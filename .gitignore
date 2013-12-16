@@ -1,0 +1,13 @@
+bin
+obj
+temp
+docs/output
+*.suo
+nuget/*.nupkg
+*.user
+__setup__*__.fsx
+TestResults.xml
+packages
+TestResult.xml
+*.VisualState.xml
+*.userprefs
