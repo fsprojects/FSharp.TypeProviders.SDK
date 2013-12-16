@@ -16,6 +16,8 @@
     <dependencies />
   </metadata>
   <files>
-    <file src="..\src\*.*" target="content" />
+    <file src="..\src\ProvidedTypes.fsi" target="content\ProvidedTypes\Signatures" />
+    <file src="..\src\ProvidedTypes.fs" target="content\ProvidedTypes\Code" />
+    <file src="..\src\Debug.fs" target="content\ProvidedTypes\Code" />
   </files>
 </package>
