@@ -5,6 +5,15 @@ files you'll need to get you started in type provider creation, and a repository
 that will (hopefully, over time) answer all your questions about how to build type providers,
 best practices and general hints and tips.
 
+This package is still currently pre-release, and actively seeking contributions towards documentation
+(the plan is a GitHub page setup similar to [FSharp.Data](http://fsharp.github.io/FSharp.Data)) with
+examples of all the most common features of Type Providers that people will want to use (basic erased type
+generation, parameterized providers, full generated types, seperating design and runtime how's and why's, etc). 
+It will also become the main place for improvements and additions to the ProvidedTypes code.
+
+Once it has reached an acceptable standard of documentation/helpfulness ownership will be transferred to the
+F# Foundation.
+
 ## Documentation 
 
 Building a type provider nearly always starts with adding the `ProvidedTypes.fs` and `ProvidedTypes.fsi`. The
