@@ -1,36 +1,36 @@
-# F# Data: Library for Data Access
+# F# Type Provider Starter Pack
 
-The F# Data library (`FSharp.Data.dll`) implements everything you need to access data in your F# applications 
-and scripts. It implements F# type providers for working with structured file formats (CSV, JSON and XML) and 
-for accessing the WorldBank and Freebase data. It also includes helpers for parsing JSON files and for sending HTTP requests.
+The F# Type Provider Starter Pack is two things: a code only NuGet package with the code
+files you'll need to get you started in type provider creation, and a repository of tutorials
+that will (hopefully, over time) answer all your questions about how to build type providers,
+best practices and general hints and tips.
 
 ## Documentation 
 
-One of the key benefits of this library is that it comes with a comprehensive documentation. The documentation is 
-automatically generated from `*.fsx` files in [the samples folder][2]. If you find a typo, please submit a pull request! 
+Building a type provider nearly always starts with adding the `ProvidedTypes.fs` and `ProvidedTypes.fsi`. The
+Starter Pack NuGet package contains both these files as well as a set of debugging helpers, and when you install
+it, it should add them all to your F# project. It's probably best not to modify the files after adding them as
+upgrades to the package will ask to replace the previous versions - either submit changes back to this project
+or shadow the relevant functions in a seperate file.
 
- - [F# Data Library home page][3] with more information about the library, contributions etc.
- - [F# Data Library documentation][4] with links to pages that document individual type providers 
-   (CSV, XML, JSON and WorldBank) as well as for other public types available in FSharp.Data.dll. 
+For advice on how to get started building a type provider, check out:
 
- - The samples from the documentation are included as part of `FSharp.Data.Tests.sln`, make sure you build the
-solution before trying out the samples to ensure that all needed packages are installed.
+ - [Type Providers from the ground up](http://blog.mavnn.co.uk/type-providers-from-the-ground-up/)
+ - [The MSDN Tutorial](http://msdn.microsoft.com/en-us/library/hh361034.aspx). The code in this package replaces the code from the sample pack it mentions.
+
 
 ## Support and community
 
- - If you have a question about `FSharp.Data`, ask at StackOverflow and [mark your question with the `f#-data` tag](http://stackoverflow.com/questions/tagged/f%23-data). 
- - If you want to submit a bug, a feature request or help witht fixing bugs then look at [issues](https://github.com/fsharp/FSharp.Data/issues) and read [contributing to F# Data](http://fsharp.github.io/FSharp.Data/contributing.html).
- - To discuss more general issues about F# Data, its goals and other open-source F# projects, join the [fsharp-opensource mailing list](http://groups.google.com/group/fsharp-opensource)
+ - If you have a question about `FSharp`, ask at StackOverflow and [mark your question with the `f#` tag](http://stackoverflow.com/questions/tagged/f%23). 
+ - If you want to submit a bug, a feature request or help with fixing bugs then look at [issues](https://github.com/mavnn/FSharp.TypeProviders.StarterPack/issues).
+ - To discuss more general issues about F# Type Providers Starter Pack, its goals and other open-source F# projects, join the [fsharp-opensource mailing list](http://groups.google.com/group/fsharp-opensource)
 
 ## Building
 
-- Simply build
+- This repository contains no compiled code.
 
 ## Library license
 
 The library is available under Apache 2.0. For more information see the [License file][1] in the GitHub repository.
 
- [1]: https://github.com/fsharp/FSharp.Data/blob/master/LICENSE.md
- [2]: https://github.com/fsharp/FSharp.Data/tree/master/samples
- [3]: http://fsharp.github.io/FSharp.Data/
- [4]: http://fsharp.github.io/FSharp.Data/fsharpdata.html
+ [1]: https://github.com/mavnn/FSharp.TypeProviders.StarterPack/blob/master/LICENSE.md
