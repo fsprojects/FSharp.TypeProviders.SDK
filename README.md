@@ -17,7 +17,7 @@ F# Foundation.
 ## Documentation 
 
 Building a type provider nearly always starts with adding the `ProvidedTypes.fs` and `ProvidedTypes.fsi`. The
-Starter Pack NuGet package contains both these files as well as a set of debugging helpers, and when you install
+[Starter Pack NuGet package](https://www.nuget.org/packages/FSharp.TypeProviders.StarterPack) contains both these files as well as a set of debugging helpers, and when you install
 it, it should add them all to your F# project. It's probably best not to modify the files after adding them as
 upgrades to the package will ask to replace the previous versions - either submit changes back to this project
 or shadow the relevant functions in a seperate file.
