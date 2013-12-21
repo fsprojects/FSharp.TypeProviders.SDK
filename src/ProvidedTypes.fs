@@ -384,7 +384,7 @@ type ProvidedConstructor(parameters : ProvidedParameter list) =
             let paramNames = 
                 parameters
                 |> List.map (fun p -> p.Name) 
-                |> List.append (if this.IsStatic then [] else ["this"])
+                |> List.append (if not isGenerated || this.IsStatic then [] else ["this"])
                 |> Array.ofList
             transQuotationToCode isGenerated f paramNames
         | None -> failwith (sprintf "ProvidedConstructor: no invoker for '%s'" (nameText()))
