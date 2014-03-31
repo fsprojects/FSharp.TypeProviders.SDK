@@ -866,6 +866,9 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
     override this.GetCustomAttributes(_inherit)                                                    = [| |]
     override this.GetCustomAttributes(_attributeType, _inherit)                                    = [| |]
     override this.IsDefined(_attributeType, _inherit)                                              = false
+    // FSharp.Data addition: this was added to support arrays of arrays
+    override this.MakeArrayType() = ProvidedSymbolType(SymbolKind.SDArray, [this]) :> Type
+    override this.MakeArrayType arg = ProvidedSymbolType(SymbolKind.Array arg, [this]) :> Type
 
 type ProvidedSymbolMethod(genericMethodDefinition: MethodInfo, parameters: Type list) =
     inherit System.Reflection.MethodInfo()
@@ -1604,7 +1607,7 @@ type AssemblyGenerator(assemblyFileName) =
                 emitExpr (ilg, copyOfLocals, [| Quotations.Var("this", lambda); v|]) expectedState body
                 ilg.Emit(OpCodes.Ret) 
 
-                let ty = lambda.CreateType()
+                lambda.CreateType() |> ignore
 
                 callSiteIlg.Emit(OpCodes.Newobj, ctor)
                 for (v, f) in fields do
@@ -1731,7 +1734,7 @@ type AssemblyGenerator(assemblyFileName) =
                           ilg.Emit(OpCodes.Castclass, targetTy)
                               
                         popIfEmptyExpected expectedState
-                    | Quotations.DerivedPatterns.SpecificCall <@ (-) @>(None, [t1; t2; t3], [a1; a2]) ->
+                    | Quotations.DerivedPatterns.SpecificCall <@ (-) @>(None, [t1; t2; _], [a1; a2]) ->
                         assert(t1 = t2)
                         emit ExpectedStackState.Value a1
                         emit ExpectedStackState.Value a2
@@ -1743,7 +1746,7 @@ type AssemblyGenerator(assemblyFileName) =
 
                         popIfEmptyExpected expectedState
 
-                    | Quotations.DerivedPatterns.SpecificCall <@ (/) @> (None, [t1; t2; t3], [a1; a2]) ->
+                    | Quotations.DerivedPatterns.SpecificCall <@ (/) @> (None, [t1; t2; _], [a1; a2]) ->
                         assert (t1 = t2)
                         emit ExpectedStackState.Value a1
                         emit ExpectedStackState.Value a2
