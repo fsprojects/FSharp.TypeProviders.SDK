@@ -134,7 +134,7 @@ type ProvidedProperty =
     /// Add definition location information to the provided type definition.
     member AddDefinitionLocation : line:int * column:int * filePath:string -> unit
 
-    /// Add a cutom attribute to the provided property definition.
+    /// Add a custom attribute to the provided property definition.
     member AddCustomAttribute : CustomAttributeData -> unit
 
 /// Represents an erased provided property.
@@ -362,7 +362,7 @@ type ProvidedTypeDefinition =
     /// FSharp.Data addition: this method is used by Debug.fs
     member MakeParametricType : name:string * args:obj[] -> ProvidedTypeDefinition
 
-    /// Add a cutom attribute to the provided type definition.
+    /// Add a custom attribute to the provided type definition.
     member AddCustomAttribute : CustomAttributeData -> unit
 
     /// FSharp.Data addition: this method is used by Debug.fs and QuotationBuilder.fs
