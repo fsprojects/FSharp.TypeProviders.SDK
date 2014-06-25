@@ -1,12 +1,13 @@
-﻿// Copyright (c) Microsoft Corporation 2005-2012.
+﻿// Based on code developed for the F# 3.0 Beta release of March 2012,
+// Copyright (c) Microsoft Corporation 2005-2012.
 // This sample code is provided "as is" without warranty of any kind. 
 // We disclaim all warranties, either express or implied, including the 
 // warranties of merchantability and fitness for a particular purpose. 
 
 // This file contains a set of helper types and methods for providing types in an implementation 
 // of ITypeProvider.
-//
-// This code is a sample for use in conjunction with the F# 3.0 Developer Preview release of September 2011.
+
+// This code has been modified and is appropriate for use in conjunction with the F# 3.0, F# 3.1, and F# 3.1.1 releases
 
 
 namespace ProviderImplementation.ProvidedTypes
