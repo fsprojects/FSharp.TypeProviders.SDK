@@ -1500,7 +1500,6 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
     override this.IsPrimitiveImpl() = false
     override this.IsCOMObjectImpl() = false
     override this.HasElementTypeImpl() = false
-    override this.UnderlyingSystemType = typeof<System.Type>
     override this.Name = className
     override this.DeclaringType = declaringType.Force()
     override this.MemberType = if this.IsNested then MemberTypes.NestedType else MemberTypes.TypeInfo      
@@ -1636,7 +1635,7 @@ type AssemblyGenerator(assemblyFileName) =
 
         let ctorMap = Dictionary<ProvidedConstructor, ConstructorBuilder>(HashIdentity.Reference)
         let methMap = Dictionary<ProvidedMethod, MethodBuilder>(HashIdentity.Reference)
-        let fieldMap = Dictionary<ProvidedField, FieldBuilder>(HashIdentity.Reference)
+        let fieldMap = Dictionary<FieldInfo, FieldBuilder>(HashIdentity.Reference)
 
         let iterateTypes f = 
             let rec typeMembers (ptd : ProvidedTypeDefinition) = 
