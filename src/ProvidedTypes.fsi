@@ -315,6 +315,9 @@ type ProvidedTypeDefinition =
     /// Set the base type to a lazily evaluated value
     member SetBaseTypeDelayed      : Lazy<Type option> -> unit    
 
+    /// Set underlying type for generated enums
+    member SetEnumUnderlyingType : Type -> unit
+
     /// Add XML documentation information to this provided constructor, where the computation of the documentation is delayed until necessary.
     /// The documentation is only computed once.
     member AddXmlDocDelayed   : xmlDocFunction: (unit -> string) -> unit   
