@@ -14,6 +14,10 @@ It will also become the main place for improvements and additions to the Provide
 Once it has reached an acceptable standard of documentation/helpfulness ownership will be transferred to the
 F# Foundation.
 
+## Build status
+
+[![Build status](https://ci.appveyor.com/api/projects/status/y1c6gs2r0ihog1re)](https://ci.appveyor.com/project/mavnn/fsharp-typeproviders-starterpack)
+
 ## Documentation 
 
 Building a type provider nearly always starts with adding the `ProvidedTypes.fs` and `ProvidedTypes.fsi`. The
