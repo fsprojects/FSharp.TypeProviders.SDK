@@ -1,3 +1,6 @@
+#### 1.0 - July 7 2014
+* Latest updates merged in, first FsProjects based release
+
 #### 0.9.1 - December 16 2013
 * Make sure files are added in the right order by putting them in a sub folder.
 
