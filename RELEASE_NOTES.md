@@ -1,3 +1,6 @@
+#### 1.0.1 - July 7 2014
+* Add targets file to help PCL builds
+
 #### 1.0 - July 7 2014
 * Latest updates merged in, first FsProjects based release
 
