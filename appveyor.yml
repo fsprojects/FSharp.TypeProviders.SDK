@@ -3,7 +3,6 @@ branches:
     - master
 
 environment:
-  BuildCounter: {build}
   nugetkey:
     secure: n3OPPceWsuWBrmW71gxbdNzcHRZpGc3iaqWRqGvv8avFFu5QQUxQa+Rv/bBXxBur
 

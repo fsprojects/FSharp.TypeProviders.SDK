@@ -32,7 +32,7 @@ let release =
     File.ReadLines "RELEASE_NOTES.md" 
     |> ReleaseNotesHelper.parseReleaseNotes
 
-let version = sprintf "%s.%s" release.AssemblyVersion (getBuildParamOrDefault "BuildCounter" "0")
+let version = sprintf "%s.%s" release.AssemblyVersion (getBuildParamOrDefault "APPVEYOR_BUILD_VERSION" "0")
 let releaseNotes = release.Notes |> String.concat "\n"
 let outputPath = "output"
 
