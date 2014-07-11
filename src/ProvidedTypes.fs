@@ -33,7 +33,7 @@ type internal ExpectedStackState =
 [<AutoOpen>]
 module internal Misc =
     let TypeBuilderInstantiationType = 
-    let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> false 
+        let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> false 
         let typeName = if runningOnMono then "System.Reflection.MonoGenericClass" else "System.Reflection.Emit.TypeBuilderInstantiation"
         typeof<TypeBuilder>.Assembly.GetType(typeName)
     let GetTypeFromHandleMethod = typeof<Type>.GetMethod("GetTypeFromHandle")
@@ -1704,12 +1704,12 @@ type AssemblyGenerator(assemblyFileName) =
 
             for finfo in ptd.GetFields(ALL) do
                 let fieldInfo = 
-                match finfo with 
-                    | :? ProvidedField as pinfo -> 
-                        Some (pinfo.Name, convType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesDataImpl(), None)
-                    | :? ProvidedLiteralField as pinfo ->
-                        Some (pinfo.Name, convType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesDataImpl(), Some (pinfo.GetRawConstantValue()))
-                    | _ -> None
+                    match finfo with 
+                        | :? ProvidedField as pinfo -> 
+                            Some (pinfo.Name, convType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesDataImpl(), None)
+                        | :? ProvidedLiteralField as pinfo ->
+                            Some (pinfo.Name, convType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesDataImpl(), Some (pinfo.GetRawConstantValue()))
+                        | _ -> None
                 match fieldInfo with
                 | Some (name, ty, attr, cattr, constantVal) when not (fieldMap.ContainsKey finfo) ->
                     let fb = tb.DefineField(name, ty, attr)
@@ -2019,10 +2019,10 @@ type AssemblyGenerator(assemblyFileName) =
                         | Some e -> 
                           let s = if e.Type.IsValueType then ExpectedStackState.Address else ExpectedStackState.Value
                           emit s e
-                            let field = 
-                                match field with 
-                                | :? ProvidedField as pf when fieldMap.ContainsKey pf -> fieldMap.[pf] :> FieldInfo 
-                                | m -> m
+                        let field = 
+                            match field with 
+                            | :? ProvidedField as pf when fieldMap.ContainsKey pf -> fieldMap.[pf] :> FieldInfo 
+                            | m -> m
                         if field.IsStatic then 
                             ilg.Emit(OpCodes.Ldsfld, field)
                         else

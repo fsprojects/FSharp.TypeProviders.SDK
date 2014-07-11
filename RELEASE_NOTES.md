@@ -1,3 +1,7 @@
+#### 1.1.0 - July 11 2014
+* Fixed utterly broken indentation in ProvidedTypes.md
+* Add compile step to build as sanity check
+
 #### 1.0.1 - July 7 2014
 * Add targets file to help PCL builds
 

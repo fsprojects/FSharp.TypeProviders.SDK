@@ -10,6 +10,7 @@ open System.IO
 open Fake 
 open Fake.AssemblyInfoFile
 open Fake.Git
+open Fake.FscHelper
 
 // --------------------------------------------------------------------------------------
 // Information about the project to be used at NuGet
@@ -35,6 +36,7 @@ let release =
 let version = sprintf "%s.%s" release.AssemblyVersion (getBuildParamOrDefault "APPVEYOR_BUILD_VERSION" "0")
 let releaseNotes = release.Notes |> String.concat "\n"
 let outputPath = "output"
+let srcPath = "src"
 
 // --------------------------------------------------------------------------------------
 // Clean build results
@@ -42,6 +44,14 @@ let outputPath = "output"
 Target "Clean" (fun _ ->
     CleanDirs [outputPath]
 )
+
+// --------------------------------------------------------------------------------------
+// Compile ProvidedTypes as a smoke test
+Target "Compile" (fun _ ->
+    Fsc id [srcPath @@ "ProvidedTypes.fsi";srcPath @@ "ProvidedTypes.fs"]
+)
+
+
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
 
@@ -74,8 +84,11 @@ Target "Help" (fun _ ->
     printfn "  Please specify the target by calling 'build <Target>'"
     printfn ""
     printfn "  * NuGet (creates package only, doesn't publish unless api key provided)"
+    printfn "  * Compile (attempts to compile ProvidedTypes.fs)"
     printfn "")
 
-"Clean" ==> "NuGet"
+"Clean"
+    ==> "Compile"
+    ==> "NuGet"
 
 RunTargetOrDefault "Help"
