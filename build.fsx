@@ -74,6 +74,10 @@ Target "Compile" (fun _ ->
 // Build a NuGet package
 
 Target "NuGet" (fun _ ->
+    ["./src/ProvidedTypes.fsi"] |> CopyTo (workingDir @@ "content/ProvidedTypes/Signatures")
+    ["./src/ProvidedTypes.fs"; "./src/Debug.fs"] |> CopyTo (workingDir @@ "content/ProvidedTypes/Code")
+    ["./src/FSharp.TypeProviders.StarterPack.targets"] |> CopyTo (workingDir @@ "build")
+    
     NuGet (fun p -> 
         { p with   
             Authors = authors
