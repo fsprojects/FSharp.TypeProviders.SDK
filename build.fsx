@@ -33,7 +33,24 @@ let release =
     File.ReadLines "RELEASE_NOTES.md" 
     |> ReleaseNotesHelper.parseReleaseNotes
 
-let version = sprintf "%s.%s" release.AssemblyVersion (getBuildParamOrDefault "APPVEYOR_BUILD_VERSION" "0")
+let PullRequest =
+    match getBuildParamOrDefault "APPVEYOR_PULL_REQUEST_NUMBER" "" with
+    | "" -> 
+        trace "Master build detected"
+        None
+    | a -> 
+        trace "Pull Request build detected"
+        Some <| int a
+
+let buildNumber =
+    int (getBuildParamOrDefault "APPVEYOR_BUILD_VERSION" "0")
+
+let version =
+    match PullRequest with
+    | None ->
+        sprintf "%s.%d" release.AssemblyVersion buildNumber
+    | Some num ->
+        sprintf "%s-pull-%d-%05d" release.AssemblyVersion num buildNumber
 let releaseNotes = release.Notes |> String.concat "\n"
 let outputPath = "output"
 let srcPath = "src"
@@ -71,7 +88,8 @@ Target "NuGet" (fun _ ->
             OutputPath = outputPath
             ToolPath = nugetPath
             AccessKey = getBuildParamOrDefault "nugetkey" ""
-            Publish = hasBuildParam "nugetkey"
+            Publish =
+                hasBuildParam "nugetkey"
             Dependencies = [] })
         "nuget/FSharp.TypeProviders.StarterPack.nuspec"
 )
