@@ -52,7 +52,7 @@ let version =
     | Some num ->
         sprintf "%s-pull-%d-%05d" release.AssemblyVersion num buildNumber
 let releaseNotes = release.Notes |> String.concat "\n"
-let outputPath = "output"
+let outputPath = "./output"
 let srcPath = "src"
 
 // --------------------------------------------------------------------------------------
