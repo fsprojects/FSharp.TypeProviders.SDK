@@ -1,3 +1,4 @@
+#nowarn "40"
 // Based on code for the F# 3.0 Developer Preview release of September 2011,
 // Copyright (c) Microsoft Corporation 2005-2012.
 // This sample code is provided "as is" without warranty of any kind. 
@@ -2367,7 +2368,7 @@ type ProvidedAssembly(assemblyFileName: string) =
         //printfn "registered assembly in '%s'" fileName
         let assemblyBytes = System.IO.File.ReadAllBytes fileName
         let assembly = Assembly.Load(assemblyBytes,null,System.Security.SecurityContextSource.CurrentAppDomain)
-        GlobalProvidedAssemblyElementsTable.theTable.Add(assembly, Lazy.CreateFromValue assemblyBytes)
+        GlobalProvidedAssemblyElementsTable.theTable.Add(assembly, Lazy<_>.CreateFromValue assemblyBytes)
         assembly
 #endif
 
@@ -2550,6 +2551,6 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
             | true,bytes -> bytes.Force()
             | _ -> 
                 let bytes = System.IO.File.ReadAllBytes assembly.ManifestModule.FullyQualifiedName
-                GlobalProvidedAssemblyElementsTable.theTable.[assembly] <- Lazy.CreateFromValue bytes
+                GlobalProvidedAssemblyElementsTable.theTable.[assembly] <- Lazy<_>.CreateFromValue bytes
                 bytes
 #endif

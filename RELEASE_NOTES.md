@@ -1,3 +1,6 @@
+#### 1.1.1 - July 17 2014
+* Fix build on some versions of .net
+
 #### 1.1.0 - July 11 2014
 * Fixed utterly broken indentation in ProvidedTypes.md
 * Add compile step to build as sanity check
