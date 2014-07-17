@@ -17,7 +17,7 @@ open Fake.FscHelper
 // --------------------------------------------------------------------------------------
 
 let project = "FSharp.TypeProviders.StarterPack"
-let authors = ["Tomas Petricek, Gustavo Guerra, Michael Newton"]
+let authors = ["Tomas Petricek"; "Gustavo Guerra"; "Michael Newton"]
 let summary = "Helper code and examples for getting started with Type Providers"
 let description = """
   The F# Type Provider Starter Pack contains everything you need to start building your own
