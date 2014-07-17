@@ -53,13 +53,14 @@ let version =
         sprintf "%s-pull-%d-%05d" release.AssemblyVersion num buildNumber
 let releaseNotes = release.Notes |> String.concat "\n"
 let outputPath = "./output/"
+let workingDir = "./temp/"
 let srcPath = "src"
 
 // --------------------------------------------------------------------------------------
 // Clean build results
 
 Target "Clean" (fun _ ->
-    CleanDirs [outputPath]
+    CleanDirs [outputPath; workingDir]
 )
 
 // --------------------------------------------------------------------------------------
@@ -83,10 +84,9 @@ Target "NuGet" (fun _ ->
             ReleaseNotes = releaseNotes
             Tags = tags
             OutputPath = outputPath
-            WorkingDir = outputPath
+            WorkingDir = workingDir
             AccessKey = getBuildParamOrDefault "nugetkey" ""
-            Publish =
-                hasBuildParam "nugetkey"
+            Publish = hasBuildParam "nugetkey"
             Dependencies = [] })
         "nuget/FSharp.TypeProviders.StarterPack.nuspec"
 )
