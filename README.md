@@ -16,7 +16,13 @@ F# Foundation.
 
 ## Build status
 
+### Windows (.net)
+
 [![Build status](https://ci.appveyor.com/api/projects/status/y1c6gs2r0ihog1re)](https://ci.appveyor.com/project/mavnn/fsharp-typeproviders-starterpack)
+
+### MacOS (mono)
+
+[![Build Status](https://travis-ci.org/fsprojects/FSharp.TypeProviders.StarterPack.svg?branch=master)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.StarterPack)
 
 ## Documentation 
 
