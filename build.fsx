@@ -91,6 +91,7 @@ Target "NuGet" (fun _ ->
             WorkingDir = workingDir
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = hasBuildParam "nugetkey"
+            Files = [".", None, None]
             Dependencies = [] })
         "nuget/FSharp.TypeProviders.StarterPack.nuspec"
 )
