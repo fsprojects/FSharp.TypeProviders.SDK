@@ -17,7 +17,7 @@ open Fake.FscHelper
 // --------------------------------------------------------------------------------------
 
 let project = "FSharp.TypeProviders.StarterPack"
-let authors = ["Tomas Petricek, Gustavo Guerra, Michael Newton"]
+let authors = ["Tomas Petricek"; "Gustavo Guerra"; "Michael Newton"]
 let summary = "Helper code and examples for getting started with Type Providers"
 let description = """
   The F# Type Provider Starter Pack contains everything you need to start building your own
@@ -52,14 +52,15 @@ let version =
     | Some num ->
         sprintf "%s-pull-%d-%05d" release.AssemblyVersion num buildNumber
 let releaseNotes = release.Notes |> String.concat "\n"
-let outputPath = "output"
+let outputPath = "./output/"
+let workingDir = "./temp/"
 let srcPath = "src"
 
 // --------------------------------------------------------------------------------------
 // Clean build results
 
 Target "Clean" (fun _ ->
-    CleanDirs [outputPath]
+    CleanDirs [outputPath; workingDir]
 )
 
 // --------------------------------------------------------------------------------------
@@ -73,9 +74,10 @@ Target "Compile" (fun _ ->
 // Build a NuGet package
 
 Target "NuGet" (fun _ ->
-    // Format the description to fit on a single line (remove \r\n and double-spaces)
-    let description = description.Replace("\r", "").Replace("\n", "").Replace("  ", " ")
-    let nugetPath = ".nuget/Nuget.exe"
+    [srcPath @@ "ProvidedTypes.fsi"] |> CopyTo (workingDir @@ "content/ProvidedTypes/Signatures")
+    [srcPath @@ "ProvidedTypes.fs"; "./src/Debug.fs"] |> CopyTo (workingDir @@ "content/ProvidedTypes/Code")
+    [srcPath @@ "FSharp.TypeProviders.StarterPack.targets"] |> CopyTo (workingDir @@ "build")
+    
     NuGet (fun p -> 
         { p with   
             Authors = authors
@@ -86,10 +88,10 @@ Target "NuGet" (fun _ ->
             ReleaseNotes = releaseNotes
             Tags = tags
             OutputPath = outputPath
-            ToolPath = nugetPath
+            WorkingDir = workingDir
             AccessKey = getBuildParamOrDefault "nugetkey" ""
-            Publish =
-                hasBuildParam "nugetkey"
+            Publish = hasBuildParam "nugetkey"
+            Files = [workingDir, None, None]
             Dependencies = [] })
         "nuget/FSharp.TypeProviders.StarterPack.nuspec"
 )
