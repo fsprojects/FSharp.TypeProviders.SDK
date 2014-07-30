@@ -170,7 +170,7 @@ module internal Debug =
 
             let inline getAttrs attrName m = 
                 ( ^a : (member GetCustomAttributesData : unit -> IList<CustomAttributeData>) m)
-                |> Seq.filter (fun attr -> attr.AttributeType.Name = attrName) 
+                |> Seq.filter (fun attr -> attr.Constructor.DeclaringType.Name = attrName) 
 
             let inline hasAttr attrName m = 
                 not (Seq.isEmpty (getAttrs attrName m))
