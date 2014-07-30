@@ -75,7 +75,7 @@ Target "Compile" (fun _ ->
 
 Target "NuGet" (fun _ ->
     [srcPath @@ "ProvidedTypes.fsi"] |> CopyTo (workingDir @@ "content/ProvidedTypes/Signatures")
-    [srcPath @@ "ProvidedTypes.fs"; "./src/ProvidedTypesDebug.fs"] |> CopyTo (workingDir @@ "content/ProvidedTypes/Code")
+    [srcPath @@ "ProvidedTypes.fs"; "./src/DebugProvidedTypes.fs"] |> CopyTo (workingDir @@ "content/ProvidedTypes/Code")
     
     NuGet (fun p -> 
         { p with   

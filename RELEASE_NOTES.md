@@ -1,3 +1,6 @@
+#### 1.1.2 - July 17 2014
+* Fix nuget package
+
 #### 1.1.1 - July 17 2014
 * Fix build on some versions of .net
 
