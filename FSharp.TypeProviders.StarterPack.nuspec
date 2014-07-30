@@ -18,7 +18,6 @@
   <files>
     <file src="..\src\ProvidedTypes.fsi" target="content/ProvidedTypes/Signatures" />
     <file src="..\src\ProvidedTypes.fs" target="content/ProvidedTypes/Code" />
-    <file src="..\src\Debug.fs" target="content/ProvidedTypes/Code" />
-    <file src="..\src\FSharp.TypeProviders.StarterPack.targets" target="build" />
+    <file src="..\src\ProvidedTypesDebug.fs" target="content/ProvidedTypes/Code" />
   </files>
 </package>

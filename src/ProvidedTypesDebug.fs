@@ -15,7 +15,7 @@ open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Reflection
 open ProviderImplementation.ProvidedTypes
 
-module Debug = 
+module internal Debug = 
 
     /// Converts a sequence of strings to a single string separated with the delimiters
     let inline private separatedBy delimiter (items: string seq) = String.Join(delimiter, Array.ofSeq items)
