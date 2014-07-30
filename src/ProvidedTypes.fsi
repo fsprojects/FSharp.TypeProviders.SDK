@@ -217,6 +217,7 @@ type ProvidedField =
 
 /// FSharp.Data addition: SymbolKind is used by AssemblyReplacer.fs
 /// Represents the type constructor in a provided symbol type.
+[<NoComparison>]
 type SymbolKind = 
     | SDArray 
     | Array of int 
