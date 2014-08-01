@@ -1,4 +1,9 @@
-#### 1.1.2 - July 17 2014
+
+
+#### 1.1.3 - July 30 2014
+* Remove folders
+
+#### 1.1.2 - July 30 2014
 * Fix nuget package
 
 #### 1.1.1 - July 17 2014
