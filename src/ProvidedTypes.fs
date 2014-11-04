@@ -1,4 +1,5 @@
 #nowarn "40"
+#nowarn "52"
 // Based on code for the F# 3.0 Developer Preview release of September 2011,
 // Copyright (c) Microsoft Corporation 2005-2012.
 // This sample code is provided "as is" without warranty of any kind. 
