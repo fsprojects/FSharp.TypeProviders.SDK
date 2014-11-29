@@ -54,3 +54,11 @@ For advice on how to get started building a type provider, check out:
 The library is available under Apache 2.0. For more information see the [License file][1] in the GitHub repository.
 
  [1]: https://github.com/mavnn/FSharp.TypeProviders.StarterPack/blob/master/LICENSE.md
+
+
+## Maintainer(s)
+
+- [@mavnn](https://github.com/mavnn)
+- [@ovatsus](https://github.com/ovatsus)
+
+The default maintainer account for projects under "fsprojects" is [@fsgit](https://github.com/fsgit) - F# Community Project Incubation Space (repo management)
