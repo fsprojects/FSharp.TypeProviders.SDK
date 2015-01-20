@@ -229,6 +229,84 @@ module internal Misc =
                 // therefore, we can perform inlining to translate this to a form that can be compiled
                 inlineByref v vexpr bexpr
 
+            // Eliminate recursive let bindings (which are unsupported by the type provider API) to regular let bindings
+            | Quotations.Patterns.LetRecursive(bindings, expr) ->
+                // This uses a "lets and sets" approach, converting something like
+                //    let rec even = function
+                //    | 0 -> true
+                //    | n -> odd (n-1)
+                //    and odd = function
+                //    | 0 -> false
+                //    | n -> even (n-1)
+                //    X
+                // to something like
+                //    let even = ref Unchecked.defaultof<_>
+                //    let odd  = ref Unchecked.defaultof<_>
+                //    even := function
+                //            | 0 -> true
+                //            | n -> !odd (n-1)
+                //    odd  := function
+                //            | 0 -> false
+                //            | n -> !even (n-1)
+                //    X'
+                // where X' is X but with occurrences of even/odd substituted by !even and !odd (since now even and odd are references)
+                // Translation relies on typedefof<_ ref> - does this affect ability to target different runtime and design time environments?
+                let vars = List.map fst bindings
+                let vars' = vars |> List.map (fun v -> Quotations.Var(v.Name, typedefof<_ ref>.MakeGenericType(v.Type)))
+                
+                // init t generates the equivalent of <@ ref Unchecked.defaultof<t> @>
+                let init (t:Type) =
+                    let (Quotations.Patterns.Call(None, r, [_])) = <@ ref 1 @>
+                    let (Quotations.Patterns.Call(None, d, [])) = <@ Unchecked.defaultof<_> @>
+                    Quotations.Expr.Call(r.GetGenericMethodDefinition().MakeGenericMethod(t), [Quotations.Expr.Call(d.GetGenericMethodDefinition().MakeGenericMethod(t),[])])
+
+                // deref v generates the equivalent of <@ !v @>
+                // (so v's type must be ref<something>)
+                let deref (v:Quotations.Var) = 
+                    let (Quotations.Patterns.Call(None, m, [_])) = <@ !(ref 1) @>
+                    let tyArgs = v.Type.GetGenericArguments()
+                    Quotations.Expr.Call(m.GetGenericMethodDefinition().MakeGenericMethod(tyArgs), [Quotations.Expr.Var v])
+
+                // substitution mapping a variable v to the expression <@ !v' @> using the corresponding new variable v' of ref type
+                let subst =
+                    let map =
+                        vars'
+                        |> List.map deref
+                        |> List.zip vars
+                        |> Map.ofList
+                    fun v -> Map.tryFind v map
+
+                let expr' = expr.Substitute(subst)
+
+                // maps variables to new variables
+                let varDict = List.zip vars vars' |> dict
+
+                // given an old variable v and an expression e, returns a quotation like <@ v' := e @> using the corresponding new variable v' of ref type
+                let setRef (v:Quotations.Var) e = 
+                    let (Quotations.Patterns.Call(None, m, [_;_])) = <@ (ref 1) := 2 @>
+                    Quotations.Expr.Call(m.GetGenericMethodDefinition().MakeGenericMethod(v.Type), [Quotations.Expr.Var varDict.[v]; e])
+
+                // Something like 
+                //  <@
+                //      v1 := e1'
+                //      v2 := e2'
+                //      ...
+                //      expr'
+                //  @>
+                // Note that we must substitute our new variable dereferences into the bound expressions
+                let body = 
+                    bindings
+                    |> List.fold (fun b (v,e) -> Quotations.Expr.Sequential(setRef v (e.Substitute subst), b)) expr'
+                
+                // Something like
+                //   let v1 = ref Unchecked.defaultof<t1>
+                //   let v2 = ref Unchecked.defaultof<t2>
+                //   ...
+                //   body
+                vars
+                |> List.fold (fun b v -> Quotations.Expr.Let(varDict.[v], init v.Type, b)) body                
+                |> trans 
+
             // Handle the generic cases
             | Quotations.ExprShape.ShapeLambda(v,body) -> 
                 Quotations.Expr.Lambda(v, trans body)
