@@ -1,4 +1,7 @@
-# F# Type Provider Starter Pack
+[![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.StarterPack/badge/issue)](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.StarterPack)
+[![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.StarterPack/badge/pr)](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.StarterPack)
+
+# F# Type Provider Starter Pack [![NuGet Status](http://img.shields.io/nuget/v/FSharp.TypeProviders.StarterPack.svg?style=flat)](https://www.nuget.org/packages/FSharp.TypeProviders.StarterPack/)
 
 The F# Type Provider Starter Pack is two things: a code only NuGet package with the code
 files you'll need to get you started in type provider creation, and a repository of tutorials
