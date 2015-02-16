@@ -54,28 +54,80 @@ let version =
 let releaseNotes = release.Notes |> String.concat "\n"
 let outputPath = "./output/"
 let workingDir = "./temp/"
-let srcPath = "src"
+let srcDir = "src"
+let exampleDir =  "examples"
+let testDir =  "test"
+let nunitDir = "packages" @@ "Nunit.Runners" @@ "tools"
 
 // --------------------------------------------------------------------------------------
 // Clean build results
 
 Target "Clean" (fun _ ->
-    CleanDirs [outputPath; workingDir]
+    CleanDirs [outputPath; workingDir;testDir]
 )
+
+let pt = [srcDir @@ "ProvidedTypes.fsi";srcDir @@ "ProvidedTypes.fs"]
 
 // --------------------------------------------------------------------------------------
 // Compile ProvidedTypes as a smoke test
 Target "Compile" (fun _ ->
-    Fsc id [srcPath @@ "ProvidedTypes.fsi";srcPath @@ "ProvidedTypes.fs"]
+    Fsc id pt
 )
 
+type ExampleWithTests = {
+    Name : string
+    ProviderSourceFiles : string list
+    TestSourceFiles : string list
+}
+
+// --------------------------------------------------------------------------------------
+// Compile example providers and accompanying test dlls
+Target "Examples" (fun _ ->
+    let examples =
+        [
+            { Name = "StaticProperty"; ProviderSourceFiles = ["StaticProperty.fsx"]; TestSourceFiles = ["StaticProperty.Tests.fsx"]}
+            { Name = "ErasedWithConstructor"; ProviderSourceFiles = ["ErasedWithConstructor.fsx"]; TestSourceFiles = ["ErasedWithConstructor.Tests.fsx"]}
+        ]
+
+    let testNunitDll = testDir @@ "nunit.framework.dll"
+
+    do
+        if File.Exists testNunitDll then
+            File.Delete testNunitDll
+        File.Copy (nunitDir @@ "nunit.framework.dll", testNunitDll)
+
+    let fromExampleDir filenames =
+        filenames
+        |> List.map (fun filename -> exampleDir @@ filename)
+
+    examples
+    |> List.iter (fun example ->
+            // Compile type provider
+            let output = testDir @@ example.Name + ".dll"
+            let setOpts = fun def -> { def with Output = output; FscTarget = FscTarget.Library }
+            Fsc setOpts (List.concat [pt;fromExampleDir example.ProviderSourceFiles])
+
+            // Compile test dll
+            let setTestOpts = fun def ->
+                { def with 
+                    Output = testDir @@ example.Name + ".Tests.dll"
+                    FscTarget = FscTarget.Library
+                    References = [output;nunitDir @@ "nunit.framework.dll"] }
+            Fsc setTestOpts (fromExampleDir example.TestSourceFiles)
+        )
+)
+
+Target "RunTests" (fun _ ->
+    !! (testDir @@ "*.Tests.dll")
+    |> NUnit id
+)
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
 
 Target "NuGet" (fun _ ->
-    [srcPath @@ "ProvidedTypes.fsi"] |> CopyTo (workingDir @@ "content")
-    [srcPath @@ "ProvidedTypes.fs"; "./src/DebugProvidedTypes.fs"] |> CopyTo (workingDir @@ "content")
+    [srcDir @@ "ProvidedTypes.fsi"] |> CopyTo (workingDir @@ "content")
+    [srcDir @@ "ProvidedTypes.fs"; "./src/DebugProvidedTypes.fs"] |> CopyTo (workingDir @@ "content")
     
     NuGet (fun p -> 
         { p with   
@@ -108,6 +160,8 @@ Target "Help" (fun _ ->
 
 "Clean"
     ==> "Compile"
+    ==> "Examples"
+    ==> "RunTests"
     ==> "NuGet"
 
 RunTargetOrDefault "Help"
