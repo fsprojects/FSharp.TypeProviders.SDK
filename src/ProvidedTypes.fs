@@ -962,7 +962,8 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
 
 
     static member convType (parameters: Type list) (ty:Type) = 
-        if ty.IsGenericType then 
+        if ty = null then null
+        elif ty.IsGenericType then
             let args = Array.map (ProvidedSymbolType.convType parameters) (ty.GetGenericArguments())
             ProvidedSymbolType(Generic (ty.GetGenericTypeDefinition()), Array.toList args)  :> Type
         elif ty.HasElementType then 
@@ -1031,7 +1032,9 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
         | SymbolKind.Array _ -> typeof<System.Array>
         | SymbolKind.Pointer -> typeof<System.ValueType>
         | SymbolKind.ByRef -> typeof<System.ValueType>
-        | SymbolKind.Generic gty  -> ProvidedSymbolType.convType args gty.BaseType
+        | SymbolKind.Generic gty  ->
+            if gty.BaseType = null then null else
+            ProvidedSymbolType.convType args gty.BaseType
         | SymbolKind.FSharpTypeAbbreviation _ -> typeof<obj>
 
     override this.GetArrayRank() = (match kind with SymbolKind.Array n -> n | SymbolKind.SDArray -> 1 | _ -> invalidOp "non-array type")
