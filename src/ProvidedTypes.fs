@@ -1232,6 +1232,11 @@ module GlobalProvidedAssemblyElementsTable =
 
 type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType  : Type option) as this =
     inherit Type()
+
+    do match container, !ProvidedTypeDefinition.Logger with
+       | TypeContainer.Namespace _, Some logger -> logger (sprintf "Creating ProvidedTypeDefinition %s [%d]" className (System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode this))
+       | _ -> ()
+
     // state
     let mutable attributes   = 
         TypeAttributes.Public ||| 
@@ -1538,6 +1543,8 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
               |> Array.map ProvidedTypeDefinition.EraseType
             genericTypeDefinition.MakeGenericType(genericArguments)
         | t -> t
+
+    static member Logger : (string -> unit) option ref = ref None
 
     // The binding attributes are always set to DeclaredOnly ||| Static ||| Instance ||| Public when GetMembers is called directly by the F# compiler
     // However, it's possible for the framework to generate other sets of flags in some corner cases (e.g. via use of `enum` with a provided type as the target)
