@@ -381,6 +381,9 @@ type ProvidedTypeDefinition =
     /// replaced with the erased-to types
     static member EraseType : t:Type -> Type
 
+    /// FSharp.Data addition: this is used to log the creation of root Provided Types to be able to debug caching/invalidation
+    static member Logger : (string -> unit) option ref
+
 /// A provided generated assembly
 type ProvidedAssembly =
     new : assemblyFileName:string -> ProvidedAssembly
