@@ -269,14 +269,14 @@ module internal Misc =
                 
                 // init t generates the equivalent of <@ ref Unchecked.defaultof<t> @>
                 let init (t:Type) =
-                    let (Quotations.Patterns.Call(None, r, [_])) = <@ ref 1 @>
-                    let (Quotations.Patterns.Call(None, d, [])) = <@ Unchecked.defaultof<_> @>
+                    let r = match <@ ref 1 @> with Quotations.Patterns.Call(None, r, [_]) -> r | _ -> failwith "Extracting MethodInfo from <@ 1 @> failed"
+                    let d = match <@ Unchecked.defaultof<_> @> with Quotations.Patterns.Call(None, d, []) -> d | _ -> failwith "Extracting MethodInfo from <@ Unchecked.defaultof<_> @> failed"
                     Quotations.Expr.Call(r.GetGenericMethodDefinition().MakeGenericMethod(t), [Quotations.Expr.Call(d.GetGenericMethodDefinition().MakeGenericMethod(t),[])])
 
                 // deref v generates the equivalent of <@ !v @>
                 // (so v's type must be ref<something>)
                 let deref (v:Quotations.Var) = 
-                    let (Quotations.Patterns.Call(None, m, [_])) = <@ !(ref 1) @>
+                    let m = match <@ !(ref 1) @> with Quotations.Patterns.Call(None, m, [_]) -> m | _ -> failwith "Extracting MethodInfo from <@ !(ref 1) @> failed"
                     let tyArgs = v.Type.GetGenericArguments()
                     Quotations.Expr.Call(m.GetGenericMethodDefinition().MakeGenericMethod(tyArgs), [Quotations.Expr.Var v])
 
@@ -296,7 +296,7 @@ module internal Misc =
 
                 // given an old variable v and an expression e, returns a quotation like <@ v' := e @> using the corresponding new variable v' of ref type
                 let setRef (v:Quotations.Var) e = 
-                    let (Quotations.Patterns.Call(None, m, [_;_])) = <@ (ref 1) := 2 @>
+                    let m = match <@ (ref 1) := 2 @> with Quotations.Patterns.Call(None, m, [_;_]) -> m | _ -> failwith "Extracting MethodInfo from <@ (ref 1) := 2 @> failed"
                     Quotations.Expr.Call(m.GetGenericMethodDefinition().MakeGenericMethod(v.Type), [Quotations.Expr.Var varDict.[v]; e])
 
                 // Something like 
