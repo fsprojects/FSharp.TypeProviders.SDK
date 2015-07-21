@@ -34,10 +34,12 @@ type internal ExpectedStackState =
 
 [<AutoOpen>]
 module internal Misc =
+
     let TypeBuilderInstantiationType = 
         let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> false 
         let typeName = if runningOnMono then "System.Reflection.MonoGenericClass" else "System.Reflection.Emit.TypeBuilderInstantiation"
         typeof<TypeBuilder>.Assembly.GetType(typeName)
+
     let GetTypeFromHandleMethod = typeof<Type>.GetMethod("GetTypeFromHandle")
     let LanguagePrimitivesType = typedefof<list<_>>.Assembly.GetType("Microsoft.FSharp.Core.LanguagePrimitives")
     let ParseInt32Method = LanguagePrimitivesType.GetMethod "ParseInt32"
@@ -162,11 +164,11 @@ module internal Misc =
                   yield! customAttributes |]
 
         member __.AddDefinitionLocation(line:int,column:int,filePath:string) = customAttributes.Add(mkDefinitionLocationAttributeCustomAttributeData(line, column, filePath))
-        member __.AddObsolete(msg : string, isError) = obsoleteMessage <- Some (msg,isError)
+        member __.AddObsolete(message : string, isError) = obsoleteMessage <- Some (message,isError)
         member __.HasParamArray with get() = hasParamArray and set(v) = hasParamArray <- v
-        member __.AddXmlDocComputed(xmlDoc : unit -> string) = xmlDocAlwaysRecomputed <- Some xmlDoc
-        member __.AddXmlDocDelayed(xmlDoc : unit -> string) = xmlDocDelayed <- Some xmlDoc
-        member this.AddXmlDoc(text:string) =  this.AddXmlDocDelayed (fun () -> text)
+        member __.AddXmlDocComputed xmlDocFunction = xmlDocAlwaysRecomputed <- Some xmlDocFunction
+        member __.AddXmlDocDelayed xmlDocFunction = xmlDocDelayed <- Some xmlDocFunction
+        member __.AddXmlDoc xmlDoc =  xmlDocDelayed <- Some (fun () -> xmlDoc)
         member __.HideObjectMethods with set v = hideObjectMethods <- v
         member __.NonNullable with set v = nonNullable <- v
         member __.AddCustomAttribute(attribute) = customAttributes.Add(attribute)
@@ -549,9 +551,10 @@ type ProvidedStaticParameter(parameterName:string,parameterType:Type,?parameterD
     inherit System.Reflection.ParameterInfo()
 
     let customAttributesImpl = CustomAttributesImpl()
-    member __.AddXmlDocDelayed(xmlDoc : unit -> string) = customAttributesImpl.AddXmlDocDelayed xmlDoc
-    member __.AddXmlDocComputed(xmlDoc : unit -> string) = customAttributesImpl.AddXmlDocComputed xmlDoc
-    member this.AddXmlDoc(text:string) = customAttributesImpl.AddXmlDoc text
+
+    member __.AddXmlDocDelayed xmlDocFunction = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
+    member __.AddXmlDocComputed xmlDocFunction = customAttributesImpl.AddXmlDocComputed xmlDocFunction
+    member __.AddXmlDoc xmlDoc = customAttributesImpl.AddXmlDoc xmlDoc
 
     override __.RawDefaultValue = defaultArg parameterDefaultValue null
     override __.Attributes = if parameterDefaultValue.IsNone then enum 0 else ParameterAttributes.Optional
@@ -566,13 +569,13 @@ type ProvidedParameter(name:string,parameterType:Type,?isOut:bool,?optionalValue
     inherit System.Reflection.ParameterInfo()
     let customAttributesImpl = CustomAttributesImpl()
     let isOut = defaultArg isOut false
-    member this.IsParamArray with get() = customAttributesImpl.HasParamArray and set(v) = customAttributesImpl.HasParamArray <- v
-    override this.Name = name
-    override this.ParameterType = parameterType
-    override this.Attributes = (base.Attributes ||| (if isOut then ParameterAttributes.Out else enum 0)
-                                                ||| (match optionalValue with None -> enum 0 | Some _ -> ParameterAttributes.Optional ||| ParameterAttributes.HasDefault))
-    override this.RawDefaultValue = defaultArg optionalValue null
-    member this.HasDefaultParameterValue = Option.isSome optionalValue
+    member __.IsParamArray with get() = customAttributesImpl.HasParamArray and set(v) = customAttributesImpl.HasParamArray <- v
+    override __.Name = name
+    override __.ParameterType = parameterType
+    override __.Attributes = (base.Attributes ||| (if isOut then ParameterAttributes.Out else enum 0)
+                                              ||| (match optionalValue with None -> enum 0 | Some _ -> ParameterAttributes.Optional ||| ParameterAttributes.HasDefault))
+    override __.RawDefaultValue = defaultArg optionalValue null
+    member __.HasDefaultParameterValue = Option.isSome optionalValue
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
@@ -589,74 +592,75 @@ type ProvidedConstructor(parameters : ProvidedParameter list) =
     let mutable isImplicitCtor  = false
     let mutable ctorAttributes = MethodAttributes.Public ||| MethodAttributes.RTSpecialName
     let nameText () = sprintf "constructor for %s" (if declaringType=null then "<not yet known type>" else declaringType.FullName)
+    let isStatic() = ctorAttributes.HasFlag(MethodAttributes.Static)
 
     let customAttributesImpl = CustomAttributesImpl()
-    member this.IsTypeInitializer 
-        with get() = ctorAttributes.HasFlag(MethodAttributes.Static) && ctorAttributes.HasFlag(MethodAttributes.Private)
+    member __.IsTypeInitializer 
+        with get() = isStatic() && ctorAttributes.HasFlag(MethodAttributes.Private)
         and set(v) = 
             let typeInitializerAttributes = MethodAttributes.Static ||| MethodAttributes.Private
             ctorAttributes <- if v then ctorAttributes ||| typeInitializerAttributes else ctorAttributes &&& ~~~typeInitializerAttributes
 
-    member this.AddXmlDocComputed xmlDoc                    = customAttributesImpl.AddXmlDocComputed xmlDoc
-    member this.AddXmlDocDelayed xmlDoc                     = customAttributesImpl.AddXmlDocDelayed xmlDoc
-    member this.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
-    member this.AddObsoleteAttribute (msg,?isError)         = customAttributesImpl.AddObsolete (msg,defaultArg isError false)
-    member this.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
+    member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
+    member __.AddXmlDocDelayed xmlDocFunction             = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
+    member __.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
+    member __.AddObsoleteAttribute (message,?isError)     = customAttributesImpl.AddObsolete (message,defaultArg isError false)
+    member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
-    override this.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
+    override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
-    member this.DeclaringTypeImpl 
+    member __.DeclaringTypeImpl 
         with set x = 
             if declaringType<>null then failwith (sprintf "ProvidedConstructor: declaringType already set on '%s'" (nameText())); 
             declaringType <- x
 
-    member this.InvokeCode 
+    member __.InvokeCode 
         with set (q:Quotations.Expr list -> Quotations.Expr) = 
             match invokeCode with
             | None -> invokeCode <- Some q
             | Some _ -> failwith (sprintf "ProvidedConstructor: code already given for '%s'" (nameText()))        
 
-    member this.BaseConstructorCall
+    member __.BaseConstructorCall
         with set (d:Quotations.Expr list -> (ConstructorInfo * Quotations.Expr list)) = 
             match baseCall with
             | None -> baseCall <- Some d
             | Some _ -> failwith (sprintf "ProvidedConstructor: base call already given for '%s'" (nameText()))        
 
-    member this.GetInvokeCodeInternal isGenerated =
+    member __.GetInvokeCodeInternal isGenerated =
         match invokeCode with
         | Some f -> 
             // FSharp.Data change: use the real variable names instead of indices, to improve output of Debug.fs
             let paramNames = 
                 parameters
                 |> List.map (fun p -> p.Name) 
-                |> List.append (if not isGenerated || this.IsStatic then [] else ["this"])
+                |> List.append (if not isGenerated || isStatic() then [] else ["this"])
                 |> Array.ofList
             transQuotationToCode isGenerated f paramNames
         | None -> failwith (sprintf "ProvidedConstructor: no invoker for '%s'" (nameText()))
 
-    member this.GetBaseConstructorCallInternal isGenerated =
+    member __.GetBaseConstructorCallInternal isGenerated =
         match baseCall with
         | Some f -> Some(fun ctorArgs -> let c,baseCtorArgExprs = f ctorArgs in c, List.map (transExpr isGenerated) baseCtorArgExprs)
         | None -> None
-    member this.IsImplicitCtor with get() = isImplicitCtor and set v = isImplicitCtor <- v
+    member __.IsImplicitCtor with get() = isImplicitCtor and set v = isImplicitCtor <- v
 
     // Implement overloads
-    override this.GetParameters() = parameters |> List.toArray 
-    override this.Attributes = ctorAttributes
-    override this.Name = if this.IsStatic then ".cctor" else ".ctor"
-    override this.DeclaringType = declaringType |> nonNull "ProvidedConstructor.DeclaringType"                                   
-    override this.IsDefined(_attributeType, _inherit) = true 
+    override __.GetParameters() = parameters |> List.toArray 
+    override __.Attributes = ctorAttributes
+    override __.Name = if isStatic() then ".cctor" else ".ctor"
+    override __.DeclaringType = declaringType |> nonNull "ProvidedConstructor.DeclaringType"                                   
+    override __.IsDefined(_attributeType, _inherit) = true 
 
-    override this.Invoke(_invokeAttr, _binder, _parameters, _culture)      = notRequired "Invoke" (nameText())
-    override this.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired "Invoke" (nameText())
-    override this.ReflectedType                                        = notRequired "ReflectedType" (nameText())
-    override this.GetMethodImplementationFlags()                       = notRequired "GetMethodImplementationFlags" (nameText())
-    override this.MethodHandle                                         = notRequired "MethodHandle" (nameText())
-    override this.GetCustomAttributes(_inherit)                     = notRequired "GetCustomAttributes" (nameText())
-    override this.GetCustomAttributes(_attributeType, _inherit)      = notRequired "GetCustomAttributes" (nameText())
+    override __.Invoke(_invokeAttr, _binder, _parameters, _culture)      = notRequired "Invoke" (nameText())
+    override __.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired "Invoke" (nameText())
+    override __.ReflectedType                                        = notRequired "ReflectedType" (nameText())
+    override __.GetMethodImplementationFlags()                       = notRequired "GetMethodImplementationFlags" (nameText())
+    override __.MethodHandle                                         = notRequired "MethodHandle" (nameText())
+    override __.GetCustomAttributes(_inherit)                     = notRequired "GetCustomAttributes" (nameText())
+    override __.GetCustomAttributes(_attributeType, _inherit)      = notRequired "GetCustomAttributes" (nameText())
 
 type ProvidedMethod(methodName: string, parameters: ProvidedParameter list, returnType: Type) =
     inherit System.Reflection.MethodInfo()
@@ -666,76 +670,100 @@ type ProvidedMethod(methodName: string, parameters: ProvidedParameter list, retu
     let mutable declaringType : Type = null
     let mutable methodAttrs   = MethodAttributes.Public
     let mutable invokeCode    = None : option<Quotations.Expr list -> Quotations.Expr>
-
+    let mutable staticParams = [ ] 
+    let mutable staticParamsApply = None
+    let isStatic() = methodAttrs.HasFlag(MethodAttributes.Static)
     let customAttributesImpl = CustomAttributesImpl()
-    member this.AddXmlDocComputed xmlDoc                    = customAttributesImpl.AddXmlDocComputed xmlDoc
-    member this.AddXmlDocDelayed xmlDoc                     = customAttributesImpl.AddXmlDocDelayed xmlDoc
-    member this.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
-    member this.AddObsoleteAttribute (msg,?isError)         = customAttributesImpl.AddObsolete (msg,defaultArg isError false)
-    member this.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
+
+    member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
+    member __.AddXmlDocDelayed xmlDocFunction             = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
+    member __.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
+    member __.AddObsoleteAttribute (message,?isError)     = customAttributesImpl.AddObsolete (message,defaultArg isError false)
+    member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.AddCustomAttribute(attribute) = customAttributesImpl.AddCustomAttribute(attribute)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
-    override this.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
+    override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
-    member this.SetMethodAttrs m = methodAttrs <- m 
-    member this.AddMethodAttrs m = methodAttrs <- methodAttrs ||| m
-    member this.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
-    member this.IsStaticMethod 
-        with get()  = methodAttrs.HasFlag(MethodAttributes.Static)
+    member __.SetMethodAttrs m = methodAttrs <- m 
+    member __.AddMethodAttrs m = methodAttrs <- methodAttrs ||| m
+    member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
+    member __.IsStaticMethod 
+        with get()  = isStatic()
         and set x = if x then methodAttrs <- methodAttrs ||| MethodAttributes.Static
                     else methodAttrs <- methodAttrs &&& (~~~ MethodAttributes.Static)
-    member this.InvokeCode 
+
+    member __.InvokeCode 
         with set  (q:Quotations.Expr list -> Quotations.Expr) = 
             match invokeCode with
             | None -> invokeCode <- Some q
-            | Some _ -> failwith (sprintf "ProvidedConstructor: code already given for %s on type %s" this.Name (if declaringType=null then "<not yet known type>" else declaringType.FullName))
+            | Some _ -> failwith (sprintf "ProvidedConstructor: code already given for %s on type %s" methodName (if declaringType=null then "<not yet known type>" else declaringType.FullName))
 
 
-    member this.GetInvokeCodeInternal isGenerated =
+    /// Abstract a type to a parametric-type. Requires "formal parameters" and "instantiation function".
+    member __.DefineStaticParameters(staticParameters : list<ProvidedStaticParameter>, apply    : (string -> obj[] -> ProvidedMethod)) =
+        staticParams      <- staticParameters 
+        staticParamsApply <- Some apply
+
+    /// Get ParameterInfo[] for the parametric type parameters (//s GetGenericParameters)
+    member __.GetStaticParameters() = [| for p in staticParams -> p :> ParameterInfo |]
+
+    /// Instantiate parametrics type
+    member __.ApplyStaticArguments(mangledName:string, args:obj[]) =
+        if staticParams.Length>0 then
+            if staticParams.Length <> args.Length then
+                failwith (sprintf "ProvidedTypeDefinition: expecting %d static parameters but given %d for method %s" staticParams.Length args.Length methodName)
+            match staticParamsApply with
+            | None -> failwith "ProvidedTypeDefinition: DefineStaticParameters was not called"
+            | Some f -> f mangledName args
+        else
+            failwith (sprintf "ProvidedTypeDefinition: static parameters supplied but not expected for method %s" methodName)
+
+    member __.GetInvokeCodeInternal isGenerated =
         match invokeCode with
         | Some f -> 
             // FSharp.Data change: use the real variable names instead of indices, to improve output of Debug.fs
             let paramNames = 
                 parameters
                 |> List.map (fun p -> p.Name) 
-                |> List.append (if this.IsStatic then [] else ["this"])
+                |> List.append (if isStatic() then [] else ["this"])
                 |> Array.ofList
             transQuotationToCode isGenerated f paramNames
-        | None -> failwith (sprintf "ProvidedMethod: no invoker for %s on type %s" this.Name (if declaringType=null then "<not yet known type>" else declaringType.FullName))
+        | None -> failwith (sprintf "ProvidedMethod: no invoker for %s on type %s" methodName (if declaringType=null then "<not yet known type>" else declaringType.FullName))
+
    // Implement overloads
-    override this.GetParameters() = argParams |> Array.ofList
-    override this.Attributes = methodAttrs
-    override this.Name = methodName
-    override this.DeclaringType = declaringType |> nonNull "ProvidedMethod.DeclaringType"                                   
-    override this.IsDefined(_attributeType, _inherit) : bool = true
-    override this.MemberType = MemberTypes.Method
-    override this.CallingConvention = 
+    override __.GetParameters() = argParams |> Array.ofList
+    override __.Attributes = methodAttrs
+    override __.Name = methodName
+    override __.DeclaringType = declaringType |> nonNull "ProvidedMethod.DeclaringType"                                   
+    override __.IsDefined(_attributeType, _inherit) : bool = true
+    override __.MemberType = MemberTypes.Method
+    override __.CallingConvention = 
         let cc = CallingConventions.Standard
-        let cc = if not (this.IsStatic) then cc ||| CallingConventions.HasThis else cc
+        let cc = if not (isStatic()) then cc ||| CallingConventions.HasThis else cc
         cc
-    override this.ReturnType = returnType
-    override this.ReturnParameter = null // REVIEW: Give it a name and type?
-    override this.ToString() = "Method " + this.Name
+    override __.ReturnType = returnType
+    override __.ReturnParameter = null // REVIEW: Give it a name and type?
+    override __.ToString() = "Method " + methodName
     
     // These don't have to return fully accurate results - they are used 
     // by the F# Quotations library function SpecificCall as a pre-optimization
     // when comparing methods
-    override this.MetadataToken = hash declaringType + hash this.Name
-    override this.MethodHandle = RuntimeMethodHandle()
+    override __.MetadataToken = hash declaringType + hash methodName
+    override __.MethodHandle = RuntimeMethodHandle()
 
-    override this.ReturnTypeCustomAttributes                           = notRequired "ReturnTypeCustomAttributes" this.Name
-    override this.GetBaseDefinition()                                  = notRequired "GetBaseDefinition" this.Name
-    override this.GetMethodImplementationFlags()                       = notRequired "GetMethodImplementationFlags" this.Name
-    override this.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired "Invoke" this.Name
-    override this.ReflectedType                                        = notRequired "ReflectedType" this.Name
-    override this.GetCustomAttributes(_inherit)                     = notRequired "GetCustomAttributes" this.Name
-    override this.GetCustomAttributes(_attributeType, _inherit)      =  notRequired "GetCustomAttributes" this.Name
+    override __.ReturnTypeCustomAttributes                           = notRequired "ReturnTypeCustomAttributes" methodName
+    override __.GetBaseDefinition()                                  = notRequired "GetBaseDefinition" methodName
+    override __.GetMethodImplementationFlags()                       = notRequired "GetMethodImplementationFlags" methodName
+    override __.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired "Invoke" methodName
+    override __.ReflectedType                                        = notRequired "ReflectedType" methodName
+    override __.GetCustomAttributes(_inherit)                        = notRequired "GetCustomAttributes" methodName
+    override __.GetCustomAttributes(_attributeType, _inherit)        =  notRequired "GetCustomAttributes" methodName
 
 
-type ProvidedProperty(propertyName:string,propertyType:Type, ?parameters:ProvidedParameter list) = 
+type ProvidedProperty(propertyName: string, propertyType: Type, ?parameters: ProvidedParameter list) = 
     inherit System.Reflection.PropertyInfo()
     // State
 
@@ -754,50 +782,51 @@ type ProvidedProperty(propertyName:string,propertyType:Type, ?parameters:Provide
     let setter = lazy (ProvidedMethod("set_" + propertyName,parameters @ [ProvidedParameter("value",propertyType)],typeof<System.Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=setterCode.Value) |> markSpecialName) 
  
     let customAttributesImpl = CustomAttributesImpl()
-    member this.AddXmlDocComputed xmlDoc                    = customAttributesImpl.AddXmlDocComputed xmlDoc
-    member this.AddXmlDocDelayed xmlDoc                     = customAttributesImpl.AddXmlDocDelayed xmlDoc
-    member this.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
-    member this.AddObsoleteAttribute (msg,?isError)         = customAttributesImpl.AddObsolete (msg,defaultArg isError false)
-    member this.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
+    member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
+    member __.AddXmlDocDelayed xmlDocFunction             = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
+    member __.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
+    member __.AddObsoleteAttribute (message,?isError)     = customAttributesImpl.AddObsolete (message,defaultArg isError false)
+    member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
-    member this.AddCustomAttribute attribute                = customAttributesImpl.AddCustomAttribute attribute
+    member __.AddCustomAttribute attribute                = customAttributesImpl.AddCustomAttribute attribute
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
-    override this.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
+    override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
-    member this.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
-    member this.IsStatic 
+    member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
+
+    member __.IsStatic 
         with get()  = isStatic
         and set x = isStatic <- x
 
-    member this.GetterCode 
+    member __.GetterCode 
         with set  (q:Quotations.Expr list -> Quotations.Expr) = 
             if not getter.IsValueCreated then getterCode <- Some q else failwith "ProvidedProperty: getter MethodInfo has already been created"
 
-    member this.SetterCode 
+    member __.SetterCode 
         with set (q:Quotations.Expr list -> Quotations.Expr) = 
             if not (setter.IsValueCreated) then setterCode <- Some q else failwith "ProvidedProperty: setter MethodInfo has already been created"
 
     // Implement overloads
-    override this.PropertyType = propertyType
-    override this.SetValue(_obj, _value, _invokeAttr, _binder, _index, _culture) = notRequired "SetValue" this.Name
-    override this.GetAccessors _nonPublic  = notRequired "nonPublic" this.Name
-    override this.GetGetMethod _nonPublic = if hasGetter() then getter.Force() :> MethodInfo else null
-    override this.GetSetMethod _nonPublic = if hasSetter() then setter.Force() :> MethodInfo else null
-    override this.GetIndexParameters() = [| for p in parameters -> upcast p |]
-    override this.Attributes = PropertyAttributes.None
-    override this.CanRead = hasGetter()
-    override this.CanWrite = hasSetter()
-    override this.GetValue(_obj, _invokeAttr, _binder, _index, _culture) : obj = notRequired "GetValue" this.Name
-    override this.Name = propertyName
-    override this.DeclaringType = declaringType |> nonNull "ProvidedProperty.DeclaringType"
-    override this.MemberType : MemberTypes = MemberTypes.Property
+    override __.PropertyType = propertyType
+    override __.SetValue(_obj, _value, _invokeAttr, _binder, _index, _culture) = notRequired "SetValue" propertyName
+    override __.GetAccessors _nonPublic  = notRequired "nonPublic" propertyName
+    override __.GetGetMethod _nonPublic = if hasGetter() then getter.Force() :> MethodInfo else null
+    override __.GetSetMethod _nonPublic = if hasSetter() then setter.Force() :> MethodInfo else null
+    override __.GetIndexParameters() = [| for p in parameters -> upcast p |]
+    override __.Attributes = PropertyAttributes.None
+    override __.CanRead = hasGetter()
+    override __.CanWrite = hasSetter()
+    override __.GetValue(_obj, _invokeAttr, _binder, _index, _culture) : obj = notRequired "GetValue" propertyName
+    override __.Name = propertyName
+    override __.DeclaringType = declaringType |> nonNull "ProvidedProperty.DeclaringType"
+    override __.MemberType : MemberTypes = MemberTypes.Property
 
-    override this.ReflectedType                                     = notRequired "ReflectedType" this.Name
-    override this.GetCustomAttributes(_inherit)                  = notRequired "GetCustomAttributes" this.Name
-    override this.GetCustomAttributes(_attributeType, _inherit)   = notRequired "GetCustomAttributes" this.Name
-    override this.IsDefined(_attributeType, _inherit)             = notRequired "IsDefined" this.Name
+    override __.ReflectedType                                     = notRequired "ReflectedType" propertyName
+    override __.GetCustomAttributes(_inherit)                  = notRequired "GetCustomAttributes" propertyName
+    override __.GetCustomAttributes(_attributeType, _inherit)   = notRequired "GetCustomAttributes" propertyName
+    override __.IsDefined(_attributeType, _inherit)             = notRequired "IsDefined" propertyName
 
 type ProvidedEvent(eventName:string,eventHandlerType:Type) = 
     inherit System.Reflection.EventInfo()
@@ -814,45 +843,45 @@ type ProvidedEvent(eventName:string,eventHandlerType:Type) =
     let remover = lazy (ProvidedMethod("remove_" + eventName, [ProvidedParameter("handler", eventHandlerType)],typeof<System.Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=removerCode.Value) |> markSpecialName) 
  
     let customAttributesImpl = CustomAttributesImpl()
-    member this.AddXmlDocComputed xmlDoc                    = customAttributesImpl.AddXmlDocComputed xmlDoc
-    member this.AddXmlDocDelayed xmlDoc                     = customAttributesImpl.AddXmlDocDelayed xmlDoc
-    member this.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
-    member this.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
+    member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
+    member __.AddXmlDocDelayed xmlDocFunction             = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
+    member __.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
+    member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
-    override this.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
+    override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
-    member this.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
-    member this.IsStatic 
+    member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
+    member __.IsStatic 
         with get()  = isStatic
         and set x = isStatic <- x
 
-    member this.AdderCode 
+    member __.AdderCode 
         with get() = adderCode.Value
         and  set f = 
             if not adder.IsValueCreated then adderCode <- Some f else failwith "ProvidedEvent: Add MethodInfo has already been created"                                         
 
-    member this.RemoverCode
+    member __.RemoverCode
         with get() = removerCode.Value
         and  set f = 
             if not (remover.IsValueCreated) then removerCode <- Some f else failwith "ProvidedEvent: Remove MethodInfo has already been created"
 
     // Implement overloads
-    override this.EventHandlerType = eventHandlerType
-    override this.GetAddMethod _nonPublic = adder.Force() :> MethodInfo
-    override this.GetRemoveMethod _nonPublic = remover.Force() :> MethodInfo
-    override this.Attributes = EventAttributes.None
-    override this.Name = eventName
-    override this.DeclaringType = declaringType |> nonNull "ProvidedEvent.DeclaringType"
-    override this.MemberType : MemberTypes = MemberTypes.Event
+    override __.EventHandlerType = eventHandlerType
+    override __.GetAddMethod _nonPublic = adder.Force() :> MethodInfo
+    override __.GetRemoveMethod _nonPublic = remover.Force() :> MethodInfo
+    override __.Attributes = EventAttributes.None
+    override __.Name = eventName
+    override __.DeclaringType = declaringType |> nonNull "ProvidedEvent.DeclaringType"
+    override __.MemberType : MemberTypes = MemberTypes.Event
 
-    override this.GetRaiseMethod _nonPublic                      = notRequired "GetRaiseMethod" this.Name
-    override this.ReflectedType                                     = notRequired "ReflectedType" this.Name
-    override this.GetCustomAttributes(_inherit)                  = notRequired "GetCustomAttributes" this.Name
-    override this.GetCustomAttributes(_attributeType, _inherit)   = notRequired "GetCustomAttributes" this.Name
-    override this.IsDefined(_attributeType, _inherit)             = notRequired "IsDefined" this.Name
+    override __.GetRaiseMethod _nonPublic                      = notRequired "GetRaiseMethod" eventName
+    override __.ReflectedType                                  = notRequired "ReflectedType" eventName
+    override __.GetCustomAttributes(_inherit)                  = notRequired "GetCustomAttributes" eventName
+    override __.GetCustomAttributes(_attributeType, _inherit)  = notRequired "GetCustomAttributes" eventName
+    override __.IsDefined(_attributeType, _inherit)            = notRequired "IsDefined" eventName
 
 type ProvidedLiteralField(fieldName:string,fieldType:Type,literalValue:obj) = 
     inherit System.Reflection.FieldInfo()
@@ -861,36 +890,36 @@ type ProvidedLiteralField(fieldName:string,fieldType:Type,literalValue:obj) =
     let mutable declaringType = null
 
     let customAttributesImpl = CustomAttributesImpl()
-    member this.AddXmlDocComputed xmlDoc                    = customAttributesImpl.AddXmlDocComputed xmlDoc
-    member this.AddXmlDocDelayed xmlDoc                     = customAttributesImpl.AddXmlDocDelayed xmlDoc
-    member this.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
-    member this.AddObsoleteAttribute (msg,?isError)         = customAttributesImpl.AddObsolete (msg,defaultArg isError false)
-    member this.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
+    member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
+    member __.AddXmlDocDelayed xmlDocFunction             = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
+    member __.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
+    member __.AddObsoleteAttribute (message,?isError)     = customAttributesImpl.AddObsolete (message,defaultArg isError false)
+    member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
-    override this.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
+    override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
-    member this.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
+    member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
 
 
     // Implement overloads
-    override this.FieldType = fieldType
-    override this.GetRawConstantValue()  = literalValue
-    override this.Attributes = FieldAttributes.Static ||| FieldAttributes.Literal ||| FieldAttributes.Public
-    override this.Name = fieldName
-    override this.DeclaringType = declaringType |> nonNull "ProvidedLiteralField.DeclaringType"
-    override this.MemberType : MemberTypes = MemberTypes.Field
+    override __.FieldType = fieldType
+    override __.GetRawConstantValue()  = literalValue
+    override __.Attributes = FieldAttributes.Static ||| FieldAttributes.Literal ||| FieldAttributes.Public
+    override __.Name = fieldName
+    override __.DeclaringType = declaringType |> nonNull "ProvidedLiteralField.DeclaringType"
+    override __.MemberType : MemberTypes = MemberTypes.Field
 
-    override this.ReflectedType                                     = notRequired "ReflectedType" this.Name
-    override this.GetCustomAttributes(_inherit)                  = notRequired "GetCustomAttributes" this.Name
-    override this.GetCustomAttributes(_attributeType, _inherit)   = notRequired "GetCustomAttributes" this.Name
-    override this.IsDefined(_attributeType, _inherit)             = notRequired "IsDefined" this.Name
+    override __.ReflectedType                                     = notRequired "ReflectedType" fieldName
+    override __.GetCustomAttributes(_inherit)                  = notRequired "GetCustomAttributes" fieldName
+    override __.GetCustomAttributes(_attributeType, _inherit)   = notRequired "GetCustomAttributes" fieldName
+    override __.IsDefined(_attributeType, _inherit)             = notRequired "IsDefined" fieldName
 
-    override this.SetValue(_obj, _value, _invokeAttr, _binder, _culture) = notRequired "SetValue" this.Name
-    override this.GetValue(_obj) : obj = notRequired "GetValue" this.Name
-    override this.FieldHandle = notRequired "FieldHandle" this.Name
+    override __.SetValue(_obj, _value, _invokeAttr, _binder, _culture) = notRequired "SetValue" fieldName
+    override __.GetValue(_obj) : obj = notRequired "GetValue" fieldName
+    override __.FieldHandle = notRequired "FieldHandle" fieldName
 
 type ProvidedField(fieldName:string,fieldType:Type) = 
     inherit System.Reflection.FieldInfo()
@@ -900,36 +929,36 @@ type ProvidedField(fieldName:string,fieldType:Type) =
 
     let customAttributesImpl = CustomAttributesImpl()
     let mutable fieldAttrs = FieldAttributes.Private
-    member this.AddXmlDocComputed xmlDoc                    = customAttributesImpl.AddXmlDocComputed xmlDoc
-    member this.AddXmlDocDelayed xmlDoc                     = customAttributesImpl.AddXmlDocDelayed xmlDoc
-    member this.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
-    member this.AddObsoleteAttribute (msg,?isError)         = customAttributesImpl.AddObsolete (msg,defaultArg isError false)
-    member this.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
+    member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
+    member __.AddXmlDocDelayed xmlDocFunction             = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
+    member __.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
+    member __.AddObsoleteAttribute (message,?isError)     = customAttributesImpl.AddObsolete (message,defaultArg isError false)
+    member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
-    override this.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
+    override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
-    member this.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
+    member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
 
-    member this.SetFieldAttributes attrs = fieldAttrs <- attrs
+    member __.SetFieldAttributes attrs = fieldAttrs <- attrs
     // Implement overloads
-    override this.FieldType = fieldType
-    override this.GetRawConstantValue()  = null
-    override this.Attributes = fieldAttrs
-    override this.Name = fieldName
-    override this.DeclaringType = declaringType |> nonNull "ProvidedField.DeclaringType"
-    override this.MemberType : MemberTypes = MemberTypes.Field
+    override __.FieldType = fieldType
+    override __.GetRawConstantValue()  = null
+    override __.Attributes = fieldAttrs
+    override __.Name = fieldName
+    override __.DeclaringType = declaringType |> nonNull "ProvidedField.DeclaringType"
+    override __.MemberType : MemberTypes = MemberTypes.Field
 
-    override this.ReflectedType                                     = notRequired "ReflectedType" this.Name
-    override this.GetCustomAttributes(_inherit)                  = notRequired "GetCustomAttributes" this.Name
-    override this.GetCustomAttributes(_attributeType, _inherit)   = notRequired "GetCustomAttributes" this.Name
-    override this.IsDefined(_attributeType, _inherit)             = notRequired "IsDefined" this.Name
+    override __.ReflectedType                                     = notRequired "ReflectedType" fieldName
+    override __.GetCustomAttributes(_inherit)                  = notRequired "GetCustomAttributes" fieldName
+    override __.GetCustomAttributes(_attributeType, _inherit)   = notRequired "GetCustomAttributes" fieldName
+    override __.IsDefined(_attributeType, _inherit)             = notRequired "IsDefined" fieldName
 
-    override this.SetValue(_obj, _value, _invokeAttr, _binder, _culture) = notRequired "SetValue" this.Name
-    override this.GetValue(_obj) : obj = notRequired "GetValue" this.Name
-    override this.FieldHandle = notRequired "FieldHandle" this.Name
+    override __.SetValue(_obj, _value, _invokeAttr, _binder, _culture) = notRequired "SetValue" fieldName
+    override __.GetValue(_obj) : obj = notRequired "GetValue" fieldName
+    override __.FieldHandle = notRequired "FieldHandle" fieldName
 
 /// Represents the type constructor in a provided symbol type.
 [<NoComparison>]
@@ -960,6 +989,15 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
             | _ -> false
         | a, b -> a.Equals b
 
+    let nameText() = 
+        match kind,args with 
+        | SymbolKind.SDArray,[arg] -> arg.Name + "[]" 
+        | SymbolKind.Array _,[arg] -> arg.Name + "[*]" 
+        | SymbolKind.Pointer,[arg] -> arg.Name + "*" 
+        | SymbolKind.ByRef,[arg] -> arg.Name + "&"
+        | SymbolKind.Generic gty, args -> gty.Name + (sprintf "%A" args)
+        | SymbolKind.FSharpTypeAbbreviation (_,_,path),_ -> path.[path.Length-1]
+        | _ -> failwith "unreachable"
 
     static member convType (parameters: Type list) (ty:Type) = 
         if ty = null then null
@@ -982,7 +1020,7 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
                 ty
         else ty
 
-    override this.FullName =   
+    override __.FullName =   
         match kind,args with 
         | SymbolKind.SDArray,[arg] -> arg.FullName + "[]" 
         | SymbolKind.Array _,[arg] -> arg.FullName + "[*]" 
@@ -994,7 +1032,7 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
    
     /// Although not strictly required by the type provider specification, this is required when doing basic operations like FullName on
     /// .NET symbolic types made from this type, e.g. when building Nullable<SomeProvidedType[]>.FullName
-    override this.DeclaringType =                                                                 
+    override __.DeclaringType =                                                                 
         match kind,args with 
         | SymbolKind.SDArray,[arg] -> arg
         | SymbolKind.Array _,[arg] -> arg
@@ -1004,7 +1042,7 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
         | SymbolKind.FSharpTypeAbbreviation _,_ -> null
         | _ -> failwith "unreachable"
 
-    override this.IsAssignableFrom(otherTy) = 
+    override __.IsAssignableFrom(otherTy) = 
         match kind with
         | Generic gtd ->
             if otherTy.IsGenericType then
@@ -1016,17 +1054,9 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
                     base.IsAssignableFrom(otherTy)
         | _ -> base.IsAssignableFrom(otherTy)
 
-    override this.Name =
-        match kind,args with 
-        | SymbolKind.SDArray,[arg] -> arg.Name + "[]" 
-        | SymbolKind.Array _,[arg] -> arg.Name + "[*]" 
-        | SymbolKind.Pointer,[arg] -> arg.Name + "*" 
-        | SymbolKind.ByRef,[arg] -> arg.Name + "&"
-        | SymbolKind.Generic gty, args -> gty.Name + (sprintf "%A" args)
-        | SymbolKind.FSharpTypeAbbreviation (_,_,path),_ -> path.[path.Length-1]
-        | _ -> failwith "unreachable"
+    override __.Name = nameText()
 
-    override this.BaseType =
+    override __.BaseType =
         match kind with 
         | SymbolKind.SDArray -> typeof<System.Array>
         | SymbolKind.Array _ -> typeof<System.Array>
@@ -1037,31 +1067,31 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
             ProvidedSymbolType.convType args gty.BaseType
         | SymbolKind.FSharpTypeAbbreviation _ -> typeof<obj>
 
-    override this.GetArrayRank() = (match kind with SymbolKind.Array n -> n | SymbolKind.SDArray -> 1 | _ -> invalidOp "non-array type")
-    override this.IsArrayImpl() = (match kind with SymbolKind.Array _ | SymbolKind.SDArray -> true | _ -> false)
-    override this.IsByRefImpl() = (match kind with SymbolKind.ByRef _ -> true | _ -> false)
-    override this.IsPointerImpl() = (match kind with SymbolKind.Pointer _ -> true | _ -> false)
-    override this.IsPrimitiveImpl() = false
-    override this.IsGenericType = (match kind with SymbolKind.Generic _ -> true | _ -> false)
-    override this.GetGenericArguments() = (match kind with SymbolKind.Generic _ -> args |> List.toArray | _ -> invalidOp "non-generic type")
-    override this.GetGenericTypeDefinition() = (match kind with SymbolKind.Generic e -> e | _ -> invalidOp "non-generic type")
-    override this.IsCOMObjectImpl() = false
-    override this.HasElementTypeImpl() = (match kind with SymbolKind.Generic _ -> false | _ -> true)
-    override this.GetElementType() = (match kind,args with (SymbolKind.Array _  | SymbolKind.SDArray | SymbolKind.ByRef | SymbolKind.Pointer),[e] -> e | _ -> invalidOp "not an array, pointer or byref type")
+    override __.GetArrayRank() = (match kind with SymbolKind.Array n -> n | SymbolKind.SDArray -> 1 | _ -> invalidOp "non-array type")
+    override __.IsArrayImpl() = (match kind with SymbolKind.Array _ | SymbolKind.SDArray -> true | _ -> false)
+    override __.IsByRefImpl() = (match kind with SymbolKind.ByRef _ -> true | _ -> false)
+    override __.IsPointerImpl() = (match kind with SymbolKind.Pointer _ -> true | _ -> false)
+    override __.IsPrimitiveImpl() = false
+    override __.IsGenericType = (match kind with SymbolKind.Generic _ -> true | _ -> false)
+    override __.GetGenericArguments() = (match kind with SymbolKind.Generic _ -> args |> List.toArray | _ -> invalidOp "non-generic type")
+    override __.GetGenericTypeDefinition() = (match kind with SymbolKind.Generic e -> e | _ -> invalidOp "non-generic type")
+    override __.IsCOMObjectImpl() = false
+    override __.HasElementTypeImpl() = (match kind with SymbolKind.Generic _ -> false | _ -> true)
+    override __.GetElementType() = (match kind,args with (SymbolKind.Array _  | SymbolKind.SDArray | SymbolKind.ByRef | SymbolKind.Pointer),[e] -> e | _ -> invalidOp "not an array, pointer or byref type")
     override this.ToString() = this.FullName
 
-    override this.Module : Module                                                                  = notRequired "Module" this.Name
-    override this.Assembly = 
+    override __.Assembly = 
         match kind with 
         | SymbolKind.FSharpTypeAbbreviation (assembly,_nsp,_path) -> assembly
         | SymbolKind.Generic gty -> gty.Assembly
-        | _ -> notRequired "Assembly" this.Name
-    override this.Namespace = 
+        | _ -> notRequired "Assembly" (nameText())
+
+    override __.Namespace = 
         match kind with 
         | SymbolKind.FSharpTypeAbbreviation (_assembly,nsp,_path) -> nsp
-        | _ -> notRequired "Namespace" this.Name
+        | _ -> notRequired "Namespace" (nameText())
 
-    override this.GetHashCode()                                                                    = 
+    override __.GetHashCode()                                                                    = 
         match kind,args with 
         | SymbolKind.SDArray,[arg] -> 10 + hash arg
         | SymbolKind.Array _,[arg] -> 163 + hash arg
@@ -1071,55 +1101,56 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
         | SymbolKind.FSharpTypeAbbreviation _,_ -> 3092
         | _ -> failwith "unreachable"
     
-    override this.Equals(other: obj) =
+    override __.Equals(other: obj) =
         match other with
         | :? ProvidedSymbolType as otherTy -> (kind, args) = (otherTy.Kind, otherTy.Args)
         | _ -> false
 
-    member this.Kind = kind
-    member this.Args = args
+    member __.Kind = kind
+    member __.Args = args
     
-    override this.GetConstructors _bindingAttr                                                      = notRequired "GetConstructors" this.Name
-    override this.GetMethodImpl(_name, _bindingAttr, _binderBinder, _callConvention, _types, _modifiers) = 
+    override __.Module : Module                                                                   = notRequired "Module" (nameText())
+    override __.GetConstructors _bindingAttr                                                      = notRequired "GetConstructors" (nameText())
+    override __.GetMethodImpl(_name, _bindingAttr, _binderBinder, _callConvention, _types, _modifiers) = 
         match kind with
         | Generic gtd -> 
             let ty = gtd.GetGenericTypeDefinition().MakeGenericType(Array.ofList args)
             ty.GetMethod(_name, _bindingAttr)
-        | _ -> notRequired "GetMethodImpl" this.Name
-    override this.GetMembers _bindingAttr                                                           = notRequired "GetMembers" this.Name
-    override this.GetMethods _bindingAttr                                                           = notRequired "GetMethods" this.Name
-    override this.GetField(_name, _bindingAttr)                                                      = notRequired "GetField" this.Name
-    override this.GetFields _bindingAttr                                                            = notRequired "GetFields" this.Name
-    override this.GetInterface(_name, _ignoreCase)                                                   = notRequired "GetInterface" this.Name
-    override this.GetInterfaces()                                                                  = notRequired "GetInterfaces" this.Name
-    override this.GetEvent(_name, _bindingAttr)                                                      = notRequired "GetEvent" this.Name
-    override this.GetEvents _bindingAttr                                                            = notRequired "GetEvents" this.Name
-    override this.GetProperties _bindingAttr                                                        = notRequired "GetProperties" this.Name
-    override this.GetPropertyImpl(_name, _bindingAttr, _binder, _returnType, _types, _modifiers)         = notRequired "GetPropertyImpl" this.Name
-    override this.GetNestedTypes _bindingAttr                                                       = notRequired "GetNestedTypes" this.Name
-    override this.GetNestedType(_name, _bindingAttr)                                                 = notRequired "GetNestedType" this.Name
-    override this.GetAttributeFlagsImpl()                                                          = notRequired "GetAttributeFlagsImpl" this.Name
-    override this.UnderlyingSystemType                                                             = 
+        | _ -> notRequired "GetMethodImpl" (nameText())
+    override __.GetMembers _bindingAttr                                                           = notRequired "GetMembers" (nameText())
+    override __.GetMethods _bindingAttr                                                           = notRequired "GetMethods" (nameText())
+    override __.GetField(_name, _bindingAttr)                                                     = notRequired "GetField" (nameText())
+    override __.GetFields _bindingAttr                                                            = notRequired "GetFields" (nameText())
+    override __.GetInterface(_name, _ignoreCase)                                                  = notRequired "GetInterface" (nameText())
+    override __.GetInterfaces()                                                                   = notRequired "GetInterfaces" (nameText())
+    override __.GetEvent(_name, _bindingAttr)                                                     = notRequired "GetEvent" (nameText())
+    override __.GetEvents _bindingAttr                                                            = notRequired "GetEvents" (nameText())
+    override __.GetProperties _bindingAttr                                                        = notRequired "GetProperties" (nameText())
+    override __.GetPropertyImpl(_name, _bindingAttr, _binder, _returnType, _types, _modifiers)    = notRequired "GetPropertyImpl" (nameText())
+    override __.GetNestedTypes _bindingAttr                                                       = notRequired "GetNestedTypes" (nameText())
+    override __.GetNestedType(_name, _bindingAttr)                                                = notRequired "GetNestedType" (nameText())
+    override __.GetAttributeFlagsImpl()                                                           = notRequired "GetAttributeFlagsImpl" (nameText())
+    override __.UnderlyingSystemType = 
         match kind with 
         | SymbolKind.SDArray
         | SymbolKind.Array _
         | SymbolKind.Pointer
         | SymbolKind.FSharpTypeAbbreviation _
-        | SymbolKind.ByRef -> notRequired "UnderlyingSystemType" this.Name
+        | SymbolKind.ByRef -> notRequired "UnderlyingSystemType" (nameText())
         | SymbolKind.Generic gty -> gty.UnderlyingSystemType      
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
-    override this.GetCustomAttributesData()                                                        =  ([| |] :> IList<_>)
+    override __.GetCustomAttributesData()                                                        =  ([| |] :> IList<_>)
 #endif
-    override this.MemberType                                                                       = notRequired "MemberType" this.Name
-    override this.GetMember(_name,_mt,_bindingAttr)                                                = notRequired "GetMember" this.Name
-    override this.GUID                                                                             = notRequired "GUID" this.Name
-    override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "InvokeMember" this.Name
-    override this.AssemblyQualifiedName                                                            = notRequired "AssemblyQualifiedName" this.Name
-    override this.GetConstructorImpl(_bindingAttr, _binder, _callConvention, _types, _modifiers)   = notRequired "GetConstructorImpl" this.Name
-    override this.GetCustomAttributes(_inherit)                                                    = [| |]
-    override this.GetCustomAttributes(_attributeType, _inherit)                                    = [| |]
-    override this.IsDefined(_attributeType, _inherit)                                              = false
+    override __.MemberType                                                                       = notRequired "MemberType" (nameText())
+    override __.GetMember(_name,_mt,_bindingAttr)                                                = notRequired "GetMember" (nameText())
+    override __.GUID                                                                             = notRequired "GUID" (nameText())
+    override __.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "InvokeMember" (nameText())
+    override __.AssemblyQualifiedName                                                            = notRequired "AssemblyQualifiedName" (nameText())
+    override __.GetConstructorImpl(_bindingAttr, _binder, _callConvention, _types, _modifiers)   = notRequired "GetConstructorImpl" (nameText())
+    override __.GetCustomAttributes(_inherit)                                                    = [| |]
+    override __.GetCustomAttributes(_attributeType, _inherit)                                    = [| |]
+    override __.IsDefined(_attributeType, _inherit)                                              = false
     // FSharp.Data addition: this was added to support arrays of arrays
     override this.MakeArrayType() = ProvidedSymbolType(SymbolKind.SDArray, [this]) :> Type
     override this.MakeArrayType arg = ProvidedSymbolType(SymbolKind.Array arg, [this]) :> Type
@@ -1129,40 +1160,44 @@ type ProvidedSymbolMethod(genericMethodDefinition: MethodInfo, parameters: Type 
 
     let convParam (p:ParameterInfo) = 
         { new System.Reflection.ParameterInfo() with
-              override this.Name = p.Name
-              override this.ParameterType = ProvidedSymbolType.convType parameters p.ParameterType
-              override this.Attributes = p.Attributes
-              override this.RawDefaultValue = p.RawDefaultValue
+              override __.Name = p.Name
+              override __.ParameterType = ProvidedSymbolType.convType parameters p.ParameterType
+              override __.Attributes = p.Attributes
+              override __.RawDefaultValue = p.RawDefaultValue
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
               override __.GetCustomAttributesData() = p.GetCustomAttributesData()
 #endif
         } 
+
     override this.IsGenericMethod = 
         (if this.DeclaringType.IsGenericType then this.DeclaringType.GetGenericArguments().Length else 0) < parameters.Length
+
     override this.GetGenericArguments() = 
         Seq.skip (if this.DeclaringType.IsGenericType then this.DeclaringType.GetGenericArguments().Length else 0) parameters |> Seq.toArray 
-    override this.GetGenericMethodDefinition() = genericMethodDefinition
-    override this.DeclaringType = ProvidedSymbolType.convType parameters genericMethodDefinition.DeclaringType
-    override this.ToString() = "Method " + this.Name
-    override this.Name = genericMethodDefinition.Name
-    override this.MetadataToken = genericMethodDefinition.MetadataToken
-    override this.Attributes = genericMethodDefinition.Attributes
-    override this.CallingConvention = genericMethodDefinition.CallingConvention
-    override this.MemberType = genericMethodDefinition.MemberType
 
-    override this.IsDefined(_attributeType, _inherit) : bool = notRequired "IsDefined" this.Name
-    override this.ReturnType = ProvidedSymbolType.convType parameters genericMethodDefinition.ReturnType
-    override this.GetParameters() = genericMethodDefinition.GetParameters() |> Array.map convParam
-    override this.ReturnParameter = genericMethodDefinition.ReturnParameter |> convParam
-    override this.ReturnTypeCustomAttributes                           = notRequired "ReturnTypeCustomAttributes" this.Name
-    override this.GetBaseDefinition()                                  = notRequired "GetBaseDefinition" this.Name
-    override this.GetMethodImplementationFlags()                       = notRequired "GetMethodImplementationFlags" this.Name
-    override this.MethodHandle                                         = notRequired "MethodHandle" this.Name
-    override this.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired "Invoke" this.Name
-    override this.ReflectedType                                        = notRequired "ReflectedType" this.Name
-    override this.GetCustomAttributes(_inherit)                     = notRequired "GetCustomAttributes" this.Name
-    override this.GetCustomAttributes(_attributeType, _inherit)      =  notRequired "GetCustomAttributes" this.Name 
+    override __.GetGenericMethodDefinition() = genericMethodDefinition
+
+    override __.DeclaringType = ProvidedSymbolType.convType parameters genericMethodDefinition.DeclaringType
+    override __.ToString() = "Method " + genericMethodDefinition.Name
+    override __.Name = genericMethodDefinition.Name
+    override __.MetadataToken = genericMethodDefinition.MetadataToken
+    override __.Attributes = genericMethodDefinition.Attributes
+    override __.CallingConvention = genericMethodDefinition.CallingConvention
+    override __.MemberType = genericMethodDefinition.MemberType
+
+    override __.IsDefined(_attributeType, _inherit) : bool = notRequired "IsDefined" genericMethodDefinition.Name
+    override __.ReturnType = ProvidedSymbolType.convType parameters genericMethodDefinition.ReturnType
+    override __.GetParameters() = genericMethodDefinition.GetParameters() |> Array.map convParam
+    override __.ReturnParameter = genericMethodDefinition.ReturnParameter |> convParam
+    override __.ReturnTypeCustomAttributes                           = notRequired "ReturnTypeCustomAttributes" genericMethodDefinition.Name
+    override __.GetBaseDefinition()                                  = notRequired "GetBaseDefinition" genericMethodDefinition.Name
+    override __.GetMethodImplementationFlags()                       = notRequired "GetMethodImplementationFlags" genericMethodDefinition.Name
+    override __.MethodHandle                                         = notRequired "MethodHandle" genericMethodDefinition.Name
+    override __.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired "Invoke" genericMethodDefinition.Name
+    override __.ReflectedType                                        = notRequired "ReflectedType" genericMethodDefinition.Name
+    override __.GetCustomAttributes(_inherit)                     = notRequired "GetCustomAttributes" genericMethodDefinition.Name
+    override __.GetCustomAttributes(_attributeType, _inherit)      =  notRequired "GetCustomAttributes" genericMethodDefinition.Name 
 
 
 
@@ -1173,7 +1208,7 @@ type ProvidedTypeBuilder() =
 [<Class>]
 type ProvidedMeasureBuilder() =
 
-    // TODO: this shouldn't be hardcoded, but without creating a dependency on Microsoft.FSharp.Metadata in F# PowerPack
+    // TODO: this shouldn't be hardcoded, but without creating a dependency on FSharp.Compiler.Service
     // there seems to be no way to check if a type abbreviation exists
     let unitNamesTypeAbbreviations = 
         [ "meter"; "hertz"; "newton"; "pascal"; "joule"; "watt"; "coulomb"; 
@@ -1188,16 +1223,16 @@ type ProvidedMeasureBuilder() =
 
     static let theBuilder = ProvidedMeasureBuilder()
     static member Default = theBuilder
-    member b.One = typeof<Core.CompilerServices.MeasureOne> 
-    member b.Product (m1,m2) = typedefof<Core.CompilerServices.MeasureProduct<_,_>>.MakeGenericType [| m1;m2 |] 
-    member b.Inverse m = typedefof<Core.CompilerServices.MeasureInverse<_>>.MakeGenericType [| m |] 
+    member __.One = typeof<Core.CompilerServices.MeasureOne> 
+    member __.Product (m1,m2) = typedefof<Core.CompilerServices.MeasureProduct<_,_>>.MakeGenericType [| m1;m2 |] 
+    member __.Inverse m = typedefof<Core.CompilerServices.MeasureInverse<_>>.MakeGenericType [| m |] 
     member b.Ratio (m1, m2) = b.Product(m1, b.Inverse m2)
     member b.Square m = b.Product(m, m)
 
     // FSharp.Data change: if the unit is not a valid type, instead 
     // of assuming it's a type abbreviation, which may not be the case and cause a
     // problem later on, check the list of valid abbreviations
-    member b.SI (m:string) = 
+    member __.SI (m:string) = 
         let mLowerCase = m.ToLowerInvariant()
         let abbreviation =            
             if unitNamesTypeAbbreviations.Contains mLowerCase then
@@ -1217,7 +1252,7 @@ type ProvidedMeasureBuilder() =
         | None ->
             typedefof<list<int>>.Assembly.GetType("Microsoft.FSharp.Data.UnitSystems.SI.UnitNames." + mLowerCase)
 
-    member b.AnnotateType (basicType, annotation) = ProvidedSymbolType(Generic basicType, annotation) :> Type
+    member __.AnnotateType (basicType, annotation) = ProvidedSymbolType(Generic basicType, annotation) :> Type
 
 
 
@@ -1294,21 +1329,21 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
             if rootNamespace<>null && rootNamespace.Length=0 then failwith "Use 'null' for global namespace"
             theAssembly
         | TypeContainer.Type superTy -> superTy.Assembly
-        | TypeContainer.TypeToBeDecided -> failwith (sprintf "type '%s' was not added as a member to a declaring type" this.Name)
+        | TypeContainer.TypeToBeDecided -> failwith (sprintf "type '%s' was not added as a member to a declaring type" className)
     
     let rootNamespace =
       lazy 
         match container with
         | TypeContainer.Namespace (_,rootNamespace) -> rootNamespace
         | TypeContainer.Type enclosingTyp           -> enclosingTyp.Namespace
-        | TypeContainer.TypeToBeDecided -> failwith (sprintf "type '%s' was not added as a member to a declaring type" this.Name)
+        | TypeContainer.TypeToBeDecided -> failwith (sprintf "type '%s' was not added as a member to a declaring type" className)
 
     let declaringType =
       lazy
         match container with
         | TypeContainer.Namespace _ -> null
         | TypeContainer.Type enclosingTyp           -> enclosingTyp
-        | TypeContainer.TypeToBeDecided -> failwith (sprintf "type '%s' was not added as a member to a declaring type" this.Name)
+        | TypeContainer.TypeToBeDecided -> failwith (sprintf "type '%s' was not added as a member to a declaring type" className)
 
     let fullName = 
       lazy
@@ -1319,7 +1354,7 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
             match namespaceName with
             | null -> className
             | _    -> namespaceName + "." + className
-        | TypeContainer.TypeToBeDecided -> failwith (sprintf "type '%s' was not added as a member to a declaring type" this.Name)
+        | TypeContainer.TypeToBeDecided -> failwith (sprintf "type '%s' was not added as a member to a declaring type" className)
                                                             
     let patchUpAddedMemberInfo (this:Type) (m:MemberInfo) = 
         match m with
@@ -1333,88 +1368,100 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
         | _ -> ()
 
     let customAttributesImpl = CustomAttributesImpl()
-    member this.AddXmlDocComputed xmlDoc                    = customAttributesImpl.AddXmlDocComputed xmlDoc
-    member this.AddXmlDocDelayed xmlDoc                     = customAttributesImpl.AddXmlDocDelayed xmlDoc
-    member this.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
-    member this.AddObsoleteAttribute (msg,?isError)         = customAttributesImpl.AddObsolete (msg,defaultArg isError false)
-    member this.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
-    member this.HideObjectMethods with set v                = customAttributesImpl.HideObjectMethods <- v
-    member this.NonNullable with set v                      = customAttributesImpl.NonNullable <- v
+
+    member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
+    member __.AddXmlDocDelayed xmlDocFunction             = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
+    member __.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
+    member __.AddObsoleteAttribute (message,?isError)     = customAttributesImpl.AddObsolete (message,defaultArg isError false)
+    member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
+    member __.HideObjectMethods with set v                = customAttributesImpl.HideObjectMethods <- v
+    member __.NonNullable with set v                      = customAttributesImpl.NonNullable <- v
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
-    member this.AddCustomAttribute attribute                = customAttributesImpl.AddCustomAttribute attribute
+    member __.AddCustomAttribute attribute                = customAttributesImpl.AddCustomAttribute attribute
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
-    override this.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
+    override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
-    member this.ResetEnclosingType (ty) = 
+    member __.ResetEnclosingType (ty) = 
         container <- TypeContainer.Type ty
     new (assembly:Assembly,namespaceName,className,baseType) = new ProvidedTypeDefinition(TypeContainer.Namespace (assembly,namespaceName), className, baseType)
     new (className,baseType) = new ProvidedTypeDefinition(TypeContainer.TypeToBeDecided, className, baseType)
     // state ops
 
-    override this.UnderlyingSystemType = typeof<Type>
-    member this.SetEnumUnderlyingType(ty) = enumUnderlyingType <- ty
-    override this.GetEnumUnderlyingType() = if this.IsEnum then enumUnderlyingType else invalidOp "not enum type"
-    member this.SetBaseType t = baseType <- lazy Some t
-    member this.SetBaseTypeDelayed t = baseType <- t
-    member this.SetAttributes x = attributes <- x
+    override __.UnderlyingSystemType = typeof<Type>
+
+    member __.SetEnumUnderlyingType(ty) = enumUnderlyingType <- ty
+
+    override __.GetEnumUnderlyingType() = if this.IsEnum then enumUnderlyingType else invalidOp "not enum type"
+
+    member __.SetBaseType t = baseType <- lazy Some t
+
+    member __.SetBaseTypeDelayed baseTypeFunction = baseType <- lazy (Some (baseTypeFunction()))
+
+    member __.SetAttributes x = attributes <- x
+
     // Add MemberInfos
-    member this.AddMembersDelayed(makeMS : unit -> list<#MemberInfo>) =
-        membersQueue.Add (fun () -> makeMS() |> List.map (fun x -> patchUpAddedMemberInfo this x; x :> MemberInfo ))
-    member this.AddMembers(ms:list<#MemberInfo>) = (* strict *)
-        ms |> List.iter (patchUpAddedMemberInfo this) // strict: patch up now
-        membersQueue.Add (fun () -> ms |> List.map (fun x -> x :> MemberInfo))
-    member this.AddMember(m:MemberInfo) = this.AddMembers [m]    
-    member this.AddMemberDelayed(m : unit -> #MemberInfo) = this.AddMembersDelayed(fun () -> [m()])
+    member __.AddMembersDelayed(membersFunction : unit -> list<#MemberInfo>) =
+        membersQueue.Add (fun () -> membersFunction() |> List.map (fun x -> patchUpAddedMemberInfo this x; x :> MemberInfo ))
 
-    member this.AddAssemblyTypesAsNestedTypesDelayed (assemblyf : unit -> System.Reflection.Assembly)  = 
-            let bucketByPath nodef tipf (items: (string list * 'Value) list) = 
-                // Find all the items with an empty key list and call 'tipf' 
-                let tips = 
-                    [ for (keylist,v) in items do 
-                         match keylist with 
-                         | [] -> yield tipf v
-                         | _ -> () ]
+    member __.AddMembers(memberInfos:list<#MemberInfo>) = (* strict *)
+        memberInfos |> List.iter (patchUpAddedMemberInfo this) // strict: patch up now
+        membersQueue.Add (fun () -> memberInfos |> List.map (fun x -> x :> MemberInfo))
 
-                // Find all the items with a non-empty key list. Bucket them together by
-                // the first key. For each bucket, call 'nodef' on that head key and the bucket.
-                let nodes = 
-                    let buckets = new Dictionary<_,_>(10)
-                    for (keylist,v) in items do
+    member __.AddMember(memberInfo:MemberInfo) = 
+        this.AddMembers [memberInfo]    
+
+    member __.AddMemberDelayed(memberFunction : unit -> #MemberInfo) = 
+        this.AddMembersDelayed(fun () -> [memberFunction()])
+
+    member __.AddAssemblyTypesAsNestedTypesDelayed (assemblyf : unit -> System.Reflection.Assembly)  = 
+        let bucketByPath nodef tipf (items: (string list * 'Value) list) = 
+            // Find all the items with an empty key list and call 'tipf' 
+            let tips = 
+                [ for (keylist,v) in items do 
                         match keylist with 
-                        | [] -> ()
-                        | key::rest -> 
-                            buckets.[key] <- (rest,v) :: (if buckets.ContainsKey key then buckets.[key] else []);
+                        | [] -> yield tipf v
+                        | _ -> () ]
 
-                    [ for (KeyValue(key,items)) in buckets -> nodef key items ]
+            // Find all the items with a non-empty key list. Bucket them together by
+            // the first key. For each bucket, call 'nodef' on that head key and the bucket.
+            let nodes = 
+                let buckets = new Dictionary<_,_>(10)
+                for (keylist,v) in items do
+                    match keylist with 
+                    | [] -> ()
+                    | key::rest -> 
+                        buckets.[key] <- (rest,v) :: (if buckets.ContainsKey key then buckets.[key] else []);
 
-                tips @ nodes
-            this.AddMembersDelayed (fun _ -> 
-                let topTypes = [ for ty in assemblyf().GetTypes() do 
-                                        if not ty.IsNested then
-                                             let namespaceParts = match ty.Namespace with null -> [] | s -> s.Split '.' |> Array.toList
-                                             yield namespaceParts,  ty ]
-                let rec loop types = 
-                    types 
-                    |> bucketByPath
-                        (fun namespaceComponent typesUnderNamespaceComponent -> 
-                            let t = ProvidedTypeDefinition(namespaceComponent, baseType = Some typeof<obj>)
-                            t.AddMembers (loop typesUnderNamespaceComponent)
-                            (t :> Type))
-                        (fun ty -> ty)
-                loop topTypes)
+                [ for (KeyValue(key,items)) in buckets -> nodef key items ]
+
+            tips @ nodes
+        this.AddMembersDelayed (fun _ -> 
+            let topTypes = [ for ty in assemblyf().GetTypes() do 
+                                    if not ty.IsNested then
+                                            let namespaceParts = match ty.Namespace with null -> [] | s -> s.Split '.' |> Array.toList
+                                            yield namespaceParts,  ty ]
+            let rec loop types = 
+                types 
+                |> bucketByPath
+                    (fun namespaceComponent typesUnderNamespaceComponent -> 
+                        let t = ProvidedTypeDefinition(namespaceComponent, baseType = Some typeof<obj>)
+                        t.AddMembers (loop typesUnderNamespaceComponent)
+                        (t :> Type))
+                    (fun ty -> ty)
+            loop topTypes)
 
     /// Abstract a type to a parametric-type. Requires "formal parameters" and "instantiation function".
-    member this.DefineStaticParameters(staticParameters : list<ProvidedStaticParameter>, apply    : (string -> obj[] -> ProvidedTypeDefinition)) =
+    member __.DefineStaticParameters(staticParameters : list<ProvidedStaticParameter>, apply    : (string -> obj[] -> ProvidedTypeDefinition)) =
         staticParams      <- staticParameters 
         staticParamsApply <- Some apply
 
     /// Get ParameterInfo[] for the parametric type parameters (//s GetGenericParameters)
-    member this.GetStaticParameters() = [| for p in staticParams -> p :> ParameterInfo |]
+    member __.GetStaticParameters() = [| for p in staticParams -> p :> ParameterInfo |]
 
     /// Instantiate parametrics type
-    member this.MakeParametricType(name:string,args:obj[]) =
+    member __.MakeParametricType(name:string,args:obj[]) =
         if staticParams.Length>0 then
             if staticParams.Length <> args.Length then
                 failwith (sprintf "ProvidedTypeDefinition: expecting %d static parameters but given %d for type %s" staticParams.Length args.Length (fullName.Force()))
@@ -1425,26 +1472,31 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
         else
             failwith (sprintf "ProvidedTypeDefinition: static parameters supplied but not expected for %s" (fullName.Force()))
 
-    member this.DeclaringTypeImpl
+    member __.DeclaringTypeImpl
         with set x = 
             match container with TypeContainer.TypeToBeDecided -> () | _ -> failwith (sprintf "container type for '%s' was already set to '%s'" this.FullName x.FullName); 
             container <- TypeContainer.Type  x
 
     // Implement overloads
-    override this.Assembly = theAssembly.Force()
-    member this.SetAssembly assembly = theAssembly <- lazy assembly
-    member this.SetAssemblyLazy assembly = theAssembly <- assembly
-    override this.FullName = fullName.Force()
-    override this.Namespace = rootNamespace.Force()
-    override this.BaseType = match baseType.Value with Some ty -> ty | None -> null
+    override __.Assembly = theAssembly.Force()
+
+    member __.SetAssembly assembly = theAssembly <- lazy assembly
+
+    member __.SetAssemblyLazy assembly = theAssembly <- assembly
+
+    override __.FullName = fullName.Force()
+
+    override __.Namespace = rootNamespace.Force()
+
+    override __.BaseType = match baseType.Value with Some ty -> ty | None -> null
     
     // Constructors
-    override this.GetConstructors bindingAttr = 
+    override __.GetConstructors bindingAttr = 
         [| for m in this.GetMembers bindingAttr do                
                 if m.MemberType = MemberTypes.Constructor then
                     yield (m :?> ConstructorInfo) |]
     // Methods
-    override this.GetMethodImpl(name, bindingAttr, _binderBinder, _callConvention, _types, _modifiers) : MethodInfo = 
+    override __.GetMethodImpl(name, bindingAttr, _binderBinder, _callConvention, _types, _modifiers) : MethodInfo = 
         let membersWithName = 
             [ for m in this.GetMembers(bindingAttr) do                
                 if m.MemberType.HasFlag(MemberTypes.Method) && m.Name = name then
@@ -1454,49 +1506,52 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
         | [meth]    -> meth :?> MethodInfo
         | _several   -> failwith "GetMethodImpl. not support overloads"
 
-    override this.GetMethods bindingAttr = 
+    override __.GetMethods bindingAttr = 
         this.GetMembers bindingAttr 
         |> Array.filter (fun m -> m.MemberType.HasFlag(MemberTypes.Method)) 
         |> Array.map (fun m -> m :?> MethodInfo)
 
     // Fields
-    override this.GetField(name, bindingAttr) = 
+    override __.GetField(name, bindingAttr) = 
         let fields = [| for m in this.GetMembers bindingAttr do
                             if m.MemberType.HasFlag(MemberTypes.Field) && (name = null || m.Name = name) then // REVIEW: name = null. Is that a valid query?!
                                 yield m |] 
         if fields.Length > 0 then fields.[0] :?> FieldInfo else null
 
-    override this.GetFields bindingAttr = 
+    override __.GetFields bindingAttr = 
         [| for m in this.GetMembers bindingAttr do if m.MemberType.HasFlag(MemberTypes.Field) then yield m :?> FieldInfo |]
 
-    override this.GetInterface(_name, _ignoreCase) = notRequired "GetInterface" this.Name
+    override __.GetInterface(_name, _ignoreCase) = notRequired "GetInterface" this.Name
 
-    override this.GetInterfaces() = 
+    override __.GetInterfaces() = 
         [| yield! getInterfaces()  |]
 
-    member this.GetInterfaceImplementations() = 
+    member __.GetInterfaceImplementations() = 
         [| yield! getInterfaces() |]
 
-    member this.AddInterfaceImplementation ityp = interfaceImpls.Add ityp
-    member this.AddInterfaceImplementationsDelayed itypf = interfaceImplsDelayed.Add itypf
-    member this.GetMethodOverrides() = 
+    member __.AddInterfaceImplementation ityp = interfaceImpls.Add ityp
+
+    member __.AddInterfaceImplementationsDelayed itypf = interfaceImplsDelayed.Add itypf
+
+    member __.GetMethodOverrides() = 
         [| yield! methodOverrides |]
-    member this.DefineMethodOverride (bodyMethInfo,declMethInfo) = methodOverrides.Add (bodyMethInfo, declMethInfo)
+
+    member __.DefineMethodOverride (bodyMethInfo,declMethInfo) = methodOverrides.Add (bodyMethInfo, declMethInfo)
 
     // Events
-    override this.GetEvent(name, bindingAttr) = 
+    override __.GetEvent(name, bindingAttr) = 
         let events = this.GetMembers bindingAttr 
                      |> Array.filter(fun m -> m.MemberType.HasFlag(MemberTypes.Event) && (name = null || m.Name = name)) 
         if events.Length > 0 then events.[0] :?> EventInfo else null
 
-    override this.GetEvents bindingAttr = 
+    override __.GetEvents bindingAttr = 
         [| for m in this.GetMembers bindingAttr do if m.MemberType.HasFlag(MemberTypes.Event) then yield downcast m |]    
 
     // Properties
-    override this.GetProperties bindingAttr = 
+    override __.GetProperties bindingAttr = 
         [| for m in this.GetMembers bindingAttr do if m.MemberType.HasFlag(MemberTypes.Property) then yield downcast m |]
 
-    override this.GetPropertyImpl(name, bindingAttr, binder, returnType, types, modifiers) = 
+    override __.GetPropertyImpl(name, bindingAttr, binder, returnType, types, modifiers) = 
         if returnType <> null then failwith "Need to handle specified return type in GetPropertyImpl"
         if types      <> null then failwith "Need to handle specified parameter types in GetPropertyImpl"
         if modifiers  <> null then failwith "Need to handle specified modifiers in GetPropertyImpl"
@@ -1507,10 +1562,10 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
         else
             null
     // Nested Types
-    override this.MakeArrayType() = ProvidedSymbolType(SymbolKind.SDArray, [this]) :> Type
-    override this.MakeArrayType arg = ProvidedSymbolType(SymbolKind.Array arg, [this]) :> Type
-    override this.MakePointerType() = ProvidedSymbolType(SymbolKind.Pointer, [this]) :> Type
-    override this.MakeByRefType() = ProvidedSymbolType(SymbolKind.ByRef, [this]) :> Type
+    override __.MakeArrayType() = ProvidedSymbolType(SymbolKind.SDArray, [this]) :> Type
+    override __.MakeArrayType arg = ProvidedSymbolType(SymbolKind.Array arg, [this]) :> Type
+    override __.MakePointerType() = ProvidedSymbolType(SymbolKind.Pointer, [this]) :> Type
+    override __.MakeByRefType() = ProvidedSymbolType(SymbolKind.ByRef, [this]) :> Type
 
     // FSharp.Data addition: this method is used by Debug.fs and QuotationBuilder.fs
     // Emulate the F# type provider type erasure mechanism to get the 
@@ -1548,7 +1603,7 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
 
     // The binding attributes are always set to DeclaredOnly ||| Static ||| Instance ||| Public when GetMembers is called directly by the F# compiler
     // However, it's possible for the framework to generate other sets of flags in some corner cases (e.g. via use of `enum` with a provided type as the target)
-    override this.GetMembers bindingAttr = 
+    override __.GetMembers bindingAttr = 
         let mems = 
             getMembers() 
             |> Array.filter (fun mem -> 
@@ -1578,14 +1633,14 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
             let baseMems = (ProvidedTypeDefinition.EraseType this.BaseType).GetMembers bindingAttr
             Array.append mems baseMems
 
-    override this.GetNestedTypes bindingAttr = 
+    override __.GetNestedTypes bindingAttr = 
         this.GetMembers bindingAttr 
         |> Array.filter(fun m -> 
             m.MemberType.HasFlag(MemberTypes.NestedType) || 
             // Allow 'fake' nested types that are actually real .NET types
             m.MemberType.HasFlag(MemberTypes.TypeInfo)) |> Array.map(fun m -> m :?> Type)
 
-    override this.GetMember(name,mt,_bindingAttr) = 
+    override __.GetMember(name,mt,_bindingAttr) = 
         let mt = 
             if mt &&& MemberTypes.NestedType = MemberTypes.NestedType then 
                 mt ||| MemberTypes.TypeInfo 
@@ -1593,7 +1648,7 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
                 mt
         getMembers() |> Array.filter(fun m->0<>(int(m.MemberType &&& mt)) && m.Name = name)
         
-    override this.GetNestedType(name, bindingAttr) = 
+    override __.GetNestedType(name, bindingAttr) = 
         let nt = this.GetMember(name, MemberTypes.NestedType ||| MemberTypes.TypeInfo, bindingAttr)
         match nt.Length with
         | 0 -> null
@@ -1601,44 +1656,44 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
         | _ -> failwith (sprintf "There is more than one nested type called '%s' in type '%s'" name this.FullName)
 
     // Attributes, etc..
-    override this.GetAttributeFlagsImpl() = adjustTypeAttributes attributes this.IsNested 
-    override this.IsArrayImpl() = false
-    override this.IsByRefImpl() = false
-    override this.IsPointerImpl() = false
-    override this.IsPrimitiveImpl() = false
-    override this.IsCOMObjectImpl() = false
-    override this.HasElementTypeImpl() = false
-    override this.Name = className
-    override this.DeclaringType = declaringType.Force()
-    override this.MemberType = if this.IsNested then MemberTypes.NestedType else MemberTypes.TypeInfo      
-    override this.GetHashCode() = rootNamespace.GetHashCode() ^^^ className.GetHashCode()
-    override this.Equals(that:obj) = 
+    override __.GetAttributeFlagsImpl() = adjustTypeAttributes attributes this.IsNested 
+    override __.IsArrayImpl() = false
+    override __.IsByRefImpl() = false
+    override __.IsPointerImpl() = false
+    override __.IsPrimitiveImpl() = false
+    override __.IsCOMObjectImpl() = false
+    override __.HasElementTypeImpl() = false
+    override __.Name = className
+    override __.DeclaringType = declaringType.Force()
+    override __.MemberType = if this.IsNested then MemberTypes.NestedType else MemberTypes.TypeInfo      
+    override __.GetHashCode() = rootNamespace.GetHashCode() ^^^ className.GetHashCode()
+    override __.Equals(that:obj) = 
         match that with
         | null              -> false
         | :? ProvidedTypeDefinition as ti -> System.Object.ReferenceEquals(this,ti)
         | _                 -> false
 
-    override this.GetGenericArguments() = [||] 
-    override this.ToString() = this.Name
+    override __.GetGenericArguments() = [||] 
+    override __.ToString() = this.Name
     
 
-    override this.Module : Module = notRequired "Module" this.Name
-    override this.GUID                                                                                   = Guid.Empty
-    override this.GetConstructorImpl(_bindingAttr, _binder, _callConvention, _types, _modifiers)         = null
-    override this.GetCustomAttributes(_inherit)                                                          = [| |]
-    override this.GetCustomAttributes(_attributeType, _inherit)                                          = [| |]
-    override this.IsDefined(_attributeType: Type, _inherit)                                              = false
+    override __.Module : Module = notRequired "Module" this.Name
+    override __.GUID                                                                                   = Guid.Empty
+    override __.GetConstructorImpl(_bindingAttr, _binder, _callConvention, _types, _modifiers)         = null
+    override __.GetCustomAttributes(_inherit)                                                          = [| |]
+    override __.GetCustomAttributes(_attributeType, _inherit)                                          = [| |]
+    override __.IsDefined(_attributeType: Type, _inherit)                                              = false
 
-    override this.GetElementType()                                                                                  = notRequired "Module" this.Name
-    override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "Module" this.Name
-    override this.AssemblyQualifiedName                                                                             = notRequired "Module" this.Name
-    member this.IsErased 
+    override __.GetElementType()                                                                                  = notRequired "Module" this.Name
+    override __.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "Module" this.Name
+    override __.AssemblyQualifiedName                                                                             = notRequired "Module" this.Name
+    member __.IsErased 
         with get() = (attributes &&& enum (int32 TypeProviderTypeAttributes.IsErased)) <> enum 0
         and set v = 
            if v then attributes <- attributes ||| enum (int32 TypeProviderTypeAttributes.IsErased)
            else attributes <- attributes &&& ~~~(enum (int32 TypeProviderTypeAttributes.IsErased))
 
-    member this.SuppressRelocation 
+    member __.SuppressRelocation 
         with get() = (attributes &&& enum (int32 TypeProviderTypeAttributes.SuppressRelocate)) <> enum 0
         and set v = 
            if v then attributes <- attributes ||| enum (int32 TypeProviderTypeAttributes.SuppressRelocate)
@@ -1665,6 +1720,7 @@ type AssemblyGenerator(assemblyFileName) =
         sprintf "Lambda%O" (Guid.NewGuid()) 
 
     member __.Assembly = assembly :> Assembly
+
     /// Emit the given provided type definitions into an assembly and adjust 'Assembly' property of all type definitions to return that
     /// assembly.
     member __.Generate(providedTypeDefinitions:(ProvidedTypeDefinition * string list option) list) = 
@@ -2491,8 +2547,6 @@ module Local =
                 match types |> Array.tryFind (fun ty -> ty.Name = typeName) with
                 | Some ty -> ty
                 | None    -> null
-                // let typenames = String.concat "," (types |> Array.map (fun t -> t.Name))
-                //             failwith (sprintf "Unknown type '%s' in namespace '%s' (contains %s)" typeName namespaceName typenames)    
         }
 
 
@@ -2524,7 +2578,7 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
     new () = new TypeProviderForNamespaces([])
 
     [<CLIEvent>]
-    member this.Disposing = disposing.Publish
+    member __.Disposing = disposing.Publish
 
 #if FX_NO_LOCAL_FILESYSTEM
     interface System.IDisposable with 
@@ -2532,7 +2586,8 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
             disposing.Trigger(x, EventArgs.Empty)
 #else
     abstract member ResolveAssembly : args : System.ResolveEventArgs -> Assembly
-    default this.ResolveAssembly(args) = 
+
+    default __.ResolveAssembly(args) = 
         let expectedName = (AssemblyName(args.Name)).Name + ".dll"
         let expectedLocationOpt = 
             probingFolders 
@@ -2542,12 +2597,13 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
         | Some f -> Assembly.LoadFrom f
         | None -> null
 
-    member this.RegisterProbingFolder (folder) = 
+    member __.RegisterProbingFolder (folder) = 
         // use GetFullPath to ensure that folder is valid
         ignore(IO.Path.GetFullPath folder)
         probingFolders.Add folder
-    member this.RegisterRuntimeAssemblyLocationAsProbingFolder (cfg : Core.CompilerServices.TypeProviderConfig) =  
-        cfg.RuntimeAssembly
+
+    member __.RegisterRuntimeAssemblyLocationAsProbingFolder (config : TypeProviderConfig) =  
+        config.RuntimeAssembly
         |> IO.Path.GetDirectoryName
         |> this.RegisterProbingFolder
 
@@ -2558,13 +2614,31 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
 #endif
 
     member __.AddNamespace (namespaceName,types:list<_>) = otherNamespaces.Add (namespaceName,types)
+
     // FSharp.Data addition: this method is used by Debug.fs
     member __.Namespaces = Seq.readonly otherNamespaces
-    member self.Invalidate() = invalidateE.Trigger(self,EventArgs())
+
+    member this.Invalidate() = invalidateE.Trigger(this,EventArgs())
+
+    member __.GetStaticParametersForMethod(mb: MethodBase) =
+        printfn "In GetStaticParametersForMethod"
+        match mb with
+        | :? ProvidedMethod as t -> t.GetStaticParameters()
+        | _ -> [| |]
+
+    member __.ApplyStaticArgumentsForMethod(mb: MethodBase, mangledName, objs) = 
+        printfn "In ApplyStaticArgumentsForMethod"
+        match mb with
+        | :? ProvidedMethod as t -> t.ApplyStaticArguments(mangledName, objs) :> MethodBase
+        | _ -> failwith (sprintf "ApplyStaticArguments: static parameters for method %s are unexpected" mb.Name)
+
     interface ITypeProvider with
+
         [<CLIEvent>]
-        override this.Invalidate = invalidateE.Publish
-        override this.GetNamespaces() = Array.copy providedNamespaces.Value
+        override __.Invalidate = invalidateE.Publish
+
+        override __.GetNamespaces() = Array.copy providedNamespaces.Value
+
         member __.GetInvokerExpression(methodBase, parameters) =
             let rec getInvokerExpression (methodBase : MethodBase) parameters =
                 match methodBase with
@@ -2619,7 +2693,7 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
 
 
 #endif
-        override this.GetStaticParameters(ty) =
+        override __.GetStaticParameters(ty) =
             match ty with
             | :? ProvidedTypeDefinition as t ->
                 if ty.Name = t.Name (* REVIEW: use equality? *) then
@@ -2628,14 +2702,14 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
                     [| |]
             | _ -> [| |]
 
-        override this.ApplyStaticArguments(ty,typePathAfterArguments:string[],objs) = 
+        override __.ApplyStaticArguments(ty,typePathAfterArguments:string[],objs) = 
             let typePathAfterArguments = typePathAfterArguments.[typePathAfterArguments.Length-1]
             match ty with
             | :? ProvidedTypeDefinition as t -> (t.MakeParametricType(typePathAfterArguments,objs) :> Type)
             | _ -> failwith (sprintf "ApplyStaticArguments: static params for type %s are unexpected" ty.FullName)
 
 #if FX_NO_LOCAL_FILESYSTEM
-        override x.GetGeneratedAssemblyContents(_assembly) = 
+        override __.GetGeneratedAssemblyContents(_assembly) = 
             // TODO: this is very fake, we rely on the fact it is never needed
             match System.Windows.Application.GetResourceStream(System.Uri("FSharp.Core.dll",System.UriKind.Relative)) with 
             | null -> failwith "FSharp.Core.dll not found as Manifest Resource, we're just trying to read some random .NET assembly, ok?"
@@ -2651,7 +2725,7 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
 
             //failwith "no file system"
 #else
-        override x.GetGeneratedAssemblyContents(assembly:Assembly) = 
+        override __.GetGeneratedAssemblyContents(assembly:Assembly) = 
             //printfn "looking up assembly '%s'" assembly.FullName
             match GlobalProvidedAssemblyElementsTable.theTable.TryGetValue assembly with 
             | true,bytes -> bytes.Force()
