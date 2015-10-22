@@ -1130,7 +1130,7 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
     override __.GetNestedTypes _bindingAttr                                                       = notRequired "GetNestedTypes" (nameText())
     override __.GetNestedType(_name, _bindingAttr)                                                = notRequired "GetNestedType" (nameText())
     override __.GetAttributeFlagsImpl()                                                           = notRequired "GetAttributeFlagsImpl" (nameText())
-    override this.UnderlyingSystemType = 
+    override __.UnderlyingSystemType = 
         match kind with 
         | SymbolKind.SDArray
         | SymbolKind.Array _
