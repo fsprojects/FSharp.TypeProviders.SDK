@@ -1130,14 +1130,14 @@ type ProvidedSymbolType(kind: SymbolKind, args: Type list) =
     override __.GetNestedTypes _bindingAttr                                                       = notRequired "GetNestedTypes" (nameText())
     override __.GetNestedType(_name, _bindingAttr)                                                = notRequired "GetNestedType" (nameText())
     override __.GetAttributeFlagsImpl()                                                           = notRequired "GetAttributeFlagsImpl" (nameText())
-    override __.UnderlyingSystemType = 
+    override this.UnderlyingSystemType = 
         match kind with 
         | SymbolKind.SDArray
         | SymbolKind.Array _
         | SymbolKind.Pointer
         | SymbolKind.FSharpTypeAbbreviation _
-        | SymbolKind.ByRef -> notRequired "UnderlyingSystemType" (nameText())
-        | SymbolKind.Generic gty -> gty.UnderlyingSystemType      
+        | SymbolKind.ByRef -> upcast this
+        | SymbolKind.Generic gty -> gty.UnderlyingSystemType  
 #if FX_NO_CUSTOMATTRIBUTEDATA
 #else
     override __.GetCustomAttributesData()                                                        =  ([| |] :> IList<_>)
