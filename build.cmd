@@ -1,9 +1,14 @@
 @echo off
-if not exist packages\FAKE\tools\Fake.exe ( 
-  .nuget\nuget.exe install FAKE -OutputDirectory packages -ExcludeVersion
+cls
+
+.paket\paket.bootstrapper.exe
+if errorlevel 1 (
+  exit /b %errorlevel%
 )
-if not exist packages\NUnit.Runners\tools\nunit.exe ( 
-  .nuget\nuget.exe install Nunit.Runners -OutputDirectory packages -ExcludeVersion -Version 2.6.4
+
+.paket\paket.exe restore
+if errorlevel 1 (
+  exit /b %errorlevel%
 )
 
 packages\FAKE\tools\FAKE.exe build.fsx %*
