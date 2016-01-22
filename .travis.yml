@@ -3,9 +3,8 @@ mono:
   - latest
   - 3.2.8
 
-env:
- global:
-  - EnableNuGetPackageRestore=true 
+sudo: false  # use the new container-based Travis infrastructure 
 
-script:
- - ./build.sh RunTests
+script: 
+  - chmod u+x ./build.sh
+  - ./build.sh RunTests
