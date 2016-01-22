@@ -3,7 +3,7 @@
 // --------------------------------------------------------------------------------------
 
 #I "packages/FAKE/tools"
-#r "packages/FAKE/tools/FakeLib.dll"
+#r "FakeLib.dll"
 
 open System
 open System.IO
@@ -11,6 +11,8 @@ open Fake
 open Fake.AssemblyInfoFile
 open Fake.Git
 open Fake.FscHelper
+open Fake.Testing
+
 
 // --------------------------------------------------------------------------------------
 // Information about the project to be used at NuGet
@@ -57,7 +59,7 @@ let workingDir = "./temp/"
 let srcDir = "src"
 let exampleDir =  "examples"
 let testDir =  "test"
-let nunitDir = "packages" @@ "Nunit.Runners" @@ "tools"
+let nunitDir = "packages/NUnit/lib/net45"
 
 // --------------------------------------------------------------------------------------
 // Clean build results
@@ -119,7 +121,7 @@ Target "Examples" (fun _ ->
 
 Target "RunTests" (fun _ ->
     !! (testDir @@ "*.Tests.dll")
-    |> NUnit id
+    |> NUnit3 id
 )
 
 // --------------------------------------------------------------------------------------

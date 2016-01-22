@@ -1,5 +1,5 @@
 #if INTERACTIVE
-#r @"../packages/Nunit.Runners/tools/nunit.framework.dll"
+#r @"../packages/NUnit/lib/net45/nunit.framework.dll"
 #r @"../test/ErasedWithConstructor.dll"
 #endif
 

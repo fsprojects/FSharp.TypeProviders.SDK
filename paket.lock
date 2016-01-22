@@ -3,4 +3,5 @@ NUGET
   specs:
     FAKE (4.16.0)
     Nuget.CommandLine (3.3.0)
-    Nunit.Runners (2.6.4)
+    NUnit (3.0.1)
+    NUnit.Console (3.0.1)

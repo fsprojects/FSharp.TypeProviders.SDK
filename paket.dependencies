@@ -2,4 +2,6 @@ source https://api.nuget.org/v3/index.json
 
 nuget Nuget.CommandLine
 nuget FAKE
-nuget Nunit.Runners 2.6.4
+
+nuget NUnit
+nuget NUnit.Console
