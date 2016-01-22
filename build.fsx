@@ -11,7 +11,7 @@ open Fake
 open Fake.AssemblyInfoFile
 open Fake.Git
 open Fake.FscHelper
-open Fake.Testing.NUnit3
+open Fake.Testing
 
 
 // --------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ let workingDir = "./temp/"
 let srcDir = "src"
 let exampleDir =  "examples"
 let testDir =  "test"
-let nunitDir = "packages" @@ "Nunit" @@ "lib" @@ "net45"
+let nunitDir = "packages/NUnit/lib/net45"
 
 // --------------------------------------------------------------------------------------
 // Clean build results
