@@ -18,3 +18,4 @@ ProvidedTypes.exe
 .fake/
 .vs/
 .paket/
+test
