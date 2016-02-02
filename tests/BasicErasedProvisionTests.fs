@@ -97,14 +97,14 @@ let testCrossTargeting (refs: string list) provider args =
 
 [<Test>]
 let ``ErasingProvider generates for .NET 4.5 F# 3.1 correctly``() : unit  = 
-    let res = testCrossTargeting Targets.DotNet45FSharp31Refs ErasingProvider [| |]
+    let res = testCrossTargeting Targets.DotNet45FSharp31Refs (fun args -> new ErasingProvider(args)) [| |]
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
     Assert.True(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
 
 [<Test>]
 let ``ErasingProvider generates for .NET 4.5 F# 4.0 correctly``() : unit  = 
-    let res = testCrossTargeting Targets.DotNet45FSharp40Refs ErasingProvider [| |]
+    let res = testCrossTargeting Targets.DotNet45FSharp40Refs (fun args -> new ErasingProvider(args)) [| |]
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.True(res.Contains "[FSharp.Core, Version=4.4.0.0")
@@ -115,7 +115,7 @@ let ``ErasingProvider generates for .NET 4.5 F# 4.0 correctly``() : unit  =
 let ``ErasingProvider generates for Portable Profile 259 F# 3.1 correctly``() : unit = 
   // disabled on Linux for now because the standard packages don't come with F# PCL FSharp.Core.dll for this profile
   if Environment.OSVersion.Platform <> PlatformID.Unix then 
-    let res = testCrossTargeting Targets.Portable259FSharp31Refs ErasingProvider [| |]
+    let res = testCrossTargeting Targets.Portable259FSharp31Refs (fun args -> new ErasingProvider(args)) [| |]
     Assert.True(res.Contains "[FSharp.Core, Version=3.259.3.1")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
@@ -124,7 +124,7 @@ let ``ErasingProvider generates for Portable Profile 259 F# 3.1 correctly``() : 
 let ``ErasingProvider generates for Portable Profile 259 F# 4.0 correctly``() : unit = 
   // disabled on Linux for now because the standard packages don't come with F# PCL FSharp.Core.dll for this profile
   if Environment.OSVersion.Platform <> PlatformID.Unix then 
-    let res = testCrossTargeting Targets.Portable259FSharp40Refs ErasingProvider [| |]
+    let res = testCrossTargeting Targets.Portable259FSharp40Refs (fun args -> new ErasingProvider(args)) [| |]
     Assert.True(res.Contains "[FSharp.Core, Version=3.259.4.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
@@ -134,7 +134,7 @@ let ``ErasingProvider generates for Portable Profile 259 F# 4.0 correctly``() : 
 let ``ErasingProvider generates for Portable Profile 7 F# 4.0 correctly``() : unit = 
   // disabled on Linux for now because the standard packages don't come with F# PCL FSharp.Core.dll for this profile
   if Environment.OSVersion.Platform <> PlatformID.Unix then 
-    let res = testCrossTargeting Targets.Portable7FSharp40Refs ErasingProvider [| |]
+    let res = testCrossTargeting Targets.Portable7FSharp40Refs (fun args -> new ErasingProvider(args)) [| |]
     Assert.True(res.Contains "[FSharp.Core, Version=3.7.4.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
@@ -143,21 +143,21 @@ let ``ErasingProvider generates for Portable Profile 7 F# 4.0 correctly``() : un
 let ``ErasingProviderWithStaticParams generates for Portable Profile 7 F# 4.0 correctly``() : unit = 
   // disabled on Linux for now because the standard packages don't come with F# PCL FSharp.Core.dll for this profile
   if Environment.OSVersion.Platform <> PlatformID.Unix then 
-    let res = testCrossTargeting Targets.Portable7FSharp40Refs ErasingProviderWithStaticParams [| box 3 |]
+    let res = testCrossTargeting Targets.Portable7FSharp40Refs (fun args -> new ErasingProviderWithStaticParams(args)) [| box 3 |]
     Assert.True(res.Contains "[FSharp.Core, Version=3.7.4.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
 
 [<Test>]
 let ``ErasingConstructorProvider generates for .NET 4.5 F# 3.1 correctly``() : unit  = 
-    let res = testCrossTargeting Targets.DotNet45FSharp31Refs ErasingConstructorProvider [| |]
+    let res = testCrossTargeting Targets.DotNet45FSharp31Refs (fun args -> new ErasingConstructorProvider(args)) [| |]
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
     Assert.True(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
 
 [<Test>]
 let ``ErasingConstructorProvider generates for .NET 4.5 F# 4.0 correctly``() : unit  = 
-    let res = testCrossTargeting Targets.DotNet45FSharp40Refs ErasingConstructorProvider [| |]
+    let res = testCrossTargeting Targets.DotNet45FSharp40Refs (fun args -> new ErasingConstructorProvider(args)) [| |]
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.True(res.Contains "[FSharp.Core, Version=4.4.0.0")
@@ -168,7 +168,7 @@ let ``ErasingConstructorProvider generates for .NET 4.5 F# 4.0 correctly``() : u
 let ``ErasingConstructorProvider generates for Portable Profile 259 F# 3.1 correctly``() : unit = 
   // disabled on Linux for now because the standard packages don't come with F# PCL FSharp.Core.dll for this profile
   if Environment.OSVersion.Platform <> PlatformID.Unix then 
-    let res = testCrossTargeting Targets.Portable259FSharp31Refs ErasingConstructorProvider [| |]
+    let res = testCrossTargeting Targets.Portable259FSharp31Refs (fun args -> new ErasingConstructorProvider(args)) [| |]
     Assert.True(res.Contains "[FSharp.Core, Version=3.259.3.1")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
@@ -177,7 +177,7 @@ let ``ErasingConstructorProvider generates for Portable Profile 259 F# 3.1 corre
 let ``ErasingConstructorProvider generates for Portable Profile 259 F# 4.0 correctly``() : unit = 
   // disabled on Linux for now because the standard packages don't come with F# PCL FSharp.Core.dll for this profile
   if Environment.OSVersion.Platform <> PlatformID.Unix then 
-    let res = testCrossTargeting Targets.Portable259FSharp40Refs ErasingConstructorProvider [| |]
+    let res = testCrossTargeting Targets.Portable259FSharp40Refs (fun args -> new ErasingConstructorProvider(args)) [| |]
     Assert.True(res.Contains "[FSharp.Core, Version=3.259.4.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
@@ -187,7 +187,7 @@ let ``ErasingConstructorProvider generates for Portable Profile 259 F# 4.0 corre
 let ``ErasingConstructorProvider generates for Portable Profile 7 F# 4.0 correctly``() : unit = 
   // disabled on Linux for now because the standard packages don't come with F# PCL FSharp.Core.dll for this profile
   if Environment.OSVersion.Platform <> PlatformID.Unix then 
-    let res = testCrossTargeting Targets.Portable7FSharp40Refs ErasingConstructorProvider [| |]
+    let res = testCrossTargeting Targets.Portable7FSharp40Refs (fun args -> new ErasingConstructorProvider(args)) [| |]
     Assert.True(res.Contains "[FSharp.Core, Version=3.7.4.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
