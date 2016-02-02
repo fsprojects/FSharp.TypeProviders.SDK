@@ -1,8 +1,8 @@
 #if INTERACTIVE
-#load "../src/ProvidedTypes.fsi"
-#load "../src/ProvidedTypes.fs"
+#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" "../src/AssemblyReader.fs" "../src/AssemblyReaderReflection.fs" "../src/AssemblyReplacer.fs" "../src/ProvidedTypesContext.fs" 
 #endif
 
+open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 open System.Reflection
@@ -13,11 +13,11 @@ type BasicProvider (config : TypeProviderConfig) as this =
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
+    let ctxt = ProvidedTypesContext.Create(config)
 
     let createTypes () =
-        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let myProp = ProvidedProperty("MyProperty", typeof<string>, IsStatic = true,
-                                        GetterCode = (fun args -> <@@ "Hello world" @@>))
+        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", typeof<obj>)
+        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, IsStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
         myType.AddMember(myProp)
         [myType]
 

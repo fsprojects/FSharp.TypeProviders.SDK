@@ -20,12 +20,14 @@ open Microsoft.FSharp.Core.CompilerServices
 /// Represents an erased provided parameter
 type ProvidedParameter =
     inherit ParameterInfo
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedParameter to create a provided parameter. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new : parameterName: string * parameterType: Type * ?isOut:bool * ?optionalValue:obj -> ProvidedParameter
     member IsParamArray : bool with get,set
 
 /// Represents a provided static parameter.
 type ProvidedStaticParameter =
     inherit ParameterInfo
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedStaticParameter to create a provided static parameter. Some argument names and values may need adjusting.", 8796)>]
     new : parameterName: string * parameterType:Type * ?parameterDefaultValue:obj -> ProvidedStaticParameter
 
     /// Add XML documentation information to this provided constructor
@@ -39,6 +41,7 @@ type ProvidedConstructor =
     inherit ConstructorInfo
 
     /// Create a new provided constructor. It is not initially associated with any specific provided type definition.
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedConstructor. Some argument names and values may need adjusting.", 8796)>]
     new : parameters: ProvidedParameter list -> ProvidedConstructor
 
     /// Add a 'Obsolete' attribute to this provided constructor
@@ -76,6 +79,7 @@ type ProvidedMethod =
     inherit MethodInfo
 
     /// Create a new provided method. It is not initially associated with any specific provided type definition.
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedMethod to create a provided method. Some argument names and values may need adjusting.", 8796)>]
     new : methodName:string * parameters: ProvidedParameter list * returnType: Type -> ProvidedMethod
 
     /// Add XML documentation information to this provided method
@@ -118,7 +122,8 @@ type ProvidedMethod =
 type ProvidedProperty =
     inherit PropertyInfo
 
-    /// Create a new provided type. It is not initially associated with any specific provided type definition.
+    /// Create a new provided property. It is not initially associated with any specific provided type definition.
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedProperty to create a provided property. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new  : propertyName: string * propertyType: Type * ?parameters:ProvidedParameter list -> ProvidedProperty
 
     /// Add a 'Obsolete' attribute to this provided property
@@ -184,7 +189,8 @@ type ProvidedLiteralField =
     inherit FieldInfo
 
     /// Create a new provided field. It is not initially associated with any specific provided type definition.
-    new  : fieldName: string * fieldType: Type * literalValue: obj -> ProvidedLiteralField
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedLiteralField. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
+    new : fieldName: string * fieldType: Type * literalValue: obj -> ProvidedLiteralField
 
     /// Add a 'Obsolete' attribute to this provided field
     member AddObsoleteAttribute : message: string * ?isError: bool -> unit    
@@ -207,6 +213,7 @@ type ProvidedField =
     inherit FieldInfo
 
     /// Create a new provided field. It is not initially associated with any specific provided type definition.
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedField. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new  : fieldName: string * fieldType: Type -> ProvidedField
 
     /// Add a 'Obsolete' attribute to this provided field
@@ -307,9 +314,11 @@ type ProvidedTypeDefinition =
     inherit Type
 
     /// Create a new provided type definition in a namespace. 
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedTypeDefinition to create a provided type definition. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new : assembly: Assembly * namespaceName: string * className: string * baseType: Type option -> ProvidedTypeDefinition
 
     /// Create a new provided type definition, to be located as a nested type in some type definition.
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedTypeDefinition to create a provided type definition. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new : className : string * baseType: Type option -> ProvidedTypeDefinition
 
     /// Add the given type as an implemented interface.

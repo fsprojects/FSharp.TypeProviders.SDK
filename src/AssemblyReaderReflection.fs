@@ -80,10 +80,8 @@ module Utils =
     let optionToNull x = match x with None -> null | Some x -> x
     let uoptionToNull x = match x with UNone -> null | USome x -> x
     let notRequired msg = 
-       printfn "--------------------"
-       printfn "SHOULD NOT BE REQUIRED! %s. Stack trace:\n%s" msg (System.Diagnostics.StackTrace().ToString())
-       printfn "--------------------"
-       failwith ("not required: " + msg)
+       failwith (sprintf "SHOULD NOT BE REQUIRED! %s. Stack trace:\n%s" msg (System.Diagnostics.StackTrace().ToString()))
+
     // A table tracking how wrapped type definition objects are translated to cloned objects.
     // Unique wrapped type definition objects must be translated to unique wrapper objects, based 
     // on object identity.
@@ -418,6 +416,8 @@ and ContextTypeSymbol(kind: ContextTypeSymbolKind, args: Type[]) =
 
         | _ -> notRequired "ContextTypeSymbol: GetConstructorImpl" this.Name
 
+    override this.AssemblyQualifiedName                                                            = "[" + this.Assembly.FullName + "]" + this.FullName
+
     override this.GetMembers _bindingAttr                                                           = notRequired "GetMembers" this.Name
     override this.GetMethods _bindingAttr                                                           = notRequired "GetMethods" this.Name
     override this.GetField(_name, _bindingAttr)                                                     = notRequired "GetField" this.Name
@@ -439,7 +439,6 @@ and ContextTypeSymbol(kind: ContextTypeSymbolKind, args: Type[]) =
     override this.GetMember(_name,_mt,_bindingAttr)                                                = notRequired "GetMember" this.Name
     override this.GUID                                                                             = notRequired "GUID" this.Name
     override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "InvokeMember" this.Name
-    override this.AssemblyQualifiedName                                                            = notRequired "AssemblyQualifiedName" this.Name
     override this.GetCustomAttributes(_inherit)                                                    = [| |]
     override this.GetCustomAttributes(_attributeType, _inherit)                                    = [| |]
     override this.IsDefined(_attributeType, _inherit)                                              = false
@@ -803,6 +802,8 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
 
             override __.ToString() = sprintf "ctxt generic param %s" inp.Name 
 
+            override this.AssemblyQualifiedName                                                            = "[" + this.Assembly.FullName + "]" + this.FullName
+
             override __.GetGenericArguments() = notRequired "GetGenericArguments"
             override __.GetGenericTypeDefinition() = notRequired "GetGenericTypeDefinition"
             override __.GetMember(name,mt,_bindingFlags)                                                      = notRequired "TxILGenericParam: GetMember"
@@ -816,7 +817,6 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
             override __.Module                                                                                    = notRequired "TxILGenericParam: Module" : Module 
             override __.GetElementType()                                                                          = notRequired "TxILGenericParam: GetElementType"
             override __.InvokeMember(name, invokeAttr, binder, target, args, modifiers, culture, namedParameters) = notRequired "TxILGenericParam: InvokeMember"
-            override __.AssemblyQualifiedName                                                                     = notRequired "TxILGenericParam: AssemblyQualifiedName"
 
         }
 
@@ -935,6 +935,8 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
     override this.IsAssignableFrom(otherTy) = base.IsAssignableFrom(otherTy) || this.Equals(otherTy)
     override this.IsSubclassOf(otherTy) = base.IsSubclassOf(otherTy) || inp.IsDelegate && otherTy = typeof<Delegate> // F# quotations implementation
 
+    override this.AssemblyQualifiedName                                                            = "[" + this.Assembly.FullName + "]" + this.FullName
+
     override this.ToString() = sprintf "ctxt type %s" this.FullName
 
     override __.GetGenericArguments() = gps
@@ -948,7 +950,6 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
     override __.Module                                                                                    = notRequired "TxILTypeDef: Module" : Module 
     override __.GetElementType()                                                                          = notRequired "TxILTypeDef: GetElementType"
     override __.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "TxILTypeDef: InvokeMember"
-    override __.AssemblyQualifiedName                                                                     = notRequired "TxILTypeDef: AssemblyQualifiedName"
 
     member x.Metadata: ILTypeDef = inp
     member x.MakeMethodInfo (declTy,md) = TxILMethodDef declTy md

@@ -1,8 +1,8 @@
 #if INTERACTIVE
-#load "../src/ProvidedTypes.fsi"
-#load "../src/ProvidedTypes.fs"
+#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" "../src/AssemblyReader.fs" "../src/AssemblyReaderReflection.fs" "../src/AssemblyReplacer.fs" "../src/ProvidedTypesContext.fs" 
 #endif
 
+open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 open System.Reflection
@@ -13,20 +13,18 @@ type BasicProvider (config : TypeProviderConfig) as this =
 
     let ns = "ErasedWithConstructor.Provided"
     let asm = Assembly.GetExecutingAssembly()
+    let ctxt = ProvidedTypesContext.Create(config)
 
     let createTypes () =
-        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", typeof<obj>)
 
-        let ctor = ProvidedConstructor([], InvokeCode = fun args -> <@@ "My internal state" :> obj @@>)
+        let ctor = ctxt.ProvidedConstructor([], invokeCode = fun args -> <@@ "My internal state" :> obj @@>)
         myType.AddMember(ctor)
 
-        let ctor2 = ProvidedConstructor(
-                        [ProvidedParameter("InnerState", typeof<string>)],
-                        InvokeCode = fun args -> <@@ (%%(args.[0]):string) :> obj @@>)
+        let ctor2 = ctxt.ProvidedConstructor([ctxt.ProvidedParameter("InnerState", typeof<string>)], invokeCode = fun args -> <@@ (%%(args.[0]):string) :> obj @@>)
         myType.AddMember(ctor2)
 
-        let innerState = ProvidedProperty("InnerState", typeof<string>,
-                            GetterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string @@>)
+        let innerState = ctxt.ProvidedProperty("InnerState", typeof<string>, getterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string @@>)
         myType.AddMember(innerState)
 
         [myType]
@@ -36,3 +34,4 @@ type BasicProvider (config : TypeProviderConfig) as this =
 
 [<assembly:TypeProviderAssembly>]
 do ()
+

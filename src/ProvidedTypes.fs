@@ -527,14 +527,13 @@ module QuotationSimplifier =
                     let resultType = 
                         applicable.Type 
                         |> Seq.unfold (fun t -> 
-                            if not t.IsGenericType then None
-                            else
+                            if not t.IsGenericType then None else
                             let args = t.GetGenericArguments()
-                            if args.Length <> 2 then None
-                            else
+                            if args.Length <> 2 then None else
                             Some (args.[1], args.[1])
                         )
-                        |> Seq.nth (n - 1)
+                        |> Seq.toArray
+                        |> (fun arr -> arr.[n - 1])
 
                     let adaptMethod = getFastFuncType args resultType
                     let adapted = Expr.Call(adaptMethod, [loop applicable])

@@ -19,10 +19,10 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <Tailcalls>false</Tailcalls>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\bin</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\FSharp.TypeProviders.StarterPack.XML</DocumentationFile>
+    <DocumentationFile>..\bin\FSharp.TypeProviders.StarterPack.xml</DocumentationFile>
     <StartAction>Project</StartAction>
     <StartProgram>
     </StartProgram>
@@ -34,19 +34,17 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <Tailcalls>true</Tailcalls>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\bin</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\FSharp.TypeProviders.StarterPack.XML</DocumentationFile>
+    <DocumentationFile>bin\FSharp.TypeProviders.StarterPack.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
-    <Compile Include="DebugProvidedTypes.fs" />
     <Compile Include="AssemblyReader.fs" />
     <Compile Include="AssemblyReaderReflection.fs" />
-    <Compile Include="AssemblyReplacer.fs" />
-    <Compile Include="TypeProviderBindingContext.fs" />
+    <Compile Include="ProvidedTypesContext.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

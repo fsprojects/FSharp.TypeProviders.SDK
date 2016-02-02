@@ -1,21 +1,48 @@
 ﻿// Copyright 2011-2015, Tomas Petricek (http://tomasp.net), Gustavo Guerra (http://functionalflow.co.uk), and other contributors
 // Licensed under the Apache License, Version 2.0, see LICENSE.md in this project
 //
-// Utilities for transforming F# quotations to reference types from different assemblies
+// A binding context for cross-targeting type providers
 
 namespace ProviderImplementation
 
+#nowarn "8796" 
 open System
-open System.Collections.Generic
+open System.Diagnostics
 open System.IO
+open System.Collections.Generic
 open System.Reflection
 open Microsoft.FSharp.Quotations
-open Microsoft.FSharp.Quotations.ExprShape
 open Microsoft.FSharp.Quotations.Patterns
-open Microsoft.FSharp.Reflection
+open Microsoft.FSharp.Quotations.ExprShape
 open Microsoft.FSharp.Core.CompilerServices
+open Microsoft.FSharp.Reflection
+open ProviderImplementation.AssemblyReader
+open ProviderImplementation.AssemblyReaderReflection
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypes.UncheckedQuotations
+
+[<AutoOpen>]
+module private ImplementationUtils = 
+    type System.Object with 
+       member x.GetProperty(nm) = 
+           let ty = x.GetType()
+           let prop = ty.GetProperty(nm, BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic)
+           let v = prop.GetValue(x,null)
+           v
+       member x.GetField(nm) = 
+           let ty = x.GetType()
+           let fld = ty.GetField(nm, BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic)
+           let v = fld.GetValue(x)
+           v
+       member x.HasProperty(nm) = 
+           let ty = x.GetType()
+           let p = ty.GetProperty(nm, BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic)
+           p <> null
+       member x.HasField(nm) = 
+           let ty = x.GetType()
+           let fld = ty.GetField(nm, BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic)
+           fld <> null
+       member x.GetElements() = [ for v in (x :?> System.Collections.IEnumerable) do yield v ]
 
 /// A cross-targeting type provider must ultimately provide quotations and reflection objects w.r.t.
 /// the type binding context for the target assembly reference set.  
@@ -284,41 +311,170 @@ type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, reference
         RebuildShapeCombination (o, List.map (replaceExpr fwd) exprs)
 
   // Gets the equivalent runtime type
-  let typeToTargetAssemblies t = t |> replaceType true 
+  member __.ConvertDesignTimeTypeToTargetType t = t |> replaceType true 
   // Gets an equivalent expression with all the types replaced with runtime equivalents
-  let exprToTargetAssemblies e = e |> replaceExpr true 
+  member __.ConvertDesignTimeExprToTargetExpr e = e |> replaceExpr true 
   // Gets an equivalent expression with all the types replaced with designTime equivalents
-  let exprToOriginalAssemblies e = e |> replaceExpr false
+  member __.ConvertTargetExprToDesignTimeExpr e = e |> replaceExpr false
 
   // For the Provided* type InvokeCode and GetterCode, we to first transform the argument expressions
   // to the design time types, so we can splice it in the quotation, and then after that we have to convert
   // it back to the runtime type. 
 
-  /// When making a cross-targeting type provider, use this method instead of the ProvidedParameter constructor from ProvidedTypes
-  member replacer.ProvidedParameter(paramName, typ) = 
-      ProvidedParameter(paramName, typ |> typeToTargetAssemblies)
+/// Represents the type binding context for the type provider based on the set of assemblies
+/// referenced by the compilation.
+type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as this = 
 
-  /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-  member replacer.ProvidedProperty(propertyName, typ, getterCode) = 
-      ProvidedProperty(propertyName, typ |> typeToTargetAssemblies, GetterCode = (fun args -> args |> List.map exprToOriginalAssemblies |> getterCode |> exprToTargetAssemblies))
+
+    /// Find which assembly defines System.Object etc.
+    let systemRuntimeScopeRef = 
+      lazy
+        referencedAssemblyPaths |> List.tryPick (fun path -> 
+          try
+            let simpleName = Path.GetFileNameWithoutExtension path
+            if simpleName = "mscorlib" || simpleName = "System.Runtime" then 
+                let reader = ILModuleReaderAfterReadingAllBytes (path, mkILGlobals EcmaMscorlibScopeRef)
+                let mdef = reader.ILModuleDef
+                match mdef.TypeDefs.TryFindByName(USome "System", "Object") with 
+                | None -> None
+                | Some _ -> 
+                    let m = mdef.ManifestOfAssembly 
+                    let assRef = ILAssemblyRef(m.Name, None, (match m.PublicKey with Some k -> Some (PublicKey.KeyAsToken(k)) | None -> None), m.Retargetable, m.Version, m.Locale)
+                    Some (ILScopeRef.Assembly assRef)
+            else
+                None
+          with _ -> None )
+        |> function 
+           | None -> EcmaMscorlibScopeRef // failwith "no reference to mscorlib.dll or System.Runtime.dll found" 
+           | Some r -> r
+ 
+    let fsharpCoreRefVersion = 
+      lazy
+        referencedAssemblyPaths |> List.tryPick (fun path -> 
+          try
+            let simpleName = Path.GetFileNameWithoutExtension path
+            if simpleName = "FSharp.Core" then 
+                let reader = ILModuleReaderAfterReadingAllBytes (path, mkILGlobals EcmaMscorlibScopeRef)
+                match reader.ILModuleDef.Manifest with 
+                | Some m -> m.Version
+                | None -> None
+            else
+                None
+          with _ -> None )
+        |> function 
+           | None -> typeof<int list>.Assembly.GetName().Version // failwith "no reference to FSharp.Core found" 
+           | Some r -> r
+ 
+    let ilGlobals = lazy mkILGlobals (systemRuntimeScopeRef.Force())
+    let readers = 
+        lazy ([| for ref in referencedAssemblyPaths -> 
+                  ref,lazy (try let reader = ILModuleReaderAfterReadingAllBytes(ref, ilGlobals.Force())
+                                Choice1Of2(ContextAssembly(ilGlobals.Force(), this.TryBindAssembly, reader, ref)) 
+                            with err -> Choice2Of2 err) |])
+    let readersTable =  lazy ([| for (ref, asm) in readers.Force() do let simpleName = Path.GetFileNameWithoutExtension ref in yield simpleName, asm |] |> Map.ofArray)
+    let referencedAssemblies = lazy ([| for (_,asm) in readers.Force() do match asm.Force() with Choice2Of2 _ -> () | Choice1Of2 asm -> yield asm :> Assembly |])
+
+    let TryBindAssemblySimple(simpleName:string) : Choice<ContextAssembly, exn> = 
+        if readersTable.Force().ContainsKey(simpleName) then readersTable.Force().[simpleName].Force() 
+        else Choice2Of2 (Exception(sprintf "assembly %s not found" simpleName))
+
+    let designTimeAssemblies = 
+        lazy
+          [| yield Assembly.GetExecutingAssembly() 
+             for asm in Assembly.GetExecutingAssembly().GetReferencedAssemblies() do
+                let asm = try Assembly.Load(asm) with _ -> null
+                if asm <> null then 
+                    yield asm |]
+
+    let replacer = AssemblyReplacer (designTimeAssemblies, referencedAssemblies)
+
+    member __.TryBindAssembly(aref: ILAssemblyRef) : Choice<ContextAssembly, exn> = TryBindAssemblySimple(aref.Name) 
+    member __.TryBindAssembly(aref: AssemblyName) : Choice<ContextAssembly, exn> = TryBindAssemblySimple(aref.Name) 
+    member __.ReferencedAssemblyPaths = referencedAssemblyPaths
+    member __.ReferencedAssemblies =  referencedAssemblies
+    member x.TryGetFSharpCoreAssemblyVersion() = fsharpCoreRefVersion.Force()
+
+
+
+
+  /// When making a cross-targeting type provider, use this method instead of the ProvidedParameter constructor from ProvidedTypes
+    member __.ProvidedStaticParameter(parameterName, parameterType) = 
+      new ProvidedStaticParameter(parameterName, parameterType)
+
+    member __.ProvidedField(fieldName, fieldType) = 
+      new ProvidedField(fieldName, fieldType  |> replacer.ConvertDesignTimeTypeToTargetType)
+
+    member __.ProvidedLiteralField(fieldName, fieldType, literalValue:obj) = 
+      new ProvidedLiteralField(fieldName, fieldType  |> replacer.ConvertDesignTimeTypeToTargetType, literalValue)
+
+    member __.ProvidedParameter(parameterName, parameterType) = 
+      new ProvidedParameter(parameterName, parameterType |> replacer.ConvertDesignTimeTypeToTargetType)
+
+    /// Create a new provided property. It is not initially associated with any specific provided type definition.
+    ///
+    /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
+    member __.ProvidedProperty(propertyName, propertyType, getterCode, ?parameters) = 
+      new ProvidedProperty(propertyName, propertyType |> replacer.ConvertDesignTimeTypeToTargetType, GetterCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> getterCode |> replacer.ConvertDesignTimeExprToTargetExpr), ?parameters=parameters)
+
+    /// Create a new provided property. It is not initially associated with any specific provided type definition.
+    ///
+    /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
+    member __.ProvidedProperty(propertyName, propertyType, getterCode, setterCode, ?parameters) = 
+      new ProvidedProperty(propertyName, propertyType |> replacer.ConvertDesignTimeTypeToTargetType, 
+                           GetterCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> getterCode |> replacer.ConvertDesignTimeExprToTargetExpr), 
+                           SetterCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> setterCode |> replacer.ConvertDesignTimeExprToTargetExpr), ?parameters=parameters)
+
+    /// Create a new provided property. It is not initially associated with any specific provided type definition.
+    ///
+    /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
+    member __.ProvidedEvent(propertyName, eventHandlerType, getterCode, setterCode) = 
+      new ProvidedEvent(propertyName, eventHandlerType |> replacer.ConvertDesignTimeTypeToTargetType, 
+                           AdderCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> getterCode |> replacer.ConvertDesignTimeExprToTargetExpr), 
+                           RemoverCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> setterCode |> replacer.ConvertDesignTimeExprToTargetExpr))
 
   /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
-  member replacer.ProvidedConstructor(parameters, invokeCode: Expr list -> Expr) = 
-      ProvidedConstructor(parameters, InvokeCode = (fun args -> args |> List.map exprToOriginalAssemblies |> invokeCode |> exprToTargetAssemblies))
+    member __.ProvidedConstructor(parameters, invokeCode: Expr list -> Expr) = 
+      new ProvidedConstructor(parameters, InvokeCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> invokeCode |> replacer.ConvertDesignTimeExprToTargetExpr))
 
   /// When making a cross-targeting type provider, use this method instead of the ProvidedMethod constructor from ProvidedTypes
-  member replacer.ProvidedMethod(nm, parameters, resultType: Type, isStatic, invokeCode: Expr list -> Expr) = 
-      ProvidedMethod(nm, parameters, 
-                     resultType |> typeToTargetAssemblies, 
-                     IsStaticMethod = isStatic, 
-                     InvokeCode = (fun args -> args |> List.map exprToOriginalAssemblies |> invokeCode |> exprToTargetAssemblies))
+    member __.ProvidedMethod(methodName, parameters, returnType: Type, invokeCode: Expr list -> Expr) = 
+      new ProvidedMethod(methodName, parameters, returnType |> replacer.ConvertDesignTimeTypeToTargetType, InvokeCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> invokeCode |> replacer.ConvertDesignTimeExprToTargetExpr))
 
   /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-  member replacer.ProvidedTypeDefinition(nm, baseType: Type, hideObjectMethods, nonNullable) = 
-      ProvidedTypeDefinition(nm, Some (baseType |> typeToTargetAssemblies), HideObjectMethods = hideObjectMethods, NonNullable = nonNullable)
+    member __.ProvidedTypeDefinition(className, baseType: Type option) = 
+      new ProvidedTypeDefinition(className, baseType |> Option.map replacer.ConvertDesignTimeTypeToTargetType)
 
   /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-  member replacer.ProvidedTypeDefinition(asm, ns, typeName, baseType: Type, hideObjectMethods, nonNullable) = 
-      ProvidedTypeDefinition(asm, ns, typeName, Some (baseType |> typeToTargetAssemblies), HideObjectMethods = hideObjectMethods, NonNullable = nonNullable)
+    member __.ProvidedTypeDefinition(assembly, namespaceName, className, baseType: Type option) = 
+      new ProvidedTypeDefinition(assembly, namespaceName, className, baseType |> Option.map replacer.ConvertDesignTimeTypeToTargetType)
 
+
+    static member Create (cfg : TypeProviderConfig) = 
+
+        // Use the reflection hack to determine the set of referenced assemblies by reflecting over the SystemRuntimeContainsType
+        // closure in the TypeProviderConfig object.  
+        let referencedAssemblies = 
+            try 
+                Debug.Assert(cfg.GetType().GetField("systemRuntimeContainsType",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) <> null)
+                let systemRuntimeContainsTypeObj = cfg.GetField("systemRuntimeContainsType")
+                // Account for https://github.com/Microsoft/visualfsharp/pull/591
+                let systemRuntimeContainsTypeObj2 = 
+                    if systemRuntimeContainsTypeObj.HasField("systemRuntimeContainsTypeRef") then 
+                        systemRuntimeContainsTypeObj.GetField("systemRuntimeContainsTypeRef").GetProperty("Value")
+                    else
+                        systemRuntimeContainsTypeObj
+                Debug.Assert(systemRuntimeContainsTypeObj2.HasField("tcImports"))
+                let tcImports = systemRuntimeContainsTypeObj2.GetField("tcImports")
+                Debug.Assert(tcImports.HasField("dllInfos"))
+                Debug.Assert(tcImports.HasProperty("Base"))
+                let dllInfos = tcImports.GetField("dllInfos")
+                let baseObj = tcImports.GetProperty("Base")
+
+                [ for dllInfo in dllInfos.GetElements() -> (dllInfo.GetProperty("FileName") :?> string)
+                  for dllInfo in baseObj.GetProperty("Value").GetField("dllInfos").GetElements() -> (dllInfo.GetProperty("FileName") :?> string) ]
+            with _ ->
+                []
+
+
+        ProvidedTypesContext(referencedAssemblies)
 
