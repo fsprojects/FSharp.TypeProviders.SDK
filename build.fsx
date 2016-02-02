@@ -101,12 +101,15 @@ Target "Examples" (fun _ ->
             { Name = "ErasedWithConstructor"; ProviderSourceFiles = ["ErasedWithConstructor.fsx"]; TestSourceFiles = ["ErasedWithConstructor.Tests.fsx"]}
         ]
 
+    if not (Directory.Exists testDir) then 
+        Directory.CreateDirectory testDir |> ignore
+
     let testNunitDll = testDir @@ "nunit.framework.dll"
 
-    do
-        if File.Exists testNunitDll then
-            File.Delete testNunitDll
-        File.Copy (nunitDir @@ "nunit.framework.dll", testNunitDll)
+    if File.Exists testNunitDll then
+        File.Delete testNunitDll
+
+    File.Copy (nunitDir @@ "nunit.framework.dll", testNunitDll)
 
     let fromExampleDir filenames =
         filenames
