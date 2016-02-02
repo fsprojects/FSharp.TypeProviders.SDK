@@ -81,6 +81,9 @@ Target "Clean" (fun _ ->
 // Compile ProvidedTypes as a smoke test
 Target "Compile" (fun _ ->
     Fsc id sources
+    !! "FSharp.TypeProviders.StarterPack.sln"
+    |> MSBuildRelease "" "Build"
+    |> ignore
 )
 
 type ExampleWithTests = 
@@ -160,20 +163,12 @@ Target "NuGet" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Help
 
-Target "Help" (fun _ ->
-    printfn ""
-    printfn "  Please specify the target by calling 'build <Target>'"
-    printfn ""
-    printfn "  * Compile (compiles ProvidedTypes.fs)"
-    printfn "  * Examples(compiles ProvidedTypes.fs + examples)"
-    printfn "  * RunTests (compiles ProvidedTypes.fs + examples + run tests)"
-    printfn "  * NuGet (creates package, publishes if nuget API key provided)"
-    printfn "")
-
 "Clean"
-    ==> "Compile"
+    ==> "NuGet"
+
+"Compile"
     ==> "Examples"
     ==> "RunTests"
     ==> "NuGet"
 
-RunTargetOrDefault "Help"
+RunTargetOrDefault "RunTests"

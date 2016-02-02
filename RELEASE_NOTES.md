@@ -1,4 +1,6 @@
 
+#### 2.0.0 - 02/02/2016
+* Updates for cross-targeting of type providers
 
 #### 1.1.3 - July 30 2014
 * Remove folders
