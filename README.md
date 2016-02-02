@@ -5,7 +5,7 @@
 
 The F# Type Provider Starter Pack is two things: 
 
-1. A code-only NuGet package with the ``ProvidedTypes`` code files you'll need to get you started in type provider creation
+1. The ``ProvidedTypes.fs`` API files you need to author type providers
 
 2. Documentation and samples on type provider creation
 
@@ -17,13 +17,8 @@ It will also become the main place for improvements and additions to the Provide
 
 ## Build status
 
-### Windows (.net)
 
-[![Build status](https://ci.appveyor.com/api/projects/status/y1c6gs2r0ihog1re)](https://ci.appveyor.com/project/mavnn/fsharp-typeproviders-starterpack)
-
-### MacOS (mono)
-
-[![Build Status](https://travis-ci.org/fsprojects/FSharp.TypeProviders.StarterPack.svg?branch=master)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.StarterPack)
+[![Build status (Windows)](https://ci.appveyor.com/api/projects/status/y1c6gs2r0ihog1re)](https://ci.appveyor.com/project/mavnn/fsharp-typeproviders-starterpack)  [![Build Status (MacOS, mono)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.StarterPack.svg?branch=master)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.StarterPack)
 
 ## The ProvidedTypes API - Adding the Files
 
