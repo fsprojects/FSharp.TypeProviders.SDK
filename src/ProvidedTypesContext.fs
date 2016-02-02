@@ -480,7 +480,7 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
             [ for dllInfo in dllInfos.GetElements() -> (dllInfo.GetProperty("FileName") :?> string)
               for dllInfo in baseObj.GetProperty("Value").GetField("dllInfos").GetElements() -> (dllInfo.GetProperty("FileName") :?> string) ]
           with e -> 
-            failwith "Invalid host of cross-targeting type provider. %A" e
+            failwith (sprintf "Invalid host of cross-targeting type provider. Exception: %A" e)
            
 
         ProvidedTypesContext(referencedAssemblyPaths)
