@@ -1,5 +1,5 @@
 #if INTERACTIVE
-#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" "../src/AssemblyReader.fs" "../src/AssemblyReaderReflection.fs" "../src/AssemblyReplacer.fs" "../src/ProvidedTypesContext.fs" 
+#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" "../src/AssemblyReader.fs" "../src/AssemblyReaderReflection.fs" "../src/ProvidedTypesContext.fs" 
 #endif
 
 open ProviderImplementation
@@ -16,7 +16,7 @@ type BasicProvider (config : TypeProviderConfig) as this =
     let ctxt = ProvidedTypesContext.Create(config)
 
     let createTypes () =
-        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", typeof<obj>)
+        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
 
         let ctor = ctxt.ProvidedConstructor([], invokeCode = fun args -> <@@ "My internal state" :> obj @@>)
         myType.AddMember(ctor)
