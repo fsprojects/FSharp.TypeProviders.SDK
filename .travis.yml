@@ -6,8 +6,9 @@ mono:
   - 4.0.5
 
 os:
-  - linux
   - osx
+
+#  - linux  disabled for now because the standard packages don't come with F# PCL FSharp.Core.dll
 
 sudo: false  # use the new container-based Travis infrastructure 
 
