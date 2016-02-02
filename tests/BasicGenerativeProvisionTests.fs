@@ -11,7 +11,7 @@ open System.Reflection
 open System.IO
 open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
-open ProviderImplementation.ProvidedTypeTesting
+open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Core.CompilerServices
 open NUnit.Framework
 open FsUnit

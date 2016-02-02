@@ -130,6 +130,8 @@ type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, reference
             | _ -> 
                 let msg = 
                     if fwd then sprintf "The type '%O' utilized by a type provider was not found in reference assembly set '%A'. You may be referencing a portable profile which contains fewer types than those needed by the type provider you are using." t (referencedAssemblies.Force())
+                    elif designTimeAssemblies.Force().Length = 0 then 
+                        sprintf "A failure occured while determining compilation references"
                     else sprintf "The runtime-time type '%O' utilized by a type provider was not found in the compilation-time assembly set '%A'. You may be referencing a portable profile which contains fewer types than those needed by the type provider you are using. Please report this problem to the project site for the type provider." t (designTimeAssemblies.Force())
                 failwith msg
 
@@ -453,28 +455,33 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
 
         // Use the reflection hack to determine the set of referenced assemblies by reflecting over the SystemRuntimeContainsType
         // closure in the TypeProviderConfig object.  
-        let referencedAssemblies = 
-            try 
-                Debug.Assert(cfg.GetType().GetField("systemRuntimeContainsType",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) <> null)
-                let systemRuntimeContainsTypeObj = cfg.GetField("systemRuntimeContainsType")
-                // Account for https://github.com/Microsoft/visualfsharp/pull/591
-                let systemRuntimeContainsTypeObj2 = 
-                    if systemRuntimeContainsTypeObj.HasField("systemRuntimeContainsTypeRef") then 
-                        systemRuntimeContainsTypeObj.GetField("systemRuntimeContainsTypeRef").GetProperty("Value")
-                    else
-                        systemRuntimeContainsTypeObj
-                Debug.Assert(systemRuntimeContainsTypeObj2.HasField("tcImports"))
-                let tcImports = systemRuntimeContainsTypeObj2.GetField("tcImports")
-                Debug.Assert(tcImports.HasField("dllInfos"))
-                Debug.Assert(tcImports.HasProperty("Base"))
-                let dllInfos = tcImports.GetField("dllInfos")
-                let baseObj = tcImports.GetProperty("Base")
+        let referencedAssemblyPaths = 
+          try
+            if not (cfg.GetType().GetField("systemRuntimeContainsType",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) <> null) then  
+                failwith "Invalid host of cross-targeting type provider: a field called systemRuntimeContainsType must exist in the TypeProviderConfiguration object. Please check that the type provider being hosted by the F# compiler tools or a simulation of them."
 
-                [ for dllInfo in dllInfos.GetElements() -> (dllInfo.GetProperty("FileName") :?> string)
-                  for dllInfo in baseObj.GetProperty("Value").GetField("dllInfos").GetElements() -> (dllInfo.GetProperty("FileName") :?> string) ]
-            with _ ->
-                []
+            let systemRuntimeContainsTypeObj = cfg.GetField("systemRuntimeContainsType")
+            // Account for https://github.com/Microsoft/visualfsharp/pull/591
+            let systemRuntimeContainsTypeObj2 = 
+                if systemRuntimeContainsTypeObj.HasField("systemRuntimeContainsTypeRef") then 
+                    systemRuntimeContainsTypeObj.GetField("systemRuntimeContainsTypeRef").GetProperty("Value")
+                else
+                    systemRuntimeContainsTypeObj
+            if not (systemRuntimeContainsTypeObj2.HasField("tcImports")) then
+                failwith "Invalid host of cross-targeting type provider: a field called tcImports must exist in the systemRuntimeContainsType closure. Please check that the type provider being hosted by the F# compiler tools or a simulation of them."
+            let tcImports = systemRuntimeContainsTypeObj2.GetField("tcImports")
+            if not (tcImports.HasField("dllInfos")) then
+                failwith "Invalid host of cross-targeting type provider: a field called dllInfos must exist in the tcImports object. Please check that the type provider being hosted by the F# compiler tools or a simulation of them."
+            if not (tcImports.HasProperty("Base")) then
+                failwith "Invalid host of cross-targeting type provider: a field called Base must exist in the tcImports object. Please check that the type provider being hosted by the F# compiler tools or a simulation of them."
+            let dllInfos = tcImports.GetField("dllInfos")
+            let baseObj = tcImports.GetProperty("Base")
 
+            [ for dllInfo in dllInfos.GetElements() -> (dllInfo.GetProperty("FileName") :?> string)
+              for dllInfo in baseObj.GetProperty("Value").GetField("dllInfos").GetElements() -> (dllInfo.GetProperty("FileName") :?> string) ]
+          with e -> 
+            failwith "Invalid host of cross-targeting type provider. %A" e
+           
 
-        ProvidedTypesContext(referencedAssemblies)
+        ProvidedTypesContext(referencedAssemblyPaths)
 

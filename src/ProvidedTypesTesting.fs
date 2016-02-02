@@ -2,11 +2,12 @@
 // Helpers for writing type providers
 // ----------------------------------------------------------------------------------------------
 
-namespace ProviderImplementation.ProvidedTypeTesting
+namespace ProviderImplementation.ProvidedTypesTesting
 
 open System
 open System.Collections.Generic
 open System.Reflection
+open System.IO
 open System.Text
 open Microsoft.FSharp.Core.CompilerServices
 open Microsoft.FSharp.Core.Printf
@@ -58,6 +59,7 @@ type internal Testing() =
     /// Simulates a real instance of TypeProviderConfig and then creates an instance of the last
     /// type provider added to a namespace by the type provider constructor
     static member GenerateProvidedTypeInstantiation (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list, typeProviderForNamespacesConstructor, args) =
+        printfn "TESTING: Generating one type, resolutionFolder = %s, runtimeAssembly = %s, runtimeAssemblyRefs = %A, args = %A" resolutionFolder runtimeAssembly runtimeAssemblyRefs args
 
         let cfg = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder, runtimeAssembly, runtimeAssemblyRefs) 
 
@@ -574,12 +576,17 @@ module internal Targets =
 
     let private (++) a b = System.IO.Path.Combine(a,b)
     
-    let private runningOnMono = Type.GetType("Mono.Runtime") <> null
+    let runningOnMono = Type.GetType("Mono.Runtime") <> null
 
     // Assumes OSX
-    let private monoRoot = "/Library/Frameworks/Mono.framework/Versions/Current/lib/mono"
+    let monoRoot = 
+        Path.GetFullPath(Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(),".."))
+        //match System.Environment.OSVersion.Platform with 
+        //| System.PlatformID.MacOSX -> "/Library/Frameworks/Mono.framework/Versions/Current/lib/mono"
+        //| System.PlatformID.MacOSX -> "/Library/Frameworks/Mono.framework/Versions/Current/lib/mono"
+        //| _ -> 
 
-    let private referenceAssembliesPath = 
+    let referenceAssembliesPath = 
         (if runningOnMono then monoRoot else Environment.GetFolderPath Environment.SpecialFolder.ProgramFilesX86)
         ++ "Reference Assemblies" 
         ++ "Microsoft" 

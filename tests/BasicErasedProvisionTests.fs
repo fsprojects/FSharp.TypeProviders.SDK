@@ -9,7 +9,7 @@ module FSharp.TypeProviders.StarterPack.Tests.StaticProperty
 
 open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
-open ProviderImplementation.ProvidedTypeTesting
+open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Core.CompilerServices
 open System.Reflection
 open NUnit.Framework
