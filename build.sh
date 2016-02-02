@@ -20,7 +20,7 @@ else
   # use mono
 
   which mono
-  ls -lr /usr/lib/mono
+  find /usr/lib/mono
 
   mono .paket/paket.bootstrapper.exe
   exit_code=$?
