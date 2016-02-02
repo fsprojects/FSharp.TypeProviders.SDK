@@ -3,5 +3,4 @@ language: csharp
 sudo: false  # use the new container-based Travis infrastructure 
 
 script: 
-  - chmod u+x ./build.sh
   - ./build.sh RunTests
