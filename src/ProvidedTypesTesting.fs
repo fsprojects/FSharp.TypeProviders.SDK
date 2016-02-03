@@ -577,6 +577,11 @@ module internal Targets =
     let private (++) a b = System.IO.Path.Combine(a,b)
     
     let runningOnMono = Type.GetType("Mono.Runtime") <> null
+    let runningOnMac = 
+        (Environment.OSVersion.Platform = PlatformID.MacOSX)
+        || (Environment.OSVersion.Platform = PlatformID.Unix) && Directory.Exists("/Applications") && Directory.Exists("/System") && Directory.Exists("/Users") && Directory.Exists("/Volumes")
+    let runningOnLinux = 
+        (Environment.OSVersion.Platform = PlatformID.Unix) && not runningOnMac
 
     // Assumes OSX
     let monoRoot = 
@@ -636,7 +641,8 @@ module internal Targets =
           yield fsharpPortableAssembliesPath fsharp profile ]
 
     let DotNet45Refs = [net45AssembliesPath ++ "mscorlib.dll"; net45AssembliesPath ++ "System.Xml.dll"; net45AssembliesPath ++ "System.Core.dll"; net45AssembliesPath ++ "System.Xml.Linq.dll"; net45AssembliesPath ++ "System.dll" ]
-    let DotNet45FSharpRefs fsharp = [ yield! DotNet45Refs; yield fsharpAssembliesPath fsharp ++ "FSharp.Core.dll"]
+    let FSharpCoreRef fsharp = fsharpAssembliesPath fsharp ++ "FSharp.Core.dll"
+    let DotNet45FSharpRefs fsharp = [ yield! DotNet45Refs; yield FSharpCoreRef fsharp ]
     let Portable47FSharpRefs fsharp = [portableAssembliesPath 47 ++ "mscorlib.dll"; portableAssembliesPath 47 ++ "System.Xml.Linq.dll"; fsharpPortableAssembliesPath fsharp 47]
 
     let DotNet45FSharp31Refs = DotNet45FSharpRefs "3.1"
@@ -645,8 +651,12 @@ module internal Targets =
     let Portable78FSharp31Refs = portableCoreFSharpRefs "3.1" 78
     let Portable259FSharp31Refs = portableCoreFSharpRefs "3.1" 259
 
+    let FSharpCore40Ref = FSharpCoreRef "4.0"
     let DotNet45FSharp40Refs = DotNet45FSharpRefs "4.0"
     let Portable7FSharp40Refs = portableCoreFSharpRefs "4.0" 7
     let Portable78FSharp40Refs = portableCoreFSharpRefs "4.0" 78
     let Portable259FSharp40Refs = portableCoreFSharpRefs "4.0" 259
 
+    let supportsFSharp40 = (try File.Exists FSharpCore40Ref with _ -> false) 
+    // Some tests disabled on Linux for now because the standard packages don't come with F# PCL FSharp.Core.dll for this profile
+    let hasPortableFSharpCoreDLLs = not runningOnLinux

@@ -46,6 +46,7 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 
 [<Test>]
 let ``GenerativePropertyProviderWithStaticParams generates for .NET 4.5 F# 4.0 correctly``() : unit  = 
+  if Targets.supportsFSharp40 then 
     let args = [|  box 3 |] 
     let runtimeAssembly = Targets.DotNet45FSharp40Refs.[0]
     let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs
