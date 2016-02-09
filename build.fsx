@@ -35,7 +35,7 @@ let release =
     File.ReadLines "RELEASE_NOTES.md" 
     |> ReleaseNotesHelper.parseReleaseNotes
 
-let PullRequest =
+let pullRequest =
     match getBuildParamOrDefault "APPVEYOR_PULL_REQUEST_NUMBER" "" with
     | "" -> 
         trace "Master build detected"
@@ -48,7 +48,7 @@ let buildNumber =
     int (getBuildParamOrDefault "APPVEYOR_BUILD_VERSION" "0")
 
 let version =
-    match PullRequest with
+    match pullRequest with
     | None ->
         sprintf "%s.%d" release.AssemblyVersion buildNumber
     | Some num ->
@@ -61,6 +61,15 @@ let exampleDir =  "examples"
 let testDir =  "test"
 let nunitDir = "packages/NUnit/lib/net45"
 
+let sources = 
+    [srcDir @@ "ProvidedTypes.fsi"
+     srcDir @@ "ProvidedTypes.fs" 
+     srcDir @@ "AssemblyReader.fs"
+     srcDir @@ "AssemblyReaderReflection.fs"
+     srcDir @@ "ProvidedTypesContext.fs" 
+     srcDir @@ "ProvidedTypesTesting.fs" ] 
+    
+
 // --------------------------------------------------------------------------------------
 // Clean build results
 
@@ -68,19 +77,20 @@ Target "Clean" (fun _ ->
     CleanDirs [outputPath; workingDir;testDir]
 )
 
-let pt = [srcDir @@ "ProvidedTypes.fsi";srcDir @@ "ProvidedTypes.fs"]
-
 // --------------------------------------------------------------------------------------
 // Compile ProvidedTypes as a smoke test
 Target "Compile" (fun _ ->
-    Fsc id pt
+    Fsc id sources
+    !! "FSharp.TypeProviders.StarterPack.sln"
+    |> MSBuildRelease "" "Build"
+    |> ignore
 )
 
-type ExampleWithTests = {
-    Name : string
-    ProviderSourceFiles : string list
-    TestSourceFiles : string list
-}
+type ExampleWithTests = 
+    { Name : string
+      ProviderSourceFiles : string list
+      TestSourceFiles : string list }
+
 
 // --------------------------------------------------------------------------------------
 // Compile example providers and accompanying test dlls
@@ -91,12 +101,15 @@ Target "Examples" (fun _ ->
             { Name = "ErasedWithConstructor"; ProviderSourceFiles = ["ErasedWithConstructor.fsx"]; TestSourceFiles = ["ErasedWithConstructor.Tests.fsx"]}
         ]
 
+    if not (Directory.Exists testDir) then 
+        Directory.CreateDirectory testDir |> ignore
+
     let testNunitDll = testDir @@ "nunit.framework.dll"
 
-    do
-        if File.Exists testNunitDll then
-            File.Delete testNunitDll
-        File.Copy (nunitDir @@ "nunit.framework.dll", testNunitDll)
+    if File.Exists testNunitDll then
+        File.Delete testNunitDll
+
+    File.Copy (nunitDir @@ "nunit.framework.dll", testNunitDll)
 
     let fromExampleDir filenames =
         filenames
@@ -107,7 +120,7 @@ Target "Examples" (fun _ ->
             // Compile type provider
             let output = testDir @@ example.Name + ".dll"
             let setOpts = fun def -> { def with Output = output; FscTarget = FscTarget.Library }
-            Fsc setOpts (List.concat [pt;fromExampleDir example.ProviderSourceFiles])
+            Fsc setOpts (List.concat [sources;fromExampleDir example.ProviderSourceFiles])
 
             // Compile test dll
             let setTestOpts = fun def ->
@@ -120,6 +133,8 @@ Target "Examples" (fun _ ->
 )
 
 Target "RunTests" (fun _ ->
+    !! ("tests/bin/Release/FSharp.TypeProviders.StarterPack.Tests.dll")
+    |> NUnit3 id
     !! (testDir @@ "*.Tests.dll")
     |> NUnit3 id
 )
@@ -128,8 +143,7 @@ Target "RunTests" (fun _ ->
 // Build a NuGet package
 
 Target "NuGet" (fun _ ->
-    [srcDir @@ "ProvidedTypes.fsi"] |> CopyTo (workingDir @@ "content")
-    [srcDir @@ "ProvidedTypes.fs"; "./src/DebugProvidedTypes.fs"] |> CopyTo (workingDir @@ "content")
+    sources |> CopyTo (workingDir @@ "content")
     
     NuGet (fun p -> 
         { p with   
@@ -144,7 +158,7 @@ Target "NuGet" (fun _ ->
             WorkingDir = workingDir
             AccessKey = getBuildParamOrDefault "nugetkey" ""
             Publish = hasBuildParam "nugetkey"
-            Files = [workingDir, None, None]
+            Files = [(workingDir, None, None)]
             Dependencies = [] })
         "nuget/FSharp.TypeProviders.StarterPack.nuspec"
 )
@@ -152,18 +166,12 @@ Target "NuGet" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Help
 
-Target "Help" (fun _ ->
-    printfn ""
-    printfn "  Please specify the target by calling 'build <Target>'"
-    printfn ""
-    printfn "  * NuGet (creates package only, doesn't publish unless api key provided)"
-    printfn "  * Compile (attempts to compile ProvidedTypes.fs)"
-    printfn "")
-
 "Clean"
-    ==> "Compile"
+    ==> "NuGet"
+
+"Compile"
     ==> "Examples"
     ==> "RunTests"
     ==> "NuGet"
 
-RunTargetOrDefault "Help"
+RunTargetOrDefault "RunTests"

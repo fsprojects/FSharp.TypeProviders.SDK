@@ -18,6 +18,10 @@ then
   packages/FAKE/tools/FAKE.exe $@ --fsiargs -d:MONO build.fsx 
 else
   # use mono
+
+  which mono
+  find /usr/lib/mono
+
   mono .paket/paket.bootstrapper.exe
   exit_code=$?
   if [ $exit_code -ne 0 ]; then

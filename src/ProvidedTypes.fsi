@@ -14,17 +14,20 @@ namespace ProviderImplementation.ProvidedTypes
 open System
 open System.Reflection
 open System.Linq.Expressions
+open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Core.CompilerServices
 
 /// Represents an erased provided parameter
 type ProvidedParameter =
     inherit ParameterInfo
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedParameter to create a provided parameter. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new : parameterName: string * parameterType: Type * ?isOut:bool * ?optionalValue:obj -> ProvidedParameter
     member IsParamArray : bool with get,set
 
 /// Represents a provided static parameter.
 type ProvidedStaticParameter =
     inherit ParameterInfo
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedStaticParameter to create a provided static parameter. Some argument names and values may need adjusting.", 8796)>]
     new : parameterName: string * parameterType:Type * ?parameterDefaultValue:obj -> ProvidedStaticParameter
 
     /// Add XML documentation information to this provided constructor
@@ -38,9 +41,10 @@ type ProvidedConstructor =
     inherit ConstructorInfo
 
     /// Create a new provided constructor. It is not initially associated with any specific provided type definition.
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedConstructor. Some argument names and values may need adjusting.", 8796)>]
     new : parameters: ProvidedParameter list -> ProvidedConstructor
 
-    /// Add a 'System.Obsolete' attribute to this provided constructor
+    /// Add a 'Obsolete' attribute to this provided constructor
     member AddObsoleteAttribute : message: string * ?isError: bool -> unit    
     
     /// Add XML documentation information to this provided constructor
@@ -53,13 +57,13 @@ type ProvidedConstructor =
     member AddXmlDocComputed   : xmlDocFunction: (unit -> string) -> unit   
     
     /// Set the quotation used to compute the implementation of invocations of this constructor.
-    member InvokeCode         : (Quotations.Expr list -> Quotations.Expr) with set
+    member InvokeCode         : (Expr list -> Expr) with set
 
     /// FSharp.Data addition: this method is used by Debug.fs
-    member internal GetInvokeCodeInternal : bool -> (Quotations.Expr [] -> Quotations.Expr)
+    member internal GetInvokeCodeInternal : bool -> (Expr [] -> Expr)
 
     /// Set the target and arguments of the base constructor call. Only used for generated types.
-    member BaseConstructorCall : (Quotations.Expr list -> ConstructorInfo * Quotations.Expr list) with set
+    member BaseConstructorCall : (Expr list -> ConstructorInfo * Expr list) with set
 
     /// Set a flag indicating that the constructor acts like an F# implicit constructor, so the
     /// parameters of the constructor become fields and can be accessed using Expr.GlobalVar with the
@@ -75,6 +79,7 @@ type ProvidedMethod =
     inherit MethodInfo
 
     /// Create a new provided method. It is not initially associated with any specific provided type definition.
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedMethod to create a provided method. Some argument names and values may need adjusting.", 8796)>]
     new : methodName:string * parameters: ProvidedParameter list * returnType: Type -> ProvidedMethod
 
     /// Add XML documentation information to this provided method
@@ -99,10 +104,10 @@ type ProvidedMethod =
     member IsStaticMethod       : bool with get, set
 
     /// Set the quotation used to compute the implementation of invocations of this method.
-    member InvokeCode         : (Quotations.Expr list -> Quotations.Expr) with set
+    member InvokeCode         : (Expr list -> Expr) with set
 
     /// FSharp.Data addition: this method is used by Debug.fs
-    member internal GetInvokeCodeInternal : bool -> (Quotations.Expr [] -> Quotations.Expr)
+    member internal GetInvokeCodeInternal : bool -> (Expr [] -> Expr)
 
     /// Add definition location information to the provided type definition.
     member AddDefinitionLocation : line:int * column:int * filePath:string -> unit
@@ -117,10 +122,11 @@ type ProvidedMethod =
 type ProvidedProperty =
     inherit PropertyInfo
 
-    /// Create a new provided type. It is not initially associated with any specific provided type definition.
+    /// Create a new provided property. It is not initially associated with any specific provided type definition.
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedProperty to create a provided property. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new  : propertyName: string * propertyType: Type * ?parameters:ProvidedParameter list -> ProvidedProperty
 
-    /// Add a 'System.Obsolete' attribute to this provided property
+    /// Add a 'Obsolete' attribute to this provided property
     member AddObsoleteAttribute : message: string * ?isError: bool -> unit    
 
     /// Add XML documentation information to this provided constructor
@@ -138,10 +144,10 @@ type ProvidedProperty =
     member IsStatic             : bool with get,set
 
     /// Set the quotation used to compute the implementation of gets of this property.
-    member GetterCode           : (Quotations.Expr list -> Quotations.Expr) with set
+    member GetterCode           : (Expr list -> Expr) with set
 
     /// Set the function used to compute the implementation of sets of this property.
-    member SetterCode           : (Quotations.Expr list -> Quotations.Expr) with set
+    member SetterCode           : (Expr list -> Expr) with set
 
     /// Add definition location information to the provided type definition.
     member AddDefinitionLocation : line:int * column:int * filePath:string -> unit
@@ -170,10 +176,10 @@ type ProvidedEvent =
     member IsStatic             : bool with set
 
     /// Set the quotation used to compute the implementation of gets of this property.
-    member AdderCode           : (Quotations.Expr list -> Quotations.Expr) with set
+    member AdderCode           : (Expr list -> Expr) with set
 
     /// Set the function used to compute the implementation of sets of this property.
-    member RemoverCode           : (Quotations.Expr list -> Quotations.Expr) with set
+    member RemoverCode           : (Expr list -> Expr) with set
 
     /// Add definition location information to the provided type definition.
     member AddDefinitionLocation : line:int * column:int * filePath:string -> unit
@@ -183,9 +189,10 @@ type ProvidedLiteralField =
     inherit FieldInfo
 
     /// Create a new provided field. It is not initially associated with any specific provided type definition.
-    new  : fieldName: string * fieldType: Type * literalValue: obj -> ProvidedLiteralField
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedLiteralField. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
+    new : fieldName: string * fieldType: Type * literalValue: obj -> ProvidedLiteralField
 
-    /// Add a 'System.Obsolete' attribute to this provided field
+    /// Add a 'Obsolete' attribute to this provided field
     member AddObsoleteAttribute : message: string * ?isError: bool -> unit    
 
     /// Add XML documentation information to this provided field
@@ -206,9 +213,10 @@ type ProvidedField =
     inherit FieldInfo
 
     /// Create a new provided field. It is not initially associated with any specific provided type definition.
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedField. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new  : fieldName: string * fieldType: Type -> ProvidedField
 
-    /// Add a 'System.Obsolete' attribute to this provided field
+    /// Add a 'Obsolete' attribute to this provided field
     member AddObsoleteAttribute : message: string * ?isError: bool -> unit    
 
     /// Add XML documentation information to this provided field
@@ -228,7 +236,7 @@ type ProvidedField =
 
 /// Represents the type constructor in a provided symbol type.
 [<NoComparison>]
-type SymbolKind = 
+type ProvidedSymbolKind = 
     /// Indicates that the type constructor is for a single-dimensional array
     | SDArray 
     /// Indicates that the type constructor is for a multi-dimensional array
@@ -250,11 +258,16 @@ type ProvidedSymbolType =
     inherit Type
 
     /// Returns the kind of this symbolic type
-    member Kind : SymbolKind
+    member Kind : ProvidedSymbolKind
 
     /// Return the provided types used as arguments of this symbolic type
     member Args : list<Type>
 
+    /// For example, kg
+    member IsFSharpTypeAbbreviation: bool
+
+    /// For example, int<kg> or int<kilogram>
+    member IsFSharpUnitAnnotated : bool
 
 /// Helpers to build symbolic provided types
 [<Class>]
@@ -301,9 +314,11 @@ type ProvidedTypeDefinition =
     inherit Type
 
     /// Create a new provided type definition in a namespace. 
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedTypeDefinition to create a provided type definition. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new : assembly: Assembly * namespaceName: string * className: string * baseType: Type option -> ProvidedTypeDefinition
 
     /// Create a new provided type definition, to be located as a nested type in some type definition.
+    // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedTypeDefinition to create a provided type definition. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new : className : string * baseType: Type option -> ProvidedTypeDefinition
 
     /// Add the given type as an implemented interface.
@@ -315,7 +330,7 @@ type ProvidedTypeDefinition =
     /// Specifies that the given method body implements the given method declaration.
     member DefineMethodOverride : methodInfoBody: ProvidedMethod * methodInfoDeclaration: MethodInfo -> unit
 
-    /// Add a 'System.Obsolete' attribute to this provided type definition
+    /// Add a 'Obsolete' attribute to this provided type definition
     member AddObsoleteAttribute : message: string * ?isError: bool -> unit    
 
     /// Add XML documentation information to this provided constructor
@@ -365,7 +380,7 @@ type ProvidedTypeDefinition =
     /// Add definition location information to the provided type definition.
     member AddDefinitionLocation : line:int * column:int * filePath:string -> unit
 
-    /// Suppress System.Object entries in intellisense menus in instances of this provided type 
+    /// Suppress Object entries in intellisense menus in instances of this provided type 
     member HideObjectMethods  : bool with set
 
     /// Disallows the use of the null literal. 
@@ -450,8 +465,8 @@ type TypeProviderForNamespaces =
 #if FX_NO_LOCAL_FILESYSTEM
 #else
     /// AssemblyResolve handler. Default implementation searches <assemblyname>.dll file in registered folders 
-    abstract ResolveAssembly : System.ResolveEventArgs -> Assembly
-    default ResolveAssembly : System.ResolveEventArgs -> Assembly
+    abstract ResolveAssembly : ResolveEventArgs -> Assembly
+    default ResolveAssembly : ResolveEventArgs -> Assembly
 
     /// Registers custom probing path that can be used for probing assemblies
     member RegisterProbingFolder : folder: string -> unit
@@ -465,3 +480,28 @@ type TypeProviderForNamespaces =
     member Disposing : IEvent<EventHandler,EventArgs>
 
     interface ITypeProvider
+
+
+module internal UncheckedQuotations = 
+
+  type Expr with
+    static member NewDelegateUnchecked : ty:Type * vs:Var list * body:Expr -> Expr
+    static member NewObjectUnchecked : cinfo:ConstructorInfo * args:Expr list -> Expr
+    static member NewArrayUnchecked : elementType:Type * elements:Expr list -> Expr
+    static member CallUnchecked : minfo:MethodInfo * args:Expr list -> Expr
+    static member CallUnchecked : obj:Expr * minfo:MethodInfo * args:Expr list -> Expr
+    static member ApplicationUnchecked : f:Expr * x:Expr -> Expr
+    static member PropertyGetUnchecked : pinfo:PropertyInfo * args:Expr list -> Expr
+    static member PropertyGetUnchecked : obj:Expr * pinfo:PropertyInfo * ?args:Expr list -> Expr
+    static member PropertySetUnchecked : pinfo:PropertyInfo * value:Expr * ?args:Expr list -> Expr
+    static member PropertySetUnchecked : obj:Expr * pinfo:PropertyInfo * value:Expr * args:Expr list -> Expr
+    static member FieldGetUnchecked : pinfo:FieldInfo -> Expr
+    static member FieldGetUnchecked : obj:Expr * pinfo:FieldInfo -> Expr
+    static member FieldSetUnchecked : pinfo:FieldInfo * value:Expr -> Expr
+    static member FieldSetUnchecked : obj:Expr * pinfo:FieldInfo * value:Expr -> Expr
+    static member TupleGetUnchecked : e:Expr * n:int -> Expr
+    static member LetUnchecked : v:Var * e:Expr * body:Expr -> Expr
+
+  type Shape
+  val ( |ShapeCombinationUnchecked|ShapeVarUnchecked|ShapeLambdaUnchecked| ) : e:Expr -> Choice<(Shape * Expr list),Var, (Var * Expr)>
+  val RebuildShapeCombinationUnchecked : Shape * args:Expr list -> Expr
