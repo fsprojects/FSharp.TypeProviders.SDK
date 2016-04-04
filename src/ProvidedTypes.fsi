@@ -59,7 +59,7 @@ type ProvidedConstructor =
     /// Set the quotation used to compute the implementation of invocations of this constructor.
     member InvokeCode         : (Expr list -> Expr) with set
 
-    /// FSharp.Data addition: this method is used by Debug.fs
+    /// This method is used by Debug.fs
     member internal GetInvokeCodeInternal : bool -> (Expr [] -> Expr)
 
     /// Set the target and arguments of the base constructor call. Only used for generated types.
@@ -106,7 +106,7 @@ type ProvidedMethod =
     /// Set the quotation used to compute the implementation of invocations of this method.
     member InvokeCode         : (Expr list -> Expr) with set
 
-    /// FSharp.Data addition: this method is used by Debug.fs
+    // this method is used by Debug.fs
     member internal GetInvokeCodeInternal : bool -> (Expr [] -> Expr)
 
     /// Add definition location information to the provided type definition.
@@ -140,7 +140,6 @@ type ProvidedProperty =
     member AddXmlDocComputed   : xmlDocFunction: (unit -> string) -> unit   
     
     /// Get or set a flag indicating if the property is static.
-    /// FSharp.Data addition: the getter is used by Debug.fs
     member IsStatic             : bool with get,set
 
     /// Set the quotation used to compute the implementation of gets of this property.
@@ -408,7 +407,7 @@ type ProvidedTypeDefinition =
     [<Experimental("SuppressRelocation is a workaround and likely to be removed")>]
     member SuppressRelocation : bool  with get,set
 
-    /// FSharp.Data addition: this method is used by Debug.fs
+    // This method is used by Debug.fs
     member MakeParametricType : name:string * args:obj[] -> ProvidedTypeDefinition
 
     /// Add a custom attribute to the provided type definition.

@@ -403,11 +403,12 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
 
 
 
+<<<<<<< HEAD
     /// Create a new provided static parameter, for use with DefineStaticParamaeters on a provided type definition.
     ///
     /// When making a cross-targeting type provider, use this method instead of the ProvidedParameter constructor from ProvidedTypes
-    member __.ProvidedStaticParameter(parameterName, parameterType) = 
-      new ProvidedStaticParameter(parameterName, parameterType)
+    member __.ProvidedStaticParameter(parameterName, parameterType, ?parameterDefaultValue) = 
+      new ProvidedStaticParameter(parameterName, parameterType, ?parameterDefaultValue=parameterDefaultValue)
 
     /// Create a new provided field. It is not initially associated with any specific provided type definition.
     ///
@@ -444,10 +445,10 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
     /// Create a new provided event. It is not initially associated with any specific provided type definition.
     ///
     /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-    member __.ProvidedEvent(propertyName, eventHandlerType, getterCode, setterCode) = 
+    member __.ProvidedEvent(propertyName, eventHandlerType, adderCode, removerCode) = 
       new ProvidedEvent(propertyName, eventHandlerType |> replacer.ConvertDesignTimeTypeToTargetType, 
-                           AdderCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> getterCode |> replacer.ConvertDesignTimeExprToTargetExpr), 
-                           RemoverCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> setterCode |> replacer.ConvertDesignTimeExprToTargetExpr))
+                           AdderCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> adderCode |> replacer.ConvertDesignTimeExprToTargetExpr), 
+                           RemoverCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> removerCode |> replacer.ConvertDesignTimeExprToTargetExpr))
 
   /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
     member __.ProvidedConstructor(parameters, invokeCode: Expr list -> Expr) = 
