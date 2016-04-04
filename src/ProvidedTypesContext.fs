@@ -400,8 +400,8 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
 
 
   /// When making a cross-targeting type provider, use this method instead of the ProvidedParameter constructor from ProvidedTypes
-    member __.ProvidedStaticParameter(parameterName, parameterType) = 
-      new ProvidedStaticParameter(parameterName, parameterType)
+    member __.ProvidedStaticParameter(parameterName, parameterType, ?parameterDefaultValue) = 
+      new ProvidedStaticParameter(parameterName, parameterType, ?parameterDefaultValue=parameterDefaultValue)
 
     member __.ProvidedField(fieldName, fieldType) = 
       new ProvidedField(fieldName, fieldType  |> replacer.ConvertDesignTimeTypeToTargetType)
@@ -429,10 +429,10 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
     /// Create a new provided property. It is not initially associated with any specific provided type definition.
     ///
     /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-    member __.ProvidedEvent(propertyName, eventHandlerType, getterCode, setterCode) = 
+    member __.ProvidedEvent(propertyName, eventHandlerType, adderCode, removerCode) = 
       new ProvidedEvent(propertyName, eventHandlerType |> replacer.ConvertDesignTimeTypeToTargetType, 
-                           AdderCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> getterCode |> replacer.ConvertDesignTimeExprToTargetExpr), 
-                           RemoverCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> setterCode |> replacer.ConvertDesignTimeExprToTargetExpr))
+                           AdderCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> adderCode |> replacer.ConvertDesignTimeExprToTargetExpr), 
+                           RemoverCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> removerCode |> replacer.ConvertDesignTimeExprToTargetExpr))
 
   /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
     member __.ProvidedConstructor(parameters, invokeCode: Expr list -> Expr) = 

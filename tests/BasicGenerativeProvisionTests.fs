@@ -37,8 +37,9 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 
     do
         let myType = ProvidedTypes.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let parameters = [ ProvidedTypes.ProvidedStaticParameter("Count", typeof<int>) ]
-        myType.DefineStaticParameters(parameters, (fun typeName args -> createType(typeName, args.[0] :?> int)))
+        let parameters = [ ProvidedTypes.ProvidedStaticParameter("Count", typeof<int>) 
+                           ProvidedTypes.ProvidedStaticParameter("Count2", typeof<int>, 3) ]
+        myType.DefineStaticParameters(parameters, (fun typeName args -> createType(typeName, (args.[0] :?> int) + (args.[1] :?> int))))
 
         this.AddNamespace(ns, [myType])
 
@@ -47,7 +48,7 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 [<Test>]
 let ``GenerativePropertyProviderWithStaticParams generates for .NET 4.5 F# 4.0 correctly``() : unit  = 
   if Targets.supportsFSharp40 then 
-    let args = [|  box 3 |] 
+    let args = [|  box 3; box 4  |] 
     let runtimeAssembly = Targets.DotNet45FSharp40Refs.[0]
     let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
