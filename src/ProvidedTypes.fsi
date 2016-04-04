@@ -279,6 +279,13 @@ type ProvidedTypeBuilder =
     /// Like methodInfo.MakeGenericMethod, but will also work with unit-annotated types and provided types
     static member MakeGenericMethod: genericMethodDefinition: MethodInfo * genericArguments: Type list -> MethodInfo
 
+[<Class>]
+/// Used internally for ProvidedTypesContext
+type internal ZProvidedTypeBuilder =
+    new : convToTgt: (Type -> Type) -> ZProvidedTypeBuilder
+    member MakeGenericType: genericTypeDefinition: Type * genericArguments: Type list -> Type
+    member MakeGenericMethod: genericMethodDefinition: MethodInfo * genericArguments: Type list -> MethodInfo
+
 /// Helps create erased provided unit-of-measure annotations.
 [<Class>]
 type ProvidedMeasureBuilder =
@@ -320,6 +327,11 @@ type ProvidedTypeDefinition =
     /// Create a new provided type definition, to be located as a nested type in some type definition.
     // [<CompilerMessage("Please create a ProvidedTypesContext and use ctxt.ProvidedTypeDefinition to create a provided type definition. This will help allow your type provider to target portable profiles where that makes sense. Some argument names and values may need adjusting.", 8796)>]
     new : className : string * baseType: Type option -> ProvidedTypeDefinition
+
+
+    internal new : assembly: Assembly * namespaceName: string * className: string * baseType: Type option * convToTgt: (Type -> Type)  -> ProvidedTypeDefinition
+    internal new : className : string * baseType: Type option * convToTgt: (Type -> Type) -> ProvidedTypeDefinition
+
 
     /// Add the given type as an implemented interface.
     member AddInterfaceImplementation : interfaceType: Type -> unit    
@@ -371,8 +383,11 @@ type ProvidedTypeDefinition =
     /// Add a set of members to a ProvidedTypeDefinition, delaying computation of the members until required by the compilation context.
     member AddMembersDelayed : membersFunction:(unit -> list<#MemberInfo>) -> unit    
     
+#if NO_GENERATIVE
+#else
     /// Add the types of the generated assembly as generative types, where types in namespaces get hierarchically positioned as nested types.
     member AddAssemblyTypesAsNestedTypesDelayed : assemblyFunction:(unit -> Assembly) -> unit
+#endif
 
     /// Define the static parameters available on a statically parameterized type
     member DefineStaticParameters     : parameters: ProvidedStaticParameter list * instantiationFunction: (string -> obj[] -> ProvidedTypeDefinition) -> unit
@@ -409,6 +424,8 @@ type ProvidedTypeDefinition =
     /// Get or set a utility function to log the creation of root Provided Type. Used to debug caching/invalidation.
     static member Logger : (string -> unit) option ref
 
+#if NO_GENERATIVE
+#else
 /// A provided generated assembly
 type ProvidedAssembly =
     /// Create a provided generated assembly
@@ -434,6 +451,8 @@ type ProvidedAssembly =
 #else
     /// Register that a given file is a provided generated assembly
     static member RegisterGenerated : fileName:string -> Assembly
+#endif
+
 #endif
 
 

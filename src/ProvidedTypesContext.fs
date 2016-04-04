@@ -390,6 +390,10 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
 
     let replacer = AssemblyReplacer (designTimeAssemblies, referencedAssemblies)
 
+    // convToTgt is used to patch up some types like typeof<System.Array> reported by ProvidedTypes
+    let convToTgt = replacer.ConvertDesignTimeTypeToTargetType 
+    let ptb = ZProvidedTypeBuilder(convToTgt)
+
     member __.TryBindAssembly(aref: ILAssemblyRef) : Choice<ContextAssembly, exn> = TryBindAssemblySimple(aref.Name) 
     member __.TryBindAssembly(aref: AssemblyName) : Choice<ContextAssembly, exn> = TryBindAssemblySimple(aref.Name) 
     member __.ReferencedAssemblyPaths = referencedAssemblyPaths
@@ -399,26 +403,37 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
 
 
 
-  /// When making a cross-targeting type provider, use this method instead of the ProvidedParameter constructor from ProvidedTypes
+    /// Create a new provided static parameter, for use with DefineStaticParamaeters on a provided type definition.
+    ///
+    /// When making a cross-targeting type provider, use this method instead of the ProvidedParameter constructor from ProvidedTypes
     member __.ProvidedStaticParameter(parameterName, parameterType) = 
       new ProvidedStaticParameter(parameterName, parameterType)
 
+    /// Create a new provided field. It is not initially associated with any specific provided type definition.
+    ///
+    /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
     member __.ProvidedField(fieldName, fieldType) = 
       new ProvidedField(fieldName, fieldType  |> replacer.ConvertDesignTimeTypeToTargetType)
 
+    /// Create a new provided literal field. It is not initially associated with any specific provided type definition.
+    ///
+    /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
     member __.ProvidedLiteralField(fieldName, fieldType, literalValue:obj) = 
       new ProvidedLiteralField(fieldName, fieldType  |> replacer.ConvertDesignTimeTypeToTargetType, literalValue)
 
+    /// Create a new provided parameter. 
+    ///
+    /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
     member __.ProvidedParameter(parameterName, parameterType) = 
       new ProvidedParameter(parameterName, parameterType |> replacer.ConvertDesignTimeTypeToTargetType)
 
-    /// Create a new provided property. It is not initially associated with any specific provided type definition.
+    /// Create a new provided getter property. It is not initially associated with any specific provided type definition.
     ///
     /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
     member __.ProvidedProperty(propertyName, propertyType, getterCode, ?parameters) = 
       new ProvidedProperty(propertyName, propertyType |> replacer.ConvertDesignTimeTypeToTargetType, GetterCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> getterCode |> replacer.ConvertDesignTimeExprToTargetExpr), ?parameters=parameters)
 
-    /// Create a new provided property. It is not initially associated with any specific provided type definition.
+    /// Create a new provided getter/setter property. It is not initially associated with any specific provided type definition.
     ///
     /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
     member __.ProvidedProperty(propertyName, propertyType, getterCode, setterCode, ?parameters) = 
@@ -426,7 +441,7 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
                            GetterCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> getterCode |> replacer.ConvertDesignTimeExprToTargetExpr), 
                            SetterCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> setterCode |> replacer.ConvertDesignTimeExprToTargetExpr), ?parameters=parameters)
 
-    /// Create a new provided property. It is not initially associated with any specific provided type definition.
+    /// Create a new provided event. It is not initially associated with any specific provided type definition.
     ///
     /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
     member __.ProvidedEvent(propertyName, eventHandlerType, getterCode, setterCode) = 
@@ -444,12 +459,17 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
 
   /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
     member __.ProvidedTypeDefinition(className, baseType: Type option) = 
-      new ProvidedTypeDefinition(className, baseType |> Option.map replacer.ConvertDesignTimeTypeToTargetType)
+      new ProvidedTypeDefinition(className, baseType |> Option.map replacer.ConvertDesignTimeTypeToTargetType, convToTgt)
 
   /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
     member __.ProvidedTypeDefinition(assembly, namespaceName, className, baseType: Type option) = 
-      new ProvidedTypeDefinition(assembly, namespaceName, className, baseType |> Option.map replacer.ConvertDesignTimeTypeToTargetType)
+      new ProvidedTypeDefinition(assembly, namespaceName, className, baseType |> Option.map replacer.ConvertDesignTimeTypeToTargetType, convToTgt)
 
+  /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericType
+    member __.MakeGenericType(genericTypeDefinition, genericArguments) = ptb.MakeGenericType(genericTypeDefinition, genericArguments) 
+
+  /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericMethod
+    member __.MakeGenericMethod(genericMethodDefinition, genericArguments) = ptb.MakeGenericMethod(genericMethodDefinition, genericArguments) 
 
     static member Create (cfg : TypeProviderConfig) = 
 

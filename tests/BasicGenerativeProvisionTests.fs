@@ -18,6 +18,9 @@ open FsUnit
 
 #nowarn "760" // IDisposable needs new
 
+#if NO_GENERATIVE
+#else
+
 [<TypeProvider>]
 type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces ()
@@ -60,3 +63,4 @@ let ``GenerativePropertyProviderWithStaticParams generates for .NET 4.5 F# 4.0 c
     let assemContents = (typeProviderForNamespaces :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
     Assert.AreNotEqual(assemContents.Length, 0)
 
+#endif
