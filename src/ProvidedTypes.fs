@@ -14,13 +14,17 @@ open System
 open System.Text
 open System.IO
 open System.Reflection
-open System.Reflection.Emit
 open System.Linq.Expressions
 open System.Collections.Generic
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Quotations.DerivedPatterns
 open Microsoft.FSharp.Core.CompilerServices
+
+#if NO_GENERATIVE
+#else
+open System.Reflection.Emit
+#endif
 
 //--------------------------------------------------------------------------------
 // UncheckedQuotations
@@ -211,222 +215,239 @@ module internal UncheckedQuotations =
     let RebuildShapeCombinationUnchecked (Shape comb,args) = comb args
 
 //--------------------------------------------------------------------------------
+// The quotation simplifier
+//
+// This is invoked for each quotation specified by the type provider, just before it is
+// handed to the F# compiler, allowing a broader range of 
+// quotations to be accepted. Specifically accept:
+//
+//     - NewTuple nodes (for generative type providers)
+//     - TupleGet nodes (for generative type providers)
+//     - array and list values as constants
+//     - PropertyGet and PropertySet nodes
+//     - Application, NewUnionCase, NewRecord, UnionCaseTest nodes
+//     - Let nodes (defining "byref" values)
+//     - LetRecursive nodes 
+//
+// Additionally, a set of code optimizations are applied to generated code:
+//    - inlineRightPipe 
+//    - optimizeCurriedApplications 
+//    - inlineValueBindings 
 
-module QuotationSimplifier = 
+type QuotationSimplifier(isGenerated: bool) = 
 
-    let transExpr isGenerated q =     
-        let rec trans q = 
-            match q with 
-            // convert NewTuple to the call to the constructor of the Tuple type (only for generated types)
-            | NewTuple(items) when isGenerated ->
-                let rec mkCtor args ty = 
-                    let ctor, restTyOpt = Reflection.FSharpValue.PreComputeTupleConstructorInfo ty
-                    match restTyOpt with
-                    | None -> Expr.NewObject(ctor, List.map trans args)
-                    | Some restTy ->
-                        let curr = [for a in Seq.take 7 args -> trans a]
-                        let rest = List.ofSeq (Seq.skip 7 args) 
-                        Expr.NewObject(ctor, curr @ [mkCtor rest restTy])
-                let tys = [| for e in items -> e.Type |]
-                let tupleTy = Reflection.FSharpType.MakeTupleType tys
-                trans (mkCtor items tupleTy)
-            // convert TupleGet to the chain of PropertyGet calls (only for generated types)
-            | TupleGet(e, i) when isGenerated ->
-                let rec mkGet ty i (e : Expr)  = 
-                    let pi, restOpt = Reflection.FSharpValue.PreComputeTuplePropertyInfo(ty, i)
-                    let propGet = Expr.PropertyGet(e, pi)
-                    match restOpt with
-                    | None -> propGet
-                    | Some (restTy, restI) -> mkGet restTy restI propGet
-                trans (mkGet e.Type i (trans e))
-            | Value(value, ty) ->
-                if value <> null then
-                   let tyOfValue = value.GetType()
-                   transValue(value, tyOfValue, ty)
-                else q
-            // Eliminate F# property gets to method calls
-            | PropertyGet(obj,propInfo,args) -> 
+    let rec transExpr q = 
+        match q with 
+        // convert NewTuple to the call to the constructor of the Tuple type (only for generated types)
+        | NewTuple(items) when isGenerated ->
+            let rec mkCtor args ty = 
+                let ctor, restTyOpt = Reflection.FSharpValue.PreComputeTupleConstructorInfo ty
+                match restTyOpt with
+                | None -> Expr.NewObject(ctor, List.map transExpr args)
+                | Some restTy ->
+                    let curr = [for a in Seq.take 7 args -> transExpr a]
+                    let rest = List.ofSeq (Seq.skip 7 args) 
+                    Expr.NewObject(ctor, curr @ [mkCtor rest restTy])
+            let tys = [| for e in items -> e.Type |]
+            let tupleTy = Reflection.FSharpType.MakeTupleType tys
+            transExpr (mkCtor items tupleTy)
+        // convert TupleGet to the chain of PropertyGet calls (only for generated types)
+        | TupleGet(e, i) when isGenerated ->
+            let rec mkGet ty i (e : Expr)  = 
+                let pi, restOpt = Reflection.FSharpValue.PreComputeTuplePropertyInfo(ty, i)
+                let propGet = Expr.PropertyGet(e, pi)
+                match restOpt with
+                | None -> propGet
+                | Some (restTy, restI) -> mkGet restTy restI propGet
+            transExpr (mkGet e.Type i (transExpr e))
+        | Value(value, ty) ->
+            if value <> null then
+                let tyOfValue = value.GetType()
+                transValue(value, tyOfValue, ty)
+            else q
+        // Eliminate F# property gets to method calls
+        | PropertyGet(obj,propInfo,args) -> 
+            match obj with 
+            | None -> transExpr (Expr.CallUnchecked(propInfo.GetGetMethod(),args))
+            | Some o -> transExpr (Expr.CallUnchecked(transExpr o,propInfo.GetGetMethod(),args))
+        // Eliminate F# property sets to method calls
+        | PropertySet(obj,propInfo,args,v) -> 
                 match obj with 
-                | None -> trans (Expr.CallUnchecked(propInfo.GetGetMethod(),args))
-                | Some o -> trans (Expr.CallUnchecked(trans o,propInfo.GetGetMethod(),args))
-            // Eliminate F# property sets to method calls
-            | PropertySet(obj,propInfo,args,v) -> 
-                 match obj with 
-                 | None -> trans (Expr.CallUnchecked(propInfo.GetSetMethod(),args@[v]))
-                 | Some o -> trans (Expr.CallUnchecked(trans o,propInfo.GetSetMethod(),args@[v]))
-            // Eliminate F# function applications to FSharpFunc<_,_>.Invoke calls
-            | Application(f,e) -> 
-                trans (Expr.CallUnchecked(trans f, f.Type.GetMethod "Invoke", [ e ]) )
-            | NewUnionCase(ci, es) ->
-                trans (Expr.CallUnchecked(Reflection.FSharpValue.PreComputeUnionConstructorInfo ci, es) )
-            | NewRecord(ci, es) ->
-                trans (Expr.NewObjectUnchecked(Reflection.FSharpValue.PreComputeRecordConstructorInfo ci, es) )
-            | UnionCaseTest(e,uc) ->
-                let tagInfo = Reflection.FSharpValue.PreComputeUnionTagMemberInfo uc.DeclaringType
-                let tagExpr = 
-                    match tagInfo with 
-                    | :? PropertyInfo as tagProp ->
-                         trans (Expr.PropertyGet(e,tagProp) )
-                    | :? MethodInfo as tagMeth -> 
-                         if tagMeth.IsStatic then trans (Expr.Call(tagMeth, [e]))
-                         else trans (Expr.Call(e,tagMeth,[]))
-                    | _ -> failwith "unreachable: unexpected result from PreComputeUnionTagMemberInfo"
-                let tagNumber = uc.Tag
-                trans <@@ (%%(tagExpr) : int) = tagNumber @@>
+                | None -> transExpr (Expr.CallUnchecked(propInfo.GetSetMethod(),args@[v]))
+                | Some o -> transExpr (Expr.CallUnchecked(transExpr o,propInfo.GetSetMethod(),args@[v]))
+        // Eliminate F# function applications to FSharpFunc<_,_>.Invoke calls
+        | Application(f,e) -> 
+            transExpr (Expr.CallUnchecked(transExpr f, f.Type.GetMethod "Invoke", [ e ]) )
+        | NewUnionCase(ci, es) ->
+            transExpr (Expr.CallUnchecked(Reflection.FSharpValue.PreComputeUnionConstructorInfo ci, es) )
+        | NewRecord(ci, es) ->
+            transExpr (Expr.NewObjectUnchecked(Reflection.FSharpValue.PreComputeRecordConstructorInfo ci, es) )
+        | UnionCaseTest(e,uc) ->
+            let tagInfo = Reflection.FSharpValue.PreComputeUnionTagMemberInfo uc.DeclaringType
+            let tagExpr = 
+                match tagInfo with 
+                | :? PropertyInfo as tagProp ->
+                        transExpr (Expr.PropertyGet(e,tagProp) )
+                | :? MethodInfo as tagMeth -> 
+                        if tagMeth.IsStatic then transExpr (Expr.Call(tagMeth, [e]))
+                        else transExpr (Expr.Call(e,tagMeth,[]))
+                | _ -> failwith "unreachable: unexpected result from PreComputeUnionTagMemberInfo"
+            let tagNumber = uc.Tag
+            transExpr <@@ (%%(tagExpr) : int) = tagNumber @@>
 
-            // Explicitly handle weird byref variables in lets (used to populate out parameters), since the generic handlers can't deal with byrefs
-            | Let(v,vexpr,bexpr) when v.Type.IsByRef ->
+        // Explicitly handle weird byref variables in lets (used to populate out parameters), since the generic handlers can't deal with byrefs.
+        //
+        // The binding must have leaves that are themselves variables (due to the limited support for byrefs in expressions)
+        // therefore, we can perform inlining to translate this to a form that can be compiled
+        | Let(v,vexpr,bexpr) when v.Type.IsByRef -> transLetOfByref v vexpr bexpr
 
-                // the binding must have leaves that are themselves variables (due to the limited support for byrefs in expressions)
-                // therefore, we can perform inlining to translate this to a form that can be compiled
-                inlineByref v vexpr bexpr
+        // Eliminate recursive let bindings (which are unsupported by the type provider API) to regular let bindings
+        | LetRecursive(bindings, expr) -> transLetRec bindings expr
 
-            // Eliminate recursive let bindings (which are unsupported by the type provider API) to regular let bindings
-            | LetRecursive(bindings, expr) ->
-                // This uses a "lets and sets" approach, converting something like
-                //    let rec even = function
-                //    | 0 -> true
-                //    | n -> odd (n-1)
-                //    and odd = function
-                //    | 0 -> false
-                //    | n -> even (n-1)
-                //    X
-                // to something like
-                //    let even = ref Unchecked.defaultof<_>
-                //    let odd  = ref Unchecked.defaultof<_>
-                //    even := function
-                //            | 0 -> true
-                //            | n -> !odd (n-1)
-                //    odd  := function
-                //            | 0 -> false
-                //            | n -> !even (n-1)
-                //    X'
-                // where X' is X but with occurrences of even/odd substituted by !even and !odd (since now even and odd are references)
-                // Translation relies on typedefof<_ ref> - does this affect ability to target different runtime and design time environments?
-                let vars = List.map fst bindings
-                let vars' = vars |> List.map (fun v -> Quotations.Var(v.Name, typedefof<_ ref>.MakeGenericType(v.Type)))
+        // Handle the generic cases
+        | ShapeLambdaUnchecked(v,body) -> Expr.Lambda(v, transExpr body)
+        | ShapeCombinationUnchecked(comb,args) -> RebuildShapeCombinationUnchecked(comb,List.map transExpr args)
+        | ShapeVarUnchecked _ -> q
+
+    and transLetRec bindings expr =
+            // This uses a "lets and sets" approach, converting something like
+            //    let rec even = function
+            //    | 0 -> true
+            //    | n -> odd (n-1)
+            //    and odd = function
+            //    | 0 -> false
+            //    | n -> even (n-1)
+            //    X
+            // to something like
+            //    let even = ref Unchecked.defaultof<_>
+            //    let odd  = ref Unchecked.defaultof<_>
+            //    even := function
+            //            | 0 -> true
+            //            | n -> !odd (n-1)
+            //    odd  := function
+            //            | 0 -> false
+            //            | n -> !even (n-1)
+            //    X'
+            // where X' is X but with occurrences of even/odd substituted by !even and !odd (since now even and odd are references)
+            // Translation relies on typedefof<_ ref> - does this affect ability to target different runtime and design time environments?
+            let vars = List.map fst bindings
+            let vars' = vars |> List.map (fun v -> Quotations.Var(v.Name, typedefof<_ ref>.MakeGenericType(v.Type)))
                 
-                // init t generates the equivalent of <@ ref Unchecked.defaultof<t> @>
-                let init (t:Type) =
-                    let r = match <@ ref 1 @> with Call(None, r, [_]) -> r | _ -> failwith "Extracting MethodInfo from <@ 1 @> failed"
-                    let d = match <@ Unchecked.defaultof<_> @> with Call(None, d, []) -> d | _ -> failwith "Extracting MethodInfo from <@ Unchecked.defaultof<_> @> failed"
-                    Expr.Call(r.GetGenericMethodDefinition().MakeGenericMethod(t), [Expr.Call(d.GetGenericMethodDefinition().MakeGenericMethod(t),[])])
+            // "init t" generates the equivalent of <@ ref Unchecked.defaultof<t> @>
+            let init (t:Type) =
+                let r = match <@ ref 1 @> with Call(None, r, [_]) -> r | _ -> failwith "Extracting MethodInfo from <@ 1 @> failed"
+                let d = match <@ Unchecked.defaultof<_> @> with Call(None, d, []) -> d | _ -> failwith "Extracting MethodInfo from <@ Unchecked.defaultof<_> @> failed"
+                Expr.Call(r.GetGenericMethodDefinition().MakeGenericMethod(t), [Expr.Call(d.GetGenericMethodDefinition().MakeGenericMethod(t),[])])
 
-                // deref v generates the equivalent of <@ !v @>
-                // (so v's type must be ref<something>)
-                let deref (v:Quotations.Var) = 
-                    let m = match <@ !(ref 1) @> with Call(None, m, [_]) -> m | _ -> failwith "Extracting MethodInfo from <@ !(ref 1) @> failed"
-                    let tyArgs = v.Type.GetGenericArguments()
-                    Expr.Call(m.GetGenericMethodDefinition().MakeGenericMethod(tyArgs), [Expr.Var v])
+            // deref v generates the equivalent of <@ !v @>
+            // (so v's type must be ref<something>)
+            let deref (v:Quotations.Var) = 
+                let m = match <@ !(ref 1) @> with Call(None, m, [_]) -> m | _ -> failwith "Extracting MethodInfo from <@ !(ref 1) @> failed"
+                let tyArgs = v.Type.GetGenericArguments()
+                Expr.Call(m.GetGenericMethodDefinition().MakeGenericMethod(tyArgs), [Expr.Var v])
 
-                // substitution mapping a variable v to the expression <@ !v' @> using the corresponding new variable v' of ref type
-                let subst =
-                    let map =
-                        vars'
-                        |> List.map deref
-                        |> List.zip vars
-                        |> Map.ofList
-                    fun v -> Map.tryFind v map
+            // substitution mapping a variable v to the expression <@ !v' @> using the corresponding new variable v' of ref type
+            let subst =
+                let map =
+                    vars'
+                    |> List.map deref
+                    |> List.zip vars
+                    |> Map.ofList
+                fun v -> Map.tryFind v map
 
-                let expr' = expr.Substitute(subst)
+            let expr' = expr.Substitute(subst)
 
-                // maps variables to new variables
-                let varDict = List.zip vars vars' |> dict
+            // maps variables to new variables
+            let varDict = List.zip vars vars' |> dict
 
-                // given an old variable v and an expression e, returns a quotation like <@ v' := e @> using the corresponding new variable v' of ref type
-                let setRef (v:Quotations.Var) e = 
-                    let m = match <@ (ref 1) := 2 @> with Call(None, m, [_;_]) -> m | _ -> failwith "Extracting MethodInfo from <@ (ref 1) := 2 @> failed"
-                    Expr.Call(m.GetGenericMethodDefinition().MakeGenericMethod(v.Type), [Expr.Var varDict.[v]; e])
+            // given an old variable v and an expression e, returns a quotation like <@ v' := e @> using the corresponding new variable v' of ref type
+            let setRef (v:Quotations.Var) e = 
+                let m = match <@ (ref 1) := 2 @> with Call(None, m, [_;_]) -> m | _ -> failwith "Extracting MethodInfo from <@ (ref 1) := 2 @> failed"
+                Expr.Call(m.GetGenericMethodDefinition().MakeGenericMethod(v.Type), [Expr.Var varDict.[v]; e])
 
-                // Something like 
-                //  <@
-                //      v1 := e1'
-                //      v2 := e2'
-                //      ...
-                //      expr'
-                //  @>
-                // Note that we must substitute our new variable dereferences into the bound expressions
-                let body = 
-                    bindings
-                    |> List.fold (fun b (v,e) -> Expr.Sequential(setRef v (e.Substitute subst), b)) expr'
+            // Something like 
+            //  <@
+            //      v1 := e1'
+            //      v2 := e2'
+            //      ...
+            //      expr'
+            //  @>
+            // Note that we must substitute our new variable dereferences into the bound expressions
+            let body = 
+                bindings
+                |> List.fold (fun b (v,e) -> Expr.Sequential(setRef v (e.Substitute subst), b)) expr'
                 
-                // Something like
-                //   let v1 = ref Unchecked.defaultof<t1>
-                //   let v2 = ref Unchecked.defaultof<t2>
-                //   ...
-                //   body
-                vars
-                |> List.fold (fun b v -> Expr.LetUnchecked(varDict.[v], init v.Type, b)) body                
-                |> trans 
+            // Something like
+            //   let v1 = ref Unchecked.defaultof<t1>
+            //   let v2 = ref Unchecked.defaultof<t2>
+            //   ...
+            //   body
+            vars
+            |> List.fold (fun b v -> Expr.LetUnchecked(varDict.[v], init v.Type, b)) body                
+            |> transExpr 
 
-            // Handle the generic cases
-            | ShapeLambdaUnchecked(v,body) -> 
-                Expr.Lambda(v, trans body)
-            | ShapeCombinationUnchecked(comb,args) -> 
-                RebuildShapeCombinationUnchecked(comb,List.map trans args)
-            | ShapeVarUnchecked _ -> q
 
-        and inlineByref v vexpr bexpr =
-            match vexpr with
-            | Sequential(e',vexpr') ->
-                (* let v = (e'; vexpr') in bexpr => e'; let v = vexpr' in bexpr *)
-                Expr.Sequential(e', inlineByref v vexpr' bexpr)
-                |> trans
-            | IfThenElse(c,b1,b2) ->
-                (* let v = if c then b1 else b2 in bexpr => if c then let v = b1 in bexpr else let v = b2 in bexpr *)
-                Expr.IfThenElse(c, inlineByref v b1 bexpr, inlineByref v b2 bexpr)
-                |> trans
-            | Var _ -> 
-                (* let v = v1 in bexpr => bexpr[v/v1] *)
-                bexpr.Substitute(fun v' -> if v = v' then Some vexpr else None)
-                |> trans
-            | _ -> 
-                failwith (sprintf "Unexpected byref binding: %A = %A" v vexpr)
+    and transLetOfByref v vexpr bexpr =
+        match vexpr with
+        | Sequential(e',vexpr') ->
+            (* let v = (e'; vexpr') in bexpr => e'; let v = vexpr' in bexpr *)
+            Expr.Sequential(e', transLetOfByref v vexpr' bexpr)
+            |> transExpr
+        | IfThenElse(c,b1,b2) ->
+            (* let v = if c then b1 else b2 in bexpr => if c then let v = b1 in bexpr else let v = b2 in bexpr *)
+            //
+            // Note, this duplicates "bexpr" 
+            Expr.IfThenElse(c, transLetOfByref v b1 bexpr, transLetOfByref v b2 bexpr)
+            |> transExpr
+        | Var _ -> 
+            (* let v = v1 in bexpr => bexpr[v/v1] *)
+            bexpr.Substitute(fun v' -> if v = v' then Some vexpr else None)
+            |> transExpr
+        | _ -> 
+            failwith (sprintf "Unexpected byref binding: %A = %A" v vexpr)
 
-        and transValue (v : obj, tyOfValue : Type, expectedTy : Type) = 
-            let rec transArray (o : Array, ty : Type) = 
-                let elemTy = ty.GetElementType()
-                let converter = getConverterForType elemTy
-                let elements = 
-                    [
-                        for el in o do
-                            yield converter el
-                    ]
-                Expr.NewArrayUnchecked(elemTy, elements)
-            and transList(o, ty : Type, nil, cons) =
-                let converter = getConverterForType (ty.GetGenericArguments().[0])
-                o
-                |> Seq.cast
-                |> List.ofSeq
-                |> fun l -> List.foldBack(fun o s -> Expr.NewUnionCase(cons, [ converter(o); s ])) l (Expr.NewUnionCase(nil, []))
-                |> trans
+    and transValueArray (o : Array, ty : Type) = 
+        let elemTy = ty.GetElementType()
+        let converter = getValueConverterForType elemTy
+        let elements = [ for el in o -> converter el ]
+        Expr.NewArrayUnchecked(elemTy, elements)
 
-            and getConverterForType (ty : Type) = 
-                if ty.IsArray then 
-                    fun (v : obj) -> transArray(v :?> Array, ty)
-                elif ty.IsGenericType && ty.GetGenericTypeDefinition() = typedefof<_ list> then 
-                    let nil, cons =
-                        let cases = Reflection.FSharpType.GetUnionCases(ty)
-                        let a = cases.[0]
-                        let b = cases.[1]
-                        if a.Name = "Empty" then a,b
-                        else b,a
+    and transValueList(o, ty : Type, nil, cons) =
+        let converter = getValueConverterForType (ty.GetGenericArguments().[0])
+        o
+        |> Seq.cast
+        |> List.ofSeq
+        |> fun l -> List.foldBack(fun o s -> Expr.NewUnionCase(cons, [ converter(o); s ])) l (Expr.NewUnionCase(nil, []))
+        |> transExpr
+
+    and getValueConverterForType (ty : Type) = 
+        if ty.IsArray then 
+            fun (v : obj) -> transValueArray(v :?> Array, ty)
+        elif ty.IsGenericType && ty.GetGenericTypeDefinition() = typedefof<_ list> then 
+            let nil, cons =
+                let cases = Reflection.FSharpType.GetUnionCases(ty)
+                let a = cases.[0]
+                let b = cases.[1]
+                if a.Name = "Empty" then a,b
+                else b,a
                      
-                    fun v -> transList (v :?> System.Collections.IEnumerable, ty, nil, cons)
-                else 
-                    fun v -> Expr.Value(v, ty)
-            let converter = getConverterForType tyOfValue
-            let r = converter v
-            if tyOfValue <> expectedTy then Expr.Coerce(r, expectedTy)
-            else r
-        trans q
+            fun v -> transValueList (v :?> System.Collections.IEnumerable, ty, nil, cons)
+        else 
+            fun v -> Expr.Value(v, ty)
 
+    and transValue (v : obj, tyOfValue : Type, expectedTy : Type) = 
+        let converter = getValueConverterForType tyOfValue
+        let r = converter v
+        if tyOfValue <> expectedTy then Expr.Coerce(r, expectedTy)
+        else r
+
+#if NO_GENERATIVE
+#else
+    // TODO: this works over FSharp.Core 4.4.0.0 types. These types need to be retargeted to the target runtime.
     let getFastFuncType (args : list<Expr>) resultType =
         let types =
-            [|
-                for arg in args -> arg.Type
-                yield resultType
-            |]
+            [|  for arg in args -> arg.Type
+                yield resultType |]
         let fastFuncTy = 
             match List.length args with
             | 2 -> typedefof<OptimizedClosures.FSharpFunc<_, _, _>>.MakeGenericType(types)
@@ -436,7 +457,7 @@ module QuotationSimplifier =
             | _ -> invalidArg "args" "incorrect number of arguments"
         fastFuncTy.GetMethod("Adapt")
     
-    let inline (===) a b = LanguagePrimitives.PhysicalEquality a b
+    let (===) a b = LanguagePrimitives.PhysicalEquality a b
     
     let traverse f = 
         let rec fallback e = 
@@ -552,15 +573,20 @@ module QuotationSimplifier =
             | Lambda(arg, Application(Var f, Var arg1)) when v = f && arg = arg1 -> n
             | _ -> n
         loop expr
+#endif
+
+    member __.TranslateExpression q = transExpr q
     
-    // Use the real variable names instead of indices, to improve output of Debug.fs
-    let transQuotationToCode isGenerated qexprf (paramNames: string[]) (argExprs: Expr[]) = 
+    member __.TranslateQuotationToCode qexprf (paramNames: string[]) (argExprs: Expr[]) = 
+        // Use the real variable names instead of indices, to improve output of Debug.fs
         // Add let bindings for arguments to ensure that arguments will be evaluated
         let vars = argExprs |> Array.mapi (fun i e -> Quotations.Var(paramNames.[i], e.Type))
         let expr = qexprf ([for v in vars -> Expr.Var v])
 
         let pairs = Array.zip argExprs vars
         let expr = Array.foldBack (fun (arg, var) e -> Expr.LetUnchecked(var, arg, e)) pairs expr
+#if NO_GENERATIVE
+#else
         let expr = 
             if isGenerated then
                 let e1 = inlineRightPipe expr
@@ -569,32 +595,497 @@ module QuotationSimplifier =
                 e3
             else
                 expr
+#endif
 
-        transExpr isGenerated expr
+        transExpr expr
+
+//-------------------------------------------------------------------------------------------------
+// Generate IL code from quotations
 
 
-[<AutoOpen>]
-module internal Misc =
+#if NO_GENERATIVE
+#else
+ 
+type internal ExpectedStackState = 
+    | Empty = 1
+    | Address = 2
+    | Value = 3
 
-    type internal ExpectedStackState = 
-        | Empty = 1
-        | Address = 2
-        | Value = 3
+type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName, 
+                   implicitCtorArgsAsFields: FieldBuilder list, 
+                   transType: Type -> Type, 
+                   transField: FieldInfo -> FieldInfo, 
+                   transMethod: MethodInfo -> MethodInfo, 
+                   transCtor: ConstructorInfo -> ConstructorInfo,
+                   isLiteralEnumField: FieldInfo -> bool,
+                   ilg: ILGenerator, locals:Dictionary<Quotations.Var,LocalBuilder>, parameterVars) = 
 
     let TypeBuilderInstantiationType = 
         let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> false 
         let typeName = if runningOnMono then "System.Reflection.MonoGenericClass" else "System.Reflection.Emit.TypeBuilderInstantiation"
         typeof<TypeBuilder>.Assembly.GetType(typeName)
 
-    let GetTypeFromHandleMethod = typeof<Type>.GetMethod("GetTypeFromHandle")
-    let LanguagePrimitivesType = typedefof<list<_>>.Assembly.GetType("Microsoft.FSharp.Core.LanguagePrimitives")
-    let ParseInt32Method = LanguagePrimitivesType.GetMethod "ParseInt32"
-    let DecimalConstructor = typeof<decimal>.GetConstructor([| typeof<int>; typeof<int>; typeof<int>; typeof<bool>; typeof<byte> |])
-    let DateTimeConstructor = typeof<DateTime>.GetConstructor([| typeof<int64>; typeof<DateTimeKind> |])
-    let DateTimeOffsetConstructor = typeof<DateTimeOffset>.GetConstructor([| typeof<int64>; typeof<TimeSpan> |])
-    let TimeSpanConstructor = typeof<TimeSpan>.GetConstructor([|typeof<int64>|])
-    let isEmpty s = s = ExpectedStackState.Empty
-    let isAddress s = s = ExpectedStackState.Address
+    // TODO: this works over FSharp.Core 4.4.0.0 types and methods. These types need to be retargeted to the target runtime.
+
+    let GetTypeFromHandleMethod() = typeof<Type>.GetMethod("GetTypeFromHandle")
+    let LanguagePrimitivesType() = typedefof<list<_>>.Assembly.GetType("Microsoft.FSharp.Core.LanguagePrimitives")
+    let ParseInt32Method() = LanguagePrimitivesType().GetMethod "ParseInt32"
+    let DecimalConstructor() = typeof<decimal>.GetConstructor([| typeof<int>; typeof<int>; typeof<int>; typeof<bool>; typeof<byte> |])
+    let DateTimeConstructor() = typeof<DateTime>.GetConstructor([| typeof<int64>; typeof<DateTimeKind> |])
+    let DateTimeOffsetConstructor() = typeof<DateTimeOffset>.GetConstructor([| typeof<int64>; typeof<TimeSpan> |])
+    let TimeSpanConstructor() = typeof<TimeSpan>.GetConstructor([|typeof<int64>|])
+
+    let isEmpty s = (s = ExpectedStackState.Empty)
+    let isAddress s = (s = ExpectedStackState.Address)
+    let rec emitLambda(callSiteIlg : ILGenerator, v : Quotations.Var, body : Expr, freeVars : seq<Quotations.Var>, locals : Dictionary<_, LocalBuilder>, parameters) =
+        let lambda = assemblyMainModule.DefineType(uniqueLambdaTypeName(), TypeAttributes.Class)
+        let baseType = typedefof<FSharpFunc<_, _>>.MakeGenericType(v.Type, body.Type)
+        lambda.SetParent(baseType)
+        let ctor = lambda.DefineDefaultConstructor(MethodAttributes.Public)
+        let decl = baseType.GetMethod "Invoke"
+        let paramTypes = [| for p in decl.GetParameters() -> p.ParameterType |]
+        let invoke = lambda.DefineMethod("Invoke", MethodAttributes.Virtual ||| MethodAttributes.Final ||| MethodAttributes.Public, decl.ReturnType, paramTypes)
+        lambda.DefineMethodOverride(invoke, decl)
+
+        // promote free vars to fields
+        let fields = ResizeArray()
+        for v in freeVars do
+            let f = lambda.DefineField(v.Name, v.Type, FieldAttributes.Assembly)
+            fields.Add(v, f)
+
+        let lambdaLocals = Dictionary()
+                
+        let ilg = invoke.GetILGenerator()
+        for (v, f) in fields do
+            let l = ilg.DeclareLocal(v.Type)
+            ilg.Emit(OpCodes.Ldarg_0)
+            ilg.Emit(OpCodes.Ldfld, f)
+            ilg.Emit(OpCodes.Stloc, l)
+            lambdaLocals.[v] <- l
+
+        let expectedState = if (invoke.ReturnType = typeof<System.Void>) then ExpectedStackState.Empty else ExpectedStackState.Value
+        let lambadParamVars = [| Quotations.Var("this", lambda); v|]
+        let codeGen = CodeGenerator(assemblyMainModule, uniqueLambdaTypeName, implicitCtorArgsAsFields, transType, transField, transMethod, transCtor, isLiteralEnumField, ilg, lambdaLocals, lambadParamVars)
+        codeGen.EmitExpr (expectedState, body)
+        ilg.Emit(OpCodes.Ret) 
+
+        lambda.CreateType() |> ignore
+
+        callSiteIlg.Emit(OpCodes.Newobj, ctor)
+        for (v, f) in fields do
+            callSiteIlg.Emit(OpCodes.Dup)
+            match locals.TryGetValue v with
+            | true, loc -> 
+                callSiteIlg.Emit(OpCodes.Ldloc, loc)
+            | false, _ -> 
+                let index = parameters |> Array.findIndex ((=) v)
+                callSiteIlg.Emit(OpCodes.Ldarg, index)
+            callSiteIlg.Emit(OpCodes.Stfld, f)
+
+    and emitExpr expectedState expr = 
+        let pop () = ilg.Emit(OpCodes.Pop)
+        let popIfEmptyExpected s = if isEmpty s then pop()
+        let emitConvIfNecessary t1 = 
+            if t1 = typeof<int16> then
+                ilg.Emit(OpCodes.Conv_I2)
+            elif t1 = typeof<uint16> then
+                ilg.Emit(OpCodes.Conv_U2)
+            elif t1 = typeof<sbyte> then
+                ilg.Emit(OpCodes.Conv_I1)
+            elif t1 = typeof<byte> then
+                ilg.Emit(OpCodes.Conv_U1)
+
+        /// emits given expression to corresponding IL
+        match expr with 
+        | ForIntegerRangeLoop(loopVar, first, last, body) ->
+            // for(loopVar = first..last) body
+            let lb = 
+                match locals.TryGetValue loopVar with
+                | true, lb -> lb
+                | false, _ ->
+                    let lb = ilg.DeclareLocal(transType loopVar.Type)
+                    locals.Add(loopVar, lb)
+                    lb
+
+            // loopVar = first
+            emitExpr ExpectedStackState.Value first
+            ilg.Emit(OpCodes.Stloc, lb)
+
+            let before = ilg.DefineLabel()
+            let after = ilg.DefineLabel()
+
+            ilg.MarkLabel before
+            ilg.Emit(OpCodes.Ldloc, lb)
+                            
+            emitExpr ExpectedStackState.Value last
+            ilg.Emit(OpCodes.Bgt, after)
+
+            emitExpr ExpectedStackState.Empty body
+
+            // loopVar++
+            ilg.Emit(OpCodes.Ldloc, lb)
+            ilg.Emit(OpCodes.Ldc_I4_1)
+            ilg.Emit(OpCodes.Add)
+            ilg.Emit(OpCodes.Stloc, lb)
+
+            ilg.Emit(OpCodes.Br, before)
+            ilg.MarkLabel(after)
+
+        | NewArray(elementTy, elements) ->
+            ilg.Emit(OpCodes.Ldc_I4, List.length elements)
+            ilg.Emit(OpCodes.Newarr, transType elementTy)
+
+            elements 
+            |> List.iteri (fun i el ->
+                ilg.Emit(OpCodes.Dup)
+                ilg.Emit(OpCodes.Ldc_I4, i)
+                emitExpr ExpectedStackState.Value el
+                ilg.Emit(OpCodes.Stelem, transType elementTy))
+
+            popIfEmptyExpected expectedState
+
+        | WhileLoop(cond, body) ->
+            let before = ilg.DefineLabel()
+            let after = ilg.DefineLabel()
+
+            ilg.MarkLabel before
+            emitExpr ExpectedStackState.Value cond
+            ilg.Emit(OpCodes.Brfalse, after)
+            emitExpr ExpectedStackState.Empty body
+            ilg.Emit(OpCodes.Br, before)
+
+            ilg.MarkLabel after
+
+        | Var v -> 
+            if isEmpty expectedState then () else
+
+            // Try to interpret this as a method parameter
+            let methIdx = parameterVars |> Array.tryFindIndex (fun p -> p = v) 
+            match methIdx with 
+            | Some idx -> 
+                ilg.Emit((if isAddress expectedState then OpCodes.Ldarga else OpCodes.Ldarg), idx)
+            | None -> 
+
+            // Try to interpret this as an implicit field in a class
+            let implicitCtorArgFieldOpt = implicitCtorArgsAsFields |> List.tryFind (fun f -> f.Name = v.Name) 
+            match implicitCtorArgFieldOpt with 
+            | Some ctorArgField -> 
+                ilg.Emit(OpCodes.Ldarg_0)
+                ilg.Emit(OpCodes.Ldfld, ctorArgField)
+            | None -> 
+
+            // Try to interpret this as a local
+            match locals.TryGetValue v with 
+            | true, localBuilder -> 
+                ilg.Emit((if isAddress expectedState  then OpCodes.Ldloca else OpCodes.Ldloc), localBuilder.LocalIndex)
+            | false, _ -> 
+                failwith "unknown parameter/field"
+
+        | Coerce (arg,ty) -> 
+            // castClass may lead to observable side-effects - InvalidCastException
+            emitExpr ExpectedStackState.Value arg
+            let argTy = transType arg.Type
+            let targetTy = transType ty
+            if argTy.IsValueType && not targetTy.IsValueType then
+                ilg.Emit(OpCodes.Box, argTy)
+            elif not argTy.IsValueType && targetTy.IsValueType then
+                ilg.Emit(OpCodes.Unbox_Any, targetTy)
+            // emit castclass if 
+            // - targettype is not obj (assume this is always possible for ref types)
+            // AND 
+            // - HACK: targettype is TypeBuilderInstantiationType 
+            //   (its implementation of IsAssignableFrom raises NotSupportedException so it will be safer to always emit castclass)
+            // OR
+            // - not (argTy :> targetTy)
+            elif targetTy <> typeof<obj> && (TypeBuilderInstantiationType.Equals(targetTy.GetType()) || not (targetTy.IsAssignableFrom(argTy))) then
+                ilg.Emit(OpCodes.Castclass, targetTy)
+                              
+            popIfEmptyExpected expectedState
+
+        | SpecificCall <@ (-) @>(None, [t1; t2; _], [a1; a2]) ->
+            assert(t1 = t2)
+            emitExpr ExpectedStackState.Value a1
+            emitExpr ExpectedStackState.Value a2
+            if t1 = typeof<decimal> then
+                ilg.Emit(OpCodes.Call, typeof<decimal>.GetMethod "op_Subtraction")
+            else
+                ilg.Emit(OpCodes.Sub)
+                emitConvIfNecessary t1
+
+            popIfEmptyExpected expectedState
+
+        | SpecificCall <@ (/) @> (None, [t1; t2; _], [a1; a2]) ->
+            assert (t1 = t2)
+            emitExpr ExpectedStackState.Value a1
+            emitExpr ExpectedStackState.Value a2
+            if t1 = typeof<decimal> then
+                ilg.Emit(OpCodes.Call, typeof<decimal>.GetMethod "op_Division")
+            else
+                match Type.GetTypeCode t1 with
+                | TypeCode.UInt32
+                | TypeCode.UInt64
+                | TypeCode.UInt16
+                | TypeCode.Byte
+                | _ when t1 = typeof<unativeint> -> ilg.Emit (OpCodes.Div_Un)
+                | _ -> ilg.Emit(OpCodes.Div)
+
+                emitConvIfNecessary t1
+
+            popIfEmptyExpected expectedState
+
+        | SpecificCall <@ int @>(None, [sourceTy], [v]) ->
+            emitExpr ExpectedStackState.Value v
+            match Type.GetTypeCode(sourceTy) with
+            | TypeCode.String -> 
+                ilg.Emit(OpCodes.Call, ParseInt32Method())
+            | TypeCode.Single
+            | TypeCode.Double
+            | TypeCode.Int64 
+            | TypeCode.UInt64
+            | TypeCode.UInt16
+            | TypeCode.Char
+            | TypeCode.Byte
+            | _ when sourceTy = typeof<nativeint> || sourceTy = typeof<unativeint> ->
+                ilg.Emit(OpCodes.Conv_I4)
+            | TypeCode.Int32
+            | TypeCode.UInt32
+            | TypeCode.Int16
+            | TypeCode.SByte -> () // no op
+            | _ -> failwith "TODO: search for op_Explicit on sourceTy"
+
+        | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray @> (None, [ty], [arr; index]) ->
+            // observable side-effect - IndexOutOfRangeException
+            emitExpr ExpectedStackState.Value arr
+            emitExpr ExpectedStackState.Value index
+            if isAddress expectedState then
+                ilg.Emit(OpCodes.Readonly)
+                ilg.Emit(OpCodes.Ldelema, transType ty)
+            else
+                ilg.Emit(OpCodes.Ldelem, transType ty)
+
+            popIfEmptyExpected expectedState
+
+        | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray2D @> (None, _ty, arr::indices)
+        | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray3D @> (None, _ty, arr::indices)
+        | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray4D @> (None, _ty, arr::indices) ->
+                              
+            let meth = 
+                let name = if isAddress expectedState then "Address" else "Get"
+                arr.Type.GetMethod(name)
+
+            // observable side-effect - IndexOutOfRangeException
+            emitExpr ExpectedStackState.Value arr
+            for index in indices do
+                emitExpr ExpectedStackState.Value index
+                              
+            if isAddress expectedState then
+                ilg.Emit(OpCodes.Readonly)
+
+            ilg.Emit(OpCodes.Call, meth)
+
+            popIfEmptyExpected expectedState
+
+
+        | FieldGet (None,field) when isLiteralEnumField field ->
+            if expectedState <> ExpectedStackState.Empty then
+                emitExpr expectedState (Expr.Value(field.GetRawConstantValue(), field.FieldType.GetEnumUnderlyingType()))
+
+        | FieldGet (objOpt,field) -> 
+            objOpt |> Option.iter (fun e -> 
+                let s = if e.Type.IsValueType then ExpectedStackState.Address else ExpectedStackState.Value
+                emitExpr s e)
+            let field = transField field 
+            if field.IsStatic then 
+                ilg.Emit(OpCodes.Ldsfld, field)
+            else
+                ilg.Emit(OpCodes.Ldfld, field)
+
+        | FieldSet (objOpt,field,v) -> 
+            objOpt |> Option.iter (fun e -> 
+                let s = if e.Type.IsValueType then ExpectedStackState.Address else ExpectedStackState.Value
+                emitExpr s e)
+            emitExpr ExpectedStackState.Value v
+            let field = transField field
+            if field.IsStatic then 
+                ilg.Emit(OpCodes.Stsfld, field)
+            else
+                ilg.Emit(OpCodes.Stfld, field)
+
+        | Call (objOpt,meth,args) -> 
+            objOpt |> Option.iter (fun e -> 
+                let s = if e.Type.IsValueType then ExpectedStackState.Address else ExpectedStackState.Value
+                emitExpr s e)
+
+            for pe in args do 
+                emitExpr ExpectedStackState.Value pe
+
+            // Handle the case where this is a generic method instantiated at a type being compiled
+            let mappedMeth = 
+                if meth.IsGenericMethod then 
+                    let args = meth.GetGenericArguments() |> Array.map transType
+                    let gmd = meth.GetGenericMethodDefinition() |> transMethod
+                    gmd.GetGenericMethodDefinition().MakeGenericMethod args
+                elif meth.DeclaringType.IsGenericType then 
+                    let gdty = transType (meth.DeclaringType.GetGenericTypeDefinition())
+                    let gdtym = gdty.GetMethods() |> Seq.find (fun x -> x.Name = meth.Name)
+                    assert (gdtym <> null) // ?? will never happen - if method is not found - KeyNotFoundException will be raised
+                    let dtym =
+                        match transType meth.DeclaringType with
+                        | :? TypeBuilder as dty -> TypeBuilder.GetMethod(dty, gdtym)
+                        | dty -> MethodBase.GetMethodFromHandle(meth.MethodHandle, dty.TypeHandle) :?> _
+                                
+                    assert (dtym <> null)
+                    dtym
+                else
+                    transMethod meth
+            match objOpt with 
+            | Some obj when mappedMeth.IsAbstract || mappedMeth.IsVirtual  ->
+                if obj.Type.IsValueType then ilg.Emit(OpCodes.Constrained, transType obj.Type)
+                ilg.Emit(OpCodes.Callvirt, mappedMeth)
+            | _ ->
+                ilg.Emit(OpCodes.Call, mappedMeth)
+
+            let returnTypeIsVoid = mappedMeth.ReturnType = typeof<System.Void>
+            match returnTypeIsVoid, (isEmpty expectedState) with
+            | false, true -> 
+                    // method produced something, but we don't need it
+                    pop()
+            | true, false when expr.Type = typeof<unit> -> 
+                    // if we need result and method produce void and result should be unit - push null as unit value on stack
+                    ilg.Emit(OpCodes.Ldnull)
+            | _ -> ()
+
+        | NewObject (ctor,args) -> 
+            for pe in args do 
+                emitExpr ExpectedStackState.Value pe
+            let meth = transCtor ctor 
+            ilg.Emit(OpCodes.Newobj, meth)
+                              
+            popIfEmptyExpected expectedState                              
+
+        | Value (obj, _ty) -> 
+            let rec emitC (v:obj) = 
+                match v with 
+                | :? string as x -> ilg.Emit(OpCodes.Ldstr, x)
+                | :? int8 as x -> ilg.Emit(OpCodes.Ldc_I4, int32 x)
+                | :? uint8 as x -> ilg.Emit(OpCodes.Ldc_I4, int32 (int8 x))
+                | :? int16 as x -> ilg.Emit(OpCodes.Ldc_I4, int32 x)
+                | :? uint16 as x -> ilg.Emit(OpCodes.Ldc_I4, int32 (int16 x))
+                | :? int32 as x -> ilg.Emit(OpCodes.Ldc_I4, x)
+                | :? uint32 as x -> ilg.Emit(OpCodes.Ldc_I4, int32 x)
+                | :? int64 as x -> ilg.Emit(OpCodes.Ldc_I8, x)
+                | :? uint64 as x -> ilg.Emit(OpCodes.Ldc_I8, int64 x)
+                | :? char as x -> ilg.Emit(OpCodes.Ldc_I4, int32 x)
+                | :? bool as x -> ilg.Emit(OpCodes.Ldc_I4, if x then 1 else 0)
+                | :? float32 as x -> ilg.Emit(OpCodes.Ldc_R4, x)
+                | :? float as x -> ilg.Emit(OpCodes.Ldc_R8, x)
+#if FX_NO_GET_ENUM_UNDERLYING_TYPE
+#else
+                | :? System.Enum as x when x.GetType().GetEnumUnderlyingType() = typeof<int32> -> ilg.Emit(OpCodes.Ldc_I4, unbox<int32> v)
+#endif
+                | :? Type as ty ->
+                    ilg.Emit(OpCodes.Ldtoken, transType ty)
+                    ilg.Emit(OpCodes.Call, GetTypeFromHandleMethod())
+                | :? decimal as x ->
+                    let bits = System.Decimal.GetBits x
+                    ilg.Emit(OpCodes.Ldc_I4, bits.[0])
+                    ilg.Emit(OpCodes.Ldc_I4, bits.[1])
+                    ilg.Emit(OpCodes.Ldc_I4, bits.[2])
+                    do
+                        let sign = (bits.[3] &&& 0x80000000) <> 0
+                        ilg.Emit(if sign then OpCodes.Ldc_I4_1 else OpCodes.Ldc_I4_0)
+                    do
+                        let scale = byte ((bits.[3] >>> 16) &&& 0x7F)
+                        ilg.Emit(OpCodes.Ldc_I4_S, scale)
+                    ilg.Emit(OpCodes.Newobj, DecimalConstructor())
+                | :? DateTime as x ->
+                    ilg.Emit(OpCodes.Ldc_I8, x.Ticks)
+                    ilg.Emit(OpCodes.Ldc_I4, int x.Kind)
+                    ilg.Emit(OpCodes.Newobj, DateTimeConstructor())
+                | :? DateTimeOffset as x ->
+                    ilg.Emit(OpCodes.Ldc_I8, x.Ticks)
+                    ilg.Emit(OpCodes.Ldc_I8, x.Offset.Ticks)
+                    ilg.Emit(OpCodes.Newobj, TimeSpanConstructor())
+                    ilg.Emit(OpCodes.Newobj, DateTimeOffsetConstructor())
+                | null -> ilg.Emit(OpCodes.Ldnull)
+                | _ -> failwithf "unknown constant '%A' in generated method" v
+            if isEmpty expectedState then ()
+            else emitC obj
+
+        | Let(v,e,b) -> 
+            let lb = ilg.DeclareLocal (transType v.Type)
+            locals.Add (v, lb) 
+            emitExpr ExpectedStackState.Value e
+            ilg.Emit(OpCodes.Stloc, lb.LocalIndex)
+            emitExpr expectedState b
+                              
+        | Sequential(e1, e2) ->
+            emitExpr ExpectedStackState.Empty e1
+            emitExpr expectedState e2                          
+
+        | IfThenElse(cond, ifTrue, ifFalse) ->
+            let ifFalseLabel = ilg.DefineLabel()
+            let endLabel = ilg.DefineLabel()
+
+            emitExpr ExpectedStackState.Value cond
+
+            ilg.Emit(OpCodes.Brfalse, ifFalseLabel)
+
+            emitExpr expectedState ifTrue
+            ilg.Emit(OpCodes.Br, endLabel)
+
+            ilg.MarkLabel(ifFalseLabel)
+            emitExpr expectedState ifFalse
+
+            ilg.Emit(OpCodes.Nop)
+            ilg.MarkLabel(endLabel)
+
+        | TryWith(body, _filterVar, _filterBody, catchVar, catchBody) ->                                                                                      
+                              
+            let stres, ldres = 
+                if isEmpty expectedState then ignore, ignore
+                else
+                    let local = ilg.DeclareLocal (transType body.Type)
+                    let stres = fun () -> ilg.Emit(OpCodes.Stloc, local)
+                    let ldres = fun () -> ilg.Emit(OpCodes.Ldloc, local)
+                    stres, ldres
+
+            let exceptionVar = ilg.DeclareLocal(transType catchVar.Type)
+            locals.Add(catchVar, exceptionVar)
+
+            let _exnBlock = ilg.BeginExceptionBlock()
+                              
+            emitExpr expectedState body
+            stres()
+
+            ilg.BeginCatchBlock(transType  catchVar.Type)
+            ilg.Emit(OpCodes.Stloc, exceptionVar)
+            emitExpr expectedState catchBody
+            stres()
+            ilg.EndExceptionBlock()
+
+            ldres()
+
+        | VarSet(v,e) -> 
+            emitExpr ExpectedStackState.Value e
+            match locals.TryGetValue v with 
+            | true, localBuilder -> 
+                ilg.Emit(OpCodes.Stloc, localBuilder.LocalIndex)
+            | false, _ -> 
+                failwith "unknown parameter/field in assignment. Only assignments to locals are currently supported by TypeProviderEmit"
+        | Lambda(v, body) ->
+            emitLambda(ilg, v, body, expr.GetFreeVars(), locals, parameterVars)
+            popIfEmptyExpected expectedState
+        | n -> 
+            failwith (sprintf "unknown expression '%A' in generated method" n)
+
+    member __.EmitExpr (expectedState, expr) = emitExpr expectedState expr
+
+#endif
+
+[<AutoOpen>]
+module internal Misc = 
+
 
     let nonNull str x = if x=null then failwith ("Null in " + str) else x
     
@@ -831,13 +1322,14 @@ type ProvidedConstructor(parameters : ProvidedParameter list) =
                 |> List.map (fun p -> p.Name) 
                 |> List.append (if not isGenerated || isStatic() then [] else ["this"])
                 |> Array.ofList
-            QuotationSimplifier.transQuotationToCode isGenerated f paramNames
+            QuotationSimplifier(isGenerated).TranslateQuotationToCode f paramNames
         | None -> failwith (sprintf "ProvidedConstructor: no invoker for '%s'" (nameText()))
 
     member __.GetBaseConstructorCallInternal isGenerated =
         match baseCall with
-        | Some f -> Some(fun ctorArgs -> let c,baseCtorArgExprs = f ctorArgs in c, List.map (QuotationSimplifier.transExpr isGenerated) baseCtorArgExprs)
+        | Some f -> Some(fun ctorArgs -> let c,baseCtorArgExprs = f ctorArgs in c, List.map (QuotationSimplifier(isGenerated).TranslateExpression) baseCtorArgExprs)
         | None -> None
+
     member __.IsImplicitCtor with get() = isImplicitCtor and set v = isImplicitCtor <- v
 
     // Implement overloads
@@ -923,7 +1415,7 @@ type ProvidedMethod(methodName: string, parameters: ProvidedParameter list, retu
                 |> List.map (fun p -> p.Name) 
                 |> List.append (if isStatic() then [] else ["this"])
                 |> Array.ofList
-            QuotationSimplifier.transQuotationToCode isGenerated f paramNames
+            QuotationSimplifier(isGenerated).TranslateQuotationToCode f paramNames
         | None -> failwith (sprintf "ProvidedMethod: no invoker for %s on type %s" methodName (if declaringType=null then "<not yet known type>" else declaringType.FullName))
 
    // Implement overloads
@@ -1167,7 +1659,7 @@ type ProvidedSymbolKind =
 /// Represents an array or other symbolic type involving a provided type as the argument.
 /// See the type provider spec for the methods that must be implemented.
 /// Note that the type provider specification does not require us to implement pointer-equality for provided types.
-type ProvidedSymbolType(kind: ProvidedSymbolKind, args: Type list) =
+type ProvidedSymbolType(kind: ProvidedSymbolKind, args: Type list, convToTgt: Type -> Type) =
     inherit Type()
 
     let rec isEquivalentTo (thisTy: Type) (otherTy: Type) =
@@ -1192,19 +1684,20 @@ type ProvidedSymbolType(kind: ProvidedSymbolKind, args: Type list) =
         | ProvidedSymbolKind.FSharpTypeAbbreviation (_,_,path),_ -> path.[path.Length-1]
         | _ -> failwith "unreachable"
 
+    /// Substitute types for type variables.
     static member convType (parameters: Type list) (ty:Type) = 
         if ty = null then null
         elif ty.IsGenericType then
             let args = Array.map (ProvidedSymbolType.convType parameters) (ty.GetGenericArguments())
-            ProvidedSymbolType(Generic (ty.GetGenericTypeDefinition()), Array.toList args)  :> Type
+            ty.GetGenericTypeDefinition().MakeGenericType(args)  
         elif ty.HasElementType then 
             let ety = ProvidedSymbolType.convType parameters (ty.GetElementType()) 
             if ty.IsArray then 
                 let rank = ty.GetArrayRank()
-                if rank = 1 then ProvidedSymbolType(SDArray,[ety]) :> Type
-                else ProvidedSymbolType(Array rank,[ety]) :> Type
-            elif ty.IsPointer then ProvidedSymbolType(Pointer,[ety]) :> Type
-            elif ty.IsByRef then ProvidedSymbolType(ByRef,[ety]) :> Type
+                if rank = 1 then ety.MakeArrayType()
+                else ety.MakeArrayType(rank)
+            elif ty.IsPointer then ety.MakePointerType()
+            elif ty.IsByRef then ety.MakeByRefType()
             else ty
         elif ty.IsGenericParameter then 
             if ty.GenericParameterPosition <= parameters.Length - 1 then 
@@ -1251,14 +1744,14 @@ type ProvidedSymbolType(kind: ProvidedSymbolKind, args: Type list) =
 
     override __.BaseType =
         match kind with 
-        | ProvidedSymbolKind.SDArray -> typeof<System.Array>
-        | ProvidedSymbolKind.Array _ -> typeof<System.Array>
-        | ProvidedSymbolKind.Pointer -> typeof<System.ValueType>
-        | ProvidedSymbolKind.ByRef -> typeof<System.ValueType>
+        | ProvidedSymbolKind.SDArray -> convToTgt typeof<System.Array> 
+        | ProvidedSymbolKind.Array _ -> convToTgt typeof<System.Array> 
+        | ProvidedSymbolKind.Pointer -> convToTgt typeof<System.ValueType> 
+        | ProvidedSymbolKind.ByRef -> convToTgt typeof<System.ValueType> 
         | ProvidedSymbolKind.Generic gty  ->
             if gty.BaseType = null then null else
             ProvidedSymbolType.convType args gty.BaseType
-        | ProvidedSymbolKind.FSharpTypeAbbreviation _ -> typeof<obj>
+        | ProvidedSymbolKind.FSharpTypeAbbreviation _ -> convToTgt typeof<obj>  
 
     override __.GetArrayRank() = (match kind with ProvidedSymbolKind.Array n -> n | ProvidedSymbolKind.SDArray -> 1 | _ -> invalidOp "non-array type")
     override __.IsValueTypeImpl() = (match kind with ProvidedSymbolKind.Generic gtd -> gtd.IsValueType | _ -> false)
@@ -1350,8 +1843,8 @@ type ProvidedSymbolType(kind: ProvidedSymbolKind, args: Type list) =
     override __.GetCustomAttributes(_attributeType, _inherit)                                    = [| |]
     override __.IsDefined(_attributeType, _inherit)                                              = false
     // FSharp.Data addition: this was added to support arrays of arrays
-    override this.MakeArrayType() = ProvidedSymbolType(ProvidedSymbolKind.SDArray, [this]) :> Type
-    override this.MakeArrayType arg = ProvidedSymbolType(ProvidedSymbolKind.Array arg, [this]) :> Type
+    override this.MakeArrayType() = ProvidedSymbolType(ProvidedSymbolKind.SDArray, [this], convToTgt) :> Type
+    override this.MakeArrayType arg = ProvidedSymbolType(ProvidedSymbolKind.Array arg, [this], convToTgt) :> Type
 
 type ProvidedSymbolMethod(genericMethodDefinition: MethodInfo, parameters: Type list) =
     inherit System.Reflection.MethodInfo()
@@ -1400,8 +1893,12 @@ type ProvidedSymbolMethod(genericMethodDefinition: MethodInfo, parameters: Type 
 
 
 type ProvidedTypeBuilder() =
-    static member MakeGenericType(genericTypeDefinition, genericArguments) = ProvidedSymbolType(Generic genericTypeDefinition, genericArguments) :> Type
+    static member MakeGenericType(genericTypeDefinition, genericArguments) = ProvidedSymbolType(Generic genericTypeDefinition, genericArguments, id) :> Type
     static member MakeGenericMethod(genericMethodDefinition, genericArguments) = ProvidedSymbolMethod(genericMethodDefinition, genericArguments) :> MethodInfo
+
+type ZProvidedTypeBuilder(convToTgt: Type -> Type) =
+    member __.MakeGenericType(genericTypeDefinition, genericArguments) = ProvidedSymbolType(Generic genericTypeDefinition, genericArguments, convToTgt) :> Type
+    member __.MakeGenericMethod(genericMethodDefinition, genericArguments) = ProvidedSymbolMethod(genericMethodDefinition, genericArguments) :> MethodInfo
 
 [<Class>]
 type ProvidedMeasureBuilder() =
@@ -1421,9 +1918,9 @@ type ProvidedMeasureBuilder() =
 
     static let theBuilder = ProvidedMeasureBuilder()
     static member Default = theBuilder
-    member __.One = typeof<Core.CompilerServices.MeasureOne> 
-    member __.Product (m1,m2) = typedefof<Core.CompilerServices.MeasureProduct<_,_>>.MakeGenericType [| m1;m2 |] 
-    member __.Inverse m = typedefof<Core.CompilerServices.MeasureInverse<_>>.MakeGenericType [| m |] 
+    member __.One = typeof<CompilerServices.MeasureOne> 
+    member __.Product (m1,m2) = typedefof<CompilerServices.MeasureProduct<_,_>>.MakeGenericType [| m1;m2 |] 
+    member __.Inverse m = typedefof<CompilerServices.MeasureInverse<_>>.MakeGenericType [| m |] 
     member b.Ratio (m1, m2) = b.Product(m1, b.Inverse m2)
     member b.Square m = b.Product(m, m)
 
@@ -1441,16 +1938,11 @@ type ProvidedMeasureBuilder() =
                 None
         match abbreviation with
         | Some (ns, unitName) ->
-            ProvidedSymbolType
-               (ProvidedSymbolKind.FSharpTypeAbbreviation
-                   (typeof<Core.CompilerServices.MeasureOne>.Assembly,
-                    ns,
-                    [| unitName |]), 
-                []) :> Type
+            ProvidedSymbolType(ProvidedSymbolKind.FSharpTypeAbbreviation(typeof<Core.CompilerServices.MeasureOne>.Assembly,ns,[| unitName |]), [], id) :> Type
         | None ->
             typedefof<list<int>>.Assembly.GetType("Microsoft.FSharp.Data.UnitSystems.SI.UnitNames." + mLowerCase)
 
-    member __.AnnotateType (basicType, annotation) = ProvidedSymbolType(Generic basicType, annotation) :> Type
+    member __.AnnotateType (basicType, annotation) = ProvidedSymbolType(Generic basicType, annotation, id) :> Type
 
 
 
@@ -1460,10 +1952,13 @@ type TypeContainer =
   | Type of System.Type
   | TypeToBeDecided
 
+#if NO_GENERATIVE
+#else
 module GlobalProvidedAssemblyElementsTable = 
     let theTable = Dictionary<Assembly, Lazy<byte[]>>()
+#endif
 
-type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType  : Type option) as this =
+type ProvidedTypeDefinition(container:TypeContainer, className : string, baseType  : Type option, convToTgt) as this =
     inherit Type()
 
     do match container, !ProvidedTypeDefinition.Logger with
@@ -1478,7 +1973,7 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
         enum (int32 TypeProviderTypeAttributes.IsErased)
 
 
-    let mutable enumUnderlyingType = typeof<int>
+    let mutable enumUnderlyingType = None
     let mutable baseType   =  lazy baseType
     let mutable membersKnown   = ResizeArray<MemberInfo>()
     let mutable membersQueue   = ResizeArray<(unit -> list<MemberInfo>)>()       
@@ -1583,15 +2078,23 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
 
     member __.ResetEnclosingType (ty) = 
         container <- TypeContainer.Type ty
-    new (assembly:Assembly,namespaceName,className,baseType) = new ProvidedTypeDefinition(TypeContainer.Namespace (assembly,namespaceName), className, baseType)
-    new (className,baseType) = new ProvidedTypeDefinition(TypeContainer.TypeToBeDecided, className, baseType)
+    new (assembly:Assembly,namespaceName,className,baseType) = new ProvidedTypeDefinition(TypeContainer.Namespace (assembly,namespaceName), className, baseType, id)
+    new (className:string,baseType) = new ProvidedTypeDefinition(TypeContainer.TypeToBeDecided, className, baseType, id)
+
+    new (assembly:Assembly,namespaceName,className,baseType,convToTgt) = new ProvidedTypeDefinition(TypeContainer.Namespace (assembly,namespaceName), className, baseType, convToTgt)
+    new (className,baseType, convToTgt) = new ProvidedTypeDefinition(TypeContainer.TypeToBeDecided, className, baseType, convToTgt)
     // state ops
 
     override __.UnderlyingSystemType = typeof<Type>
 
-    member __.SetEnumUnderlyingType(ty) = enumUnderlyingType <- ty
+    member __.SetEnumUnderlyingType(ty) = enumUnderlyingType <- Some ty
 
-    override __.GetEnumUnderlyingType() = if this.IsEnum then enumUnderlyingType else invalidOp "not enum type"
+    override __.GetEnumUnderlyingType() = 
+        if this.IsEnum then 
+            match enumUnderlyingType with 
+            | None -> convToTgt typeof<int>   
+            | Some ty -> ty 
+        else invalidOp "not enum type"
 
     member __.SetBaseType t = baseType <- lazy Some t
 
@@ -1613,6 +2116,8 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
     member __.AddMemberDelayed(memberFunction : unit -> #MemberInfo) = 
         this.AddMembersDelayed(fun () -> [memberFunction()])
 
+#if NO_GENERATIVE
+#else
     member __.AddAssemblyTypesAsNestedTypesDelayed (assemblyf : unit -> System.Reflection.Assembly)  = 
         let bucketByPath nodef tipf (items: (string list * 'Value) list) = 
             // Find all the items with an empty key list and call 'tipf' 
@@ -1649,6 +2154,7 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
                         (t :> Type))
                     (fun ty -> ty)
             loop topTypes)
+#endif
 
     /// Abstract a type to a parametric-type. Requires "formal parameters" and "instantiation function".
     member __.DefineStaticParameters(staticParameters : list<ProvidedStaticParameter>, apply    : (string -> obj[] -> ProvidedTypeDefinition)) =
@@ -1760,10 +2266,10 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
         else
             null
     // Nested Types
-    override __.MakeArrayType() = ProvidedSymbolType(ProvidedSymbolKind.SDArray, [this]) :> Type
-    override __.MakeArrayType arg = ProvidedSymbolType(ProvidedSymbolKind.Array arg, [this]) :> Type
-    override __.MakePointerType() = ProvidedSymbolType(ProvidedSymbolKind.Pointer, [this]) :> Type
-    override __.MakeByRefType() = ProvidedSymbolType(ProvidedSymbolKind.ByRef, [this]) :> Type
+    override __.MakeArrayType() = ProvidedSymbolType(ProvidedSymbolKind.SDArray, [this], convToTgt) :> Type
+    override __.MakeArrayType arg = ProvidedSymbolType(ProvidedSymbolKind.Array arg, [this], convToTgt) :> Type
+    override __.MakePointerType() = ProvidedSymbolType(ProvidedSymbolKind.Pointer, [this], convToTgt) :> Type
+    override __.MakeByRefType() = ProvidedSymbolType(ProvidedSymbolKind.ByRef, [this], convToTgt) :> Type
 
     // FSharp.Data addition: this method is used by Debug.fs and QuotationBuilder.fs
     // Emulate the F# type provider type erasure mechanism to get the 
@@ -1887,6 +2393,12 @@ type ProvidedTypeDefinition(container:TypeContainer,className : string, baseType
            if v then attributes <- attributes ||| enum (int32 TypeProviderTypeAttributes.SuppressRelocate)
            else attributes <- attributes &&& ~~~(enum (int32 TypeProviderTypeAttributes.SuppressRelocate))
 
+
+#if NO_GENERATIVE
+#else
+//-------------------------------------------------------------------------------------------------
+// The assembly compiler for generative type providers. 
+
 type AssemblyGenerator(assemblyFileName) = 
     let assemblyShortName = Path.GetFileNameWithoutExtension assemblyFileName
     let assemblyName = AssemblyName assemblyShortName
@@ -1953,10 +2465,7 @@ type AssemblyGenerator(assemblyFileName) =
                             | Some tbb -> tbb 
                             | None ->
                             // OK, the implied nested type is not defined, define it now
-                            let attributes = 
-                                  TypeAttributes.Public ||| 
-                                  TypeAttributes.Class ||| 
-                                  TypeAttributes.Sealed 
+                            let attributes = TypeAttributes.Public ||| TypeAttributes.Class ||| TypeAttributes.Sealed 
                             // Filter out the additional TypeProviderTypeAttributes flags
                             let attributes = adjustTypeAttributes attributes otb.IsSome
                             let tb = 
@@ -1968,14 +2477,15 @@ type AssemblyGenerator(assemblyFileName) =
                         (Some tb, fullName))
                 nestedType otb.Value pt
         end
-        let rec convType (ty:Type) = 
+
+        let rec transType (ty:Type) = 
             match ty with 
             | :? ProvidedTypeDefinition as ptd ->   
                 if typeMap.ContainsKey ptd then typeMap.[ptd] :> Type else ty
             | _ -> 
-                if ty.IsGenericType then ty.GetGenericTypeDefinition().MakeGenericType (Array.map convType (ty.GetGenericArguments()))
+                if ty.IsGenericType then ty.GetGenericTypeDefinition().MakeGenericType (Array.map transType (ty.GetGenericArguments()))
                 elif ty.HasElementType then 
-                    let ety = convType (ty.GetElementType()) 
+                    let ety = transType (ty.GetElementType()) 
                     if ty.IsArray then 
                         let rank = ty.GetArrayRank()
                         if rank = 1 then ety.MakeArrayType() 
@@ -1988,6 +2498,10 @@ type AssemblyGenerator(assemblyFileName) =
         let ctorMap = Dictionary<ProvidedConstructor, ConstructorBuilder>(HashIdentity.Reference)
         let methMap = Dictionary<ProvidedMethod, MethodBuilder>(HashIdentity.Reference)
         let fieldMap = Dictionary<FieldInfo, FieldBuilder>(HashIdentity.Reference)
+        let transCtor (f:ConstructorInfo) = match f with :? ProvidedConstructor as pc when ctorMap.ContainsKey pc -> ctorMap.[pc] :> ConstructorInfo  | c -> c
+        let transField (f:FieldInfo) = match f with :? ProvidedField as pf when fieldMap.ContainsKey pf -> fieldMap.[pf] :> FieldInfo  | f -> f
+        let transMeth (m:MethodInfo) = match m with :? ProvidedMethod as pm when methMap.ContainsKey pm -> methMap.[pm] :> MethodInfo | m -> m
+        let isLiteralEnumField (f:FieldInfo) =  match f with :? ProvidedLiteralField as plf -> plf.DeclaringType.IsEnum | _ -> false
 
         let iterateTypes f = 
             let rec typeMembers (ptd : ProvidedTypeDefinition) = 
@@ -2019,7 +2533,7 @@ type AssemblyGenerator(assemblyFileName) =
             match ptd with 
             | None -> ()
             | Some ptd -> 
-            match ptd.BaseType with null -> () | bt -> tb.SetParent(convType bt))
+            match ptd.BaseType with null -> () | bt -> tb.SetParent(transType bt))
 
         let defineCustomAttrs f (cattrs: IList<CustomAttributeData>) = 
             for attr in cattrs do
@@ -2042,7 +2556,7 @@ type AssemblyGenerator(assemblyFileName) =
                             if (cinfo.GetParameters()).Length <> 0 then failwith "Type initializer should not have parameters"
                             tb.DefineTypeInitializer()
                         else 
-                            let cb = tb.DefineConstructor(cinfo.Attributes, CallingConventions.Standard, [| for p in cinfo.GetParameters() -> convType p.ParameterType |])
+                            let cb = tb.DefineConstructor(cinfo.Attributes, CallingConventions.Standard, [| for p in cinfo.GetParameters() -> transType p.ParameterType |])
                             for (i,p) in cinfo.GetParameters() |> Seq.mapi (fun i x -> (i,x)) do
                                 cb.DefineParameter(i+1, ParameterAttributes.None, p.Name) |> ignore
                             cb
@@ -2057,9 +2571,9 @@ type AssemblyGenerator(assemblyFileName) =
                 let fieldInfo = 
                     match finfo with 
                         | :? ProvidedField as pinfo -> 
-                            Some (pinfo.Name, convType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesDataImpl(), None)
+                            Some (pinfo.Name, transType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesDataImpl(), None)
                         | :? ProvidedLiteralField as pinfo ->
-                            Some (pinfo.Name, convType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesDataImpl(), Some (pinfo.GetRawConstantValue()))
+                            Some (pinfo.Name, transType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesDataImpl(), Some (pinfo.GetRawConstantValue()))
                         | _ -> None
                 match fieldInfo with
                 | Some (name, ty, attr, cattr, constantVal) when not (fieldMap.ContainsKey finfo) ->
@@ -2072,7 +2586,7 @@ type AssemblyGenerator(assemblyFileName) =
             for minfo in ptd.GetMethods(ALL) do
                 match minfo with 
                 | :? ProvidedMethod as pminfo when not (methMap.ContainsKey pminfo)  -> 
-                    let mb = tb.DefineMethod(minfo.Name, minfo.Attributes, convType minfo.ReturnType, [| for p in minfo.GetParameters() -> convType p.ParameterType |])
+                    let mb = tb.DefineMethod(minfo.Name, minfo.Attributes, transType minfo.ReturnType, [| for p in minfo.GetParameters() -> transType p.ParameterType |])
                     for (i, p) in minfo.GetParameters() |> Seq.mapi (fun i x -> (i,x :?> ProvidedParameter)) do
                         // TODO: check why F# compiler doesn't emit default value when just p.Attributes is used (thus bad metadata is emitted)
 //                        let mutable attrs = ParameterAttributes.None
@@ -2117,451 +2631,10 @@ type AssemblyGenerator(assemblyFileName) =
 
             let implicitCtorArgsAsFields = 
                 [ for ctorArg in implictCtorArgs -> 
-                      tb.DefineField(ctorArg.Name, convType ctorArg.ParameterType, FieldAttributes.Private) ]
+                      tb.DefineField(ctorArg.Name, transType ctorArg.ParameterType, FieldAttributes.Private) ]
             
-            let rec emitLambda(callSiteIlg : ILGenerator, v : Quotations.Var, body : Expr, freeVars : seq<Quotations.Var>, locals : Dictionary<_, LocalBuilder>, parameters) =
-                let lambda = assemblyMainModule.DefineType(uniqueLambdaTypeName(), TypeAttributes.Class)
-                let baseType = typedefof<FSharpFunc<_, _>>.MakeGenericType(v.Type, body.Type)
-                lambda.SetParent(baseType)
-                let ctor = lambda.DefineDefaultConstructor(MethodAttributes.Public)
-                let decl = baseType.GetMethod "Invoke"
-                let paramTypes = [| for p in decl.GetParameters() -> p.ParameterType |]
-                let invoke = lambda.DefineMethod("Invoke", MethodAttributes.Virtual ||| MethodAttributes.Final ||| MethodAttributes.Public, decl.ReturnType, paramTypes)
-                lambda.DefineMethodOverride(invoke, decl)
 
-                // promote free vars to fields
-                let fields = ResizeArray()
-                for v in freeVars do
-                    let f = lambda.DefineField(v.Name, v.Type, FieldAttributes.Assembly)
-                    fields.Add(v, f)
-
-                let copyOfLocals = Dictionary()
-                
-                let ilg = invoke.GetILGenerator()
-                for (v, f) in fields do
-                    let l = ilg.DeclareLocal(v.Type)
-                    ilg.Emit(OpCodes.Ldarg_0)
-                    ilg.Emit(OpCodes.Ldfld, f)
-                    ilg.Emit(OpCodes.Stloc, l)
-                    copyOfLocals.[v] <- l
-
-                let expectedState = if (invoke.ReturnType = typeof<System.Void>) then ExpectedStackState.Empty else ExpectedStackState.Value
-                emitExpr (ilg, copyOfLocals, [| Quotations.Var("this", lambda); v|]) expectedState body
-                ilg.Emit(OpCodes.Ret) 
-
-                lambda.CreateType() |> ignore
-
-                callSiteIlg.Emit(OpCodes.Newobj, ctor)
-                for (v, f) in fields do
-                    callSiteIlg.Emit(OpCodes.Dup)
-                    match locals.TryGetValue v with
-                    | true, loc -> 
-                        callSiteIlg.Emit(OpCodes.Ldloc, loc)
-                    | false, _ -> 
-                        let index = parameters |> Array.findIndex ((=) v)
-                        callSiteIlg.Emit(OpCodes.Ldarg, index)
-                    callSiteIlg.Emit(OpCodes.Stfld, f)
-
-            and emitExpr (ilg: ILGenerator, locals:Dictionary<Quotations.Var,LocalBuilder>, parameterVars) expectedState expr = 
-                let pop () = ilg.Emit(OpCodes.Pop)
-                let popIfEmptyExpected s = if isEmpty s then pop()
-                let emitConvIfNecessary t1 = 
-                    if t1 = typeof<int16> then
-                        ilg.Emit(OpCodes.Conv_I2)
-                    elif t1 = typeof<uint16> then
-                        ilg.Emit(OpCodes.Conv_U2)
-                    elif t1 = typeof<sbyte> then
-                        ilg.Emit(OpCodes.Conv_I1)
-                    elif t1 = typeof<byte> then
-                        ilg.Emit(OpCodes.Conv_U1)
-                /// emits given expression to corresponding IL
-                let rec emit (expectedState : ExpectedStackState) (expr: Expr) = 
-                    match expr with 
-                    | ForIntegerRangeLoop(loopVar, first, last, body) ->
-                      // for(loopVar = first..last) body
-                      let lb = 
-                          match locals.TryGetValue loopVar with
-                          | true, lb -> lb
-                          | false, _ ->
-                              let lb = ilg.DeclareLocal(convType loopVar.Type)
-                              locals.Add(loopVar, lb)
-                              lb
-
-                      // loopVar = first
-                      emit ExpectedStackState.Value first
-                      ilg.Emit(OpCodes.Stloc, lb)
-
-                      let before = ilg.DefineLabel()
-                      let after = ilg.DefineLabel()
-
-                      ilg.MarkLabel before
-                      ilg.Emit(OpCodes.Ldloc, lb)
-                            
-                      emit ExpectedStackState.Value last
-                      ilg.Emit(OpCodes.Bgt, after)
-
-                      emit ExpectedStackState.Empty body
-
-                      // loopVar++
-                      ilg.Emit(OpCodes.Ldloc, lb)
-                      ilg.Emit(OpCodes.Ldc_I4_1)
-                      ilg.Emit(OpCodes.Add)
-                      ilg.Emit(OpCodes.Stloc, lb)
-
-                      ilg.Emit(OpCodes.Br, before)
-                      ilg.MarkLabel(after)
-
-                    | NewArray(elementTy, elements) ->
-                      ilg.Emit(OpCodes.Ldc_I4, List.length elements)
-                      ilg.Emit(OpCodes.Newarr, convType elementTy)
-
-                      elements 
-                      |> List.iteri (fun i el ->
-                          ilg.Emit(OpCodes.Dup)
-                          ilg.Emit(OpCodes.Ldc_I4, i)
-                          emit ExpectedStackState.Value el
-                          ilg.Emit(OpCodes.Stelem, convType elementTy)
-                          )
-
-                      popIfEmptyExpected expectedState
-
-                    | WhileLoop(cond, body) ->
-                      let before = ilg.DefineLabel()
-                      let after = ilg.DefineLabel()
-
-                      ilg.MarkLabel before
-                      emit ExpectedStackState.Value cond
-                      ilg.Emit(OpCodes.Brfalse, after)
-                      emit ExpectedStackState.Empty body
-                      ilg.Emit(OpCodes.Br, before)
-
-                      ilg.MarkLabel after
-
-                    | Var v -> 
-                        if isEmpty expectedState then () else
-                        let methIdx = parameterVars |> Array.tryFindIndex (fun p -> p = v) 
-                        match methIdx with 
-                        | Some idx -> 
-                            ilg.Emit((if isAddress expectedState then OpCodes.Ldarga else OpCodes.Ldarg), idx)
-                        | None -> 
-                        let implicitCtorArgFieldOpt = implicitCtorArgsAsFields |> List.tryFind (fun f -> f.Name = v.Name) 
-                        match implicitCtorArgFieldOpt with 
-                        | Some ctorArgField -> 
-                            ilg.Emit(OpCodes.Ldarg_0)
-                            ilg.Emit(OpCodes.Ldfld, ctorArgField)
-                        | None -> 
-                        match locals.TryGetValue v with 
-                        | true, localBuilder -> 
-                            ilg.Emit((if isAddress expectedState  then OpCodes.Ldloca else OpCodes.Ldloc), localBuilder.LocalIndex)
-                        | false, _ -> 
-                            failwith "unknown parameter/field"
-
-                    | Coerce (arg,ty) -> 
-                        // castClass may lead to observable side-effects - InvalidCastException
-                        emit ExpectedStackState.Value arg
-                        let argTy = convType arg.Type
-                        let targetTy = convType ty
-                        if argTy.IsValueType && not targetTy.IsValueType then
-                          ilg.Emit(OpCodes.Box, argTy)
-                        elif not argTy.IsValueType && targetTy.IsValueType then
-                          ilg.Emit(OpCodes.Unbox_Any, targetTy)
-                        // emit castclass if 
-                        // - targettype is not obj (assume this is always possible for ref types)
-                        // AND 
-                        // - HACK: targettype is TypeBuilderInstantiationType 
-                        //   (its implementation of IsAssignableFrom raises NotSupportedException so it will be safer to always emit castclass)
-                        // OR
-                        // - not (argTy :> targetTy)
-                        elif targetTy <> typeof<obj> && (Misc.TypeBuilderInstantiationType.Equals(targetTy.GetType()) || not (targetTy.IsAssignableFrom(argTy))) then
-                          ilg.Emit(OpCodes.Castclass, targetTy)
-                              
-                        popIfEmptyExpected expectedState
-                    | SpecificCall <@ (-) @>(None, [t1; t2; _], [a1; a2]) ->
-                        assert(t1 = t2)
-                        emit ExpectedStackState.Value a1
-                        emit ExpectedStackState.Value a2
-                        if t1 = typeof<decimal> then
-                            ilg.Emit(OpCodes.Call, typeof<decimal>.GetMethod "op_Subtraction")
-                        else
-                            ilg.Emit(OpCodes.Sub)
-                            emitConvIfNecessary t1
-
-                        popIfEmptyExpected expectedState
-
-                    | SpecificCall <@ (/) @> (None, [t1; t2; _], [a1; a2]) ->
-                        assert (t1 = t2)
-                        emit ExpectedStackState.Value a1
-                        emit ExpectedStackState.Value a2
-                        if t1 = typeof<decimal> then
-                            ilg.Emit(OpCodes.Call, typeof<decimal>.GetMethod "op_Division")
-                        else
-                            match Type.GetTypeCode t1 with
-                            | TypeCode.UInt32
-                            | TypeCode.UInt64
-                            | TypeCode.UInt16
-                            | TypeCode.Byte
-                            | _ when t1 = typeof<unativeint> -> ilg.Emit (OpCodes.Div_Un)
-                            | _ -> ilg.Emit(OpCodes.Div)
-
-                            emitConvIfNecessary t1
-
-                        popIfEmptyExpected expectedState
-
-                    | SpecificCall <@ int @>(None, [sourceTy], [v]) ->
-                        emit ExpectedStackState.Value v
-                        match Type.GetTypeCode(sourceTy) with
-                        | TypeCode.String -> 
-                            ilg.Emit(OpCodes.Call, Misc.ParseInt32Method)
-                        | TypeCode.Single
-                        | TypeCode.Double
-                        | TypeCode.Int64 
-                        | TypeCode.UInt64
-                        | TypeCode.UInt16
-                        | TypeCode.Char
-                        | TypeCode.Byte
-                        | _ when sourceTy = typeof<nativeint> || sourceTy = typeof<unativeint> ->
-                            ilg.Emit(OpCodes.Conv_I4)
-                        | TypeCode.Int32
-                        | TypeCode.UInt32
-                        | TypeCode.Int16
-                        | TypeCode.SByte -> () // no op
-                        | _ -> failwith "TODO: search for op_Explicit on sourceTy"
-
-                    | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray @> (None, [ty], [arr; index]) ->
-                        // observable side-effect - IndexOutOfRangeException
-                        emit ExpectedStackState.Value arr
-                        emit ExpectedStackState.Value index
-                        if isAddress expectedState then
-                            ilg.Emit(OpCodes.Readonly)
-                            ilg.Emit(OpCodes.Ldelema, convType ty)
-                        else
-                            ilg.Emit(OpCodes.Ldelem, convType ty)
-
-                        popIfEmptyExpected expectedState
-
-                    | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray2D @> (None, _ty, arr::indices)
-                    | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray3D @> (None, _ty, arr::indices)
-                    | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray4D @> (None, _ty, arr::indices) ->
-                              
-                        let meth = 
-                          let name = if isAddress expectedState then "Address" else "Get"
-                          arr.Type.GetMethod(name)
-
-                        // observable side-effect - IndexOutOfRangeException
-                        emit ExpectedStackState.Value arr
-                        for index in indices do
-                          emit ExpectedStackState.Value index
-                              
-                        if isAddress expectedState then
-                          ilg.Emit(OpCodes.Readonly)
-
-                        ilg.Emit(OpCodes.Call, meth)
-
-                        popIfEmptyExpected expectedState
-
-                    | FieldGet (objOpt,field) -> 
-                        match field with
-                        | :? ProvidedLiteralField as plf when plf.DeclaringType.IsEnum ->
-                            if expectedState <> ExpectedStackState.Empty then
-                                emit expectedState (Expr.Value(field.GetRawConstantValue(), field.FieldType.GetEnumUnderlyingType()))
-                        | _ ->
-                        match objOpt with 
-                        | None -> () 
-                        | Some e -> 
-                          let s = if e.Type.IsValueType then ExpectedStackState.Address else ExpectedStackState.Value
-                          emit s e
-                        let field = 
-                            match field with 
-                            | :? ProvidedField as pf when fieldMap.ContainsKey pf -> fieldMap.[pf] :> FieldInfo 
-                            | m -> m
-                        if field.IsStatic then 
-                            ilg.Emit(OpCodes.Ldsfld, field)
-                        else
-                            ilg.Emit(OpCodes.Ldfld, field)
-
-                    | FieldSet (objOpt,field,v) -> 
-                        match objOpt with 
-                        | None -> () 
-                        | Some e -> 
-                          let s = if e.Type.IsValueType then ExpectedStackState.Address else ExpectedStackState.Value
-                          emit s e
-                        emit ExpectedStackState.Value v
-                        let field = match field with :? ProvidedField as pf when fieldMap.ContainsKey pf -> fieldMap.[pf] :> FieldInfo | m -> m
-                        if field.IsStatic then 
-                            ilg.Emit(OpCodes.Stsfld, field)
-                        else
-                            ilg.Emit(OpCodes.Stfld, field)
-                    | Call (objOpt,meth,args) -> 
-                        match objOpt with 
-                        | None -> () 
-                        | Some e -> 
-                          let s = if e.Type.IsValueType then ExpectedStackState.Address else ExpectedStackState.Value
-                          emit s e
-                        for pe in args do 
-                            emit ExpectedStackState.Value pe
-                        let getMeth (m:MethodInfo) = match m with :? ProvidedMethod as pm when methMap.ContainsKey pm -> methMap.[pm] :> MethodInfo | m -> m
-                        // Handle the case where this is a generic method instantiated at a type being compiled
-                        let mappedMeth = 
-                            if meth.IsGenericMethod then 
-                                let args = meth.GetGenericArguments() |> Array.map convType
-                                let gmd = meth.GetGenericMethodDefinition() |> getMeth
-                                gmd.GetGenericMethodDefinition().MakeGenericMethod args
-                            elif meth.DeclaringType.IsGenericType then 
-                                let gdty = convType (meth.DeclaringType.GetGenericTypeDefinition())
-                                let gdtym = gdty.GetMethods() |> Seq.find (fun x -> x.Name = meth.Name)
-                                assert (gdtym <> null) // ?? will never happen - if method is not found - KeyNotFoundException will be raised
-                                let dtym =
-                                    match convType meth.DeclaringType with
-                                    | :? TypeBuilder as dty -> TypeBuilder.GetMethod(dty, gdtym)
-                                    | dty -> MethodBase.GetMethodFromHandle(meth.MethodHandle, dty.TypeHandle) :?> _
-                                
-                                assert (dtym <> null)
-                                dtym
-                            else
-                                getMeth meth
-                        match objOpt with 
-                        | Some obj when mappedMeth.IsAbstract || mappedMeth.IsVirtual  ->
-                            if obj.Type.IsValueType then ilg.Emit(OpCodes.Constrained, convType obj.Type)
-                            ilg.Emit(OpCodes.Callvirt, mappedMeth)
-                        | _ ->
-                            ilg.Emit(OpCodes.Call, mappedMeth)
-
-                        let returnTypeIsVoid = mappedMeth.ReturnType = typeof<System.Void>
-                        match returnTypeIsVoid, (isEmpty expectedState) with
-                        | false, true -> 
-                              // method produced something, but we don't need it
-                              pop()
-                        | true, false when expr.Type = typeof<unit> -> 
-                              // if we need result and method produce void and result should be unit - push null as unit value on stack
-                              ilg.Emit(OpCodes.Ldnull)
-                        | _ -> ()
-
-                    | NewObject (ctor,args) -> 
-                        for pe in args do 
-                            emit ExpectedStackState.Value pe
-                        let meth = match ctor with :? ProvidedConstructor as pc when ctorMap.ContainsKey pc -> ctorMap.[pc] :> ConstructorInfo | c -> c
-                        ilg.Emit(OpCodes.Newobj, meth)
-                              
-                        popIfEmptyExpected expectedState                              
-
-                    | Value (obj, _ty) -> 
-                        let rec emitC (v:obj) = 
-                            match v with 
-                            | :? string as x -> ilg.Emit(OpCodes.Ldstr, x)
-                            | :? int8 as x -> ilg.Emit(OpCodes.Ldc_I4, int32 x)
-                            | :? uint8 as x -> ilg.Emit(OpCodes.Ldc_I4, int32 (int8 x))
-                            | :? int16 as x -> ilg.Emit(OpCodes.Ldc_I4, int32 x)
-                            | :? uint16 as x -> ilg.Emit(OpCodes.Ldc_I4, int32 (int16 x))
-                            | :? int32 as x -> ilg.Emit(OpCodes.Ldc_I4, x)
-                            | :? uint32 as x -> ilg.Emit(OpCodes.Ldc_I4, int32 x)
-                            | :? int64 as x -> ilg.Emit(OpCodes.Ldc_I8, x)
-                            | :? uint64 as x -> ilg.Emit(OpCodes.Ldc_I8, int64 x)
-                            | :? char as x -> ilg.Emit(OpCodes.Ldc_I4, int32 x)
-                            | :? bool as x -> ilg.Emit(OpCodes.Ldc_I4, if x then 1 else 0)
-                            | :? float32 as x -> ilg.Emit(OpCodes.Ldc_R4, x)
-                            | :? float as x -> ilg.Emit(OpCodes.Ldc_R8, x)
-#if FX_NO_GET_ENUM_UNDERLYING_TYPE
-#else
-                            | :? System.Enum as x when x.GetType().GetEnumUnderlyingType() = typeof<int32> -> ilg.Emit(OpCodes.Ldc_I4, unbox<int32> v)
-#endif
-                            | :? Type as ty ->
-                                ilg.Emit(OpCodes.Ldtoken, convType ty)
-                                ilg.Emit(OpCodes.Call, Misc.GetTypeFromHandleMethod)
-                            | :? decimal as x ->
-                                let bits = System.Decimal.GetBits x
-                                ilg.Emit(OpCodes.Ldc_I4, bits.[0])
-                                ilg.Emit(OpCodes.Ldc_I4, bits.[1])
-                                ilg.Emit(OpCodes.Ldc_I4, bits.[2])
-                                do
-                                    let sign = (bits.[3] &&& 0x80000000) <> 0
-                                    ilg.Emit(if sign then OpCodes.Ldc_I4_1 else OpCodes.Ldc_I4_0)
-                                do
-                                    let scale = byte ((bits.[3] >>> 16) &&& 0x7F)
-                                    ilg.Emit(OpCodes.Ldc_I4_S, scale)
-                                ilg.Emit(OpCodes.Newobj, Misc.DecimalConstructor)
-                            | :? DateTime as x ->
-                                ilg.Emit(OpCodes.Ldc_I8, x.Ticks)
-                                ilg.Emit(OpCodes.Ldc_I4, int x.Kind)
-                                ilg.Emit(OpCodes.Newobj, Misc.DateTimeConstructor)
-                            | :? DateTimeOffset as x ->
-                                ilg.Emit(OpCodes.Ldc_I8, x.Ticks)
-                                ilg.Emit(OpCodes.Ldc_I8, x.Offset.Ticks)
-                                ilg.Emit(OpCodes.Newobj, Misc.TimeSpanConstructor)
-                                ilg.Emit(OpCodes.Newobj, Misc.DateTimeOffsetConstructor)
-                            | null -> ilg.Emit(OpCodes.Ldnull)
-                            | _ -> failwithf "unknown constant '%A' in generated method" v
-                        if isEmpty expectedState then ()
-                        else emitC obj
-
-                    | Let(v,e,b) -> 
-                        let lb = ilg.DeclareLocal (convType v.Type)
-                        locals.Add (v, lb) 
-                        emit ExpectedStackState.Value e
-                        ilg.Emit(OpCodes.Stloc, lb.LocalIndex)
-                        emit expectedState b
-                              
-                    | Sequential(e1, e2) ->
-                        emit ExpectedStackState.Empty e1
-                        emit expectedState e2                          
-
-                    | IfThenElse(cond, ifTrue, ifFalse) ->
-                        let ifFalseLabel = ilg.DefineLabel()
-                        let endLabel = ilg.DefineLabel()
-
-                        emit ExpectedStackState.Value cond
-
-                        ilg.Emit(OpCodes.Brfalse, ifFalseLabel)
-
-                        emit expectedState ifTrue
-                        ilg.Emit(OpCodes.Br, endLabel)
-
-                        ilg.MarkLabel(ifFalseLabel)
-                        emit expectedState ifFalse
-
-                        ilg.Emit(OpCodes.Nop)
-                        ilg.MarkLabel(endLabel)
-
-                    | TryWith(body, _filterVar, _filterBody, catchVar, catchBody) ->                                                                                      
-                              
-                        let stres, ldres = 
-                            if isEmpty expectedState then ignore, ignore
-                            else
-                              let local = ilg.DeclareLocal (convType body.Type)
-                              let stres = fun () -> ilg.Emit(OpCodes.Stloc, local)
-                              let ldres = fun () -> ilg.Emit(OpCodes.Ldloc, local)
-                              stres, ldres
-
-                        let exceptionVar = ilg.DeclareLocal(convType catchVar.Type)
-                        locals.Add(catchVar, exceptionVar)
-
-                        let _exnBlock = ilg.BeginExceptionBlock()
-                              
-                        emit expectedState body
-                        stres()
-
-                        ilg.BeginCatchBlock(convType  catchVar.Type)
-                        ilg.Emit(OpCodes.Stloc, exceptionVar)
-                        emit expectedState catchBody
-                        stres()
-                        ilg.EndExceptionBlock()
-
-                        ldres()
-
-                    | VarSet(v,e) -> 
-                        emit ExpectedStackState.Value e
-                        match locals.TryGetValue v with 
-                        | true, localBuilder -> 
-                            ilg.Emit(OpCodes.Stloc, localBuilder.LocalIndex)
-                        | false, _ -> 
-                            failwith "unknown parameter/field in assignment. Only assignments to locals are currently supported by TypeProviderEmit"
-                    | Lambda(v, body) ->
-                        emitLambda(ilg, v, body, expr.GetFreeVars(), locals, parameterVars)
-                        popIfEmptyExpected expectedState
-                    | n -> 
-                        failwith (sprintf "unknown expression '%A' in generated method" n)
-                emit expectedState expr
-
-
+ 
             // Emit the constructor (if any)
             for pcinfo in ctors do 
                 assert ctorMap.ContainsKey pcinfo
@@ -2574,6 +2647,8 @@ type AssemblyGenerator(assemblyFileName) =
                     [| yield Var("this", pcinfo.DeclaringType)
                        for p in pcinfo.GetParameters() do 
                             yield Var(p.Name, p.ParameterType) |]
+ 
+                let codeGen = CodeGenerator(assemblyMainModule, uniqueLambdaTypeName, implicitCtorArgsAsFields, transType, transField, transMeth, transCtor, isLiteralEnumField, ilg, locals, parameterVars)
                 let parameters = 
                     [| for v in parameterVars -> Expr.Var v |]
                 match pcinfo.GetBaseConstructorCallInternal true with
@@ -2585,7 +2660,7 @@ type AssemblyGenerator(assemblyFileName) =
                     // argExprs should always include 'this'
                     let (cinfo,argExprs) = f (Array.toList parameters)
                     for argExpr in argExprs do 
-                        emitExpr (ilg, locals, parameterVars) ExpectedStackState.Value argExpr
+                        codeGen.EmitExpr (ExpectedStackState.Value, argExpr)
                     ilg.Emit(OpCodes.Call,cinfo)
 
                 if pcinfo.IsImplicitCtor then
@@ -2594,9 +2669,8 @@ type AssemblyGenerator(assemblyFileName) =
                         ilg.Emit(OpCodes.Ldarg, ctorArgsAsFieldIdx+1)
                         ilg.Emit(OpCodes.Stfld, ctorArgsAsField)
                 else
-                    let code  = pcinfo.GetInvokeCodeInternal true
-                    let code = code parameters
-                    emitExpr (ilg, locals, parameterVars) ExpectedStackState.Empty code
+                    let code = pcinfo.GetInvokeCodeInternal true parameters
+                    codeGen.EmitExpr (ExpectedStackState.Empty, code)
                 ilg.Emit(OpCodes.Ret)
             
             match ptd.GetConstructors(ALL) |> Seq.tryPick (function :? ProvidedConstructor as pc when pc.IsTypeInitializer -> Some pc | _ -> None) with
@@ -2607,7 +2681,8 @@ type AssemblyGenerator(assemblyFileName) =
                 let cattr = pc.GetCustomAttributesDataImpl() 
                 defineCustomAttrs cb.SetCustomAttribute cattr
                 let expr = pc.GetInvokeCodeInternal true [||]
-                emitExpr(ilg, new Dictionary<_, _>(), [||]) ExpectedStackState.Empty expr
+                let codeGen = CodeGenerator(assemblyMainModule, uniqueLambdaTypeName, implicitCtorArgsAsFields, transType, transField, transMeth, transCtor, isLiteralEnumField, ilg, new Dictionary<_, _>(), [| |])
+                codeGen.EmitExpr (ExpectedStackState.Empty, expr)
                 ilg.Emit OpCodes.Ret
 
             // Emit the methods
@@ -2634,7 +2709,8 @@ type AssemblyGenerator(assemblyFileName) =
 
 
                 let expectedState = if (minfo.ReturnType = typeof<System.Void>) then ExpectedStackState.Empty else ExpectedStackState.Value
-                emitExpr (ilg, locals, parameterVars) expectedState expr
+                let codeGen = CodeGenerator(assemblyMainModule, uniqueLambdaTypeName, implicitCtorArgsAsFields, transType, transField, transMeth, transCtor, isLiteralEnumField, ilg, locals, parameterVars)
+                codeGen.EmitExpr (expectedState, expr)
                 ilg.Emit OpCodes.Ret
               | _ -> ()
   
@@ -2650,7 +2726,7 @@ type AssemblyGenerator(assemblyFileName) =
                 // TODO: add raiser
             
             for pinfo in ptd.GetProperties(ALL) |> Seq.choose (function :? ProvidedProperty as pe -> Some pe | _ -> None) do
-                let pb = tb.DefineProperty(pinfo.Name, pinfo.Attributes, convType pinfo.PropertyType, [| for p in pinfo.GetIndexParameters() -> convType p.ParameterType |])
+                let pb = tb.DefineProperty(pinfo.Name, pinfo.Attributes, transType pinfo.PropertyType, [| for p in pinfo.GetIndexParameters() -> transType p.ParameterType |])
                 let cattr = pinfo.GetCustomAttributesDataImpl() 
                 defineCustomAttrs pb.SetCustomAttribute cattr
                 if  pinfo.CanRead then 
@@ -2722,6 +2798,7 @@ type ProvidedAssembly(assemblyFileName: string) =
         assembly
 #endif
 
+#endif // NO_GENERATIVE
 
 module Local = 
 
@@ -2896,6 +2973,10 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
             | :? ProvidedTypeDefinition as t -> (t.MakeParametricType(typePathAfterArguments,objs) :> Type)
             | _ -> failwith (sprintf "ApplyStaticArguments: static params for type %s are unexpected" ty.FullName)
 
+#if NO_GENERATIVE
+        override __.GetGeneratedAssemblyContents(_assembly) = 
+            failwith "no generative assemblies"
+#else
 #if FX_NO_LOCAL_FILESYSTEM
         override __.GetGeneratedAssemblyContents(_assembly) = 
             // TODO: this is very fake, we rely on the fact it is never needed
@@ -2921,4 +3002,5 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
                 let bytes = System.IO.File.ReadAllBytes assembly.ManifestModule.FullyQualifiedName
                 GlobalProvidedAssemblyElementsTable.theTable.[assembly] <- Lazy<_>.CreateFromValue bytes
                 bytes
+#endif
 #endif
