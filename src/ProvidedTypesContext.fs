@@ -400,10 +400,6 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
     member __.ReferencedAssemblies =  referencedAssemblies
     member x.TryGetFSharpCoreAssemblyVersion() = fsharpCoreRefVersion.Force()
 
-
-
-
-<<<<<<< HEAD
     /// Create a new provided static parameter, for use with DefineStaticParamaeters on a provided type definition.
     ///
     /// When making a cross-targeting type provider, use this method instead of the ProvidedParameter constructor from ProvidedTypes
