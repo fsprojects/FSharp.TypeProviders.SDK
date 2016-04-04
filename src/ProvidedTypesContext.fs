@@ -62,11 +62,11 @@ module private ImplementationUtils =
 ///    ProvidedConstructor, 
 ///    ProvidedMethod 
 /// should be replaced by 
-///    replacer.ProvidedTypeDefinition
-///    replacer.ProvidedParameter,
-///    replacer.ProvidedProperty
-///    replacer.ProvidedConstructor, 
-///    replacer.ProvidedMethod 
+///    bindingContext.ProvidedTypeDefinition
+///    bindingContext.ProvidedParameter,
+///    bindingContext.ProvidedProperty
+///    bindingContext.ProvidedConstructor, 
+///    bindingContext.ProvidedMethod 
 /// 
 type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, referencedAssemblies: Lazy<Assembly[]>) =
 
@@ -446,26 +446,26 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
                            AdderCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> adderCode |> replacer.ConvertDesignTimeExprToTargetExpr), 
                            RemoverCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> removerCode |> replacer.ConvertDesignTimeExprToTargetExpr))
 
-  /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
+    /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
     member __.ProvidedConstructor(parameters, invokeCode: Expr list -> Expr) = 
       new ProvidedConstructor(parameters, InvokeCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> invokeCode |> replacer.ConvertDesignTimeExprToTargetExpr))
 
-  /// When making a cross-targeting type provider, use this method instead of the ProvidedMethod constructor from ProvidedTypes
-    member __.ProvidedMethod(methodName, parameters, returnType: Type, invokeCode: Expr list -> Expr) = 
-      new ProvidedMethod(methodName, parameters, returnType |> replacer.ConvertDesignTimeTypeToTargetType, InvokeCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> invokeCode |> replacer.ConvertDesignTimeExprToTargetExpr))
+    /// When making a cross-targeting type provider, use this method instead of the ProvidedMethod constructor from ProvidedTypes
+    member __.ProvidedMethod(methodName, parameters, returnType: Type, invokeCode: Expr list -> Expr, ?isStatic: bool) = 
+      new ProvidedMethod(methodName, parameters, returnType |> replacer.ConvertDesignTimeTypeToTargetType, InvokeCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> invokeCode |> replacer.ConvertDesignTimeExprToTargetExpr), IsStaticMethod = defaultArg isStatic false)
 
-  /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-    member __.ProvidedTypeDefinition(className, baseType: Type option) = 
-      new ProvidedTypeDefinition(className, baseType |> Option.map replacer.ConvertDesignTimeTypeToTargetType, convToTgt)
+    /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
+    member __.ProvidedTypeDefinition(className, baseType: Type option, ?hideObjectMethods: bool, ?nonNullable: bool) = 
+      new ProvidedTypeDefinition(className, baseType |> Option.map replacer.ConvertDesignTimeTypeToTargetType, convToTgt, HideObjectMethods = (defaultArg hideObjectMethods false), NonNullable = (defaultArg nonNullable false))
 
-  /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-    member __.ProvidedTypeDefinition(assembly, namespaceName, className, baseType: Type option) = 
-      new ProvidedTypeDefinition(assembly, namespaceName, className, baseType |> Option.map replacer.ConvertDesignTimeTypeToTargetType, convToTgt)
+    /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
+    member __.ProvidedTypeDefinition(assembly, namespaceName, className, baseType: Type option, ?hideObjectMethods: bool, ?nonNullable: bool) = 
+      new ProvidedTypeDefinition(assembly, namespaceName, className, baseType |> Option.map replacer.ConvertDesignTimeTypeToTargetType, convToTgt, HideObjectMethods = (defaultArg hideObjectMethods false), NonNullable = (defaultArg nonNullable false))
 
-  /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericType
+    /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericType
     member __.MakeGenericType(genericTypeDefinition, genericArguments) = ptb.MakeGenericType(genericTypeDefinition, genericArguments) 
 
-  /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericMethod
+    /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericMethod
     member __.MakeGenericMethod(genericMethodDefinition, genericArguments) = ptb.MakeGenericMethod(genericMethodDefinition, genericArguments) 
 
     static member Create (cfg : TypeProviderConfig) = 
