@@ -559,11 +559,11 @@ type internal Testing() =
                 | _ -> ""
                 |> print
                 print (toString true t)
-                if t.BaseType <> typeof<obj> then
-                    print " : "
-                    print (toString true t.BaseType)
+                let bt = if t.BaseType = null then typeof<obj> else t.BaseType
+                print " : "
+                print (toString true bt)
                 println()
-                t.GetMembers() 
+                t.GetMembers(BindingFlags.DeclaredOnly ||| BindingFlags.Instance ||| BindingFlags.Static ||| BindingFlags.Public) 
                 |> Seq.sortBy (fun m -> m.Name)
                 |> Seq.iter printMember
                 println()
