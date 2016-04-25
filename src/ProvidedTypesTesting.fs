@@ -563,7 +563,7 @@ type internal Testing() =
                 print " : "
                 print (toString true bt)
                 println()
-                t.GetMembers() 
+                t.GetMembers(BindingFlags.DeclaredOnly ||| BindingFlags.Instance ||| BindingFlags.Static ||| BindingFlags.Public) 
                 |> Seq.sortBy (fun m -> m.Name)
                 |> Seq.iter printMember
                 println()
