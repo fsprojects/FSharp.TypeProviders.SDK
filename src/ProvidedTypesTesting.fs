@@ -59,8 +59,6 @@ type internal Testing() =
     /// Simulates a real instance of TypeProviderConfig and then creates an instance of the last
     /// type provider added to a namespace by the type provider constructor
     static member GenerateProvidedTypeInstantiation (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list, typeProviderForNamespacesConstructor, args) =
-        printfn "TESTING: Generating one type, resolutionFolder = %s, runtimeAssembly = %s, runtimeAssemblyRefs = %A, args = %A" resolutionFolder runtimeAssembly runtimeAssemblyRefs args
-
         let cfg = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder, runtimeAssembly, runtimeAssemblyRefs) 
 
         let typeProviderForNamespaces = typeProviderForNamespacesConstructor cfg :> TypeProviderForNamespaces
