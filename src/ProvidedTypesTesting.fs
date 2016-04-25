@@ -141,7 +141,7 @@ type internal Testing() =
                         else
                             t.GetGenericArguments() 
                             |> Seq.map (fun _ -> "_")
-                    if FSharpType.IsTuple t then
+                    if t.FullName.StartsWith("System.Tuple`") then
                         String.concat " * " args
                     elif t.Name.StartsWith "FSharpFunc`" then
                         "(" + (String.concat " -> " args) + ")"
@@ -155,7 +155,7 @@ type internal Testing() =
                             | t when not useQualifiedNames && t.GetGenericTypeDefinition().Name = typeof<int list>.GetGenericTypeDefinition().Name -> "list", true
                             | t when not useQualifiedNames && t.GetGenericTypeDefinition().Name = typeof<int option>.GetGenericTypeDefinition().Name -> "option", true
                             | t when not useQualifiedNames && t.GetGenericTypeDefinition().Name = typeof<int ref>.GetGenericTypeDefinition().Name -> "ref", true
-                            | t when not useQualifiedNames && t.Name = "FSharpAsync`1" -> "Async", true
+                            | t when not useQualifiedNames && t.Name = "FSharpAsync`1" -> "async", true
                             // Short names for types in F# namespaces
                             | t when not useQualifiedNames && knownNamespaces.Contains t.Namespace -> t.Name, false
                             | t -> (if useFullName then fullName t else t.Name), false
