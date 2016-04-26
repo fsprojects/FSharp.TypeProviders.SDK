@@ -118,21 +118,17 @@ type internal Testing() =
             let hasUnitOfMeasure = t.Name.Contains("[")
 
             let innerToString (t: Type) =
-                let baset = 
-                    match t with
-                    | :? ProviderImplementation.AssemblyReaderReflection.ContextTypeDefinition as t -> t.UnderlyingSystemType
-                    | _ -> t
                 match t with
-                | _ when baset = typeof<bool> -> "bool"
-                | _ when baset = typeof<obj> -> "obj"
-                | _ when baset = typeof<int> -> "int"
-                | _ when baset = typeof<int64> -> "int64"
-                | _ when baset = typeof<float> -> "float"
-                | _ when baset = typeof<float32> -> "float32"
-                | _ when baset = typeof<decimal> -> "decimal"
-                | _ when baset = typeof<string> -> "string"
-                | _ when baset = typeof<Void> -> "()"
-                | _ when baset = typeof<unit> -> "()"
+                | _ when t.Name = typeof<bool>.Name -> "bool"
+                | _ when t.Name = typeof<obj>.Name -> "obj"
+                | _ when t.Name = typeof<int>.Name -> "int"
+                | _ when t.Name = typeof<int64>.Name -> "int64"
+                | _ when t.Name = typeof<float>.Name -> "float"
+                | _ when t.Name = typeof<float32>.Name -> "float32"
+                | _ when t.Name = typeof<decimal>.Name -> "decimal"
+                | _ when t.Name = typeof<string>.Name -> "string"
+                | _ when t.Name = typeof<Void>.Name -> "()"
+                | _ when t.Name = typeof<unit>.Name -> "()"
                 | t when t.IsArray -> (t.GetElementType() |> toString useFullName) + "[]"
                 | :? ProvidedTypeDefinition as t ->
                     add t
