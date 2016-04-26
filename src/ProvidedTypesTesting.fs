@@ -118,17 +118,21 @@ type internal Testing() =
             let hasUnitOfMeasure = t.Name.Contains("[")
 
             let innerToString (t: Type) =
+                let baset = 
+                    match t with
+                    | :? ProviderImplementation.AssemblyReaderReflection.ContextTypeDefinition as t -> t.UnderlyingSystemType
+                    | _ -> t
                 match t with
-                | t when t = typeof<bool> -> "bool"
-                | t when t = typeof<obj> -> "obj"
-                | t when t = typeof<int> -> "int"
-                | t when t = typeof<int64> -> "int64"
-                | t when t = typeof<float> -> "float"
-                | t when t = typeof<float32> -> "float32"
-                | t when t = typeof<decimal> -> "decimal"
-                | t when t = typeof<string> -> "string"
-                | t when t = typeof<Void> -> "()"
-                | t when t = typeof<unit> -> "()"
+                | _ when baset = typeof<bool> -> "bool"
+                | _ when baset = typeof<obj> -> "obj"
+                | _ when baset = typeof<int> -> "int"
+                | _ when baset = typeof<int64> -> "int64"
+                | _ when baset = typeof<float> -> "float"
+                | _ when baset = typeof<float32> -> "float32"
+                | _ when baset = typeof<decimal> -> "decimal"
+                | _ when baset = typeof<string> -> "string"
+                | _ when baset = typeof<Void> -> "()"
+                | _ when baset = typeof<unit> -> "()"
                 | t when t.IsArray -> (t.GetElementType() |> toString useFullName) + "[]"
                 | :? ProvidedTypeDefinition as t ->
                     add t
@@ -141,7 +145,7 @@ type internal Testing() =
                         else
                             t.GetGenericArguments() 
                             |> Seq.map (fun _ -> "_")
-                    if t.FullName.StartsWith("System.Tuple`") then
+                    if t.FullName.StartsWith "System.Tuple`" then
                         String.concat " * " args
                     elif t.Name.StartsWith "FSharpFunc`" then
                         "(" + (String.concat " -> " args) + ")"
