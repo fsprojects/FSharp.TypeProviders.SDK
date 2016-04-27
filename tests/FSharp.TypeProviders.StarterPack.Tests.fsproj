@@ -74,6 +74,7 @@
     </Compile>
     <Compile Include="BasicErasedProvisionTests.fs" />
     <Compile Include="BasicGenerativeProvisionTests.fs" />
+    <Compile Include="AssemblyReaderTests.fs" />
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
