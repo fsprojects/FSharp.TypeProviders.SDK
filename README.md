@@ -24,8 +24,8 @@ It will also become the main place for improvements and additions to the Provide
 
 Building a type provider nearly always starts with adding these files to your project:
 
-    ProvidedTypes.fsi
-    ProvidedTypes.fs
+* ProvidedTypes.fsi
+* ProvidedTypes.fs
 
 The [Starter Pack NuGet package](https://www.nuget.org/packages/FSharp.TypeProviders.StarterPack) contains both these files as well as a set of debugging helpers, and when you install
 it, it should add them all to your F# project. It's probably best not to modify the files after adding them as
@@ -41,17 +41,21 @@ Type providers may be used in projects that generate portable code or target oth
 that being used by the F# compiler. To convert an erasing
 type provider to a cross-targeting erasing type provider, add the following source files to your project:
 
-    AssemblyReader.fs
-    AssemblyReaderReflection.fs
-    ProvidedTypesContext.fs
+* AssemblyReader.fs
+* AssemblyReaderReflection.fs
+* ProvidedTypesContext.fs
 
 Then add 
 
-        let ctxt = ProvidedTypesContext.Create(config)
+```fsharp
+let ctxt = ProvidedTypesContext.Create(config)
+```
 
-to your code and always create proided entities using this ``ctxt`` object:
+to your code and always create provided entities using this ``ctxt`` object:
 
-        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", typeof<obj>)
+```fsharp
+let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", typeof<obj>)
+```
 
 This is shown in the example below.
 
@@ -59,30 +63,32 @@ This is shown in the example below.
 
 Here is a basic erasing type provider using the Provided Types API:
 
-    open ProviderImplementation
-    open ProviderImplementation.ProvidedTypes
-    open Microsoft.FSharp.Core.CompilerServices
-    open System.Reflection
+```fsharp
+open ProviderImplementation
+open ProviderImplementation.ProvidedTypes
+open Microsoft.FSharp.Core.CompilerServices
+open System.Reflection
 
-    [<TypeProvider>]
-    type BasicProvider (config : TypeProviderConfig) as this =
-        inherit TypeProviderForNamespaces ()
+[<TypeProvider>]
+type BasicProvider (config : TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces ()
 
-        let ns = "StaticProperty.Provided"
-        let asm = Assembly.GetExecutingAssembly()
-        let ctxt = ProvidedTypesContext.Create(config)
+    let ns = "StaticProperty.Provided"
+    let asm = Assembly.GetExecutingAssembly()
+    let ctxt = ProvidedTypesContext.Create(config)
 
-        let createTypes () =
-            let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", typeof<obj>)
-            let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, IsStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
-            myType.AddMember(myProp)
-            [myType]
+    let createTypes () =
+        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", typeof<obj>)
+        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, IsStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
+        myType.AddMember(myProp)
+        [myType]
 
-        do
-            this.AddNamespace(ns, createTypes())
+    do
+        this.AddNamespace(ns, createTypes())
 
-    [<assembly:TypeProviderAssembly>]
-    do ()
+[<assembly:TypeProviderAssembly>]
+do ()
+```
 
 ## Resources
 
@@ -103,12 +109,15 @@ For advice on how to get started building a type provider, check out:
 
 Use
 
-    build.sh RunTests
+```shell
+build.sh RunTests
+```
 
 or
 
-    build.cmd RunTests
-
+```shell
+build.cmd RunTests
+```
 
 ## Library license
 
