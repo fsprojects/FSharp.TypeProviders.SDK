@@ -49,7 +49,7 @@ Then add
 
         let ctxt = ProvidedTypesContext.Create(config)
 
-to your code and always create proided entities using this ``ctxt`` object:
+to your code and always create provided entities using this ``ctxt`` object:
 
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", typeof<obj>)
 
