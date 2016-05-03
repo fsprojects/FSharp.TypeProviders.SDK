@@ -3342,10 +3342,16 @@ type ILTypeSigParser(tstring : string) =
                 let arity = 
                     while (int(here()) >= (int('0'))) && (int(here()) <= ((int('9')))) && (int(peek()) >= (int('0'))) && (int(peek()) <= ((int('9')))) do step()
                     System.Int32.Parse(take())
-                // skip the '['
-                drop()
-                // get the specializations
-                typeName+"`"+(arity.ToString()), Some(([| for _i in 0..arity-1 do yield x.ParseType() |]))
+
+                // typically types are saturated, i.e. if generic they have arguments. However, assembly metadata for reflectedDefinitions they occur free.
+                // this code takes care of exactly this case.
+                if here () = '[' then  
+                    // skip the '['
+                    drop()
+                    // get the specializations
+                    typeName+"`"+(arity.ToString()), Some(([| for _i in 0..arity-1 do yield x.ParseType() |]))
+                else 
+                    typeName+"`"+(arity.ToString()), None
             else
                 typeName, None
 
