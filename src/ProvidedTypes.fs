@@ -2758,7 +2758,7 @@ type AssemblyGenerator(assemblyFileName) =
         let assemblyBytes = File.ReadAllBytes assemblyFileName
         let _assemblyLoadedInMemory = System.Reflection.Assembly.Load(assemblyBytes,null,System.Security.SecurityContextSource.CurrentAppDomain)
         //printfn "final bytes in '%s'" assemblyFileName
-        //File.Delete assemblyFileName
+        File.Delete assemblyFileName
         assemblyBytes
 #endif
 
