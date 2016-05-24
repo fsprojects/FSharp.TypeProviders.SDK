@@ -2350,7 +2350,7 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
 
     // Attributes, etc..
     override __.GetAttributeFlagsImpl() = adjustTypeAttributes attributes this.IsNested 
-    override this.IsValueTypeImpl() = if this.BaseType <> null then this.BaseType.IsValueType else false
+    override this.IsValueTypeImpl() = if this.BaseType <> null then this.BaseType = typeof<Enum> || this.BaseType.IsValueType else false
     override __.IsArrayImpl() = false
     override __.IsByRefImpl() = false
     override __.IsPointerImpl() = false
