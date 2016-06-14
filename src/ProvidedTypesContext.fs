@@ -68,7 +68,7 @@ module private ImplementationUtils =
 ///    bindingContext.ProvidedConstructor, 
 ///    bindingContext.ProvidedMethod 
 /// 
-type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, referencedAssemblies: Lazy<Assembly[]>) =
+type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, referencedAssemblies: Lazy<Assembly[]>, assemblyReplacementMap) =
 
   /// When translating quotations, Expr.Var's are translated to new variable respecting reference equality.
   let varTable = Dictionary<Var, Var>()
@@ -84,9 +84,17 @@ type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, reference
       else 
           fullName
 
-  let tryGetTypeFromAssembly fullName (asm:Assembly) =
+  let tryGetTypeFromAssembly (originalAssemblyName:string) fullName (asm:Assembly) =
+        // if the original assembly of the type being replaced is in `assemblyReplacementMap`,
+        // then we only map it to assemblies with a name specified in `assemblyReplacementMap`
+        let notRestrictedOrMatching = 
+            assemblyReplacementMap
+            |> Seq.forall (fun (originalName, newName) ->
+                if originalAssemblyName.StartsWith originalName then asm.FullName.StartsWith(newName)
+                else true)
 
-        if asm.FullName.StartsWith "FSI-ASSEMBLY" then
+        if not notRestrictedOrMatching then None
+        elif asm.FullName.StartsWith "FSI-ASSEMBLY" then
             // when F# Interactive is the host of the design time assembly,
             // for each type in the runtime assembly there might be multiple
             // versions (FSI_0001.FullTypeName, FSI_0002.FullTypeName, etc).
@@ -114,7 +122,7 @@ type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, reference
             // typeof<System.Void>.Equals(ty).
             if fullName = "System.Void" then typeof<System.Void> else
 
-            match Array.choose (tryGetTypeFromAssembly fullName) asms |> Seq.distinct |> Seq.toArray with
+            match Array.choose (tryGetTypeFromAssembly t.Assembly.FullName fullName) asms |> Seq.distinct |> Seq.toArray with
             //| [| (newT, canSave) |] -> 
             //     if canSave then cache.[t] <- newT
             //     newT
@@ -325,7 +333,7 @@ type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, reference
 
 /// Represents the type binding context for the type provider based on the set of assemblies
 /// referenced by the compilation.
-type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as this = 
+type internal ProvidedTypesContext(referencedAssemblyPaths : string list, assemblyReplacementMap : seq<string*string>) as this = 
 
 
     /// Find which assembly defines System.Object etc.
@@ -388,7 +396,7 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
                 if asm <> null then 
                     yield asm |]
 
-    let replacer = AssemblyReplacer (designTimeAssemblies, referencedAssemblies)
+    let replacer = AssemblyReplacer (designTimeAssemblies, referencedAssemblies, assemblyReplacementMap)
 
     // convToTgt is used to patch up some types like typeof<System.Array> reported by ProvidedTypes
     let convToTgt = replacer.ConvertDesignTimeTypeToTargetType 
@@ -468,7 +476,7 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
     /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericMethod
     member __.MakeGenericMethod(genericMethodDefinition, genericArguments) = ptb.MakeGenericMethod(genericMethodDefinition, genericArguments) 
 
-    static member Create (cfg : TypeProviderConfig) = 
+    static member Create (cfg : TypeProviderConfig, ?assemblyReplacementMap) = 
 
         // Use the reflection hack to determine the set of referenced assemblies by reflecting over the SystemRuntimeContainsType
         // closure in the TypeProviderConfig object.  
@@ -500,5 +508,5 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list) as thi
             failwith (sprintf "Invalid host of cross-targeting type provider. Exception: %A" e)
            
 
-        ProvidedTypesContext(referencedAssemblyPaths)
+        ProvidedTypesContext(referencedAssemblyPaths, defaultArg assemblyReplacementMap Seq.empty)
 
