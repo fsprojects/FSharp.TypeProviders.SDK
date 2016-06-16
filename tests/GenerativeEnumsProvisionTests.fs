@@ -31,20 +31,6 @@ let createEnum name (values: list<string*int>) =
     
     enumType
 
-[<TypeProvider>]
-type SimpleGenerativeEnumProvider (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces ()
-
-    let ns = "Enums.Provided"
-    let asm = Assembly.GetExecutingAssembly()
-    let tmp = Path.ChangeExtension(Path.GetTempFileName(), "dll")
-    let myAssem = ProvidedAssembly(tmp)
-    let container = ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, IsErased = false)
-
-    do
-        container.AddMember <| createEnum "Enum1" ["One", 1; "Two", 2]
-        myAssem.AddTypes [container]
-        this.AddNamespace(ns, [container])
 
 [<TypeProvider>]
 type UsedNestedGenerativeEnumProvider (config: TypeProviderConfig) as this =
@@ -52,58 +38,46 @@ type UsedNestedGenerativeEnumProvider (config: TypeProviderConfig) as this =
 
     let ns = "Enums.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let tmp = Path.ChangeExtension(Path.GetTempFileName(), "dll")
-    let myAssem = ProvidedAssembly(tmp)
+    let tempAssembly = Path.ChangeExtension(Path.GetTempFileName(), "dll") |> ProvidedAssembly
+    let container = ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, IsErased = false)
 
     do
-        let container = ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, IsErased = false)
-        let someType = ProvidedTypeDefinition("SomeClass", Some typeof<obj>, IsErased = false)
+        let enumContainer = ProvidedTypeDefinition("EnumContainer", Some typeof<obj>, IsErased = false)
         let enum = createEnum "NestedEnum" ["Foo", 1; "Bar", 2]
-        someType.AddMember enum
-        someType.AddMember <| ProvidedField("enumField", enum)
-        container.AddMember someType
-        myAssem.AddTypes [container]
-        this.AddNamespace(ns, [container])
+        enumContainer.AddMember enum
+        enumContainer.AddMember <| ProvidedField("enumField", enum)
+        container.AddMember <| enumContainer
     
+        tempAssembly.AddTypes [container]
+        this.AddNamespace(container.Namespace, [container])
 
-let testTypeProvider test = 
+let testProvidedAssembly (typeProvider: TypeProviderConfig -> #TypeProviderForNamespaces) test = 
     if Targets.supportsFSharp40 then
         let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs
         let runtimeAssembly = runtimeAssemblyRefs.[0]
         let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
-        test cfg
-
-[<Test>]
-let ``GenerativeEnumsProvider generates simple enum correctly``()  = 
-    testTypeProvider <| fun cfg -> 
-        let typeProviderForNamespaces = SimpleGenerativeEnumProvider cfg :> TypeProviderForNamespaces
-        let providedTypeDefinition = typeProviderForNamespaces.Namespaces |> Seq.last |> snd |> Seq.last
+        let tp = typeProvider cfg
+        let providedTypeDefinition = tp.Namespaces |> Seq.last |> snd |> Seq.last
         Assert.AreEqual("Container", providedTypeDefinition.Name)
 
-        let assemContents = (typeProviderForNamespaces :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
-        Assert.AreNotEqual(assemContents.Length, 0)
-        
+        let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
         let assembly = Assembly.Load assemContents
-        Assert.IsNotEmpty assembly.ExportedTypes
+        assembly.ExportedTypes |> Seq.find (fun ty -> ty.Name = "Container") |> test
 
 [<Test>]
 let ``Nested enum used by the enclosing type is generated correctly``() =
-    testTypeProvider <| fun cfg -> 
-        let typeProviderForNamespaces = UsedNestedGenerativeEnumProvider cfg :> TypeProviderForNamespaces
-        let providedTypeDefinition = typeProviderForNamespaces.Namespaces |> Seq.last |> snd |> Seq.last
-        Assert.AreEqual("Container", providedTypeDefinition.Name)
+    testProvidedAssembly UsedNestedGenerativeEnumProvider <| fun container -> 
+        let enumContainer = container.GetNestedType "EnumContainer"
+        Assert.IsNotNull enumContainer
 
-        let assemContents = (typeProviderForNamespaces :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
-        Assert.AreNotEqual(0, assemContents.Length)
-        
-        let assembly = Assembly.Load assemContents
-        Assert.IsNotEmpty assembly.ExportedTypes
+        let enum = enumContainer.GetNestedType "NestedEnum"
+        Assert.IsNotNull enum
 
-        let someClass = assembly.ExportedTypes |> Seq.tryFind (fun ty -> ty.Name = "SomeClass")
-        Assert.IsTrue someClass.IsSome
+        let field = enumContainer.GetField("enumField", BindingFlags.Instance ||| BindingFlags.NonPublic)
+        Assert.IsNotNull field
+        Assert.AreEqual(enum, field.FieldType)
 
-        let nested = someClass.Value.GetNestedTypes()
-        Assert.AreEqual(1, nested.Length)
-        Assert.AreEqual("NestedEnum", nested.[0].Name)
+        let enumValues = Enum.GetValues(enum) |> Seq.cast<int> |> Seq.zip (Enum.GetNames(enum)) 
+        CollectionAssert.AreEquivalent(["Foo", 1; "Bar", 2], enumValues)
 
 #endif
