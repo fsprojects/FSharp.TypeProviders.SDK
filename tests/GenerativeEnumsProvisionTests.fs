@@ -94,9 +94,16 @@ let ``Nested enum used by the enclosing type is generated correctly``() =
         Assert.AreEqual("Container", providedTypeDefinition.Name)
 
         let assemContents = (typeProviderForNamespaces :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
-        Assert.AreNotEqual(assemContents.Length, 0)
+        Assert.AreNotEqual(0, assemContents.Length)
         
         let assembly = Assembly.Load assemContents
         Assert.IsNotEmpty assembly.ExportedTypes
+
+        let someClass = assembly.ExportedTypes |> Seq.tryFind (fun ty -> ty.Name = "SomeClass")
+        Assert.IsTrue someClass.IsSome
+
+        let nested = someClass.Value.GetNestedTypes()
+        Assert.AreEqual(1, nested.Length)
+        Assert.AreEqual("NestedEnum", nested.[0].Name)
 
 #endif

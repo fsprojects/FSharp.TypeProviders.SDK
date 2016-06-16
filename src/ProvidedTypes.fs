@@ -2756,7 +2756,7 @@ type AssemblyGenerator(assemblyFileName) =
 
         domain.add_TypeResolve resolveHandler
 
-        iterateTypes (fun tb _ptd -> complete tb)
+        iterateTypes (fun tb _ -> complete tb)
 
         domain.remove_TypeResolve resolveHandler
 
