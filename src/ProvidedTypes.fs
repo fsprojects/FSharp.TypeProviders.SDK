@@ -2740,25 +2740,34 @@ type AssemblyGenerator(assemblyFileName) =
         // phase 4 - complete types
         
         let completed = HashSet<_>()
-        
+        let mutable current = None
+
         let complete (tb: TypeBuilder) =
-            if not (completed.Contains tb) then 
+            if not <| completed.Contains tb then
+                let previous = current
+                current <- Some tb
+
                 tb.CreateType() |> ignore
                 completed.Add tb |> ignore
 
-        let domain = System.Threading.Thread.GetDomain()
-        
+                current <- previous
+
         let resolveHandler = ResolveEventHandler(fun _ args ->
-            typeMap.Values
-            |> Seq.filter (fun tb -> tb.Name = args.Name)
-            |> Seq.iter complete
+            match current with
+            | Some(tb) ->
+                let targetName = tb.FullName + "+" + args.Name
+                typeMap.Values
+                |> Seq.filter (fun tb -> tb.FullName = targetName)
+                |> Seq.iter complete
+            | None -> ()
+
             assemblyMainModule.Assembly)
 
-        domain.add_TypeResolve resolveHandler
+        AppDomain.CurrentDomain.add_TypeResolve resolveHandler
 
         iterateTypes (fun tb _ -> complete tb)
 
-        domain.remove_TypeResolve resolveHandler
+        AppDomain.CurrentDomain.remove_TypeResolve resolveHandler
 
 #if FX_NO_LOCAL_FILESYSTEM
 #else
