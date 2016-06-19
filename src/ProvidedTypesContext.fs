@@ -68,7 +68,9 @@ module private ImplementationUtils =
 ///    bindingContext.ProvidedConstructor, 
 ///    bindingContext.ProvidedMethod 
 /// 
-type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, referencedAssemblies: Lazy<Assembly[]>, assemblyReplacementMap) =
+type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, referencedAssemblies: Lazy<Assembly[]>, ?assemblyReplacementMap) =
+
+  let assemblyReplacementMap = defaultArg assemblyReplacementMap Seq.empty
 
   /// When translating quotations, Expr.Var's are translated to new variable respecting reference equality.
   let varTable = Dictionary<Var, Var>()
@@ -333,8 +335,9 @@ type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, reference
 
 /// Represents the type binding context for the type provider based on the set of assemblies
 /// referenced by the compilation.
-type internal ProvidedTypesContext(referencedAssemblyPaths : string list, assemblyReplacementMap : seq<string*string>) as this = 
+type internal ProvidedTypesContext(referencedAssemblyPaths : string list, ?assemblyReplacementMap : seq<string*string>) as this = 
 
+    let assemblyReplacementMap = defaultArg assemblyReplacementMap Seq.empty
 
     /// Find which assembly defines System.Object etc.
     let systemRuntimeScopeRef = 
