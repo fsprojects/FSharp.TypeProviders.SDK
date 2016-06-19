@@ -15,7 +15,7 @@ module FSharp.TypeProviders.StarterPack.Tests.GenerativeEnumsProvisionTests
 open System
 open System.Reflection
 open System.IO
-open FSharp.Core.CompilerServices
+open Microsoft.FSharp.Core.CompilerServices
 open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
@@ -38,7 +38,7 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
 
     let ns = "Enums.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let tempAssembly = Path.ChangeExtension(Path.GetTempFileName(), "dll") |> ProvidedAssembly
+    let tempAssembly = ProvidedAssembly(Path.ChangeExtension(Path.GetTempFileName(), "dll"))
     let container = ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, IsErased = false)
 
     do
@@ -55,12 +55,12 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
         tempAssembly.AddTypes [container]
         this.AddNamespace(container.Namespace, [container])
 
-let testProvidedAssembly (typeProvider: TypeProviderConfig -> #TypeProviderForNamespaces) test = 
+let testProvidedAssembly test = 
     if Targets.supportsFSharp40 then
         let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs
         let runtimeAssembly = runtimeAssemblyRefs.[0]
         let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
-        let tp = typeProvider cfg
+        let tp = GenerativeEnumsProvider(cfg) :> TypeProviderForNamespaces
         let providedTypeDefinition = tp.Namespaces |> Seq.last |> snd |> Seq.last
         Assert.AreEqual("Container", providedTypeDefinition.Name)
 
@@ -70,7 +70,7 @@ let testProvidedAssembly (typeProvider: TypeProviderConfig -> #TypeProviderForNa
 
 [<Test>]
 let ``Enums are generated correctly``() =
-    testProvidedAssembly GenerativeEnumsProvider <| fun container -> 
+    testProvidedAssembly <| fun container -> 
         let enumContainer = container.GetNestedType "EnumContainer"
         Assert.IsNotNull enumContainer
 
