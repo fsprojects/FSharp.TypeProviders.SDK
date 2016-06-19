@@ -2736,36 +2736,19 @@ type AssemblyGenerator(assemblyFileName) =
                     let minfo = pinfo.GetSetMethod(true)
                     pb.SetSetMethod (methMap.[minfo :?> ProvidedMethod ]))
 
-
         // phase 4 - complete types
-        
-        let completed = HashSet<_>()
-        let mutable current = None
-
-        let complete (tb: TypeBuilder) =
-            if not <| completed.Contains tb then
-                let previous = current
-                current <- Some tb
-
-                tb.CreateType() |> ignore
-                completed.Add tb |> ignore
-
-                current <- previous
 
         let resolveHandler = ResolveEventHandler(fun _ args ->
-            match current with
-            | Some(tb) ->
-                let targetName = tb.FullName + "+" + args.Name
-                typeMap.Values
-                |> Seq.filter (fun tb -> tb.FullName = targetName)
-                |> Seq.iter complete
-            | None -> ()
+            // On Mono args.Name is full name of the type, on .NET - just name (no namespace)
+            typeMap.Values
+            |> Seq.filter (fun tb -> tb.FullName = args.Name || tb.Name = args.Name)
+            |> Seq.iter (fun tb -> tb.CreateType() |> ignore)
 
             assemblyMainModule.Assembly)
 
         AppDomain.CurrentDomain.add_TypeResolve resolveHandler
 
-        iterateTypes (fun tb _ -> complete tb)
+        iterateTypes (fun tb _ -> tb.CreateType() |> ignore)
 
         AppDomain.CurrentDomain.remove_TypeResolve resolveHandler
 

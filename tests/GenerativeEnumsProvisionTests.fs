@@ -33,7 +33,7 @@ let createEnum name (values: list<string*int>) =
 
 
 [<TypeProvider>]
-type UsedNestedGenerativeEnumProvider (config: TypeProviderConfig) as this =
+type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces ()
 
     let ns = "Enums.Provided"
@@ -45,8 +45,12 @@ type UsedNestedGenerativeEnumProvider (config: TypeProviderConfig) as this =
         let enumContainer = ProvidedTypeDefinition("EnumContainer", Some typeof<obj>, IsErased = false)
         let enum = createEnum "NestedEnum" ["Foo", 1; "Bar", 2]
         enumContainer.AddMember enum
-        enumContainer.AddMember <| ProvidedField("enumField", enum)
+        enumContainer.AddMember <| ProvidedField("nestedEnumField", enum)
         container.AddMember <| enumContainer
+
+        let topLevelEnum = createEnum "TopLevelEnum" ["One", 1; "Two", 2]
+        enumContainer.AddMember <| ProvidedField("topLevelEnumField", topLevelEnum)
+        container.AddMember topLevelEnum
     
         tempAssembly.AddTypes [container]
         this.AddNamespace(container.Namespace, [container])
@@ -65,19 +69,26 @@ let testProvidedAssembly (typeProvider: TypeProviderConfig -> #TypeProviderForNa
         assembly.ExportedTypes |> Seq.find (fun ty -> ty.Name = "Container") |> test
 
 [<Test>]
-let ``Nested enum used by the enclosing type is generated correctly``() =
-    testProvidedAssembly UsedNestedGenerativeEnumProvider <| fun container -> 
+let ``Enums are generated correctly``() =
+    testProvidedAssembly GenerativeEnumsProvider <| fun container -> 
         let enumContainer = container.GetNestedType "EnumContainer"
         Assert.IsNotNull enumContainer
 
-        let enum = enumContainer.GetNestedType "NestedEnum"
-        Assert.IsNotNull enum
+        let nestedEnum = enumContainer.GetNestedType "NestedEnum"
+        Assert.IsNotNull nestedEnum
 
-        let field = enumContainer.GetField("enumField", BindingFlags.Instance ||| BindingFlags.NonPublic)
-        Assert.IsNotNull field
-        Assert.AreEqual(enum, field.FieldType)
+        let nestedEnumField = enumContainer.GetField("nestedEnumField", BindingFlags.Instance ||| BindingFlags.NonPublic)
+        Assert.IsNotNull nestedEnumField
+        Assert.AreEqual(nestedEnum, nestedEnumField.FieldType)
 
-        let enumValues = Enum.GetValues(enum) |> Seq.cast<int> |> Seq.zip (Enum.GetNames(enum)) 
+        let enumValues = Enum.GetValues(nestedEnum) |> Seq.cast<int> |> Seq.zip (Enum.GetNames(nestedEnum)) 
         CollectionAssert.AreEquivalent(["Foo", 1; "Bar", 2], enumValues)
+
+        let topLevelEnum = container.GetNestedType "TopLevelEnum"
+        Assert.IsNotNull topLevelEnum
+
+        let topLevelEnumField = enumContainer.GetField("topLevelEnumField", BindingFlags.Instance ||| BindingFlags.NonPublic)
+        Assert.IsNotNull topLevelEnumField
+        Assert.AreEqual(topLevelEnum, topLevelEnumField.FieldType)
 
 #endif
