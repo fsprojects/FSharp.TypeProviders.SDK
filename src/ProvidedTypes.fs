@@ -2736,9 +2736,21 @@ type AssemblyGenerator(assemblyFileName) =
                     let minfo = pinfo.GetSetMethod(true)
                     pb.SetSetMethod (methMap.[minfo :?> ProvidedMethod ]))
 
-
         // phase 4 - complete types
-        iterateTypes (fun tb _ptd -> tb.CreateType() |> ignore)
+
+        let resolveHandler = ResolveEventHandler(fun _ args ->
+            // On Mono args.Name is full name of the type, on .NET - just name (no namespace)
+            typeMap.Values
+            |> Seq.filter (fun tb -> tb.FullName = args.Name || tb.Name = args.Name)
+            |> Seq.iter (fun tb -> tb.CreateType() |> ignore)
+
+            assemblyMainModule.Assembly)
+
+        AppDomain.CurrentDomain.add_TypeResolve resolveHandler
+
+        iterateTypes (fun tb _ -> tb.CreateType() |> ignore)
+
+        AppDomain.CurrentDomain.remove_TypeResolve resolveHandler
 
 #if FX_NO_LOCAL_FILESYSTEM
 #else
