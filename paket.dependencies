@@ -4,4 +4,4 @@ nuget Nuget.CommandLine
 nuget FAKE
 
 nuget NUnit
-nuget NUnit.Console
+nuget NUnit.ConsoleRunner

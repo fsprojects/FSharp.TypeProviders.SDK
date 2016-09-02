@@ -2760,11 +2760,11 @@ type AssemblyGenerator(assemblyFileName) =
 
             assemblyMainModule.Assembly)
 
-        AppDomain.CurrentDomain.add_TypeResolve resolveHandler
-
-        iterateTypes (fun tb _ -> tb.CreateType() |> ignore)
-
-        AppDomain.CurrentDomain.remove_TypeResolve resolveHandler
+        try
+            AppDomain.CurrentDomain.add_TypeResolve resolveHandler
+            iterateTypes (fun tb _ -> tb.CreateType() |> ignore)
+        finally
+            AppDomain.CurrentDomain.remove_TypeResolve resolveHandler
 
 #if FX_NO_LOCAL_FILESYSTEM
 #else
