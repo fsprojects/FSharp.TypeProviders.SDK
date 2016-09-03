@@ -866,7 +866,11 @@ type ILAssemblyManifest =
         let asmName = AssemblyName(Name=x.Name)
         x.PublicKey |> Option.iter (fun bytes -> asmName.SetPublicKey(bytes))
         x.Version |> Option.iter (fun v -> asmName.Version <- v)
-        asmName.CultureInfo <- System.Globalization.CultureInfo.InvariantCulture;
+#if NETSTANDARD1_6 || DOTNETCORE || NETSTANDARD
+        asmName.CultureName <- System.Globalization.CultureInfo.InvariantCulture.Name
+#else
+        asmName.CultureInfo <- System.Globalization.CultureInfo.InvariantCulture
+#endif
         asmName
     override x.ToString() = "manifest " + x.Name
 
