@@ -1,4 +1,4 @@
-﻿// Copyright 2011-2015, Tomas Petricek (http://tomasp.net), Gustavo Guerra (http://functionalflow.co.uk), and other contributors
+// Copyright 2011-2015, Tomas Petricek (http://tomasp.net), Gustavo Guerra (http://functionalflow.co.uk), and other contributors
 // Licensed under the Apache License, Version 2.0, see LICENSE.md in this project
 //
 // A lightweight .NET assembly reader that fits in a single F# file.  Based on the well-tested Abstract IL 
@@ -866,10 +866,18 @@ type ILAssemblyManifest =
         let asmName = AssemblyName(Name=x.Name)
         x.PublicKey |> Option.iter (fun bytes -> asmName.SetPublicKey(bytes))
         x.Version |> Option.iter (fun v -> asmName.Version <- v)
-#if NETSTANDARD1_6 || DOTNETCORE || NETSTANDARD
+#if NETSTANDARD1_6
+        asmName.CultureName <- System.Globalization.CultureInfo.InvariantCulture.Name
+#else
+#if DOTNETCORE
+        asmName.CultureName <- System.Globalization.CultureInfo.InvariantCulture.Name
+#else
+#if NETSTANDARD
         asmName.CultureName <- System.Globalization.CultureInfo.InvariantCulture.Name
 #else
         asmName.CultureInfo <- System.Globalization.CultureInfo.InvariantCulture
+#endif
+#endif
 #endif
         asmName
     override x.ToString() = "manifest " + x.Name
