@@ -606,7 +606,7 @@ type QuotationSimplifier(isGenerated: bool) =
 #if NO_GENERATIVE
 #else
  
-type internal ExpectedStackState = 
+type (*internal*) ExpectedStackState = 
     | Empty = 1
     | Address = 2
     | Value = 3
