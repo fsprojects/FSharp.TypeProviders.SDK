@@ -432,8 +432,8 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list, ?assem
     /// Create a new provided parameter. 
     ///
     /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-    member __.ProvidedParameter(parameterName, parameterType) = 
-      new ProvidedParameter(parameterName, parameterType |> replacer.ConvertDesignTimeTypeToTargetType)
+    member __.ProvidedParameter(parameterName, parameterType, ?isOut, ?optionalValue) = 
+      new ProvidedParameter(parameterName, parameterType |> replacer.ConvertDesignTimeTypeToTargetType, ?isOut = isOut, ?optionalValue = optionalValue)
 
     /// Create a new provided getter property. It is not initially associated with any specific provided type definition.
     ///
