@@ -54,7 +54,7 @@ let ctxt = ProvidedTypesContext.Create(config)
 to your code and always create provided entities using this ``ctxt`` object:
 
 ```fsharp
-let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", typeof<obj>)
+let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
 ```
 
 This is shown in the example below.
@@ -78,7 +78,7 @@ type BasicProvider (config : TypeProviderConfig) as this =
     let ctxt = ProvidedTypesContext.Create(config)
 
     let createTypes () =
-        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", typeof<obj>)
+        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
         let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, IsStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
         myType.AddMember(myProp)
         [myType]
