@@ -1224,7 +1224,8 @@ module internal Misc =
         member __.AddCustomAttribute(attribute) = customAttributes.Add(attribute)
         member __.GetCustomAttributesData() = 
             [| yield! customAttributesOnce.Force()
-               match xmlDocAlwaysRecomputed with None -> () | Some f -> customAttributes.Add(mkXmlDocCustomAttributeData (f()))  |]
+               // Recomputed XML doc is evaluated on every call to GetCustomAttributesData()
+               match xmlDocAlwaysRecomputed with None -> () | Some f -> yield mkXmlDocCustomAttributeData (f())  |]
             :> IList<_>
 
 
