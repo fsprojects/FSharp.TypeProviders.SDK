@@ -1984,7 +1984,6 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
     let mutable attributes   = 
         TypeAttributes.Public ||| 
         TypeAttributes.Class ||| 
-        TypeAttributes.Sealed |||
         enum (int32 TypeProviderTypeAttributes.IsErased)
 
 
