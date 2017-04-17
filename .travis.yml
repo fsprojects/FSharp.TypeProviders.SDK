@@ -1,4 +1,7 @@
 language: csharp
+mono:
+  - latest
+  - 3.2.8
 
 mono:
   - latest
