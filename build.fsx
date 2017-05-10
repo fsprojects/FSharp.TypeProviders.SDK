@@ -1,5 +1,5 @@
 // --------------------------------------------------------------------------------------
-// FAKE build script 
+// FAKE build script
 // --------------------------------------------------------------------------------------
 
 #I "packages/FAKE/tools"
@@ -7,10 +7,9 @@
 
 open System
 open System.IO
-open Fake 
+open Fake
 open Fake.AssemblyInfoFile
 open Fake.Git
-open Fake.FscHelper
 open Fake.Testing
 
 
@@ -31,16 +30,16 @@ let gitName = "FSharp.TypeProviders.StarterPack"
 
 // Read release notes & version info from RELEASE_NOTES.md
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
-let release = 
-    File.ReadLines "RELEASE_NOTES.md" 
+let release =
+    File.ReadLines "RELEASE_NOTES.md"
     |> ReleaseNotesHelper.parseReleaseNotes
 
 let pullRequest =
     match getBuildParamOrDefault "APPVEYOR_PULL_REQUEST_NUMBER" "" with
-    | "" -> 
+    | "" ->
         trace "Master build detected"
         None
-    | a -> 
+    | a ->
         trace "Pull Request build detected"
         Some <| int a
 
@@ -61,14 +60,14 @@ let exampleDir =  "examples"
 let testDir =  "test"
 let nunitDir = "packages/NUnit/lib/net45"
 
-let sources = 
+let sources =
     [srcDir @@ "ProvidedTypes.fsi"
-     srcDir @@ "ProvidedTypes.fs" 
+     srcDir @@ "ProvidedTypes.fs"
      srcDir @@ "AssemblyReader.fs"
      srcDir @@ "AssemblyReaderReflection.fs"
-     srcDir @@ "ProvidedTypesContext.fs" 
-     srcDir @@ "ProvidedTypesTesting.fs" ] 
-    
+     srcDir @@ "ProvidedTypesContext.fs"
+     srcDir @@ "ProvidedTypesTesting.fs" ]
+
 
 // --------------------------------------------------------------------------------------
 // Clean build results
@@ -80,13 +79,13 @@ Target "Clean" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Compile ProvidedTypes as a smoke test
 Target "Compile" (fun _ ->
-    Fsc id sources
+    FscHelper.Fsc id sources
     !! "FSharp.TypeProviders.StarterPack.sln"
     |> MSBuildRelease "" "Build"
     |> ignore
 )
 
-type ExampleWithTests = 
+type ExampleWithTests =
     { Name : string
       ProviderSourceFiles : string list
       TestSourceFiles : string list }
@@ -101,7 +100,7 @@ Target "Examples" (fun _ ->
             { Name = "ErasedWithConstructor"; ProviderSourceFiles = ["ErasedWithConstructor.fsx"]; TestSourceFiles = ["ErasedWithConstructor.Tests.fsx"]}
         ]
 
-    if not (Directory.Exists testDir) then 
+    if not (Directory.Exists testDir) then
         Directory.CreateDirectory testDir |> ignore
 
     let testNunitDll = testDir @@ "nunit.framework.dll"
@@ -119,16 +118,16 @@ Target "Examples" (fun _ ->
     |> List.iter (fun example ->
             // Compile type provider
             let output = testDir @@ example.Name + ".dll"
-            let setOpts = fun def -> { def with Output = output; FscTarget = FscTarget.Library }
-            Fsc setOpts (List.concat [sources;fromExampleDir example.ProviderSourceFiles])
+            let setOpts = fun (def:FscHelper.FscParams) -> { def with Output = output; FscTarget = FscHelper.FscTarget.Library }
+            FscHelper.Fsc setOpts (List.concat [sources;fromExampleDir example.ProviderSourceFiles])
 
             // Compile test dll
-            let setTestOpts = fun def ->
-                { def with 
+            let setTestOpts = fun (def:FscHelper.FscParams) ->
+                { def with
                     Output = testDir @@ example.Name + ".Tests.dll"
-                    FscTarget = FscTarget.Library
+                    FscTarget = FscHelper.FscTarget.Library
                     References = [output;nunitDir @@ "nunit.framework.dll"] }
-            Fsc setTestOpts (fromExampleDir example.TestSourceFiles)
+            FscHelper.Fsc setTestOpts (fromExampleDir example.TestSourceFiles)
         )
 )
 
@@ -144,9 +143,9 @@ Target "RunTests" (fun _ ->
 
 Target "NuGet" (fun _ ->
     sources |> CopyTo (workingDir @@ "content")
-    
-    NuGet (fun p -> 
-        { p with   
+
+    NuGet (fun p ->
+        { p with
             Authors = authors
             Project = project
             Summary = summary
