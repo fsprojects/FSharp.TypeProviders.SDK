@@ -620,10 +620,13 @@ type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName,
                    isLiteralEnumField: FieldInfo -> bool,
                    ilg: ILGenerator, locals:Dictionary<Quotations.Var,LocalBuilder>, parameterVars) = 
 
-    let TypeBuilderInstantiationType = 
-        let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> false 
-        let typeName = if runningOnMono then "System.Reflection.MonoGenericClass" else "System.Reflection.Emit.TypeBuilderInstantiation"
-        typeof<TypeBuilder>.Assembly.GetType(typeName)
+    let TypeBuilderInstantiationType =
+        let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> false
+        let typeBuilderAssembly = typeof<TypeBuilder>.Assembly
+        let ty = typeBuilderAssembly.GetType("System.Reflection.Emit.TypeBuilderInstantiation")
+        match ty, runningOnMono with
+        | null, true -> typeBuilderAssembly.GetType("System.Reflection.MonoGenericClass")
+        | _ -> ty
 
     // TODO: this works over FSharp.Core 4.4.0.0 types and methods. These types need to be retargeted to the target runtime.
 
