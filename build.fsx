@@ -80,12 +80,12 @@ Target "Clean" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Compile ProvidedTypes as a smoke test
 Target "Compile" (fun _ ->
-    sources
-    |> Compile [
-        FscHelper.Target TargetType.Library
-        Platform PlatformType.AnyCpu
-        Reference "System.Reflection.Metadata.dll"
-    ]
+    // sources
+    // |> Compile [
+    //     FscHelper.Target TargetType.Library
+    //     Platform PlatformType.AnyCpu
+    //     Reference "System.Reflection.Metadata.dll"
+    // ]
 
     !! "FSharp.TypeProviders.StarterPack.sln"
     |> MSBuildRelease "" "Build"
@@ -144,6 +144,7 @@ Target "Examples" (fun _ ->
 Target "RunTests" (fun _ ->
     !! ("tests/bin/Release/FSharp.TypeProviders.StarterPack.Tests.dll")
     |> NUnit3 id
+
     !! (testDir @@ "*.Tests.dll")
     |> NUnit3 id
 )
