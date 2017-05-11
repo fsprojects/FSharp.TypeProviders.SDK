@@ -7,10 +7,11 @@
 
 open System
 open System.IO
-open Fake
 open Fake.AssemblyInfoFile
 open Fake.Git
 open Fake.Testing
+open Fake.FscHelper
+open Fake
 
 
 // --------------------------------------------------------------------------------------
@@ -79,7 +80,13 @@ Target "Clean" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Compile ProvidedTypes as a smoke test
 Target "Compile" (fun _ ->
-    FscHelper.Fsc id sources
+    sources
+    |> Compile [
+        FscHelper.Target TargetType.Library
+        Platform PlatformType.AnyCpu
+        Reference "System.Reflection.Metadata.dll"
+    ]
+
     !! "FSharp.TypeProviders.StarterPack.sln"
     |> MSBuildRelease "" "Build"
     |> ignore
@@ -118,16 +125,19 @@ Target "Examples" (fun _ ->
     |> List.iter (fun example ->
             // Compile type provider
             let output = testDir @@ example.Name + ".dll"
-            let setOpts = fun (def:FscHelper.FscParams) -> { def with Output = output; FscTarget = FscHelper.FscTarget.Library }
-            FscHelper.Fsc setOpts (List.concat [sources;fromExampleDir example.ProviderSourceFiles])
+            (List.concat [sources;fromExampleDir example.ProviderSourceFiles])
+            |> Compile [
+                Out output
+                FscHelper.Target TargetType.Library
+            ]
 
             // Compile test dll
-            let setTestOpts = fun (def:FscHelper.FscParams) ->
-                { def with
-                    Output = testDir @@ example.Name + ".Tests.dll"
-                    FscTarget = FscHelper.FscTarget.Library
-                    References = [output;nunitDir @@ "nunit.framework.dll"] }
-            FscHelper.Fsc setTestOpts (fromExampleDir example.TestSourceFiles)
+            (fromExampleDir example.TestSourceFiles)
+            |> Compile [
+                Out (testDir @@ example.Name + ".Tests.dll")
+                FscHelper.Target TargetType.Library
+                References [output;nunitDir @@ "nunit.framework.dll"]
+            ]
         )
 )
 
