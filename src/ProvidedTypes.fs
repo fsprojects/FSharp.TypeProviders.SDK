@@ -620,9 +620,9 @@ type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName,
                    isLiteralEnumField: FieldInfo -> bool,
                    ilg: ILGenerator, locals:Dictionary<Quotations.Var,LocalBuilder>, parameterVars) = 
 
-    // This is gross. TypeBuilderInstantiation should really be a public type, since we
-    // have to use alternative means for various Method/Field/Constructor lookups.  However since 
-    // it isn't we resort to this technique...
+    // TypeBuilderInstantiation should really be a public type, since we
+    // have to use alternative means for various Method/Field/Constructor lookups on this kind of type.
+    // Also, on Mono 3.x and 4.x this type had a different name.
     let TypeBuilderInstantiationType = 
         let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e-> false
         let ty = 
