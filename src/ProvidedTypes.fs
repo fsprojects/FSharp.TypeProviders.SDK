@@ -620,11 +620,22 @@ type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName,
                    isLiteralEnumField: FieldInfo -> bool,
                    ilg: ILGenerator, locals:Dictionary<Quotations.Var,LocalBuilder>, parameterVars) = 
 
+    // TypeBuilderInstantiation should really be a public type, since we
+    // have to use alternative means for various Method/Field/Constructor lookups on this kind of type.
+    // Also, on Mono 3.x and 4.x this type had a different name.
     let TypeBuilderInstantiationType = 
-        let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> false 
-        let typeName = if runningOnMono then "System.Reflection.MonoGenericClass" else "System.Reflection.Emit.TypeBuilderInstantiation"
-        typeof<TypeBuilder>.Assembly.GetType(typeName)
+        let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e-> false
+        let ty = 
+            if runningOnMono then
+                let ty = Type.GetType("System.Reflection.MonoGenericClass")
+                match ty with
+                | null -> Type.GetType("System.Reflection.Emit.TypeBuilderInstantiation")
+                | _ -> ty
+            else
+                Type.GetType("System.Reflection.Emit.TypeBuilderInstantiation")
 
+        ty
+    
     // TODO: this works over FSharp.Core 4.4.0.0 types and methods. These types need to be retargeted to the target runtime.
 
     let GetTypeFromHandleMethod() = typeof<Type>.GetMethod("GetTypeFromHandle")
