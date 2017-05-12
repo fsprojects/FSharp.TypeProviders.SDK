@@ -634,7 +634,6 @@ type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName,
             else
                 Type.GetType("System.Reflection.Emit.TypeBuilderInstantiation")
 
-        assert (not (isNull ty))
         ty
     
     // TODO: this works over FSharp.Core 4.4.0.0 types and methods. These types need to be retargeted to the target runtime.
