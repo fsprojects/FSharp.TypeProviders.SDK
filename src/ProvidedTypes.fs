@@ -623,7 +623,7 @@ type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName,
     // This is gross. TypeBuilderInstantiation should really be a public type, since we
     // have to use alternative means for various Method/Field/Constructor lookups.  However since 
     // it isn't we resort to this technique...
-    let TypeBuilderInstantiationT = 
+    let TypeBuilderInstantiationType = 
         let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e-> false
         let ty = 
             if runningOnMono then
