@@ -100,6 +100,7 @@ type ExampleWithTests =
 
 // --------------------------------------------------------------------------------------
 // Compile example providers and accompanying test dlls
+#if EXAMPLES
 Target "Examples" (fun _ ->
     let examples =
         [
@@ -140,13 +141,16 @@ Target "Examples" (fun _ ->
             ]
         )
 )
+#endif
 
 Target "RunTests" (fun _ ->
     !! ("tests/bin/Release/FSharp.TypeProviders.StarterPack.Tests.dll")
     |> NUnit3 id
 
+#if EXAMPLES
     !! (testDir @@ "*.Tests.dll")
     |> NUnit3 id
+#endif
 )
 
 // --------------------------------------------------------------------------------------
@@ -180,7 +184,9 @@ Target "NuGet" (fun _ ->
     ==> "NuGet"
 
 "Compile"
+#if EXAMPLES
     ==> "Examples"
+#endif
     ==> "RunTests"
     ==> "NuGet"
 
