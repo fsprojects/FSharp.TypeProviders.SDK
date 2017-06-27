@@ -68,8 +68,12 @@ let testProvidedAssembly test =
         let assembly = Assembly.Load assemContents
         assembly.ExportedTypes |> Seq.find (fun ty -> ty.Name = "Container") |> test
 
+let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> false 
+
 [<Test>]
 let ``Enums are generated correctly``() =
+  // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.StarterPack/issues/123 
+  if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
         let enumContainer = container.GetNestedType "EnumContainer"
         Assert.IsNotNull enumContainer
