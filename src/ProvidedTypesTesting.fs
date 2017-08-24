@@ -606,6 +606,21 @@ module internal Targets =
          | "4.0", 259 -> referenceAssembliesPath ++ "FSharp" ++ ".NETCore" ++ "3.259.4.0" ++ "FSharp.Core.dll"
          | _ -> failwith "unimplemented portable profile"
 
+    let private fsharpPortableAssembliesPathFromNuGet fsharp profile =
+        let paketGroup =
+           match fsharp with
+           | "3.1" -> "fs31"
+           | "4.0" -> "fs40"
+           | _ -> failwith "unimplemented F# versin"
+        let profileFolder =
+            match profile with
+            | 47    -> "portable-net45+sl5+netcore45"       //"portable-net45+sl5+win8"
+            | 7     -> "portable-net45+netcore45"           //"portable-net45+win8"
+            | 78    -> "portable-net45+netcore45+wp8"       //"portable-net45+win8+wp8"
+            | 259   -> "portable-net45+netcore45+wpa81+wp8" //"portable-net45+win8+wpa81+wp8"
+            | _ -> failwith "unimplemented portable profile"
+        __SOURCE_DIRECTORY__ ++ ".." ++ "packages" ++ paketGroup ++ "FSharp.Core" ++ "lib" ++ profileFolder ++ "FSharp.Core.dll"
+
     let private fsharpAssembliesPath fsharp = 
         match fsharp with 
         | "3.1" -> 
@@ -636,7 +651,12 @@ module internal Targets =
                        "System.Runtime.InteropServices.WindowsRuntime"; "System.Runtime.Serialization"; "System.Threading"; "System.Threading.Tasks"; "System.Xml"; "System.Xml.Linq"; "System.Xml.XDocument";
                        "System.Runtime.Serialization.Json"; "System.Runtime.Serialization.Primitives"; "System.Windows" ] do 
              yield portableAssembliesPath profile ++ asm + ".dll"
-          yield fsharpPortableAssembliesPath fsharp profile ]
+          let installedFSharpCore = fsharpPortableAssembliesPath fsharp profile
+          let restoredFSharpCore  = fsharpPortableAssembliesPathFromNuGet fsharp profile
+          if (not(File.Exists(installedFSharpCore)) && File.Exists(restoredFSharpCore))
+          then yield restoredFSharpCore
+          else yield installedFSharpCore
+        ]
 
     let DotNet45Refs = [net45AssembliesPath ++ "mscorlib.dll"; net45AssembliesPath ++ "System.Xml.dll"; net45AssembliesPath ++ "System.Core.dll"; net45AssembliesPath ++ "System.Xml.Linq.dll"; net45AssembliesPath ++ "System.dll" ]
     let FSharpCoreRef fsharp = fsharpAssembliesPath fsharp ++ "FSharp.Core.dll"

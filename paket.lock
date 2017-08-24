@@ -5,3 +5,13 @@ NUGET
     NuGet.CommandLine (4.1)
     NUnit (3.7.1)
     NUnit.ConsoleRunner (3.6.1)
+
+GROUP fs31
+NUGET
+  remote: https://api.nuget.org/v3/index.json
+    FSharp.Core (3.1.2.5)
+
+GROUP fs40
+NUGET
+  remote: https://api.nuget.org/v3/index.json
+    FSharp.Core (4.0.0.1)
