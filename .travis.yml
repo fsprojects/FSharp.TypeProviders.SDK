@@ -11,8 +11,9 @@ os:
   - linux
   - osx
 
-allow_failures:
-  - mono: beta
+matrix:
+  allow_failures:
+    - mono: beta
 
 sudo: false  # use the new container-based Travis infrastructure
 
