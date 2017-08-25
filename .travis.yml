@@ -1,7 +1,9 @@
 language: csharp
 
 mono:
+  - beta
   - latest
+  - 4.8.1
   - 4.2.2
   - 4.0.5
 
@@ -9,7 +11,11 @@ os:
   - linux
   - osx
 
-sudo: false  # use the new container-based Travis infrastructure 
+matrix:
+  allow_failures:
+    - mono: beta
 
-script: 
+sudo: false  # use the new container-based Travis infrastructure
+
+script:
   - ./build.sh RunTests

@@ -1,3 +1,4 @@
+framework: >=net45
 source https://api.nuget.org/v3/index.json
 
 nuget Nuget.CommandLine
@@ -5,3 +6,12 @@ nuget FAKE
 
 nuget NUnit
 nuget NUnit.ConsoleRunner
+
+group fs31
+    source https://api.nuget.org/v3/index.json
+    nuget FSharp.Core ~> 3.1.0
+
+group fs40
+    source https://api.nuget.org/v3/index.json
+    nuget FSharp.Core ~> 4.0.0
+

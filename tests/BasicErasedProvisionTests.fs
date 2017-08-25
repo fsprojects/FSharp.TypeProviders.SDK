@@ -91,6 +91,8 @@ type ErasingProviderWithStaticParams (config : TypeProviderConfig) as this =
         this.AddNamespace(ns, [myType])
 
 let testCrossTargeting (refs: string list) provider args = 
+    for x in refs do
+        printfn "\t%A" x
     Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, provider, args ) 
     |> (fun t -> Testing.FormatProvidedType(t,useQualifiedNames=true))
     |> fun s -> s.Trim()
