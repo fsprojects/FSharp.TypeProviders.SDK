@@ -458,6 +458,10 @@ type internal ProvidedTypesContext(referencedAssemblyPaths : string list, ?assem
                            RemoverCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> removerCode |> replacer.ConvertDesignTimeExprToTargetExpr))
 
     /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
+    member __.ProvidedConstructor(parameters) = 
+      new ProvidedConstructor(parameters)
+
+    /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
     member __.ProvidedConstructor(parameters, invokeCode: Expr list -> Expr) =
       new ProvidedConstructor(parameters, InvokeCode = (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> invokeCode |> replacer.ConvertDesignTimeExprToTargetExpr))
 
