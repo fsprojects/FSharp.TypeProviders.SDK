@@ -297,7 +297,7 @@ type ProvidedMeasureBuilder =
     member One : Type
 
     /// Returns the measure indicating the product of two units of measure, e.g. kg * m
-    member Product : measure1: Type * measure1: Type  -> Type
+    member Product : measure1: Type * measure2: Type  -> Type
 
     /// Returns the measure indicating the inverse of two units of measure, e.g. 1 / s
     member Inverse : denominator: Type -> Type

@@ -1945,21 +1945,21 @@ type ProvidedMeasureBuilder() =
     static let theBuilder = ProvidedMeasureBuilder()
     static member Default = theBuilder
     member __.One = typeof<CompilerServices.MeasureOne>
-    member __.Product (m1,m2) = typedefof<CompilerServices.MeasureProduct<_,_>>.MakeGenericType [| m1;m2 |]
-    member __.Inverse m = typedefof<CompilerServices.MeasureInverse<_>>.MakeGenericType [| m |]
-    member b.Ratio (m1, m2) = b.Product(m1, b.Inverse m2)
-    member b.Square m = b.Product(m, m)
+    member __.Product (measure1, measure2) = typedefof<CompilerServices.MeasureProduct<_,_>>.MakeGenericType [| measure1;measure2 |]
+    member __.Inverse denominator = typedefof<CompilerServices.MeasureInverse<_>>.MakeGenericType [| denominator |]
+    member b.Ratio (numerator, denominator) = b.Product(numerator, b.Inverse denominator)
+    member b.Square ``measure`` = b.Product(``measure``, ``measure``)
 
     // FSharp.Data change: if the unit is not a valid type, instead
     // of assuming it's a type abbreviation, which may not be the case and cause a
     // problem later on, check the list of valid abbreviations
-    member __.SI (m:string) =
-        let mLowerCase = m.ToLowerInvariant()
+    member __.SI (unitName:string) =
+        let mLowerCase = unitName.ToLowerInvariant()
         let abbreviation =
             if unitNamesTypeAbbreviations.Contains mLowerCase then
                 Some ("Microsoft.FSharp.Data.UnitSystems.SI.UnitNames", mLowerCase)
-            elif unitSymbolsTypeAbbreviations.Contains m then
-                Some ("Microsoft.FSharp.Data.UnitSystems.SI.UnitSymbols", m)
+            elif unitSymbolsTypeAbbreviations.Contains unitName then
+                Some ("Microsoft.FSharp.Data.UnitSystems.SI.UnitSymbols", unitName)
             else
                 None
         match abbreviation with
@@ -1968,7 +1968,7 @@ type ProvidedMeasureBuilder() =
         | None ->
             typedefof<list<int>>.Assembly.GetType("Microsoft.FSharp.Data.UnitSystems.SI.UnitNames." + mLowerCase)
 
-    member __.AnnotateType (basicType, annotation) = ProvidedSymbolType(Generic basicType, annotation, id) :> Type
+    member __.AnnotateType (basic, argument) = ProvidedSymbolType(Generic basic, argument, id) :> Type
 
 
 
@@ -2102,8 +2102,8 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
     override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
-    member __.ResetEnclosingType (ty) =
-        container <- TypeContainer.Type ty
+    member __.ResetEnclosingType (enclosingType) =
+        container <- TypeContainer.Type enclosingType
     new (assembly:Assembly,namespaceName,className,baseType) = new ProvidedTypeDefinition(TypeContainer.Namespace (assembly,namespaceName), className, baseType, id)
     new (className:string,baseType) = new ProvidedTypeDefinition(TypeContainer.TypeToBeDecided, className, baseType, id)
 
@@ -2144,7 +2144,7 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
 
 #if NO_GENERATIVE
 #else
-    member __.AddAssemblyTypesAsNestedTypesDelayed (assemblyf : unit -> System.Reflection.Assembly)  =
+    member __.AddAssemblyTypesAsNestedTypesDelayed (assemblyFunction : unit -> System.Reflection.Assembly)  =
         let bucketByPath nodef tipf (items: (string list * 'Value) list) =
             // Find all the items with an empty key list and call 'tipf'
             let tips =
@@ -2167,7 +2167,7 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
 
             tips @ nodes
         this.AddMembersDelayed (fun _ ->
-            let topTypes = [ for ty in assemblyf().GetTypes() do
+            let topTypes = [ for ty in assemblyFunction().GetTypes() do
                                     if not ty.IsNested then
                                             let namespaceParts = match ty.Namespace with null -> [] | s -> s.Split '.' |> Array.toList
                                             yield namespaceParts,  ty ]
@@ -2183,9 +2183,9 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
 #endif
 
     /// Abstract a type to a parametric-type. Requires "formal parameters" and "instantiation function".
-    member __.DefineStaticParameters(staticParameters : list<ProvidedStaticParameter>, apply    : (string -> obj[] -> ProvidedTypeDefinition)) =
-        staticParams      <- staticParameters
-        staticParamsApply <- Some apply
+    member __.DefineStaticParameters(parameters : list<ProvidedStaticParameter>, instantiationFunction    : (string -> obj[] -> ProvidedTypeDefinition)) =
+        staticParams      <- parameters
+        staticParamsApply <- Some instantiationFunction
 
     /// Get ParameterInfo[] for the parametric type parameters (//s GetGenericParameters)
     member __.GetStaticParameters() = [| for p in staticParams -> p :> ParameterInfo |]
@@ -2259,14 +2259,14 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
     member __.GetInterfaceImplementations() =
         [| yield! getInterfaces() |]
 
-    member __.AddInterfaceImplementation ityp = interfaceImpls.Add ityp
+    member __.AddInterfaceImplementation interfaceType = interfaceImpls.Add interfaceType
 
-    member __.AddInterfaceImplementationsDelayed itypf = interfaceImplsDelayed.Add itypf
+    member __.AddInterfaceImplementationsDelayed interfacesFunction = interfaceImplsDelayed.Add interfacesFunction
 
     member __.GetMethodOverrides() =
         [| yield! methodOverrides |]
 
-    member __.DefineMethodOverride (bodyMethInfo,declMethInfo) = methodOverrides.Add (bodyMethInfo, declMethInfo)
+    member __.DefineMethodOverride (methodInfoBody,methodInfoDeclaration) = methodOverrides.Add (methodInfoBody, methodInfoDeclaration)
 
     // Events
     override __.GetEvent(name, bindingAttr) =
@@ -2303,15 +2303,15 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
     // and we erase array of provided type to array of base type. In the
     // case of generics all the generic type arguments are also recursively
     // replaced with the erased-to types
-    static member EraseType(t:Type) : Type =
-        match t with
-        | :? ProvidedTypeDefinition as ptd when ptd.IsErased -> ProvidedTypeDefinition.EraseType t.BaseType
+    static member EraseType(typ:Type) : Type =
+        match typ with
+        | :? ProvidedTypeDefinition as ptd when ptd.IsErased -> ProvidedTypeDefinition.EraseType typ.BaseType
         | t when t.IsArray ->
             let rank = t.GetArrayRank()
             let et = ProvidedTypeDefinition.EraseType (t.GetElementType())
             if rank = 0 then et.MakeArrayType() else et.MakeArrayType(rank)
         | :? ProvidedSymbolType as sym when sym.IsFSharpUnitAnnotated ->
-            t.UnderlyingSystemType
+            typ.UnderlyingSystemType
         | t when t.IsGenericType && not t.IsGenericTypeDefinition ->
             let genericTypeDefinition = t.GetGenericTypeDefinition()
             let genericArguments = t.GetGenericArguments() |> Array.map ProvidedTypeDefinition.EraseType
@@ -2824,8 +2824,8 @@ type ProvidedAssembly(assemblyFileName: string) =
             theTypes.Add(pt,enclosingTypeNames)
             pt.SetAssemblyLazy assemblyLazy
 
-    member x.AddNestedTypes (providedTypeDefinitions, enclosingTypeNames) = add (providedTypeDefinitions, Some enclosingTypeNames)
-    member x.AddTypes (providedTypeDefinitions) = add (providedTypeDefinitions, None)
+    member x.AddNestedTypes (types, enclosingGeneratedTypeNames) = add (types, Some enclosingGeneratedTypeNames)
+    member x.AddTypes (types) = add (types, None)
 #if FX_NO_LOCAL_FILESYSTEM
 #else
     static member RegisterGenerated (fileName:string) =
