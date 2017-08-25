@@ -1274,13 +1274,13 @@ type ProvidedStaticParameter(parameterName:string,parameterType:Type,?parameterD
     override __.GetCustomAttributes(_inherit) = ignore(_inherit); notRequired "GetCustomAttributes" parameterName
     override __.GetCustomAttributes(_attributeType, _inherit) = notRequired "GetCustomAttributes" parameterName
 
-type ProvidedParameter(name:string,parameterType:Type,?isOut:bool,?optionalValue:obj) =
+type ProvidedParameter(parameterName:string,parameterType:Type,?isOut:bool,?optionalValue:obj) =
     inherit System.Reflection.ParameterInfo()
     let customAttributesImpl = CustomAttributesImpl()
     let isOut = defaultArg isOut false
     member __.IsParamArray with get() = customAttributesImpl.HasParamArray and set(v) = customAttributesImpl.HasParamArray <- v
     member __.IsReflectedDefinition with get() = customAttributesImpl.HasReflectedDefinition and set(v) = customAttributesImpl.HasReflectedDefinition <- v
-    override __.Name = name
+    override __.Name = parameterName
     override __.ParameterType = parameterType
     override __.Attributes = (base.Attributes ||| (if isOut then ParameterAttributes.Out else enum 0)
                                               ||| (match optionalValue with None -> enum 0 | Some _ -> ParameterAttributes.Optional ||| ParameterAttributes.HasDefault))
@@ -1398,8 +1398,8 @@ type ProvidedMethod(methodName: string, parameters: ProvidedParameter list, retu
     override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
-    member __.SetMethodAttrs m = methodAttrs <- m
-    member __.AddMethodAttrs m = methodAttrs <- methodAttrs ||| m
+    member __.SetMethodAttrs attributes = methodAttrs <- attributes
+    member __.AddMethodAttrs attributes = methodAttrs <- methodAttrs ||| attributes
     member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
     member __.IsStaticMethod
         with get()  = isStatic()
@@ -1414,9 +1414,9 @@ type ProvidedMethod(methodName: string, parameters: ProvidedParameter list, retu
 
 
     /// Abstract a type to a parametric-type. Requires "formal parameters" and "instantiation function".
-    member __.DefineStaticParameters(staticParameters : list<ProvidedStaticParameter>, apply    : (string -> obj[] -> ProvidedMethod)) =
-        staticParams      <- staticParameters
-        staticParamsApply <- Some apply
+    member __.DefineStaticParameters(parameters : list<ProvidedStaticParameter>, instantiationFunction    : (string -> obj[] -> ProvidedMethod)) =
+        staticParams      <- parameters
+        staticParamsApply <- Some instantiationFunction
 
     /// Get ParameterInfo[] for the parametric type parameters (//s GetGenericParameters)
     member __.GetStaticParameters() = [| for p in staticParams -> p :> ParameterInfo |]
@@ -1539,7 +1539,7 @@ type ProvidedProperty(propertyName: string, propertyType: Type, ?parameters: Pro
     override __.GetCustomAttributes(_attributeType, _inherit)   = notRequired "GetCustomAttributes" propertyName
     override __.IsDefined(_attributeType, _inherit)             = notRequired "IsDefined" propertyName
 
-type ProvidedEvent(eventName:string,eventHandlerType:Type) =
+type ProvidedEvent(propertyName:string,eventHandlerType:Type) =
     inherit System.Reflection.EventInfo()
     // State
 
@@ -1550,8 +1550,8 @@ type ProvidedEvent(eventName:string,eventHandlerType:Type) =
 
     // Delay construction - to pick up the latest isStatic
     let markSpecialName (m:ProvidedMethod) = m.AddMethodAttrs(MethodAttributes.SpecialName); m
-    let adder = lazy (ProvidedMethod("add_" + eventName, [ProvidedParameter("handler", eventHandlerType)],typeof<System.Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=adderCode.Value) |> markSpecialName)
-    let remover = lazy (ProvidedMethod("remove_" + eventName, [ProvidedParameter("handler", eventHandlerType)],typeof<System.Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=removerCode.Value) |> markSpecialName)
+    let adder = lazy (ProvidedMethod("add_" + propertyName, [ProvidedParameter("handler", eventHandlerType)],typeof<System.Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=adderCode.Value) |> markSpecialName)
+    let remover = lazy (ProvidedMethod("remove_" + propertyName, [ProvidedParameter("handler", eventHandlerType)],typeof<System.Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=removerCode.Value) |> markSpecialName)
 
     let customAttributesImpl = CustomAttributesImpl()
     member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
@@ -1584,15 +1584,15 @@ type ProvidedEvent(eventName:string,eventHandlerType:Type) =
     override __.GetAddMethod _nonPublic = adder.Force() :> MethodInfo
     override __.GetRemoveMethod _nonPublic = remover.Force() :> MethodInfo
     override __.Attributes = EventAttributes.None
-    override __.Name = eventName
+    override __.Name = propertyName
     override __.DeclaringType = declaringType |> nonNull "ProvidedEvent.DeclaringType"
     override __.MemberType : MemberTypes = MemberTypes.Event
 
-    override __.GetRaiseMethod _nonPublic                      = notRequired "GetRaiseMethod" eventName
-    override __.ReflectedType                                  = notRequired "ReflectedType" eventName
-    override __.GetCustomAttributes(_inherit)                  = notRequired "GetCustomAttributes" eventName
-    override __.GetCustomAttributes(_attributeType, _inherit)  = notRequired "GetCustomAttributes" eventName
-    override __.IsDefined(_attributeType, _inherit)            = notRequired "IsDefined" eventName
+    override __.GetRaiseMethod _nonPublic                      = notRequired "GetRaiseMethod" propertyName
+    override __.ReflectedType                                  = notRequired "ReflectedType" propertyName
+    override __.GetCustomAttributes(_inherit)                  = notRequired "GetCustomAttributes" propertyName
+    override __.GetCustomAttributes(_attributeType, _inherit)  = notRequired "GetCustomAttributes" propertyName
+    override __.IsDefined(_attributeType, _inherit)            = notRequired "IsDefined" propertyName
 
 type ProvidedLiteralField(fieldName:string,fieldType:Type,literalValue:obj) =
     inherit System.Reflection.FieldInfo()
@@ -1653,7 +1653,7 @@ type ProvidedField(fieldName:string,fieldType:Type) =
 
     member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
 
-    member __.SetFieldAttributes attrs = fieldAttrs <- attrs
+    member __.SetFieldAttributes attributes = fieldAttrs <- attributes
     // Implement overloads
     override __.FieldType = fieldType
     override __.GetRawConstantValue()  = null

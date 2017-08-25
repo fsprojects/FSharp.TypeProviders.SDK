@@ -1,3 +1,6 @@
+#### 2.1.0 - August 25 2017
+* Mono 5 support
+* Parameter names unification
 
 #### 2.0.0 - 02/02/2016
 * Updates for cross-targeting of type providers

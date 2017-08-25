@@ -74,7 +74,7 @@ let sources =
 // Clean build results
 
 Target "Clean" (fun _ ->
-    CleanDirs [outputPath; workingDir;testDir]
+    CleanDirs [outputPath; workingDir]
 )
 
 // --------------------------------------------------------------------------------------
