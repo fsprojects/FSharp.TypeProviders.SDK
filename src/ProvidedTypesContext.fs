@@ -91,7 +91,7 @@ type internal AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, reference
         // then we only map it to assemblies with a name specified in `assemblyReplacementMap`
         let notRestrictedOrMatching =
             assemblyReplacementMap
-            |> Seq.forall (fun (originalName, newName) ->
+            |> Seq.forall (fun (originalName:string, newName:string) ->
                 if originalAssemblyName.StartsWith originalName then asm.FullName.StartsWith(newName)
                 else true)
 
