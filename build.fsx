@@ -65,27 +65,33 @@ Target "Clean" (fun _ ->
 )
 
 Target "Restore" (fun _ ->
+  // We don't use Fake.DotNetCli.Restore because of https://github.com/dotnet/sdk/issues/335
     Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Restore"]} ) "src/FSharp.TypeProviders.SDK.fsproj"
     Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Restore"]} ) "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
 )
 Target "Compile" (fun _ ->
+  // We don't use Fake.DotNetCli.Build because of https://github.com/dotnet/sdk/issues/335
     Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Build"]} ) "src/FSharp.TypeProviders.SDK.fsproj"
 )
 
 
-#if EXAMPLES
+//#if EXAMPLES
 //            { Name = "StaticProperty"; ProviderSourceFiles = ["StaticProperty.fsx"]; TestSourceFiles = ["StaticProperty.Tests.fsx"]}
 //            { Name = "ErasedWithConstructor"; ProviderSourceFiles = ["ErasedWithConstructor.fsx"]; TestSourceFiles = ["ErasedWithConstructor.Tests.fsx"]}
-#endif
+//#endif
 
 Target "RunTests" (fun _ ->
 #if !MONO
+  // We don't do this on Linux/OSX because of https://github.com/dotnet/sdk/issues/335
     Fake.DotNetCli.Test (fun pp -> { pp with Project="tests/FSharp.TypeProviders.SDK.Tests.fsproj" })
 #endif
 )
 
 Target "NuGet" (fun _ ->
-    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Pack"]} ) "src/FSharp.TypeProviders.SDK.fsproj"
+#if !MONO
+  // We don't do this on Linux/OSX because of https://github.com/dotnet/sdk/issues/335
+    Fake.DotNetCli.Pack (fun pp -> { pp with Project="src/FSharp.TypeProviders.SDK.fsproj" })
+#endif
 )
 
 "Clean"
@@ -93,9 +99,9 @@ Target "NuGet" (fun _ ->
 
 "Restore"
     ==> "Compile"
-#if EXAMPLES
-    ==> "Examples"
-#endif
+//#if EXAMPLES
+//    ==> "Examples"
+//#endif
     ==> "RunTests"
     ==> "NuGet"
 
