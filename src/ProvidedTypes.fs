@@ -21,8 +21,7 @@ open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Quotations.DerivedPatterns
 open Microsoft.FSharp.Core.CompilerServices
 
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
 open System.Reflection.Emit
 #endif
 
@@ -441,8 +440,7 @@ type QuotationSimplifier(isGenerated: bool) =
         if tyOfValue <> expectedTy then Expr.Coerce(r, expectedTy)
         else r
 
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
     // TODO: this works over FSharp.Core 4.4.0.0 types. These types need to be retargeted to the target runtime.
     let getFastFuncType (args : list<Expr>) resultType =
         let types =
@@ -585,8 +583,7 @@ type QuotationSimplifier(isGenerated: bool) =
 
         let pairs = Array.zip argExprs vars
         let expr = Array.foldBack (fun (arg, var) e -> Expr.LetUnchecked(var, arg, e)) pairs expr
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
         let expr =
             if isGenerated then
                 let e1 = inlineRightPipe expr
@@ -603,8 +600,7 @@ type QuotationSimplifier(isGenerated: bool) =
 // Generate IL code from quotations
 
 
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
 
 type (*internal*) ExpectedStackState =
     | Empty = 1
@@ -990,8 +986,7 @@ type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName,
                 | :? bool as x -> ilg.Emit(OpCodes.Ldc_I4, if x then 1 else 0)
                 | :? float32 as x -> ilg.Emit(OpCodes.Ldc_R4, x)
                 | :? float as x -> ilg.Emit(OpCodes.Ldc_R8, x)
-#if FX_NO_GET_ENUM_UNDERLYING_TYPE
-#else
+#if !FX_NO_GET_ENUM_UNDERLYING_TYPE
                 | :? System.Enum as x when x.GetType().GetEnumUnderlyingType() = typeof<int32> -> ilg.Emit(OpCodes.Ldc_I4, unbox<int32> v)
 #endif
                 | :? Type as ty ->
@@ -1287,8 +1282,7 @@ type ProvidedParameter(parameterName:string,parameterType:Type,?isOut:bool,?opti
     override __.RawDefaultValue = defaultArg optionalValue null
     member __.HasDefaultParameterValue = Option.isSome optionalValue
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
-#if FX_NO_CUSTOMATTRIBUTEDATA
-#else
+#if !FX_NO_CUSTOMATTRIBUTEDATA
     override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 #endif
 
@@ -1317,8 +1311,7 @@ type ProvidedConstructor(parameters : ProvidedParameter list) =
     member __.AddObsoleteAttribute (message,?isError)     = customAttributesImpl.AddObsolete (message,defaultArg isError false)
     member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
-#if FX_NO_CUSTOMATTRIBUTEDATA
-#else
+#if !FX_NO_CUSTOMATTRIBUTEDATA
     override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
@@ -1393,8 +1386,7 @@ type ProvidedMethod(methodName: string, parameters: ProvidedParameter list, retu
     member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.AddCustomAttribute(attribute) = customAttributesImpl.AddCustomAttribute(attribute)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
-#if FX_NO_CUSTOMATTRIBUTEDATA
-#else
+#if !FX_NO_CUSTOMATTRIBUTEDATA
     override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
@@ -1500,8 +1492,7 @@ type ProvidedProperty(propertyName: string, propertyType: Type, ?parameters: Pro
     member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
     member __.AddCustomAttribute attribute                = customAttributesImpl.AddCustomAttribute attribute
-#if FX_NO_CUSTOMATTRIBUTEDATA
-#else
+#if !FX_NO_CUSTOMATTRIBUTEDATA
     override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
@@ -1559,8 +1550,7 @@ type ProvidedEvent(propertyName:string,eventHandlerType:Type) =
     member __.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
     member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
-#if FX_NO_CUSTOMATTRIBUTEDATA
-#else
+#if !FX_NO_CUSTOMATTRIBUTEDATA
     override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
@@ -1607,8 +1597,7 @@ type ProvidedLiteralField(fieldName:string,fieldType:Type,literalValue:obj) =
     member __.AddObsoleteAttribute (message,?isError)     = customAttributesImpl.AddObsolete (message,defaultArg isError false)
     member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
-#if FX_NO_CUSTOMATTRIBUTEDATA
-#else
+#if !FX_NO_CUSTOMATTRIBUTEDATA
     override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
@@ -1646,8 +1635,7 @@ type ProvidedField(fieldName:string,fieldType:Type) =
     member __.AddObsoleteAttribute (message,?isError)     = customAttributesImpl.AddObsolete (message,defaultArg isError false)
     member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
-#if FX_NO_CUSTOMATTRIBUTEDATA
-#else
+#if !FX_NO_CUSTOMATTRIBUTEDATA
     override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
@@ -1855,8 +1843,7 @@ type ProvidedSymbolType(kind: ProvidedSymbolKind, args: Type list, convToTgt: Ty
         | ProvidedSymbolKind.FSharpTypeAbbreviation _
         | ProvidedSymbolKind.ByRef -> upcast this
         | ProvidedSymbolKind.Generic gty -> gty.UnderlyingSystemType
-#if FX_NO_CUSTOMATTRIBUTEDATA
-#else
+#if !FX_NO_CUSTOMATTRIBUTEDATA
     override __.GetCustomAttributesData()                                                        =  ([| |] :> IList<_>)
 #endif
     override __.MemberType                                                                       = notRequired "MemberType" (nameText())
@@ -1881,8 +1868,7 @@ type ProvidedSymbolMethod(genericMethodDefinition: MethodInfo, parameters: Type 
               override __.ParameterType = ProvidedSymbolType.convType parameters p.ParameterType
               override __.Attributes = p.Attributes
               override __.RawDefaultValue = p.RawDefaultValue
-#if FX_NO_CUSTOMATTRIBUTEDATA
-#else
+#if !FX_NO_CUSTOMATTRIBUTEDATA
               override __.GetCustomAttributesData() = p.GetCustomAttributesData()
 #endif
         }
@@ -1978,8 +1964,7 @@ type TypeContainer =
   | Type of System.Type
   | TypeToBeDecided
 
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
 module GlobalProvidedAssemblyElementsTable =
     let theTable = Dictionary<Assembly, Lazy<byte[]>>()
 #endif
@@ -2097,8 +2082,7 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
     member __.NonNullable with set v                      = customAttributesImpl.NonNullable <- v
     member __.GetCustomAttributesDataImpl() = customAttributesImpl.GetCustomAttributesData()
     member __.AddCustomAttribute attribute                = customAttributesImpl.AddCustomAttribute attribute
-#if FX_NO_CUSTOMATTRIBUTEDATA
-#else
+#if !FX_NO_CUSTOMATTRIBUTEDATA
     override __.GetCustomAttributesData()                 = customAttributesImpl.GetCustomAttributesData()
 #endif
 
@@ -2142,8 +2126,7 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
     member __.AddMemberDelayed(memberFunction : unit -> #MemberInfo) =
         this.AddMembersDelayed(fun () -> [memberFunction()])
 
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
     member __.AddAssemblyTypesAsNestedTypesDelayed (assemblyFunction : unit -> System.Reflection.Assembly)  =
         let bucketByPath nodef tipf (items: (string list * 'Value) list) =
             // Find all the items with an empty key list and call 'tipf'
@@ -2420,8 +2403,7 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
            else attributes <- attributes &&& ~~~(enum (int32 TypeProviderTypeAttributes.SuppressRelocate))
 
 
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
 //-------------------------------------------------------------------------------------------------
 // The assembly compiler for generative type providers.
 
@@ -2778,8 +2760,7 @@ type AssemblyGenerator(assemblyFileName) =
         finally
             AppDomain.CurrentDomain.remove_TypeResolve resolveHandler
 
-#if FX_NO_LOCAL_FILESYSTEM
-#else
+#if !FX_NO_LOCAL_FILESYSTEM
         assembly.Save (Path.GetFileName assemblyFileName)
 #endif
 
@@ -2807,8 +2788,7 @@ type ProvidedAssembly(assemblyFileName: string) =
         lazy
             assemblyGenerator.Generate(theTypes |> Seq.toList)
             assemblyGenerator.Assembly
-#if FX_NO_LOCAL_FILESYSTEM
-#else
+#if !FX_NO_LOCAL_FILESYSTEM
     let theAssemblyBytesLazy =
       lazy
         assemblyGenerator.GetFinalBytes()
@@ -2826,8 +2806,7 @@ type ProvidedAssembly(assemblyFileName: string) =
 
     member x.AddNestedTypes (types, enclosingGeneratedTypeNames) = add (types, Some enclosingGeneratedTypeNames)
     member x.AddTypes (types) = add (types, None)
-#if FX_NO_LOCAL_FILESYSTEM
-#else
+#if !FX_NO_LOCAL_FILESYSTEM
     static member RegisterGenerated (fileName:string) =
         //printfn "registered assembly in '%s'" fileName
         let assemblyBytes = System.IO.File.ReadAllBytes fileName
@@ -2870,8 +2849,7 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
 
     let disposing = Event<EventHandler,EventArgs>()
 
-#if FX_NO_LOCAL_FILESYSTEM
-#else
+#if !FX_NO_LOCAL_FILESYSTEM
     let probingFolders = ResizeArray()
     let handler = ResolveEventHandler(fun _ args -> this.ResolveAssembly(args))
     do AppDomain.CurrentDomain.add_AssemblyResolve handler

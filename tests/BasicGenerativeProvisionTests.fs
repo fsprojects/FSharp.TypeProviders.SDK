@@ -18,8 +18,7 @@ open FsUnit
 
 #nowarn "760" // IDisposable needs new
 
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
 
 [<TypeProvider>]
 type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as this =

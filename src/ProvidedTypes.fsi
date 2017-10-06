@@ -383,8 +383,7 @@ type ProvidedTypeDefinition =
     /// Add a set of members to a ProvidedTypeDefinition, delaying computation of the members until required by the compilation context.
     member AddMembersDelayed : membersFunction:(unit -> list<#MemberInfo>) -> unit
 
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
     /// Add the types of the generated assembly as generative types, where types in namespaces get hierarchically positioned as nested types.
     member AddAssemblyTypesAsNestedTypesDelayed : assemblyFunction:(unit -> Assembly) -> unit
 #endif
@@ -424,8 +423,7 @@ type ProvidedTypeDefinition =
     /// Get or set a utility function to log the creation of root Provided Type. Used to debug caching/invalidation.
     static member Logger : (string -> unit) option ref
 
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
 /// A provided generated assembly
 type ProvidedAssembly =
     /// Create a provided generated assembly
@@ -447,8 +445,7 @@ type ProvidedAssembly =
     /// <param name="enclosingTypeNames">A path of type names to wrap the generated types. The generated types are then generated as nested types.</param>
     member AddNestedTypes : types : ProvidedTypeDefinition list * enclosingGeneratedTypeNames: string list -> unit
 
-#if FX_NO_LOCAL_FILESYSTEM
-#else
+#if !FX_NO_LOCAL_FILESYSTEM
     /// Register that a given file is a provided generated assembly
     static member RegisterGenerated : fileName:string -> Assembly
 #endif
@@ -481,8 +478,7 @@ type TypeProviderForNamespaces =
     /// Invoked by the host of the type provider to apply the static argumetns for a method.
     member ApplyStaticArgumentsForMethod : MethodBase * string * obj[] -> MethodBase
 
-#if FX_NO_LOCAL_FILESYSTEM
-#else
+#if !FX_NO_LOCAL_FILESYSTEM
     /// AssemblyResolve handler. Default implementation searches <assemblyname>.dll file in registered folders
     abstract ResolveAssembly : ResolveEventArgs -> Assembly
     default ResolveAssembly : ResolveEventArgs -> Assembly

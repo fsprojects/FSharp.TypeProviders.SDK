@@ -9,8 +9,7 @@ module FSharp.TypeProviders.StarterPack.Tests.GenerativeEnumsProvisionTests
 
 #nowarn "760" // IDisposable needs new
 
-#if NO_GENERATIVE
-#else
+#if !NO_GENERATIVE
 
 open System
 open System.Reflection
