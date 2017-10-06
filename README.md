@@ -1,7 +1,7 @@
-[![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.StarterPack/badge/issue)](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.StarterPack)
-[![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.StarterPack/badge/pr)](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.StarterPack)
+[![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK/badge/issue)](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK)
+[![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK/badge/pr)](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK)
 
-# F# Type Provider Starter Pack [![NuGet Status](http://img.shields.io/nuget/v/FSharp.TypeProviders.StarterPack.svg?style=flat)](https://www.nuget.org/packages/FSharp.TypeProviders.StarterPack/)
+# F# Type Provider Starter Pack [![NuGet Status](http://img.shields.io/nuget/v/FSharp.TypeProviders.SDK.svg?style=flat)](https://www.nuget.org/packages/FSharp.TypeProviders.SDK/)
 
 The F# Type Provider Starter Pack is two things: 
 
@@ -18,7 +18,7 @@ It will also become the main place for improvements and additions to the Provide
 ## Build status
 
 
-[![Build status (Windows)](https://ci.appveyor.com/api/projects/status/y1c6gs2r0ihog1re)](https://ci.appveyor.com/project/mavnn/fsharp-typeproviders-starterpack)  [![Build Status (MacOS, mono)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.StarterPack.svg?branch=master)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.StarterPack)
+[![Build status (Windows)](https://ci.appveyor.com/api/projects/status/y1c6gs2r0ihog1re)](https://ci.appveyor.com/project/mavnn/fsharp-typeproviders-starterpack)  [![Build Status (MacOS, mono)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.SDK.svg?branch=master)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.SDK)
 
 ## The ProvidedTypes API - Adding the Files
 
@@ -27,7 +27,7 @@ Building a type provider nearly always starts with adding these files to your pr
 * ProvidedTypes.fsi
 * ProvidedTypes.fs
 
-The [Starter Pack NuGet package](https://www.nuget.org/packages/FSharp.TypeProviders.StarterPack) contains both these files as well as a set of debugging helpers, and when you install
+The [Starter Pack NuGet package](https://www.nuget.org/packages/FSharp.TypeProviders.SDK) contains both these files as well as a set of debugging helpers, and when you install
 it, it should add them all to your F# project. It's probably best not to modify the files after adding them as
 upgrades to the package will ask to replace the previous versions - either submit changes back to this project
 or shadow the relevant functions in a seperate file.
@@ -102,7 +102,7 @@ For advice on how to get started building a type provider, check out:
 ## Support and community
 
  - If you have a question about `FSharp`, ask at StackOverflow and [mark your question with the `f#` tag](http://stackoverflow.com/questions/tagged/f%23). 
- - If you want to submit a bug, a feature request or help with fixing bugs then look at [issues](https://github.com/mavnn/FSharp.TypeProviders.StarterPack/issues).
+ - If you want to submit a bug, a feature request or help with fixing bugs then look at [issues](https://github.com/mavnn/FSharp.TypeProviders.SDK/issues).
  - To discuss more general issues about F# Type Providers Starter Pack, its goals and other open-source F# projects, join the [fsharp-opensource mailing list](http://groups.google.com/group/fsharp-opensource)
 
 ## Building
@@ -123,7 +123,7 @@ build.cmd RunTests
 
 The library is available under Apache 2.0. For more information see the [License file][1] in the GitHub repository.
 
- [1]: https://github.com/mavnn/FSharp.TypeProviders.StarterPack/blob/master/LICENSE.md
+ [1]: https://github.com/mavnn/FSharp.TypeProviders.SDK/blob/master/LICENSE.md
 
 
 ## Maintainer(s)

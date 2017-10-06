@@ -4,7 +4,7 @@
 #load "../src/ProvidedTypesTesting.fs"
 #load "FsUnit.fs"
 #else
-module FSharp.TypeProviders.StarterPack.Tests.StaticProperty
+module FSharp.TypeProviders.SDK.Tests.StaticProperty
 #endif
 
 open System

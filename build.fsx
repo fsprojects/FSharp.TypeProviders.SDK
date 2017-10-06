@@ -18,7 +18,7 @@ open Fake
 // Information about the project to be used at NuGet
 // --------------------------------------------------------------------------------------
 
-let project = "FSharp.TypeProviders.StarterPack"
+let project = "FSharp.TypeProviders.SDK"
 let authors = ["Tomas Petricek"; "Gustavo Guerra"; "Michael Newton"]
 let summary = "Helper code and examples for getting started with Type Providers"
 let description = """
@@ -27,7 +27,7 @@ let description = """
 let tags = "F# fsharp typeprovider"
 
 let gitHome = "https://github.com/mavnn"
-let gitName = "FSharp.TypeProviders.StarterPack"
+let gitName = "FSharp.TypeProviders.SDK"
 
 // Read release notes & version info from RELEASE_NOTES.md
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
@@ -87,7 +87,7 @@ Target "Compile" (fun _ ->
     //     Reference "System.Reflection.Metadata.dll"
     // ]
 
-    !! "FSharp.TypeProviders.StarterPack.sln"
+    !! "FSharp.TypeProviders.SDK.sln"
     |> MSBuildRelease "" "Build"
     |> ignore
 )
@@ -144,7 +144,7 @@ Target "Examples" (fun _ ->
 #endif
 
 Target "RunTests" (fun _ ->
-    !! ("tests/bin/Release/FSharp.TypeProviders.StarterPack.Tests.dll")
+    !! ("tests/bin/Release/FSharp.TypeProviders.SDK.Tests.dll")
     |> NUnit3 id
 
 #if EXAMPLES
@@ -174,7 +174,7 @@ Target "NuGet" (fun _ ->
             Publish = hasBuildParam "nugetkey"
             Files = [(workingDir, None, None)]
             Dependencies = [] })
-        "nuget/FSharp.TypeProviders.StarterPack.nuspec"
+        "nuget/FSharp.TypeProviders.SDK.nuspec"
 )
 
 // --------------------------------------------------------------------------------------

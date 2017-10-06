@@ -5,9 +5,9 @@
     <version>@build.number@</version>
     <authors>@authors@</authors>
     <owners>@authors@</owners>
-    <licenseUrl>http://github.com/fsprojects/FSharp.TypeProviders.StarterPack/blob/master/LICENSE.md</licenseUrl>
-    <projectUrl>http://github.com/fsprojects/FSharp.TypeProviders.StarterPack</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/fsprojects/FSharp.TypeProviders.StarterPack/master/docs/files/img/logo.png</iconUrl>
+    <licenseUrl>http://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/LICENSE.md</licenseUrl>
+    <projectUrl>http://github.com/fsprojects/FSharp.TypeProviders.SDK</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/fsprojects/FSharp.TypeProviders.SDK/master/docs/files/img/logo.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>@summary@</summary>
     <description>@description@</description>

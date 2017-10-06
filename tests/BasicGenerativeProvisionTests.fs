@@ -4,7 +4,7 @@
 #load "../src/ProvidedTypesTesting.fs"
 #load "FsUnit.fs"
 #else
-module FSharp.TypeProviders.StarterPack.Tests.BasicGenerativeTests
+module FSharp.TypeProviders.SDK.Tests.BasicGenerativeTests
 #endif
 
 open System.Reflection
