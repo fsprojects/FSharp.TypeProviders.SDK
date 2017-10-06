@@ -1,16 +1,15 @@
 #if INTERACTIVE
-#r @"../packages/NUnit/lib/net45/nunit.framework.dll"
 #r @"../test/ErasedWithConstructor.dll"
 #endif
 
-open NUnit.Framework
 open ErasedWithConstructor.Provided
+open Xunit
 
-[<Test>]
+[<Fact>]
 let ``Default constructor should create instance`` () =
-    Assert.AreEqual("My internal state", MyType().InnerState)
+    Assert.Equal("My internal state", MyType().InnerState)
 
-[<Test>]
+[<Fact>]
 let ``Constructor with parameter should create instance`` () =
-    Assert.AreEqual("override", MyType("override").InnerState)
+    Assert.Equal("override", MyType("override").InnerState)
     

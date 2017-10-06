@@ -1,9 +1,9 @@
 #if INTERACTIVE
-#r "../packages/NUnit/lib/net45/nunit.framework.dll"
 #load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" "../src/AssemblyReader.fs" "../src/AssemblyReaderReflection.fs" "../src/ProvidedTypesContext.fs" 
 #load "../src/ProvidedTypesTesting.fs"
-#load "FsUnit.fs"
+
 #else
+
 module FSharp.TypeProviders.SDK.Tests.GenerativeEnumsProvisionTests
 #endif
 
@@ -15,10 +15,10 @@ open System
 open System.Reflection
 open System.IO
 open Microsoft.FSharp.Core.CompilerServices
+open Xunit
 open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
-open NUnit.Framework
 
 let createEnum name (values: list<string*int>) =
     let enumType = ProvidedTypeDefinition(name, Some typeof<Enum>, IsErased = false)
@@ -61,7 +61,7 @@ let testProvidedAssembly test =
         let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
         let tp = GenerativeEnumsProvider(cfg) :> TypeProviderForNamespaces
         let providedTypeDefinition = tp.Namespaces |> Seq.last |> snd |> Seq.last
-        Assert.AreEqual("Container", providedTypeDefinition.Name)
+        Assert.Equal("Container", providedTypeDefinition.Name)
 
         let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
         let assembly = Assembly.Load assemContents
@@ -69,29 +69,29 @@ let testProvidedAssembly test =
 
 let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> false 
 
-[<Test>]
+[<Fact>]
 let ``Enums are generated correctly``() =
   // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/123 
   if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
         let enumContainer = container.GetNestedType "EnumContainer"
-        Assert.IsNotNull enumContainer
+        Assert.NotNull enumContainer
 
         let nestedEnum = enumContainer.GetNestedType "NestedEnum"
-        Assert.IsNotNull nestedEnum
+        Assert.NotNull nestedEnum
 
         let nestedEnumField = enumContainer.GetField("nestedEnumField", BindingFlags.Instance ||| BindingFlags.NonPublic)
-        Assert.IsNotNull nestedEnumField
-        Assert.AreEqual(nestedEnum, nestedEnumField.FieldType)
+        Assert.NotNull nestedEnumField
+        Assert.Equal(nestedEnum, nestedEnumField.FieldType)
 
-        let enumValues = Enum.GetValues(nestedEnum) |> Seq.cast<int> |> Seq.zip (Enum.GetNames(nestedEnum)) 
-        CollectionAssert.AreEquivalent(["Foo", 1; "Bar", 2], enumValues)
+        let enumValues = Enum.GetValues(nestedEnum) |> Seq.cast<int> |> Seq.zip (Enum.GetNames(nestedEnum))  |> Seq.toList
+        Assert.True(["Foo", 1; "Bar", 2] = enumValues)
 
         let topLevelEnum = container.GetNestedType "TopLevelEnum"
-        Assert.IsNotNull topLevelEnum
+        Assert.NotNull topLevelEnum
 
         let topLevelEnumField = enumContainer.GetField("topLevelEnumField", BindingFlags.Instance ||| BindingFlags.NonPublic)
-        Assert.IsNotNull topLevelEnumField
-        Assert.AreEqual(topLevelEnum, topLevelEnumField.FieldType)
+        Assert.NotNull topLevelEnumField
+        Assert.Equal(topLevelEnum, topLevelEnumField.FieldType)
 
 #endif

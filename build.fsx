@@ -3,15 +3,32 @@
 // --------------------------------------------------------------------------------------
 
 #I "packages/FAKE/tools"
-#r "FakeLib.dll"
+#r "packages/FAKE/tools/FakeLib.dll"
 
 open System
 open System.IO
 open Fake.AssemblyInfoFile
 open Fake.Git
 open Fake.Testing
-open Fake.FscHelper
 open Fake
+
+// --------------------------------------------------------------------------------------
+// Utilities
+// --------------------------------------------------------------------------------------
+
+let assertExitCodeZero x = if x = 0 then () else failwithf "Command failed with exit code %i" x
+let runCmdIn workDir (exe:string) = Printf.ksprintf (fun (args:string) ->
+#if MONO
+        let exe = exe.Replace("\\","/")
+        let args = args.Replace("\\","/")
+        printfn "[%s] mono %s %s" workDir exe args
+        Shell.Exec("mono", sprintf "%s %s" exe args, workDir)
+#else
+        printfn "[%s] %s %s" workDir exe args
+        Shell.Exec(exe, args, workDir)
+#endif
+        |> assertExitCodeZero
+)
 
 
 // --------------------------------------------------------------------------------------
@@ -58,7 +75,6 @@ let workingDir = "./temp/"
 let srcDir = "src"
 let exampleDir =  "examples"
 let testDir =  "test"
-let nunitDir = "packages/NUnit/lib/net45"
 
 let sources =
     [srcDir @@ "ProvidedTypes.fsi"
@@ -123,7 +139,7 @@ Target "Examples" (fun _ ->
 
     examples
     |> List.iter (fun example ->
-            // Compile type provider
+            runIn // Compile type provider
             let output = testDir @@ example.Name + ".dll"
             (List.concat [sources;fromExampleDir example.ProviderSourceFiles])
             |> Compile [

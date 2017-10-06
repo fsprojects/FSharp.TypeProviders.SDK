@@ -1,19 +1,17 @@
 ﻿#if INTERACTIVE
-#r "../packages/NUnit/lib/net45/nunit.framework.dll"
 #load "../src/AssemblyReader.fs" 
 //#load "../src/AssemblyReaderReflection.fs"  (strangely fails to bind)
-#load "FsUnit.fs"
+
 #else
 module FSharp.TypeProviders.SDK.Tests.AssemblyReaderTests
 #endif
 
 open System
 open System.IO
-open NUnit.Framework
-open FsUnit
+open Xunit
 
 
-[<Test>]
+[<Fact>]
 let ``AssemblyReader reads assemblies containing Reflected Definitions``() : unit  = 
     let file = Path.Combine [| __SOURCE_DIRECTORY__; ".."; "test"; "ConsoleApplication4.exe" |]
     let assemblyReader = ProviderImplementation.AssemblyReader.ILModuleReaderAfterReadingAllBytes(file, ProviderImplementation.AssemblyReader.mkILGlobals ProviderImplementation.AssemblyReader.EcmaMscorlibScopeRef)
