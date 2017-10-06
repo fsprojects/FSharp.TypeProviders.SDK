@@ -4,7 +4,7 @@
 //#load "../src/AssemblyReaderReflection.fs"  (strangely fails to bind)
 #load "FsUnit.fs"
 #else
-module FSharp.TypeProviders.StarterPack.Tests.AssemblyReaderTests
+module FSharp.TypeProviders.SDK.Tests.AssemblyReaderTests
 #endif
 
 open System

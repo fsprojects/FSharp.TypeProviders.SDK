@@ -4,7 +4,7 @@
 #load "../src/ProvidedTypesTesting.fs"
 #load "FsUnit.fs"
 #else
-module FSharp.TypeProviders.StarterPack.Tests.GenerativeEnumsProvisionTests
+module FSharp.TypeProviders.SDK.Tests.GenerativeEnumsProvisionTests
 #endif
 
 #nowarn "760" // IDisposable needs new
@@ -71,7 +71,7 @@ let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> fa
 
 [<Test>]
 let ``Enums are generated correctly``() =
-  // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.StarterPack/issues/123 
+  // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/123 
   if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
         let enumContainer = container.GetNestedType "EnumContainer"
