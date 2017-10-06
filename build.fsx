@@ -64,8 +64,12 @@ Target "Clean" (fun _ ->
     CleanDirs []
 )
 
+Target "Restore" (fun _ ->
+    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Restore"]} ) "src/FSharp.TypeProviders.SDK.fsproj"
+    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Restore"]} ) "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
+)
 Target "Compile" (fun _ ->
-    Fake.DotNetCli.Build id
+    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Build"]} ) "src/FSharp.TypeProviders.SDK.fsproj"
 )
 
 
@@ -75,17 +79,20 @@ Target "Compile" (fun _ ->
 #endif
 
 Target "RunTests" (fun _ ->
-    Fake.DotNetCli.Test (fun pp -> { pp with Project="tests/FSharp.TypeProviders.SDK.Tests.fsproj" } )
+#if !MONO
+    Fake.DotNetCli.Test (fun pp -> { pp with Project="tests/FSharp.TypeProviders.SDK.Tests.fsproj" })
+#endif
 )
 
 Target "NuGet" (fun _ ->
-    Fake.DotNetCli.Pack id
+    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Pack"]} ) "src/FSharp.TypeProviders.SDK.fsproj"
 )
 
 "Clean"
     ==> "NuGet"
 
-"Compile"
+"Restore"
+    ==> "Compile"
 #if EXAMPLES
     ==> "Examples"
 #endif
