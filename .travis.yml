@@ -3,17 +3,13 @@ language: csharp
 mono:
   - beta
   - latest
-  - 4.8.1
-  - 4.2.2
-  - 4.0.5
+  - 5.2.0
+
+dotnet: 2.0.0
 
 os:
   - linux
   - osx
-
-matrix:
-  allow_failures:
-    - mono: beta
 
 sudo: false  # use the new container-based Travis infrastructure
 

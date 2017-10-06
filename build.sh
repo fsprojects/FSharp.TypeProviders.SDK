@@ -13,6 +13,7 @@ else
   # use mono
 
   which mono
+  which dotnet
   find /usr/lib/mono
 
   mono .paket/paket.exe restore
