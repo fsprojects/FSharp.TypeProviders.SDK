@@ -19,14 +19,13 @@ open Fake
 // --------------------------------------------------------------------------------------
 
 let project = "FSharp.TypeProviders.SDK"
-let authors = ["Tomas Petricek"; "Gustavo Guerra"; "Michael Newton"]
+let authors = ["Tomas Petricek"; "Gustavo Guerra"; "Michael Newton"; "Don Syme" ]
 let summary = "Helper code and examples for getting started with Type Providers"
 let description = """
-  The F# Type Provider Starter Pack contains everything you need to start building your own
-  type providers."""
+  The F# Type Provider SDK provides utilities for authoring type providers."""
 let tags = "F# fsharp typeprovider"
 
-let gitHome = "https://github.com/mavnn"
+let gitHome = "https://github.com/fsprojects"
 let gitName = "FSharp.TypeProviders.SDK"
 
 // Read release notes & version info from RELEASE_NOTES.md

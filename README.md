@@ -102,7 +102,7 @@ For advice on how to get started building a type provider, check out:
 ## Support and community
 
  - If you have a question about `FSharp`, ask at StackOverflow and [mark your question with the `f#` tag](http://stackoverflow.com/questions/tagged/f%23). 
- - If you want to submit a bug, a feature request or help with fixing bugs then look at [issues](https://github.com/mavnn/FSharp.TypeProviders.SDK/issues).
+ - If you want to submit a bug, a feature request or help with fixing bugs then look at [issues](https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues).
  - To discuss more general issues about F# Type Providers Starter Pack, its goals and other open-source F# projects, join the [fsharp-opensource mailing list](http://groups.google.com/group/fsharp-opensource)
 
 ## Building
@@ -123,7 +123,7 @@ build.cmd RunTests
 
 The library is available under Apache 2.0. For more information see the [License file][1] in the GitHub repository.
 
- [1]: https://github.com/mavnn/FSharp.TypeProviders.SDK/blob/master/LICENSE.md
+ [1]: https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/LICENSE.md
 
 
 ## Maintainer(s)
