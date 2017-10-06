@@ -2073,6 +2073,9 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
 
     let customAttributesImpl = CustomAttributesImpl()
 
+    //interface IReflectableType with 
+    //    member  __. GetTypeInfo() = failwith "IReflectableType.GetTypeInfo"
+
     member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
     member __.AddXmlDocDelayed xmlDocFunction             = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
     member __.AddXmlDoc xmlDoc                            = customAttributesImpl.AddXmlDoc xmlDoc
@@ -2088,11 +2091,11 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
 
     member __.ResetEnclosingType (enclosingType) =
         container <- TypeContainer.Type enclosingType
-    new (assembly:Assembly,namespaceName,className,baseType) = new ProvidedTypeDefinition(TypeContainer.Namespace (assembly,namespaceName), className, baseType, id)
-    new (className:string,baseType) = new ProvidedTypeDefinition(TypeContainer.TypeToBeDecided, className, baseType, id)
+    new (assembly:Assembly,namespaceName,className,baseType) = ProvidedTypeDefinition(TypeContainer.Namespace (assembly,namespaceName), className, baseType, id)
+    new (className:string,baseType) = ProvidedTypeDefinition(TypeContainer.TypeToBeDecided, className, baseType, id)
 
-    new (assembly:Assembly,namespaceName,className,baseType,convToTgt) = new ProvidedTypeDefinition(TypeContainer.Namespace (assembly,namespaceName), className, baseType, convToTgt)
-    new (className,baseType, convToTgt) = new ProvidedTypeDefinition(TypeContainer.TypeToBeDecided, className, baseType, convToTgt)
+    new (assembly:Assembly,namespaceName,className,baseType,convToTgt) = ProvidedTypeDefinition(TypeContainer.Namespace (assembly,namespaceName), className, baseType, convToTgt)
+    new (className,baseType, convToTgt) = ProvidedTypeDefinition(TypeContainer.TypeToBeDecided, className, baseType, convToTgt)
     // state ops
 
     override __.UnderlyingSystemType = typeof<Type>
@@ -2170,7 +2173,7 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
         staticParams      <- parameters
         staticParamsApply <- Some instantiationFunction
 
-    /// Get ParameterInfo[] for the parametric type parameters (//s GetGenericParameters)
+    /// Get ParameterInfo[] for the parametric type parameters 
     member __.GetStaticParameters() = [| for p in staticParams -> p :> ParameterInfo |]
 
     /// Instantiate parametrics type
