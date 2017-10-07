@@ -85,6 +85,7 @@ Target "RunTests" (fun _ ->
   // We don't do this on Linux/OSX because of https://github.com/dotnet/sdk/issues/335
     Fake.DotNetCli.Test (fun pp -> { pp with Project="tests/FSharp.TypeProviders.SDK.Tests.fsproj" })
 #endif
+    ()
 )
 
 Target "NuGet" (fun _ ->
@@ -92,6 +93,7 @@ Target "NuGet" (fun _ ->
   // We don't do this on Linux/OSX because of https://github.com/dotnet/sdk/issues/335
     Fake.DotNetCli.Pack (fun pp -> { pp with Project="src/FSharp.TypeProviders.SDK.fsproj" })
 #endif
+    ()
 )
 
 "Clean"
