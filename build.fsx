@@ -47,14 +47,14 @@ let pullRequest =
         Some <| int a
 
 let buildNumber =
-    int (getBuildParamOrDefault "APPVEYOR_BUILD_VERSION" "0")
+    getBuildParamOrDefault "APPVEYOR_BUILD_VERSION" "0"
 
 let version =
     match pullRequest with
     | None ->
-        sprintf "%s.%d" release.AssemblyVersion buildNumber
+        sprintf "%s.%s" release.AssemblyVersion buildNumber
     | Some num ->
-        sprintf "%s-pull-%d-%05d" release.AssemblyVersion num buildNumber
+        sprintf "%s-pull-%d-%s" release.AssemblyVersion num buildNumber
 let releaseNotes = release.Notes |> String.concat "\n"
 let srcDir = "src"
 
