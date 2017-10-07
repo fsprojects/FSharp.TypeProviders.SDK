@@ -11,7 +11,7 @@ os:
   - linux
   - osx
 
-sudo: false  # use the new container-based Travis infrastructure
+sudo: true  # use the new container-based Travis infrastructure
 
 script:
   - ./build.sh RunTests
