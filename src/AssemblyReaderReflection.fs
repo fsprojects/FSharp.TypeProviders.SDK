@@ -79,8 +79,8 @@ module Utils =
     let nullToOption x = match x with null -> None | _ -> Some x
     let optionToNull x = match x with None -> null | Some x -> x
     let uoptionToNull x = match x with UNone -> null | USome x -> x
-    let notRequired msg =
-       failwith (sprintf "SHOULD NOT BE REQUIRED! %s. Stack trace:\n%s" msg (System.Diagnostics.StackTrace().ToString()))
+    let notRequired msg nm =
+       failwithf "SHOULD NOT BE REQUIRED! %s for %s. Stack trace:\n%s" msg nm (System.Diagnostics.StackTrace().ToString())
 
     // A table tracking how wrapped type definition objects are translated to cloned objects.
     // Unique wrapped type definition objects must be translated to unique wrapper objects, based
@@ -262,10 +262,6 @@ type ContextTypeSymbolKind =
 and ContextTypeSymbol(kind: ContextTypeSymbolKind, args: Type[]) =
     inherit Type()
 
-    let notRequired msg =
-        System.Diagnostics.Debugger.Break()
-        failwith ("not required: " + msg)
-
     override __.FullName =
         match kind,args with
         | ContextTypeSymbolKind.SDArray,[| arg |] -> arg.FullName + "[]"
@@ -369,7 +365,7 @@ and ContextTypeSymbol(kind: ContextTypeSymbolKind, args: Type[]) =
     member this.Kind = kind
     member this.Args = args
 
-    override this.GetConstructors _bindingAttr                                                      = notRequired "GetConstructors" this.Name
+    override this.GetConstructors _bindingAttr = notRequired "GetConstructors" this.Name
     override this.GetMethodImpl(name, _bindingAttr, _binderBinder, _callConvention, types, _modifiers) =
         match kind with
         | ContextTypeSymbolKind.Generic gtd ->
@@ -416,32 +412,32 @@ and ContextTypeSymbol(kind: ContextTypeSymbolKind, args: Type[]) =
 
         | _ -> notRequired "ContextTypeSymbol: GetConstructorImpl" this.Name
 
-    override this.AssemblyQualifiedName                                                            = "[" + this.Assembly.FullName + "]" + this.FullName
+    override this.AssemblyQualifiedName = "[" + this.Assembly.FullName + "]" + this.FullName
 
-    override this.GetMembers _bindingAttr                                                           = notRequired "GetMembers" this.Name
-    override this.GetMethods _bindingAttr                                                           = notRequired "GetMethods" this.Name
-    override this.GetField(_name, _bindingAttr)                                                     = notRequired "GetField" this.Name
-    override this.GetFields _bindingAttr                                                            = notRequired "GetFields" this.Name
-    override this.GetInterface(_name, _ignoreCase)                                                  = notRequired "GetInterface" this.Name
-    override this.GetInterfaces()                                                                   = notRequired "GetInterfaces" this.Name
-    override this.GetEvent(_name, _bindingAttr)                                                     = notRequired "GetEvent" this.Name
-    override this.GetEvents _bindingAttr                                                            = notRequired "GetEvents" this.Name
-    override this.GetProperties _bindingAttr                                                        = notRequired "GetProperties" this.Name
+    override this.GetMembers _bindingAttr = notRequired "GetMembers" this.Name
+    override this.GetMethods _bindingAttr = notRequired "GetMethods" this.Name
+    override this.GetField(_name, _bindingAttr) = notRequired "GetField" this.Name
+    override this.GetFields _bindingAttr = notRequired "GetFields" this.Name
+    override this.GetInterface(_name, _ignoreCase) = notRequired "GetInterface" this.Name
+    override this.GetInterfaces() = notRequired "GetInterfaces" this.Name
+    override this.GetEvent(_name, _bindingAttr) = notRequired "GetEvent" this.Name
+    override this.GetEvents _bindingAttr = notRequired "GetEvents" this.Name
+    override this.GetProperties _bindingAttr = notRequired "GetProperties" this.Name
     override this.GetPropertyImpl(_name, _bindingAttr, _binder, _returnType, _types, _modifiers)    = notRequired "GetPropertyImpl" this.Name
-    override this.GetNestedTypes _bindingAttr                                                       = notRequired "GetNestedTypes" this.Name
-    override this.GetNestedType(_name, _bindingAttr)                                                = notRequired "GetNestedType" this.Name
-    override this.GetAttributeFlagsImpl()                                                           = notRequired "GetAttributeFlagsImpl" this.Name
+    override this.GetNestedTypes _bindingAttr = notRequired "GetNestedTypes" this.Name
+    override this.GetNestedType(_name, _bindingAttr) = notRequired "GetNestedType" this.Name
+    override this.GetAttributeFlagsImpl() = notRequired "GetAttributeFlagsImpl" this.Name
 
     override this.UnderlyingSystemType = (this :> Type)
 
-    override this.GetCustomAttributesData()                                                        =  ([| |] :> IList<_>)
-    override this.MemberType                                                                       = notRequired "MemberType" this.Name
-    override this.GetMember(_name,_mt,_bindingAttr)                                                = notRequired "GetMember" this.Name
-    override this.GUID                                                                             = notRequired "GUID" this.Name
+    override this.GetCustomAttributesData() =  ([| |] :> IList<_>)
+    override this.MemberType = notRequired "MemberType" this.Name
+    override this.GetMember(_name,_mt,_bindingAttr) = notRequired "GetMember" this.Name
+    override this.GUID = notRequired "GUID" this.Name
     override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "InvokeMember" this.Name
-    override this.GetCustomAttributes(_inherit)                                                    = [| |]
-    override this.GetCustomAttributes(_attributeType, _inherit)                                    = [| |]
-    override this.IsDefined(_attributeType, _inherit)                                              = false
+    override this.GetCustomAttributes(_inherit) = [| |]
+    override this.GetCustomAttributes(_attributeType, _inherit) = [| |]
+    override this.IsDefined(_attributeType, _inherit) = false
     override this.MakeArrayType() = ContextTypeSymbol(ContextTypeSymbolKind.SDArray, [| this |]) :> Type
     override this.MakeArrayType arg = ContextTypeSymbol(ContextTypeSymbolKind.Array arg, [| this |]) :> Type
     override this.MakePointerType() = ContextTypeSymbol(ContextTypeSymbolKind.Pointer, [| this |]) :> Type
@@ -472,16 +468,16 @@ and ContextMethodSymbol(gmd: MethodInfo, gargs: Type[]) =
         | :? MethodInfo as thatMI -> thatMI.IsGenericMethod && gmd.Equals(thatMI.GetGenericMethodDefinition()) && lengthsEqAndForall2 (gmd.GetGenericArguments()) (thatMI.GetGenericArguments()) (=)
         | _ -> false
 
-    override __.MethodHandle = notRequired "MethodHandle"
-    override __.ReturnParameter   = notRequired "ReturnParameter"
-    override __.IsDefined(_attributeType, _inherited)                   = notRequired "IsDefined"
-    override __.ReturnTypeCustomAttributes                            = notRequired "ReturnTypeCustomAttributes"
-    override __.GetBaseDefinition()                                   = notRequired "GetBaseDefinition"
-    override __.GetMethodImplementationFlags()                        = notRequired "GetMethodImplementationFlags"
-    override __.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture)  = notRequired "Invoke"
-    override __.ReflectedType                                         = notRequired "ReflectedType"
-    override __.GetCustomAttributes(_inherited)                        = notRequired "GetCustomAttributes"
-    override __.GetCustomAttributes(_attributeType, _inherited)         = notRequired "GetCustomAttributes"
+    override this.MethodHandle = notRequired "MethodHandle" this.Name
+    override this.ReturnParameter   = notRequired "ReturnParameter" this.Name
+    override this.IsDefined(_attributeType, _inherited) = notRequired "IsDefined" this.Name
+    override this.ReturnTypeCustomAttributes = notRequired "ReturnTypeCustomAttributes" this.Name
+    override this.GetBaseDefinition() = notRequired "GetBaseDefinition" this.Name
+    override this.GetMethodImplementationFlags() = notRequired "GetMethodImplementationFlags" this.Name
+    override this.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture)  = notRequired "Invoke" this.Name
+    override this.ReflectedType = notRequired "ReflectedType" this.Name
+    override this.GetCustomAttributes(_inherited) = notRequired "GetCustomAttributes" this.Name
+    override this.GetCustomAttributes(_attributeType, _inherited) = notRequired "GetCustomAttributes" this.Name
 
     override __.ToString() = gmd.ToString() + "@inst"
 
@@ -505,7 +501,7 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
             member __.NamedArguments = [| |] :> IList<_>
          }
 
-    and TxCustomAttributesData (inp: ILCustomAttrs) = //notRequired "custom attributes are not available for context assemblies"
+    and TxCustomAttributesData (inp: ILCustomAttrs) =
          [| for a in inp.Elements do
               yield TxCustomAttributesDatum a |]
          :> IList<CustomAttributeData>
@@ -543,14 +539,14 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
                     eqParametersAndILParameterTypesWithInst gps (that.GetParameters()) inp.Parameters
                 | _ -> false
 
-            override __.IsDefined(attributeType, inherited) = notRequired "IsDefined"
-            override __.Invoke(invokeAttr, binder, parameters, culture) = notRequired "Invoke"
-            override __.Invoke(obj, invokeAttr, binder, parameters, culture) = notRequired "Invoke"
-            override __.ReflectedType = notRequired "ReflectedType"
-            override __.GetMethodImplementationFlags() = notRequired "GetMethodImplementationFlags"
-            override __.MethodHandle = notRequired "MethodHandle"
-            override __.GetCustomAttributes(inherited) = notRequired "GetCustomAttributes"
-            override __.GetCustomAttributes(attributeType, inherited) = notRequired "GetCustomAttributes"
+            override this.IsDefined(attributeType, inherited) = notRequired "IsDefined"  this.Name
+            override this.Invoke(invokeAttr, binder, parameters, culture) = notRequired "Invoke"  this.Name
+            override this.Invoke(obj, invokeAttr, binder, parameters, culture) = notRequired "Invoke" this.Name
+            override this.ReflectedType = notRequired "ReflectedType" this.Name
+            override this.GetMethodImplementationFlags() = notRequired "GetMethodImplementationFlags" this.Name
+            override this.MethodHandle = notRequired "MethodHandle" this.Name
+            override this.GetCustomAttributes(inherited) = notRequired "GetCustomAttributes" this.Name
+            override this.GetCustomAttributes(attributeType, inherited) = notRequired "GetCustomAttributes" this.Name
 
             override __.ToString() = sprintf "ctxt constructor(...) in type %s" declTy.FullName }
 
@@ -586,16 +582,16 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
             override __.MetadataToken = inp.MetadataToken
 
             // unused
-            override __.MethodHandle = notRequired "MethodHandle"
-            override __.ReturnParameter = notRequired "ReturnParameter"
-            override __.IsDefined(attributeType, inherited) = notRequired "IsDefined"
-            override __.ReturnTypeCustomAttributes = notRequired "ReturnTypeCustomAttributes"
-            override __.GetBaseDefinition() = notRequired "GetBaseDefinition"
-            override __.GetMethodImplementationFlags() = notRequired "GetMethodImplementationFlags"
-            override __.Invoke(obj, invokeAttr, binder, parameters, culture)  = notRequired "Invoke"
-            override __.ReflectedType = notRequired "ReflectedType"
-            override __.GetCustomAttributes(inherited) = notRequired "GetCustomAttributes"
-            override __.GetCustomAttributes(attributeType, inherited) = notRequired "GetCustomAttributes"
+            override this.MethodHandle = notRequired "MethodHandle" this.Name
+            override this.ReturnParameter = notRequired "ReturnParameter" this.Name
+            override this.IsDefined(attributeType, inherited) = notRequired "IsDefined" this.Name
+            override this.ReturnTypeCustomAttributes = notRequired "ReturnTypeCustomAttributes" this.Name
+            override this.GetBaseDefinition() = notRequired "GetBaseDefinition" this.Name
+            override this.GetMethodImplementationFlags() = notRequired "GetMethodImplementationFlags" this.Name
+            override this.Invoke(obj, invokeAttr, binder, parameters, culture)  = notRequired "Invoke" this.Name
+            override this.ReflectedType = notRequired "ReflectedType" this.Name
+            override this.GetCustomAttributes(inherited) = notRequired "GetCustomAttributes" this.Name
+            override this.GetCustomAttributes(attributeType, inherited) = notRequired "GetCustomAttributes" this.Name
 
             override __.ToString() = sprintf "ctxt method %s(...) in type %s" inp.Name declTy.FullName  }
 
@@ -624,13 +620,13 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
                     eqType this.DeclaringType thatPI.DeclaringType
                 | _ -> false
 
-            override __.GetValue(obj, invokeAttr, binder, index, culture) = notRequired "GetValue"
-            override __.SetValue(obj, _value, invokeAttr, binder, index, culture) = notRequired "SetValue"
-            override __.GetAccessors(nonPublic) = notRequired "GetAccessors"
-            override __.ReflectedType = notRequired "ReflectedType"
-            override __.GetCustomAttributes(inherited) = notRequired "GetCustomAttributes"
-            override __.GetCustomAttributes(attributeType, inherited) = notRequired "GetCustomAttributes"
-            override __.IsDefined(attributeType, inherited) = notRequired "IsDefined"
+            override this.GetValue(obj, invokeAttr, binder, index, culture) = notRequired "GetValue" this.Name
+            override this.SetValue(obj, _value, invokeAttr, binder, index, culture) = notRequired "SetValue" this.Name
+            override this.GetAccessors(nonPublic) = notRequired "GetAccessors" this.Name
+            override this.ReflectedType = notRequired "ReflectedType" this.Name
+            override this.GetCustomAttributes(inherited) = notRequired "GetCustomAttributes" this.Name
+            override this.GetCustomAttributes(attributeType, inherited) = notRequired "GetCustomAttributes" this.Name
+            override this.IsDefined(attributeType, inherited) = notRequired "IsDefined" this.Name
 
             override __.ToString() = sprintf "ctxt property %s(...) in type %s" inp.Name declTy.Name }
 
@@ -656,11 +652,11 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
                     eqType this.DeclaringType thatEI.DeclaringType
                 | _ -> false
 
-            override __.GetRaiseMethod(nonPublic) = notRequired "GetRaiseMethod"
-            override __.ReflectedType = notRequired "ReflectedType"
-            override __.GetCustomAttributes(inherited) = notRequired "GetCustomAttributes"
-            override __.GetCustomAttributes(attributeType, inherited)  = notRequired "GetCustomAttributes"
-            override __.IsDefined(attributeType, inherited) = notRequired "IsDefined"
+            override this.GetRaiseMethod(nonPublic) = notRequired "GetRaiseMethod" this.Name
+            override this.ReflectedType = notRequired "ReflectedType" this.Name
+            override this.GetCustomAttributes(inherited) = notRequired "GetCustomAttributes" this.Name
+            override this.GetCustomAttributes(attributeType, inherited)  = notRequired "GetCustomAttributes" this.Name
+            override this.IsDefined(attributeType, inherited) = notRequired "IsDefined" this.Name
 
             override __.ToString() = sprintf "ctxt event %s(...) in type %s" inp.Name declTy.FullName }
 
@@ -685,13 +681,13 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
                     eqType this.DeclaringType thatFI.DeclaringType
                 | _ -> false
 
-            override __.ReflectedType = notRequired "ReflectedType"
-            override __.GetCustomAttributes(inherited) = notRequired "GetCustomAttributes"
-            override __.GetCustomAttributes(attributeType, inherited) = notRequired "GetCustomAttributes"
-            override __.IsDefined(attributeType, inherited) = notRequired "IsDefined"
-            override __.SetValue(obj, _value, invokeAttr, binder, culture) = notRequired "SetValue"
-            override __.GetValue(obj) = notRequired "GetValue"
-            override __.FieldHandle = notRequired "FieldHandle"
+            override this.ReflectedType = notRequired "ReflectedType" this.Name
+            override this.GetCustomAttributes(inherited) = notRequired "GetCustomAttributes" this.Name
+            override this.GetCustomAttributes(attributeType, inherited) = notRequired "GetCustomAttributes" this.Name
+            override this.IsDefined(attributeType, inherited) = notRequired "IsDefined" this.Name
+            override this.SetValue(obj, _value, invokeAttr, binder, culture) = notRequired "SetValue" this.Name
+            override this.GetValue(obj) = notRequired "GetValue" this.Name
+            override this.FieldHandle = notRequired "FieldHandle" this.Name
 
             override __.ToString() = sprintf "ctxt literal field %s(...) in type %s" inp.Name declTy.FullName }
 
@@ -762,22 +758,22 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
             override __.MemberType = enum 0
 
             override __.Namespace = null //notRequired "Namespace"
-            override __.DeclaringType = notRequired "DeclaringType"
-            override __.BaseType = notRequired "BaseType"
-            override __.GetInterfaces() = notRequired "GetInterfaces"
+            override this.DeclaringType = notRequired "DeclaringType" this.Name
+            override this.BaseType = notRequired "BaseType" this.Name
+            override this.GetInterfaces() = notRequired "GetInterfaces" this.Name
 
-            override this.GetConstructors(_bindingFlags) = notRequired "GetConstructors"
-            override this.GetMethods(_bindingFlags) = notRequired "GetMethods"
-            override this.GetField(name, _bindingFlags) = notRequired "GetField"
-            override this.GetFields(_bindingFlags) = notRequired "GetFields"
-            override this.GetEvent(name, _bindingFlags) = notRequired "GetEvent"
-            override this.GetEvents(_bindingFlags) = notRequired "GetEvents"
-            override this.GetProperties(_bindingFlags) = notRequired "GetProperties"
-            override this.GetMembers(_bindingFlags) = notRequired "GetMembers"
-            override this.GetNestedTypes(_bindingFlags) = notRequired "GetNestedTypes"
-            override this.GetNestedType(name, _bindingFlags) = notRequired "GetNestedType"
-            override this.GetPropertyImpl(name, _bindingFlags, _binder, _returnType, _types, _modifiers) = notRequired "GetPropertyImpl"
-            override this.MakeGenericType(args) = notRequired "MakeGenericType"
+            override this.GetConstructors(_bindingFlags) = notRequired "GetConstructors" this.Name
+            override this.GetMethods(_bindingFlags) = notRequired "GetMethods" this.Name
+            override this.GetField(name, _bindingFlags) = notRequired "GetField" this.Name
+            override this.GetFields(_bindingFlags) = notRequired "GetFields" this.Name
+            override this.GetEvent(name, _bindingFlags) = notRequired "GetEvent" this.Name
+            override this.GetEvents(_bindingFlags) = notRequired "GetEvents" this.Name
+            override this.GetProperties(_bindingFlags) = notRequired "GetProperties" this.Name
+            override this.GetMembers(_bindingFlags) = notRequired "GetMembers" this.Name
+            override this.GetNestedTypes(_bindingFlags) = notRequired "GetNestedTypes" this.Name
+            override this.GetNestedType(name, _bindingFlags) = notRequired "GetNestedType" this.Name
+            override this.GetPropertyImpl(name, _bindingFlags, _binder, _returnType, _types, _modifiers) = notRequired "GetPropertyImpl" this.Name
+            override this.MakeGenericType(args) = notRequired "MakeGenericType" this.Name
             override this.MakeArrayType() = ContextTypeSymbol(ContextTypeSymbolKind.SDArray, [| this |]) :> Type
             override this.MakeArrayType arg = ContextTypeSymbol(ContextTypeSymbolKind.Array arg, [| this |]) :> Type
             override this.MakePointerType() = ContextTypeSymbol(ContextTypeSymbolKind.Pointer, [| this |]) :> Type
@@ -804,19 +800,19 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
 
             override this.AssemblyQualifiedName                                                            = "[" + this.Assembly.FullName + "]" + this.FullName
 
-            override __.GetGenericArguments() = notRequired "GetGenericArguments"
-            override __.GetGenericTypeDefinition() = notRequired "GetGenericTypeDefinition"
-            override __.GetMember(name,mt,_bindingFlags)                                                      = notRequired "TxILGenericParam: GetMember"
-            override __.GUID                                                                                      = notRequired "TxILGenericParam: GUID"
-            override __.GetMethodImpl(name, _bindingFlags, binder, callConvention, types, modifiers)          = notRequired "TxILGenericParam: GetMethodImpl"
-            override __.GetConstructorImpl(_bindingFlags, binder, callConvention, types, modifiers)           = notRequired "TxILGenericParam: GetConstructorImpl"
-            override __.GetCustomAttributes(inherited)                                                            = notRequired "TxILGenericParam: GetCustomAttributes"
-            override __.GetCustomAttributes(attributeType, inherited)                                             = notRequired "TxILGenericParam: GetCustomAttributes"
-            override __.IsDefined(attributeType, inherited)                                                       = notRequired "TxILGenericParam: IsDefined"
-            override __.GetInterface(name, ignoreCase)                                                            = notRequired "TxILGenericParam: GetInterface"
-            override __.Module                                                                                    = notRequired "TxILGenericParam: Module" : Module
-            override __.GetElementType()                                                                          = notRequired "TxILGenericParam: GetElementType"
-            override __.InvokeMember(name, invokeAttr, binder, target, args, modifiers, culture, namedParameters) = notRequired "TxILGenericParam: InvokeMember"
+            override this.GetGenericArguments() = notRequired "GetGenericArguments" this.Name
+            override this.GetGenericTypeDefinition() = notRequired "GetGenericTypeDefinition" this.Name
+            override this.GetMember(name,mt,_bindingFlags) = notRequired "TxILGenericParam: GetMember" this.Name
+            override this.GUID = notRequired "TxILGenericParam: GUID" this.Name
+            override this.GetMethodImpl(name, _bindingFlags, binder, callConvention, types, modifiers) = notRequired "TxILGenericParam: GetMethodImpl" this.Name
+            override this.GetConstructorImpl(_bindingFlags, binder, callConvention, types, modifiers) = notRequired "TxILGenericParam: GetConstructorImpl" this.Name
+            override this.GetCustomAttributes(inherited) = notRequired "TxILGenericParam: GetCustomAttributes" this.Name
+            override this.GetCustomAttributes(attributeType, inherited) = notRequired "TxILGenericParam: GetCustomAttributes" this.Name
+            override this.IsDefined(attributeType, inherited) = notRequired "TxILGenericParam: IsDefined" this.Name
+            override this.GetInterface(name, ignoreCase) = notRequired "TxILGenericParam: GetInterface" this.Name
+            override this.Module = notRequired "TxILGenericParam: Module" this.Name : Module 
+            override this.GetElementType() = notRequired "TxILGenericParam: GetElementType" this.Name
+            override this.InvokeMember(name, invokeAttr, binder, target, args, modifiers, culture, namedParameters) = notRequired "TxILGenericParam: InvokeMember" this.Name
 
         }
 
@@ -940,16 +936,16 @@ and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef 
     override this.ToString() = sprintf "ctxt type %s" this.FullName
 
     override __.GetGenericArguments() = gps
-    override __.GetGenericTypeDefinition() = notRequired "GetGenericTypeDefinition"
-    override __.GetMember(_name, _memberType, _bindingFlags)                                                      = notRequired "TxILTypeDef: GetMember"
-    override __.GUID                                                                                      = notRequired "TxILTypeDef: GUID"
-    override __.GetCustomAttributes(_inherited)                                                            = notRequired "TxILTypeDef: GetCustomAttributes"
-    override __.GetCustomAttributes(_attributeType, _inherited)                                             = notRequired "TxILTypeDef: GetCustomAttributes"
-    override __.IsDefined(_attributeType, _inherited)                                                       = notRequired "TxILTypeDef: IsDefined"
-    override __.GetInterface(_name, _ignoreCase)                                                            = notRequired "TxILTypeDef: GetInterface"
-    override __.Module                                                                                    = notRequired "TxILTypeDef: Module" : Module
-    override __.GetElementType()                                                                          = notRequired "TxILTypeDef: GetElementType"
-    override __.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "TxILTypeDef: InvokeMember"
+    override __.GetGenericTypeDefinition() = notRequired "GetGenericTypeDefinition" inp.Name
+    override __.GetMember(_name, _memberType, _bindingFlags) = notRequired "TxILTypeDef: GetMember" inp.Name
+    override __.GUID = notRequired "TxILTypeDef: GUID" inp.Name
+    override __.GetCustomAttributes(_inherited) = notRequired "TxILTypeDef: GetCustomAttributes" inp.Name
+    override __.GetCustomAttributes(_attributeType, _inherited) = notRequired "TxILTypeDef: GetCustomAttributes" inp.Name
+    override __.IsDefined(_attributeType, _inherited) = notRequired "TxILTypeDef: IsDefined" inp.Name
+    override __.GetInterface(_name, _ignoreCase) = notRequired "TxILTypeDef: GetInterface" inp.Name
+    override __.Module = notRequired "TxILTypeDef: Module"  inp.Name : Module
+    override __.GetElementType() = notRequired "TxILTypeDef: GetElementType" inp.Name
+    override __.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "TxILTypeDef: InvokeMember" inp.Name
 
     member x.Metadata: ILTypeDef = inp
     member x.MakeMethodInfo (declTy,md) = TxILMethodDef declTy md
@@ -992,7 +988,7 @@ and ContextAssembly(ilGlobals, tryBindAssembly: ILAssemblyRef -> Choice<ContextA
         let r = reader.ILModuleDef.Resources.Elements |> Seq.find (fun r -> r.Name = resourceName)
         match r.Location with
         | ILResourceLocation.Local f -> new MemoryStream(f()) :> Stream
-        | _ -> notRequired (sprintf "reading manifest resource %s from non-embedded location" resourceName)
+        | _ -> notRequired "reading manifest resource %s from non-embedded location" resourceName
 
     member x.BindType(nsp:string uoption, nm:string) =
         match x.TryBindType(nsp, nm) with
