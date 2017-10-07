@@ -1812,8 +1812,8 @@ type ProvidedSymbolType(kind: ProvidedSymbolKind, args: Type list, convToTgt: Ty
     // For example, int<kg>
     member __.IsFSharpUnitAnnotated = match kind with ProvidedSymbolKind.Generic gtd -> not gtd.IsGenericTypeDefinition | _ -> false
 
-    override __.Module : Module                                                                   = notRequired "Module" (nameText())
-    override __.GetConstructors _bindingAttr                                                      = notRequired "GetConstructors" (nameText())
+    override __.Module : Module = notRequired "Module" (nameText())
+    override __.GetConstructors _bindingAttr = notRequired "GetConstructors" (nameText())
     override __.GetMethodImpl(_name, _bindingAttr, _binderBinder, _callConvention, _types, _modifiers) =
         match kind with
         | Generic gtd ->
@@ -2382,11 +2382,11 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
 
 
     override __.Module : Module = notRequired "Module" this.Name
-    override __.GUID                                                                                   = Guid.Empty
-    override __.GetConstructorImpl(_bindingAttr, _binder, _callConvention, _types, _modifiers)         = null
-    override __.GetCustomAttributes(_inherit)                                                          = [| |]
-    override __.GetCustomAttributes(_attributeType, _inherit)                                          = [| |]
-    override __.IsDefined(_attributeType: Type, _inherit)                                              = false
+    override __.GUID = Guid.Empty
+    override __.GetConstructorImpl(_bindingAttr, _binder, _callConvention, _types, _modifiers) = null
+    override __.GetCustomAttributes(_inherit) = [| |]
+    override __.GetCustomAttributes(_attributeType, _inherit) = [| |]
+    override __.IsDefined(_attributeType: Type, _inherit) = false
 
     override __.GetElementType()                                                                                  = notRequired "Module" this.Name
     override __.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "Module" this.Name
