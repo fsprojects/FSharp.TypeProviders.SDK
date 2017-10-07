@@ -3,6 +3,7 @@ source https://api.nuget.org/v3/index.json
 
 nuget Nuget.CommandLine
 nuget FAKE
+nuget xunit.runner.console
 
 group fs31
     source https://api.nuget.org/v3/index.json

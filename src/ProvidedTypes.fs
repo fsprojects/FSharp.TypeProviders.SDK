@@ -15,7 +15,9 @@ open System.Text
 open System.IO
 open System.Reflection
 open System.Linq.Expressions
+open System.Collections
 open System.Collections.Generic
+open System.Diagnostics
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Quotations.DerivedPatterns
@@ -430,7 +432,7 @@ type QuotationSimplifier(isGenerated: bool) =
                 if a.Name = "Empty" then a,b
                 else b,a
 
-            fun v -> transValueList (v :?> System.Collections.IEnumerable, ty, nil, cons)
+            fun v -> transValueList (v :?> IEnumerable, ty, nil, cons)
         else
             fun v -> Expr.Value(v, ty)
 
@@ -620,7 +622,7 @@ type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName,
     // have to use alternative means for various Method/Field/Constructor lookups on this kind of type.
     // Also, on Mono 3.x and 4.x this type had a different name.
     let TypeBuilderInstantiationType =
-        let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e-> false
+        let runningOnMono = try not (isNull (Type.GetType("Mono.Runtime"))) with e-> false
         let ty =
             if runningOnMono then
                 let ty = Type.GetType("System.Reflection.MonoGenericClass")
@@ -670,7 +672,7 @@ type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName,
             ilg.Emit(OpCodes.Stloc, l)
             lambdaLocals.[v] <- l
 
-        let expectedState = if (invoke.ReturnType = typeof<System.Void>) then ExpectedStackState.Empty else ExpectedStackState.Value
+        let expectedState = if (invoke.ReturnType = typeof<Void>) then ExpectedStackState.Empty else ExpectedStackState.Value
         let lambadParamVars = [| Quotations.Var("this", lambda); v|]
         let codeGen = CodeGenerator(assemblyMainModule, uniqueLambdaTypeName, implicitCtorArgsAsFields, transType, transField, transMethod, transCtor, isLiteralEnumField, ilg, lambdaLocals, lambadParamVars)
         codeGen.EmitExpr (expectedState, body)
@@ -952,7 +954,7 @@ type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName,
             | _ ->
                 ilg.Emit(OpCodes.Call, mappedMeth)
 
-            let returnTypeIsVoid = mappedMeth.ReturnType = typeof<System.Void>
+            let returnTypeIsVoid = mappedMeth.ReturnType = typeof<Void>
             match returnTypeIsVoid, (isEmpty expectedState) with
             | false, true ->
                     // method produced something, but we don't need it
@@ -987,13 +989,13 @@ type CodeGenerator(assemblyMainModule: ModuleBuilder, uniqueLambdaTypeName,
                 | :? float32 as x -> ilg.Emit(OpCodes.Ldc_R4, x)
                 | :? float as x -> ilg.Emit(OpCodes.Ldc_R8, x)
 #if !FX_NO_GET_ENUM_UNDERLYING_TYPE
-                | :? System.Enum as x when x.GetType().GetEnumUnderlyingType() = typeof<int32> -> ilg.Emit(OpCodes.Ldc_I4, unbox<int32> v)
+                | :? Enum as x when x.GetType().GetEnumUnderlyingType() = typeof<int32> -> ilg.Emit(OpCodes.Ldc_I4, unbox<int32> v)
 #endif
                 | :? Type as ty ->
                     ilg.Emit(OpCodes.Ldtoken, transType ty)
                     ilg.Emit(OpCodes.Call, GetTypeFromHandleMethod())
                 | :? decimal as x ->
-                    let bits = System.Decimal.GetBits x
+                    let bits = Decimal.GetBits x
                     ilg.Emit(OpCodes.Ldc_I4, bits.[0])
                     ilg.Emit(OpCodes.Ldc_I4, bits.[1])
                     ilg.Emit(OpCodes.Ldc_I4, bits.[2])
@@ -1097,8 +1099,8 @@ module internal Misc =
 
     let notRequired opname item =
         let msg = sprintf "The operation '%s' on item '%s' should not be called on provided type, member or parameter" opname item
-        System.Diagnostics.Debug.Assert (false, msg)
-        raise (System.NotSupportedException msg)
+        Debug.Assert (false, msg)
+        raise (NotSupportedException msg)
 
     let mkParamArrayCustomAttributeData() =
 #if FX_NO_CUSTOMATTRIBUTEDATA
@@ -1177,7 +1179,7 @@ module internal Misc =
 #else
         { new CustomAttributeData() with
 #endif
-                member __.Constructor =  typeof<System.ObsoleteAttribute>.GetConstructors() |> Array.find (fun x -> x.GetParameters().Length = 2)
+                member __.Constructor =  typeof<ObsoleteAttribute>.GetConstructors() |> Array.find (fun x -> x.GetParameters().Length = 2)
                 member __.ConstructorArguments = upcast [|CustomAttributeTypedArgument(typeof<string>, message) ; CustomAttributeTypedArgument(typeof<bool>, isError)  |]
                 member __.NamedArguments = upcast [| |] }
 
@@ -1252,7 +1254,7 @@ module internal Misc =
 
 
 type ProvidedStaticParameter(parameterName:string,parameterType:Type,?parameterDefaultValue:obj) =
-    inherit System.Reflection.ParameterInfo()
+    inherit ParameterInfo()
 
     let customAttributesImpl = CustomAttributesImpl()
 
@@ -1270,7 +1272,7 @@ type ProvidedStaticParameter(parameterName:string,parameterType:Type,?parameterD
     override __.GetCustomAttributes(_attributeType, _inherit) = notRequired "GetCustomAttributes" parameterName
 
 type ProvidedParameter(parameterName:string,parameterType:Type,?isOut:bool,?optionalValue:obj) =
-    inherit System.Reflection.ParameterInfo()
+    inherit ParameterInfo()
     let customAttributesImpl = CustomAttributesImpl()
     let isOut = defaultArg isOut false
     member __.IsParamArray with get() = customAttributesImpl.HasParamArray and set(v) = customAttributesImpl.HasParamArray <- v
@@ -1291,11 +1293,11 @@ type ProvidedConstructor(parameters : ProvidedParameter list) =
     let parameters  = parameters |> List.map (fun p -> p :> ParameterInfo)
     let mutable baseCall  = None
 
-    let mutable declaringType = null : System.Type
+    let mutable declaringType = null : Type
     let mutable invokeCode    = None : option<Expr list -> Expr>
     let mutable isImplicitCtor  = false
     let mutable ctorAttributes = MethodAttributes.Public ||| MethodAttributes.RTSpecialName
-    let nameText () = sprintf "constructor for %s" (if declaringType=null then "<not yet known type>" else declaringType.FullName)
+    let nameText () = sprintf "constructor for %s" (if isNull declaringType then "<not yet known type>" else declaringType.FullName)
     let isStatic() = ctorAttributes.HasFlag(MethodAttributes.Static)
 
     let customAttributesImpl = CustomAttributesImpl()
@@ -1317,7 +1319,7 @@ type ProvidedConstructor(parameters : ProvidedParameter list) =
 
     member __.DeclaringTypeImpl
         with set x =
-            if declaringType<>null then failwith (sprintf "ProvidedConstructor: declaringType already set on '%s'" (nameText()));
+            if not (isNull declaringType) then failwith (sprintf "ProvidedConstructor: declaringType already set on '%s'" (nameText()));
             declaringType <- x
 
     member __.InvokeCode
@@ -1367,7 +1369,7 @@ type ProvidedConstructor(parameters : ProvidedParameter list) =
     override __.GetCustomAttributes(_attributeType, _inherit)      = notRequired "GetCustomAttributes" (nameText())
 
 type ProvidedMethod(methodName: string, parameters: ProvidedParameter list, returnType: Type) =
-    inherit System.Reflection.MethodInfo()
+    inherit MethodInfo()
     let argParams = parameters |> List.map (fun p -> p :> ParameterInfo)
 
     // State
@@ -1467,8 +1469,7 @@ type ProvidedMethod(methodName: string, parameters: ProvidedParameter list, retu
 
 
 type ProvidedProperty(propertyName: string, propertyType: Type, ?parameters: ProvidedParameter list) =
-    inherit System.Reflection.PropertyInfo()
-    // State
+    inherit PropertyInfo()
 
     let parameters = defaultArg parameters []
     let mutable declaringType = null
@@ -1482,7 +1483,7 @@ type ProvidedProperty(propertyName: string, propertyType: Type, ?parameters: Pro
     // Delay construction - to pick up the latest isStatic
     let markSpecialName (m:ProvidedMethod) = m.AddMethodAttrs(MethodAttributes.SpecialName); m
     let getter = lazy (ProvidedMethod("get_" + propertyName,parameters,propertyType,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=getterCode.Value) |> markSpecialName)
-    let setter = lazy (ProvidedMethod("set_" + propertyName,parameters @ [ProvidedParameter("value",propertyType)],typeof<System.Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=setterCode.Value) |> markSpecialName)
+    let setter = lazy (ProvidedMethod("set_" + propertyName,parameters @ [ProvidedParameter("value",propertyType)],typeof<Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=setterCode.Value) |> markSpecialName)
 
     let customAttributesImpl = CustomAttributesImpl()
     member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
@@ -1531,8 +1532,7 @@ type ProvidedProperty(propertyName: string, propertyType: Type, ?parameters: Pro
     override __.IsDefined(_attributeType, _inherit)             = notRequired "IsDefined" propertyName
 
 type ProvidedEvent(propertyName:string,eventHandlerType:Type) =
-    inherit System.Reflection.EventInfo()
-    // State
+    inherit EventInfo()
 
     let mutable declaringType = null
     let mutable isStatic = false
@@ -1541,8 +1541,8 @@ type ProvidedEvent(propertyName:string,eventHandlerType:Type) =
 
     // Delay construction - to pick up the latest isStatic
     let markSpecialName (m:ProvidedMethod) = m.AddMethodAttrs(MethodAttributes.SpecialName); m
-    let adder = lazy (ProvidedMethod("add_" + propertyName, [ProvidedParameter("handler", eventHandlerType)],typeof<System.Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=adderCode.Value) |> markSpecialName)
-    let remover = lazy (ProvidedMethod("remove_" + propertyName, [ProvidedParameter("handler", eventHandlerType)],typeof<System.Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=removerCode.Value) |> markSpecialName)
+    let adder = lazy (ProvidedMethod("add_" + propertyName, [ProvidedParameter("handler", eventHandlerType)],typeof<Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=adderCode.Value) |> markSpecialName)
+    let remover = lazy (ProvidedMethod("remove_" + propertyName, [ProvidedParameter("handler", eventHandlerType)],typeof<Void>,IsStaticMethod=isStatic,DeclaringTypeImpl=declaringType,InvokeCode=removerCode.Value) |> markSpecialName)
 
     let customAttributesImpl = CustomAttributesImpl()
     member __.AddXmlDocComputed xmlDocFunction            = customAttributesImpl.AddXmlDocComputed xmlDocFunction
@@ -1585,8 +1585,7 @@ type ProvidedEvent(propertyName:string,eventHandlerType:Type) =
     override __.IsDefined(_attributeType, _inherit)            = notRequired "IsDefined" propertyName
 
 type ProvidedLiteralField(fieldName:string,fieldType:Type,literalValue:obj) =
-    inherit System.Reflection.FieldInfo()
-    // State
+    inherit FieldInfo()
 
     let mutable declaringType = null
 
@@ -1622,8 +1621,7 @@ type ProvidedLiteralField(fieldName:string,fieldType:Type,literalValue:obj) =
     override __.FieldHandle = notRequired "FieldHandle" fieldName
 
 type ProvidedField(fieldName:string,fieldType:Type) =
-    inherit System.Reflection.FieldInfo()
-    // State
+    inherit FieldInfo()
 
     let mutable declaringType = null
 
@@ -1666,8 +1664,8 @@ type ProvidedSymbolKind =
     | Array of int
     | Pointer
     | ByRef
-    | Generic of System.Type
-    | FSharpTypeAbbreviation of (System.Reflection.Assembly * string * string[])
+    | Generic of Type
+    | FSharpTypeAbbreviation of (Assembly * string * string[])
 
 
 /// Represents an array or other symbolic type involving a provided type as the argument.
@@ -1758,10 +1756,10 @@ type ProvidedSymbolType(kind: ProvidedSymbolKind, args: Type list, convToTgt: Ty
 
     override __.BaseType =
         match kind with
-        | ProvidedSymbolKind.SDArray -> convToTgt typeof<System.Array>
-        | ProvidedSymbolKind.Array _ -> convToTgt typeof<System.Array>
-        | ProvidedSymbolKind.Pointer -> convToTgt typeof<System.ValueType>
-        | ProvidedSymbolKind.ByRef -> convToTgt typeof<System.ValueType>
+        | ProvidedSymbolKind.SDArray -> convToTgt typeof<Array>
+        | ProvidedSymbolKind.Array _ -> convToTgt typeof<Array>
+        | ProvidedSymbolKind.Pointer -> convToTgt typeof<ValueType>
+        | ProvidedSymbolKind.ByRef -> convToTgt typeof<ValueType>
         | ProvidedSymbolKind.Generic gty  ->
             if gty.BaseType = null then null else
             ProvidedSymbolType.convType args gty.BaseType
@@ -1860,10 +1858,10 @@ type ProvidedSymbolType(kind: ProvidedSymbolKind, args: Type list, convToTgt: Ty
     override this.MakeArrayType arg = ProvidedSymbolType(ProvidedSymbolKind.Array arg, [this], convToTgt) :> Type
 
 type ProvidedSymbolMethod(genericMethodDefinition: MethodInfo, parameters: Type list) =
-    inherit System.Reflection.MethodInfo()
+    inherit MethodInfo()
 
     let convParam (p:ParameterInfo) =
-        { new System.Reflection.ParameterInfo() with
+        { new ParameterInfo() with
               override __.Name = p.Name
               override __.ParameterType = ProvidedSymbolType.convType parameters p.ParameterType
               override __.Attributes = p.Attributes
@@ -1961,7 +1959,7 @@ type ProvidedMeasureBuilder() =
 [<RequireQualifiedAccess; NoComparison>]
 type TypeContainer =
   | Namespace of Assembly * string // namespace
-  | Type of System.Type
+  | Type of Type
   | TypeToBeDecided
 
 #if !NO_GENERATIVE
@@ -2130,7 +2128,7 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
         this.AddMembersDelayed(fun () -> [memberFunction()])
 
 #if !NO_GENERATIVE
-    member __.AddAssemblyTypesAsNestedTypesDelayed (assemblyFunction : unit -> System.Reflection.Assembly)  =
+    member __.AddAssemblyTypesAsNestedTypesDelayed (assemblyFunction : unit -> Assembly)  =
         let bucketByPath nodef tipf (items: (string list * 'Value) list) =
             // Find all the items with an empty key list and call 'tipf'
             let tips =
@@ -2376,7 +2374,7 @@ type ProvidedTypeDefinition(container:TypeContainer, className : string, baseTyp
     override __.Equals(that:obj) =
         match that with
         | null              -> false
-        | :? ProvidedTypeDefinition as ti -> System.Object.ReferenceEquals(this,ti)
+        | :? ProvidedTypeDefinition as ti -> Object.ReferenceEquals(this,ti)
         | _                 -> false
 
     override __.GetGenericArguments() = [||]
@@ -2415,12 +2413,12 @@ type AssemblyGenerator(assemblyFileName) =
     let assemblyName = AssemblyName assemblyShortName
 #if FX_NO_LOCAL_FILESYSTEM
     let assembly =
-        System.AppDomain.CurrentDomain.DefineDynamicAssembly(name=assemblyName,access=AssemblyBuilderAccess.Run)
+        AppDomain.CurrentDomain.DefineDynamicAssembly(name=assemblyName,access=AssemblyBuilderAccess.Run)
     let assemblyMainModule =
         assembly.DefineDynamicModule("MainModule")
 #else
     let assembly =
-        System.AppDomain.CurrentDomain.DefineDynamicAssembly(name=assemblyName,access=(AssemblyBuilderAccess.Save ||| AssemblyBuilderAccess.Run),dir=Path.GetDirectoryName assemblyFileName)
+        AppDomain.CurrentDomain.DefineDynamicAssembly(name=assemblyName,access=(AssemblyBuilderAccess.Save ||| AssemblyBuilderAccess.Run),dir=Path.GetDirectoryName assemblyFileName)
     let assemblyMainModule =
         assembly.DefineDynamicModule("MainModule", Path.GetFileName assemblyFileName)
 #endif
@@ -2609,11 +2607,11 @@ type AssemblyGenerator(assemblyFileName) =
                         if p.HasDefaultParameterValue then
                             do
                                 let ctor = typeof<System.Runtime.InteropServices.DefaultParameterValueAttribute>.GetConstructor([|typeof<obj>|])
-                                let builder = new CustomAttributeBuilder(ctor, [|p.RawDefaultValue|])
+                                let builder = CustomAttributeBuilder(ctor, [|p.RawDefaultValue|])
                                 pb.SetCustomAttribute builder
                             do
                                 let ctor = typeof<System.Runtime.InteropServices.OptionalAttribute>.GetConstructor([||])
-                                let builder = new CustomAttributeBuilder(ctor, [||])
+                                let builder = CustomAttributeBuilder(ctor, [||])
                                 pb.SetCustomAttribute builder
                             pb.SetConstant p.RawDefaultValue
                     methMap.[pminfo] <- mb
@@ -2719,7 +2717,7 @@ type AssemblyGenerator(assemblyFileName) =
                 //printfn "Emitting linqCode for %s::%s, code = %s" pminfo.DeclaringType.FullName pminfo.Name (try linqCode.ToString() with _ -> "<error>")
 
 
-                let expectedState = if (minfo.ReturnType = typeof<System.Void>) then ExpectedStackState.Empty else ExpectedStackState.Value
+                let expectedState = if (minfo.ReturnType = typeof<Void>) then ExpectedStackState.Empty else ExpectedStackState.Value
                 let codeGen = CodeGenerator(assemblyMainModule, uniqueLambdaTypeName, implicitCtorArgsAsFields, transType, transField, transMeth, transCtor, isLiteralEnumField, ilg, locals, parameterVars)
                 codeGen.EmitExpr (expectedState, expr)
                 ilg.Emit OpCodes.Ret
@@ -2774,11 +2772,10 @@ type AssemblyGenerator(assemblyFileName) =
             | None -> ()
             | Some ptd -> ptd.SetAssembly assemblyLoadedInMemory)
 
-#if FX_NO_LOCAL_FILESYSTEM
-#else
+#if !FX_NO_LOCAL_FILESYSTEM
     member __.GetFinalBytes() =
         let assemblyBytes = File.ReadAllBytes assemblyFileName
-        let _assemblyLoadedInMemory = System.Reflection.Assembly.Load(assemblyBytes,null,System.Security.SecurityContextSource.CurrentAppDomain)
+        let _assemblyLoadedInMemory = Assembly.Load(assemblyBytes,null,System.Security.SecurityContextSource.CurrentAppDomain)
         //printfn "final bytes in '%s'" assemblyFileName
         File.Delete assemblyFileName
         assemblyBytes
@@ -2812,7 +2809,7 @@ type ProvidedAssembly(assemblyFileName: string) =
 #if !FX_NO_LOCAL_FILESYSTEM
     static member RegisterGenerated (fileName:string) =
         //printfn "registered assembly in '%s'" fileName
-        let assemblyBytes = System.IO.File.ReadAllBytes fileName
+        let assemblyBytes = File.ReadAllBytes fileName
         let assembly = Assembly.Load(assemblyBytes,null,System.Security.SecurityContextSource.CurrentAppDomain)
         GlobalProvidedAssemblyElementsTable.theTable.Add(assembly, Lazy<_>.CreateFromValue assemblyBytes)
         assembly
@@ -2828,7 +2825,7 @@ module Local =
             member __.GetNestedNamespaces() = [| |]
             member __.NamespaceName = namespaceName
             member __.GetTypes() = types |> Array.copy
-            member __.ResolveTypeName typeName : System.Type =
+            member __.ResolveTypeName typeName : Type =
                 match types |> Array.tryFind (fun ty -> ty.Name = typeName) with
                 | Some ty -> ty
                 | None    -> null
@@ -2865,11 +2862,11 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
     member __.Disposing = disposing.Publish
 
 #if FX_NO_LOCAL_FILESYSTEM
-    interface System.IDisposable with
+    interface IDisposable with
         member x.Dispose() =
             disposing.Trigger(x, EventArgs.Empty)
 #else
-    abstract member ResolveAssembly : args : System.ResolveEventArgs -> Assembly
+    abstract member ResolveAssembly : args : ResolveEventArgs -> Assembly
 
     default __.ResolveAssembly(args) =
         let expectedName = (AssemblyName(args.Name)).Name + ".dll"
@@ -2891,7 +2888,7 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
         |> IO.Path.GetDirectoryName
         |> this.RegisterProbingFolder
 
-    interface System.IDisposable with
+    interface IDisposable with
         member x.Dispose() =
             disposing.Trigger(x, EventArgs.Empty)
             AppDomain.CurrentDomain.remove_AssemblyResolve handler
@@ -2935,7 +2932,7 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
                 // Otherwise, assume this is a generative assembly and just emit a call to the constructor or method
                 | :?  ConstructorInfo as cinfo ->
                     Expr.NewObjectUnchecked(cinfo, Array.toList parameters)
-                | :? System.Reflection.MethodInfo as minfo ->
+                | :? MethodInfo as minfo ->
                     if minfo.IsStatic then
                         Expr.CallUnchecked(minfo, Array.toList parameters)
                     else
@@ -2999,7 +2996,7 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
 #if FX_NO_LOCAL_FILESYSTEM
         override __.GetGeneratedAssemblyContents(_assembly) =
             // TODO: this is very fake, we rely on the fact it is never needed
-            match System.Windows.Application.GetResourceStream(System.Uri("FSharp.Core.dll",System.UriKind.Relative)) with
+            match System.Windows.Application.GetResourceStream(Uri("FSharp.Core.dll",UriKind.Relative)) with
             | null -> failwith "FSharp.Core.dll not found as Manifest Resource, we're just trying to read some random .NET assembly, ok?"
             | resStream ->
                 use stream = resStream.Stream
@@ -3018,7 +3015,7 @@ type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<Provided
             match GlobalProvidedAssemblyElementsTable.theTable.TryGetValue assembly with
             | true,bytes -> bytes.Force()
             | _ ->
-                let bytes = System.IO.File.ReadAllBytes assembly.ManifestModule.FullyQualifiedName
+                let bytes = File.ReadAllBytes assembly.ManifestModule.FullyQualifiedName
                 GlobalProvidedAssemblyElementsTable.theTable.[assembly] <- Lazy<_>.CreateFromValue bytes
                 bytes
 #endif

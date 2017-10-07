@@ -25,6 +25,8 @@ let tags = "F# fsharp typeprovider"
 let gitHome = "https://github.com/fsprojects"
 let gitName = "FSharp.TypeProviders.SDK"
 
+let config = "Release"
+
 // Read release notes & version info from RELEASE_NOTES.md
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 let release =
@@ -71,9 +73,9 @@ Target "Restore" (fun _ ->
 )
 Target "Compile" (fun _ ->
   // We don't use Fake.DotNetCli.Build because of https://github.com/dotnet/sdk/issues/335
-    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Build"]} ) "src/FSharp.TypeProviders.SDK.fsproj"
+    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Build"]; Properties=[("Cofiguration",config)]} ) "src/FSharp.TypeProviders.SDK.fsproj"
+    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Build"]; Properties=[("Cofiguration",config)]} ) "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
 )
-
 
 //#if EXAMPLES
 //            { Name = "StaticProperty"; ProviderSourceFiles = ["StaticProperty.fsx"]; TestSourceFiles = ["StaticProperty.Tests.fsx"]}
@@ -83,7 +85,8 @@ Target "Compile" (fun _ ->
 Target "RunTests" (fun _ ->
 #if !MONO
   // We don't do this on Linux/OSX because of https://github.com/dotnet/sdk/issues/335
-    Fake.DotNetCli.Test (fun pp -> { pp with Project="tests/FSharp.TypeProviders.SDK.Tests.fsproj" })
+  // TODO: work out why parallel tests are failing?
+    Fake.DotNetCli.Test (fun pp -> { pp with Project="tests/FSharp.TypeProviders.SDK.Tests.fsproj"; Configuration=config; AdditionalArgs=["-l";"trx";"--";"-parallel";"none"] })
 #endif
     ()
 )
@@ -91,7 +94,7 @@ Target "RunTests" (fun _ ->
 Target "NuGet" (fun _ ->
 #if !MONO
   // We don't do this on Linux/OSX because of https://github.com/dotnet/sdk/issues/335
-    Fake.DotNetCli.Pack (fun pp -> { pp with Project="src/FSharp.TypeProviders.SDK.fsproj" })
+    Fake.DotNetCli.Pack (fun pp -> { pp with Project="src/FSharp.TypeProviders.SDK.fsproj"; Configuration=config })
 #endif
     ()
 )
