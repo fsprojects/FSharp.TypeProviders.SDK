@@ -9,7 +9,6 @@
 open System
 open System.IO
 open Fake
-open Fake.DotNetCli
 
 // --------------------------------------------------------------------------------------
 // Information about the project to be used at NuGet
@@ -35,6 +34,7 @@ let release =
 
 
 let exec p args = 
+    printfn "Executing %s %s" p args 
     Shell.Exec(p, args) |> function 0 -> () | d -> failwithf "%s %s exited with error %d" p args d
 
 let pullRequest =
@@ -75,8 +75,9 @@ Target "Restore" (fun _ ->
 )
 Target "Compile" (fun _ ->
 #if MONO
-  // We don't use Fake.DotNetCli.Build because of https://github.com/dotnet/sdk/issues/335
-    exec "msbuild" ""
+  // We don't use dotnet build because of https://github.com/dotnet/sdk/issues/335
+    exec "msbuild" ("tests/FSharp.TypeProviders.SDK.fsproj /p:Configuration=" + config)
+    exec "msbuild" ("tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=" + config)
 #else
     exec "dotnet" "build"
 #endif
@@ -88,9 +89,15 @@ Target "Compile" (fun _ ->
 //#endif
 
 Target "RunTests" (fun _ ->
+#if MONO
+  // We don't use dotnet test because of https://github.com/dotnet/sdk/issues/335
+    //exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" ("/p:Configuration=" + config + " tests/bin/" + config + "/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none")
+    ()
+#else
     exec "dotnet" ("test tests/FSharp.TypeProviders.SDK.Tests.fsproj -c " + config)
     // This also gives console output:
     //exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" ("/p:Configuration=" + config + " tests/bin/" + config + "/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none")
+#endif
     ()
 )
 
