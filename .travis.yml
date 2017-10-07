@@ -1,6 +1,7 @@
 language: csharp
 
 mono:
+  - weekly
   - nightly
 
 # beta doesn't work because of whacky msbuild package install problems
