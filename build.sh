@@ -12,8 +12,11 @@ then
 else
   # use mono
 
+  sudo apt-get -y install msbuild mono-complete mono-devel fsharp
+
   which mono
-  find /usr/lib/mono
+  which dotnet
+  which msbuild
 
   mono .paket/paket.exe restore
   exit_code=$?

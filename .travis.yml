@@ -1,21 +1,25 @@
 language: csharp
 
 mono:
-  - beta
-  - latest
-  - 4.8.1
-  - 4.2.2
-  - 4.0.5
+  - weekly
+  - nightly
+
+# beta doesn't work because of whacky msbuild package install problems
+#  beta
+
+# 5.4.0 doesn't work because of missing SDK build things for F# new styleprojects + msbuild
+#  - latest
+
+# 5.2.0 doesn't work because of missing SDK build things for F# new styleprojects + msbuild
+#  - 5.2.0
+
+dotnet: 2.0.0
 
 os:
   - linux
   - osx
 
-matrix:
-  allow_failures:
-    - mono: beta
-
-sudo: false  # use the new container-based Travis infrastructure
+sudo: true  # use the new container-based Travis infrastructure
 
 script:
   - ./build.sh RunTests

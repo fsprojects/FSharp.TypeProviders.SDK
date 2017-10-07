@@ -1,10 +1,9 @@
 RESTRICTION: >= net45
 NUGET
   remote: https://api.nuget.org/v3/index.json
-    FAKE (4.63)
+    FAKE (4.63.2)
     Nuget.CommandLine (4.3)
-    NUnit (3.7.1)
-    NUnit.ConsoleRunner (3.7)
+    xunit.runner.console (2.3)
 
 GROUP fs31
 NUGET

@@ -1,8 +1,7 @@
 #if INTERACTIVE
-#r "../packages/NUnit/lib/net45/nunit.framework.dll"
 #load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" "../src/AssemblyReader.fs" "../src/AssemblyReaderReflection.fs" "../src/ProvidedTypesContext.fs" 
 #load "../src/ProvidedTypesTesting.fs"
-#load "FsUnit.fs"
+
 #else
 module FSharp.TypeProviders.SDK.Tests.BasicGenerativeTests
 #endif
@@ -13,8 +12,7 @@ open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Core.CompilerServices
-open NUnit.Framework
-open FsUnit
+open Xunit
 
 #nowarn "760" // IDisposable needs new
 
@@ -47,7 +45,7 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 
 
 
-[<Test>]
+[<Fact>]
 let ``GenerativePropertyProviderWithStaticParams generates for .NET 4.5 F# 4.0 correctly``() : unit  = 
   if Targets.supportsFSharp40 then 
     let args = [|  box 3; box 4  |] 
@@ -61,6 +59,6 @@ let ``GenerativePropertyProviderWithStaticParams generates for .NET 4.5 F# 4.0 c
     let t = providedTypeDefinition.MakeParametricType(typeName, args)
     Assert.True(t.Assembly.FullName.Contains("tmp"))
     let assemContents = (typeProviderForNamespaces :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
-    Assert.AreNotEqual(assemContents.Length, 0)
+    Assert.NotEqual(assemContents.Length, 0)
 
 #endif

@@ -3,16 +3,12 @@
 // --------------------------------------------------------------------------------------
 
 #I "packages/FAKE/tools"
-#r "FakeLib.dll"
+
+#r "packages/FAKE/tools/FakeLib.dll"
 
 open System
 open System.IO
-open Fake.AssemblyInfoFile
-open Fake.Git
-open Fake.Testing
-open Fake.FscHelper
 open Fake
-
 
 // --------------------------------------------------------------------------------------
 // Information about the project to be used at NuGet
@@ -28,11 +24,18 @@ let tags = "F# fsharp typeprovider"
 let gitHome = "https://github.com/fsprojects"
 let gitName = "FSharp.TypeProviders.SDK"
 
+let config = "Release"
+
 // Read release notes & version info from RELEASE_NOTES.md
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 let release =
     File.ReadLines "RELEASE_NOTES.md"
     |> ReleaseNotesHelper.parseReleaseNotes
+
+
+let exec p args = 
+    printfn "Executing %s %s" p args 
+    Shell.Exec(p, args) |> function 0 -> () | d -> failwithf "%s %s exited with error %d" p args d
 
 let pullRequest =
     match getBuildParamOrDefault "APPVEYOR_PULL_REQUEST_NUMBER" "" with
@@ -44,21 +47,16 @@ let pullRequest =
         Some <| int a
 
 let buildNumber =
-    int (getBuildParamOrDefault "APPVEYOR_BUILD_VERSION" "0")
+    getBuildParamOrDefault "APPVEYOR_BUILD_VERSION" "0"
 
 let version =
     match pullRequest with
     | None ->
-        sprintf "%s.%d" release.AssemblyVersion buildNumber
+        sprintf "%s.%s" release.AssemblyVersion buildNumber
     | Some num ->
-        sprintf "%s-pull-%d-%05d" release.AssemblyVersion num buildNumber
+        sprintf "%s-pull-%d-%s" release.AssemblyVersion num buildNumber
 let releaseNotes = release.Notes |> String.concat "\n"
-let outputPath = "./output/"
-let workingDir = "./temp/"
 let srcDir = "src"
-let exampleDir =  "examples"
-let testDir =  "test"
-let nunitDir = "packages/NUnit/lib/net45"
 
 let sources =
     [srcDir @@ "ProvidedTypes.fsi"
@@ -68,124 +66,57 @@ let sources =
      srcDir @@ "ProvidedTypesContext.fs"
      srcDir @@ "ProvidedTypesTesting.fs" ]
 
-
-// --------------------------------------------------------------------------------------
-// Clean build results
-
 Target "Clean" (fun _ ->
-    CleanDirs [outputPath; workingDir]
+    CleanDirs []
 )
 
-// --------------------------------------------------------------------------------------
-// Compile ProvidedTypes as a smoke test
+Target "Restore" (fun _ ->
+    exec "dotnet" "restore"
+)
 Target "Compile" (fun _ ->
-    // sources
-    // |> Compile [
-    //     FscHelper.Target TargetType.Library
-    //     Platform PlatformType.AnyCpu
-    //     Reference "System.Reflection.Metadata.dll"
-    // ]
-
-    !! "FSharp.TypeProviders.SDK.sln"
-    |> MSBuildRelease "" "Build"
-    |> ignore
-)
-
-type ExampleWithTests =
-    { Name : string
-      ProviderSourceFiles : string list
-      TestSourceFiles : string list }
-
-
-// --------------------------------------------------------------------------------------
-// Compile example providers and accompanying test dlls
-#if EXAMPLES
-Target "Examples" (fun _ ->
-    let examples =
-        [
-            { Name = "StaticProperty"; ProviderSourceFiles = ["StaticProperty.fsx"]; TestSourceFiles = ["StaticProperty.Tests.fsx"]}
-            { Name = "ErasedWithConstructor"; ProviderSourceFiles = ["ErasedWithConstructor.fsx"]; TestSourceFiles = ["ErasedWithConstructor.Tests.fsx"]}
-        ]
-
-    if not (Directory.Exists testDir) then
-        Directory.CreateDirectory testDir |> ignore
-
-    let testNunitDll = testDir @@ "nunit.framework.dll"
-
-    if File.Exists testNunitDll then
-        File.Delete testNunitDll
-
-    File.Copy (nunitDir @@ "nunit.framework.dll", testNunitDll)
-
-    let fromExampleDir filenames =
-        filenames
-        |> List.map (fun filename -> exampleDir @@ filename)
-
-    examples
-    |> List.iter (fun example ->
-            // Compile type provider
-            let output = testDir @@ example.Name + ".dll"
-            (List.concat [sources;fromExampleDir example.ProviderSourceFiles])
-            |> Compile [
-                Out output
-                FscHelper.Target TargetType.Library
-            ]
-
-            // Compile test dll
-            (fromExampleDir example.TestSourceFiles)
-            |> Compile [
-                Out (testDir @@ example.Name + ".Tests.dll")
-                FscHelper.Target TargetType.Library
-                References [output;nunitDir @@ "nunit.framework.dll"]
-            ]
-        )
-)
+#if MONO
+  // We don't use dotnet build because of https://github.com/dotnet/sdk/issues/335
+    exec "msbuild" ("src/FSharp.TypeProviders.SDK.fsproj /p:Configuration=" + config)
+    exec "msbuild" ("tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=" + config)
+#else
+    exec "dotnet" "build"
 #endif
+)
+
+//#if EXAMPLES
+//            { Name = "StaticProperty"; ProviderSourceFiles = ["StaticProperty.fsx"]; TestSourceFiles = ["StaticProperty.Tests.fsx"]}
+//            { Name = "ErasedWithConstructor"; ProviderSourceFiles = ["ErasedWithConstructor.fsx"]; TestSourceFiles = ["ErasedWithConstructor.Tests.fsx"]}
+//#endif
 
 Target "RunTests" (fun _ ->
-    !! ("tests/bin/Release/FSharp.TypeProviders.SDK.Tests.dll")
-    |> NUnit3 id
-
-#if EXAMPLES
-    !! (testDir @@ "*.Tests.dll")
-    |> NUnit3 id
+#if MONO
+  // We don't use dotnet test because of https://github.com/dotnet/sdk/issues/335
+    //exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" ("/p:Configuration=" + config + " tests/bin/" + config + "/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none")
+    ()
+#else
+    exec "dotnet" ("test tests/FSharp.TypeProviders.SDK.Tests.fsproj -c " + config)
+    // This also gives console output:
+    //exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" ("/p:Configuration=" + config + " tests/bin/" + config + "/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none")
 #endif
+    ()
 )
-
-// --------------------------------------------------------------------------------------
-// Build a NuGet package
 
 Target "NuGet" (fun _ ->
-    sources |> CopyTo (workingDir @@ "content")
-
-    NuGet (fun p ->
-        { p with
-            Authors = authors
-            Project = project
-            Summary = summary
-            Description = description
-            Version = version
-            ReleaseNotes = releaseNotes
-            Tags = tags
-            OutputPath = outputPath
-            WorkingDir = workingDir
-            AccessKey = getBuildParamOrDefault "nugetkey" ""
-            Publish = hasBuildParam "nugetkey"
-            Files = [(workingDir, None, None)]
-            Dependencies = [] })
-        "nuget/FSharp.TypeProviders.SDK.nuspec"
+#if !MONO
+  // We don't do this on Linux/OSX because of https://github.com/dotnet/sdk/issues/335
+    exec "dotnet" ("pack src/FSharp.TypeProviders.SDK.fsproj -c " + config)
+#endif
+    ()
 )
-
-// --------------------------------------------------------------------------------------
-// Help
 
 "Clean"
     ==> "NuGet"
 
-"Compile"
-#if EXAMPLES
-    ==> "Examples"
-#endif
+"Restore"
+    ==> "Compile"
+//#if EXAMPLES
+//    ==> "Examples"
+//#endif
     ==> "RunTests"
     ==> "NuGet"
 
