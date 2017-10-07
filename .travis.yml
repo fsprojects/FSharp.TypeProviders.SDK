@@ -1,9 +1,16 @@
 language: csharp
 
 mono:
-  - beta
-  - latest
-  - 5.2.0
+  - nightly
+
+# beta doesn't work because of whacky msbuild package install problems
+#  beta
+
+# 5.4.0 doesn't work because of missing SDK build things for F# new styleprojects + msbuild
+#  - latest
+
+# 5.2.0 doesn't work because of missing SDK build things for F# new styleprojects + msbuild
+#  - 5.2.0
 
 dotnet: 2.0.0
 
