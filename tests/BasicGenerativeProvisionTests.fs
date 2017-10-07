@@ -54,7 +54,7 @@ let ``GenerativePropertyProviderWithStaticParams generates for .NET 4.5 F# 4.0 c
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
     let typeProviderForNamespaces = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
     let providedTypeDefinition = typeProviderForNamespaces.Namespaces |> Seq.last |> snd |> Seq.last
-    let typeName = providedTypeDefinition.Name + (args |> Seq.map (fun s -> ",\"" + (if s = null then "" else s.ToString()) + "\"") |> Seq.reduce (+))
+    let typeName = providedTypeDefinition.Name + (args |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
 
     let t = providedTypeDefinition.MakeParametricType(typeName, args)
     Assert.True(t.Assembly.FullName.Contains("tmp"))
