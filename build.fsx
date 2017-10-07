@@ -33,6 +33,10 @@ let release =
     File.ReadLines "RELEASE_NOTES.md"
     |> ReleaseNotesHelper.parseReleaseNotes
 
+
+let exec p args = 
+    Shell.Exec(p, args) |> function 0 -> () | d -> failwithf "%s %s exited with error %d" p args d
+
 let pullRequest =
     match getBuildParamOrDefault "APPVEYOR_PULL_REQUEST_NUMBER" "" with
     | "" ->
@@ -67,14 +71,15 @@ Target "Clean" (fun _ ->
 )
 
 Target "Restore" (fun _ ->
-  // We don't use Fake.DotNetCli.Restore because of https://github.com/dotnet/sdk/issues/335
-    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Restore"]} ) "src/FSharp.TypeProviders.SDK.fsproj"
-    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Restore"]} ) "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
+    exec "dotnet" "restore"
 )
 Target "Compile" (fun _ ->
+#if MONO
   // We don't use Fake.DotNetCli.Build because of https://github.com/dotnet/sdk/issues/335
-    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Build"]; Properties=[("Cofiguration",config)]} ) "src/FSharp.TypeProviders.SDK.fsproj"
-    Fake.MSBuildHelper.build  (fun pp -> { pp with Targets= ["Build"]; Properties=[("Cofiguration",config)]} ) "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
+    exec "msbuild" ""
+#else
+    exec "dotnet" "build"
+#endif
 )
 
 //#if EXAMPLES
@@ -83,18 +88,16 @@ Target "Compile" (fun _ ->
 //#endif
 
 Target "RunTests" (fun _ ->
-#if !MONO
-  // We don't do this on Linux/OSX because of https://github.com/dotnet/sdk/issues/335
-  // TODO: work out why parallel tests are failing?
-    Fake.DotNetCli.Test (fun pp -> { pp with Project="tests/FSharp.TypeProviders.SDK.Tests.fsproj"; Configuration=config; AdditionalArgs=["-l";"trx";"--";"-parallel";"none"] })
-#endif
+    exec "dotnet" ("test tests/FSharp.TypeProviders.SDK.Tests.fsproj -c " + config)
+    // This also gives console output:
+    //exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" ("/p:Configuration=" + config + " tests/bin/" + config + "/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none")
     ()
 )
 
 Target "NuGet" (fun _ ->
 #if !MONO
   // We don't do this on Linux/OSX because of https://github.com/dotnet/sdk/issues/335
-    Fake.DotNetCli.Pack (fun pp -> { pp with Project="src/FSharp.TypeProviders.SDK.fsproj"; Configuration=config })
+    exec "dotnet" ("pack src/FSharp.TypeProviders.SDK.fsproj -c " + config)
 #endif
     ()
 )

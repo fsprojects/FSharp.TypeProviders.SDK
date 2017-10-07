@@ -7,6 +7,9 @@
      <IsPackable>false</IsPackable>
     </PropertyGroup>
   <ItemGroup>
+    <None Include="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Compile Include="..\src\ProvidedTypes.fsi">
       <Link>ProvidedTypes.fsi</Link>
     </Compile>
