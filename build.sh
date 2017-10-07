@@ -12,7 +12,7 @@ then
 else
   # use mono
 
-  sudo apt-get -y install msbuild
+  sudo apt-get -y install msbuild mono-complete mono-devel fsharp mono-roslyn
 
   which mono
   which dotnet
