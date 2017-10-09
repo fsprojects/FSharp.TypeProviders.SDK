@@ -20,16 +20,6 @@ open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 
-let createEnum name (values: list<string*int>) =
-    let enumType = ProvidedTypeDefinition(name, Some typeof<Enum>, IsErased = false)
-    enumType.SetEnumUnderlyingType(typeof<int>)
-    
-    values
-    |> List.map (fun (name, value) -> ProvidedLiteralField(name, enumType, value))
-    |> enumType.AddMembers
-    
-    enumType
-
 
 [<TypeProvider>]
 type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
@@ -37,18 +27,29 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
 
     let ns = "Enums.Provided"
     let asm = Assembly.GetExecutingAssembly()
+    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=true)
     let tempAssembly = ProvidedAssembly(Path.ChangeExtension(Path.GetTempFileName(), "dll"))
-    let container = ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, IsErased = false)
+    let container = ctxt.ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, IsErased = false)
+
+    let createEnum name (values: list<string*int>) =
+        let enumType = ctxt.ProvidedTypeDefinition(name, Some typeof<Enum>, IsErased = false)
+        enumType.SetEnumUnderlyingType(typeof<int>)
+        
+        values
+        |> List.map (fun (name, value) -> ctxt.ProvidedLiteralField(name, enumType, value))
+        |> enumType.AddMembers
+        
+        enumType
 
     do
-        let enumContainer = ProvidedTypeDefinition("EnumContainer", Some typeof<obj>, IsErased = false)
+        let enumContainer = ctxt.ProvidedTypeDefinition("EnumContainer", Some typeof<obj>, IsErased = false)
         let enum = createEnum "NestedEnum" ["Foo", 1; "Bar", 2]
         enumContainer.AddMember enum
-        enumContainer.AddMember <| ProvidedField("nestedEnumField", enum)
+        enumContainer.AddMember <| ctxt.ProvidedField("nestedEnumField", enum)
         container.AddMember <| enumContainer
 
         let topLevelEnum = createEnum "TopLevelEnum" ["One", 1; "Two", 2]
-        enumContainer.AddMember <| ProvidedField("topLevelEnumField", topLevelEnum)
+        enumContainer.AddMember <| ctxt.ProvidedField("topLevelEnumField", topLevelEnum)
         container.AddMember topLevelEnum
     
         tempAssembly.AddTypes [container]

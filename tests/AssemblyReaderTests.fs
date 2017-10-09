@@ -11,6 +11,9 @@ open System.IO
 open Xunit
 
 
+(*
+    // Disabled because AssemblyReader is no longer available in signature for separate unit testing
+
 [<Fact>]
 let ``AssemblyReader reads assemblies containing Reflected Definitions``() : unit  = 
     let file = Path.Combine [| __SOURCE_DIRECTORY__; "test"; "ConsoleApplication4.exe" |]
@@ -21,3 +24,4 @@ let ``AssemblyReader reads assemblies containing Reflected Definitions``() : uni
              | [] -> ()
              | args -> yield (inp.Method.EnclosingType.BasicQualifiedName, Seq.head [ for (_,arg) in args -> if arg = null then "" else arg.ToString()]) ]
     ()
+*)

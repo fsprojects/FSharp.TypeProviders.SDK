@@ -8,23 +8,23 @@ open Microsoft.FSharp.Core.CompilerServices
 open System.Reflection
 
 [<TypeProvider>]
-type BasicProvider (config : TypeProviderConfig) as this =
+type BasicErasingProvider (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces ()
 
     let ns = "ErasedWithConstructor.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config)
+    let ctxt = ProvidedTypesContext.Create(config, false)
 
     let createTypes () =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
 
-        let ctor = ctxt.ProvidedConstructor([], invokeCode = fun args -> <@@ "My internal state" :> obj @@>)
+        let ctor = ctxt.ProvidedConstructor([], InvokeCode = fun args -> <@@ "My internal state" :> obj @@>)
         myType.AddMember(ctor)
 
-        let ctor2 = ctxt.ProvidedConstructor([ctxt.ProvidedParameter("InnerState", typeof<string>)], invokeCode = fun args -> <@@ (%%(args.[0]):string) :> obj @@>)
+        let ctor2 = ctxt.ProvidedConstructor([ctxt.ProvidedParameter("InnerState", typeof<string>)], InvokeCode = fun args -> <@@ (%%(args.[0]):string) :> obj @@>)
         myType.AddMember(ctor2)
 
-        let innerState = ctxt.ProvidedProperty("InnerState", typeof<string>, getterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string @@>)
+        let innerState = ctxt.ProvidedProperty("InnerState", typeof<string>, GetterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string @@>)
         myType.AddMember(innerState)
 
         [myType]

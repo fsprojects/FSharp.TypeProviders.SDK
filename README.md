@@ -37,18 +37,11 @@ If using Paket, you can also add code files by direct GitHub references.
 
 ## The ProvidedTypes API - Cross-Targeting Type Providers
 
-Type providers may be used in projects that generate portable code or target other .NET Frameworks than
-that being used by the F# compiler. To convert an erasing
-type provider to a cross-targeting erasing type provider, add the following source files to your project:
-
-* AssemblyReader.fs
-* AssemblyReaderReflection.fs
-* ProvidedTypesContext.fs
-
-Then add 
+Type providers may be used in projects that generate .NET Standard code or target other .NET Frameworks than
+that being used to execute the F# compiler. Use 
 
 ```fsharp
-let ctxt = ProvidedTypesContext.Create(config)
+let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
 ```
 
 to your code and always create provided entities using this ``ctxt`` object:
@@ -75,11 +68,11 @@ type BasicProvider (config : TypeProviderConfig) as this =
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config)
+    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
 
     let createTypes () =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, IsStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
+        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, IsStatic = true, GetterCode = (fun args -> <@@ "Hello world" @@>))
         myType.AddMember(myProp)
         [myType]
 

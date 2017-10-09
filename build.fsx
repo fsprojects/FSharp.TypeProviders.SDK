@@ -61,9 +61,6 @@ let srcDir = "src"
 let sources =
     [srcDir @@ "ProvidedTypes.fsi"
      srcDir @@ "ProvidedTypes.fs"
-     srcDir @@ "AssemblyReader.fs"
-     srcDir @@ "AssemblyReaderReflection.fs"
-     srcDir @@ "ProvidedTypesContext.fs"
      srcDir @@ "ProvidedTypesTesting.fs" ]
 
 Target "Clean" (fun _ ->

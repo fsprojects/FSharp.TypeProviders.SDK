@@ -31,7 +31,7 @@ type internal Testing() =
     /// Simulates a real instance of TypeProviderConfig
     static member MakeSimulatedTypeProviderConfig (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list) =
 
-        let cfg = new TypeProviderConfig(fun _ -> false)
+        let cfg = TypeProviderConfig(fun _ -> false)
         let (?<-) cfg prop value =
             let ty = cfg.GetType()
             match ty.GetProperty(prop,BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic) with
@@ -48,11 +48,11 @@ type internal Testing() =
         cfg?systemRuntimeContainsType <- systemRuntimeContainsType
 
         //Diagnostics.Debugger.Launch() |> ignore
-        Diagnostics.Debug.Assert(cfg.GetType().GetField("systemRuntimeContainsType",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) <> null)
-        Diagnostics.Debug.Assert(systemRuntimeContainsType.GetType().GetField("tcImports",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) <> null)
-        Diagnostics.Debug.Assert(typeof<TcImports>.GetField("dllInfos",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) <> null)
-        Diagnostics.Debug.Assert(typeof<TcImports>.GetProperty("Base",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) <> null)
-        Diagnostics.Debug.Assert(typeof<DllInfo>.GetProperty("FileName",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) <> null)
+        Diagnostics.Debug.Assert(cfg.GetType().GetField("systemRuntimeContainsType",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
+        Diagnostics.Debug.Assert(systemRuntimeContainsType.GetType().GetField("tcImports",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
+        Diagnostics.Debug.Assert(typeof<TcImports>.GetField("dllInfos",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
+        Diagnostics.Debug.Assert(typeof<TcImports>.GetProperty("Base",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
+        Diagnostics.Debug.Assert(typeof<DllInfo>.GetProperty("FileName",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
 
         cfg
 
@@ -203,7 +203,7 @@ type internal Testing() =
 
             let breakLine indent =
                 print "\n"
-                print (new String(' ', indent))
+                print (String(' ', indent))
 
             let isBigExpression = function
             | Let _ | NewArray _ | NewTuple _ -> true
@@ -287,7 +287,7 @@ type internal Testing() =
                         print " |> "
                         match args.Tail.Head with
                         | Lambda (_, (Call(_,_,_) as call)) -> printExpr true false call
-                        | _ as expr -> printExpr false false expr
+                        | expr -> printExpr false false expr
                     else
                         let printName() =
                             match instance with
@@ -459,14 +459,14 @@ type internal Testing() =
                       for param in m.GetParameters() do yield (ProvidedTypeDefinition.EraseType param.ParameterType) }
                 |> Seq.map (fun typ -> Expr.Value(null, typ))
                 |> Array.ofSeq
-                |> m.GetInvokeCodeInternal false
+                |> m.GetInvokeCodeInternal (false, id)
 
             let getConstructorBody (c: ProvidedConstructor) =
                 if c.IsImplicitCtor then Expr.Value(()) else
                 seq { for param in c.GetParameters() do yield (ProvidedTypeDefinition.EraseType param.ParameterType) }
                 |> Seq.map (fun typ -> Expr.Value(null, typ))
                 |> Array.ofSeq
-                |> c.GetInvokeCodeInternal false
+                |> c.GetInvokeCodeInternal (false, id)
 
             let printExpr x =
                 if not ignoreOutput then
@@ -557,7 +557,7 @@ type internal Testing() =
                 | _ -> ""
                 |> print
                 print (toString true t)
-                let bt = if t.BaseType = null then typeof<obj> else t.BaseType
+                let bt = if isNull t.BaseType then typeof<obj> else t.BaseType
                 print " : "
                 print (toString true bt)
                 println()
@@ -574,7 +574,7 @@ module internal Targets =
 
     let private (++) a b = System.IO.Path.Combine(a,b)
 
-    let runningOnMono = Type.GetType("Mono.Runtime") <> null
+    let runningOnMono = Type.GetType("Mono.Runtime") |> isNull |> not
     let runningOnMac =
         (Environment.OSVersion.Platform = PlatformID.MacOSX)
         || (Environment.OSVersion.Platform = PlatformID.Unix) && Directory.Exists("/Applications") && Directory.Exists("/System") && Directory.Exists("/Users") && Directory.Exists("/Volumes")
