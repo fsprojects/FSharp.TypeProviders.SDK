@@ -6999,9 +6999,9 @@ namespace ProviderImplementation.ProvidedTypes
     open ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
     open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 
-    #if !NO_GENERATIVE
+#if !NO_GENERATIVE
 
-    type (*internal*) ExpectedStackState =
+    type ExpectedStackState =
         | Empty = 1
         | Address = 2
         | Value = 3
@@ -7964,11 +7964,11 @@ namespace ProviderImplementation.ProvidedTypes
 
         let disposing = Event<EventHandler,EventArgs>()
 
-    #if !FX_NO_LOCAL_FILESYSTEM
+#if !FX_NO_LOCAL_FILESYSTEM
         let probingFolders = ResizeArray()
         let handler = ResolveEventHandler(fun _ args -> this.ResolveAssembly(args))
         do AppDomain.CurrentDomain.add_AssemblyResolve handler
-    #endif
+#endif
 
         new (namespaceName:string,types:list<ProvidedTypeDefinition>) = new TypeProviderForNamespaces([(namespaceName,types)])
         new () = new TypeProviderForNamespaces([])
@@ -7976,13 +7976,13 @@ namespace ProviderImplementation.ProvidedTypes
         [<CLIEvent>]
         member __.Disposing = disposing.Publish
 
-    #if FX_NO_LOCAL_FILESYSTEM
+#if FX_NO_LOCAL_FILESYSTEM
 
         interface IDisposable with
             member x.Dispose() =
                 disposing.Trigger(x, EventArgs.Empty)
 
-    #else
+#else
 
         abstract member ResolveAssembly : args : ResolveEventArgs -> Assembly
 
@@ -8010,7 +8010,7 @@ namespace ProviderImplementation.ProvidedTypes
             member x.Dispose() =
                 disposing.Trigger(x, EventArgs.Empty)
                 AppDomain.CurrentDomain.remove_AssemblyResolve handler
-    #endif
+#endif
 
         member __.AddNamespace (namespaceName,types:list<_>) = otherNamespaces.Add (namespaceName,types)
 
