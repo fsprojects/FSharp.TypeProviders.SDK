@@ -7,9 +7,6 @@
   <ItemGroup>
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
-    <Compile Include="AssemblyReader.fs" />
-    <Compile Include="AssemblyReaderReflection.fs" />
     <Compile Include="ProvidedTypesTesting.fs" />
-    <Compile Include="ProvidedTypesContext.fs" />
   </ItemGroup>
 </Project>

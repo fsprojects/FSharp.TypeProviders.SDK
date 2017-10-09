@@ -24,16 +24,16 @@ type ErasingProvider (config : TypeProviderConfig) as this =
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config)
+    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
 
     let createTypes () =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let myStaticGetterProp = ctxt.ProvidedProperty("MyStaticGetterProperty", typeof<string list>, IsStatic = true, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
-        let myStaticSetterProp = ctxt.ProvidedProperty("MyStaticSetterProperty", typeof<string list>, IsStatic = true, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>), setterCode = (fun args -> <@@ () @@>))
-        let myStaticMethod = ctxt.ProvidedMethod("MyStaticMethod", [ ctxt.ProvidedParameter("paramName",typeof<string list>) ], typeof<string list>, IsStaticMethod = true, invokeCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
-        let myGetterProp = ctxt.ProvidedProperty("MyGetterProperty", typeof<string list>, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
-        let mySetterProp = ctxt.ProvidedProperty("MySetterProperty", typeof<string list>, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>), setterCode = (fun args -> <@@ () @@>))
-        let myMethod = ctxt.ProvidedMethod("MyMethod", [ ctxt.ProvidedParameter("paramName",typeof<string list>) ], typeof<string list>, invokeCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let myStaticGetterProp = ctxt.ProvidedProperty("MyStaticGetterProperty", typeof<string list>, IsStatic = true, GetterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let myStaticSetterProp = ctxt.ProvidedProperty("MyStaticSetterProperty", typeof<string list>, IsStatic = true, GetterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>), SetterCode = (fun args -> <@@ () @@>))
+        let myStaticMethod = ctxt.ProvidedMethod("MyStaticMethod", [ ctxt.ProvidedParameter("paramName",typeof<string list>) ], typeof<string list>, IsStatic = true, InvokeCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let myGetterProp = ctxt.ProvidedProperty("MyGetterProperty", typeof<string list>, GetterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let mySetterProp = ctxt.ProvidedProperty("MySetterProperty", typeof<string list>, GetterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>), SetterCode = (fun args -> <@@ () @@>))
+        let myMethod = ctxt.ProvidedMethod("MyMethod", [ ctxt.ProvidedParameter("paramName",typeof<string list>) ], typeof<string list>, InvokeCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
         myType.AddMembers [myStaticGetterProp; myStaticSetterProp; myGetterProp; mySetterProp]
         myType.AddMembers [myStaticMethod; myMethod ]
 
@@ -49,18 +49,18 @@ type ErasingConstructorProvider (config : TypeProviderConfig) as this =
 
     let ns = "ErasedWithConstructor.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config)
+    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
 
     let createTypes () =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
 
-        let ctor = ctxt.ProvidedConstructor([], invokeCode = fun args -> <@@ ["My internal state"] :> obj @@>)
+        let ctor = ctxt.ProvidedConstructor([], InvokeCode = fun args -> <@@ ["My internal state"] :> obj @@>)
         myType.AddMember(ctor)
 
-        let ctor2 = ctxt.ProvidedConstructor([ctxt.ProvidedParameter("InnerState", typeof<string list>)], invokeCode = fun args -> <@@ (%%(args.[0]):string list) :> obj @@>)
+        let ctor2 = ctxt.ProvidedConstructor([ctxt.ProvidedParameter("InnerState", typeof<string list>)], InvokeCode = fun args -> <@@ (%%(args.[0]):string list) :> obj @@>)
         myType.AddMember(ctor2)
 
-        let innerState = ctxt.ProvidedProperty("InnerState", typeof<string list>, getterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string list @@>)
+        let innerState = ctxt.ProvidedProperty("InnerState", typeof<string list>, GetterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string list @@>)
         myType.AddMember(innerState)
 
         [myType]
@@ -74,11 +74,11 @@ type ErasingProviderWithStaticParams (config : TypeProviderConfig) as this =
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config)
+    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
 
     let createType (typeName, n:int) =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>)
-        let myProp = ctxt.ProvidedProperty("MyGetterProperty", typeof<string list>, IsStatic = true, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let myProp = ctxt.ProvidedProperty("MyGetterProperty", typeof<string list>, IsStatic = true, GetterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
         myType.AddMember(myProp)
         myType
 
