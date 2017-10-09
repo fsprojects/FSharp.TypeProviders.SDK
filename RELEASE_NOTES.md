@@ -8,9 +8,9 @@
 
 * ProvidedTypesContext.Create now takes a flag isForGenerated. It should be set to true for generative type providers
 
-* IsStaticMethod becomes IsStatic and some other similar naming changes
+* ``IsStaticMethod=true`` becomes ``isStatic=true`` and some other similar naming changes
 
-* Direct setters such as prop.GetterCode <- ... are removed in favour of optional parameters. You must specify GetterCode as a parameter
+* Direct setters such as prop.GetterCode <- ... are removed in favour of optional parameters ``getterCode=...``. You must specify getterCode as a parameter
 
 * Enables use as part of .NET Core execution of the F# compiler by extending TypeDelegator instead of Type. This needs to be more fully tested but repo itself now compiles as both .NET Standard 2.0 and .NET Framework, and passes tests as both .NET CoreApp 2.0 and .NET Framework 4.6.1
 

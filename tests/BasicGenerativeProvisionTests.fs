@@ -29,8 +29,8 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
     let createType (typeName, n:int) =
         let tmp = Path.ChangeExtension(Path.GetTempFileName(), "dll")
         let myAssem = ProvidedAssembly(tmp)
-        let myType = ctxt.ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, IsErased=false)
-        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string list>, IsStatic = true, GetterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let myType = ctxt.ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased=false)
+        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string list>, isStatic = true, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
         myType.AddMember(myProp)
         myAssem.AddTypes [myType]
         myType

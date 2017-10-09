@@ -419,24 +419,24 @@ namespace ProviderImplementation.ProvidedTypes
         /// Create a new provided property. It is not initially associated with any specific provided type definition.
         ///
         /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-        member ProvidedProperty: propertyName: string * propertyType: Type * ?IsStatic: bool * ?GetterCode: (Expr list -> Expr) * ?SetterCode: (Expr list -> Expr) * ?parameters: ProvidedParameter list -> ProvidedProperty
+        member ProvidedProperty: propertyName: string * propertyType: Type * ?isStatic: bool * ?getterCode: (Expr list -> Expr) * ?setterCode: (Expr list -> Expr) * ?parameters: ProvidedParameter list -> ProvidedProperty
 
         /// Create a new provided event. It is not initially associated with any specific provided type definition.
         ///
         /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-        member ProvidedEvent: eventName: string * eventHandlerType: Type * ?IsStatic: bool * ?AdderCode: (Expr list -> Expr) * ?RemoverCode: (Expr list -> Expr) -> ProvidedEvent
+        member ProvidedEvent: eventName: string * eventHandlerType: Type * ?isStatic: bool * ?adderCode: (Expr list -> Expr) * ?removerCode: (Expr list -> Expr) -> ProvidedEvent
 
         /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
-        member ProvidedConstructor: parameters: ProvidedParameter list * ?InvokeCode: (Expr list -> Expr) -> ProvidedConstructor
+        member ProvidedConstructor: parameters: ProvidedParameter list * ?invokeCode: (Expr list -> Expr) -> ProvidedConstructor
 
         /// When making a cross-targeting type provider, use this method instead of the ProvidedMethod constructor from ProvidedTypes
-        member ProvidedMethod: methodName: string * parameters: ProvidedParameter list * returnType: Type * ?IsStatic: bool * ?InvokeCode: (Expr list -> Expr)  -> ProvidedMethod
+        member ProvidedMethod: methodName: string * parameters: ProvidedParameter list * returnType: Type * ?isStatic: bool * ?invokeCode: (Expr list -> Expr)  -> ProvidedMethod
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        member ProvidedTypeDefinition: className: string * baseType: Type option * ?HideObjectMethods: bool * ?NonNullable: bool * ?IsErased: bool -> ProvidedTypeDefinition
+        member ProvidedTypeDefinition: className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool -> ProvidedTypeDefinition
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        member ProvidedTypeDefinition: assembly: Assembly * namespaceName: string * className: string * baseType: Type option * ?HideObjectMethods: bool * ?NonNullable: bool * ?IsErased: bool  -> ProvidedTypeDefinition
+        member ProvidedTypeDefinition: assembly: Assembly * namespaceName: string * className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool  -> ProvidedTypeDefinition
 
         /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericType
         member MakeGenericType: genericTypeDefinition: Type * genericArguments: Type list -> Type
