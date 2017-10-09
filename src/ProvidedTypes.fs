@@ -5,7 +5,10 @@
 // We disclaim all warranties, either express or implied, including the
 // warranties of merchantability and fitness for a particular purpose.
 
-#nowarn "49" // upercase parameter names
+namespace global
+    [<AutoOpen>]
+    module Utils = 
+        let isNull x = match x with null -> true | _ -> false
 
 namespace ProviderImplementation.ProvidedTypes
 

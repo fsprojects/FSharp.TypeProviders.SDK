@@ -16,6 +16,11 @@ open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Reflection
 open ProviderImplementation.ProvidedTypes
 
+[<AutoOpen>]
+module Utils = 
+    let isNull x = match x with null -> true | _ -> false
+
+
 /// Simulate a real host of TypeProviderConfig
 type internal DllInfo(path: string) =
     member x.FileName = path
