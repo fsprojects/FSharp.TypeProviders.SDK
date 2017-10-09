@@ -74,13 +74,7 @@ Target "Restore" (fun _ ->
     exec "dotnet" "restore"
 )
 Target "Compile" (fun _ ->
-#if MONO
-  // We don't use dotnet build because of https://github.com/dotnet/sdk/issues/335
-    exec "msbuild" ("src/FSharp.TypeProviders.SDK.fsproj /p:Configuration=" + config)
-    exec "msbuild" ("tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=" + config)
-#else
     exec "dotnet" "build"
-#endif
 )
 
 //#if EXAMPLES
