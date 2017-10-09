@@ -1,4 +1,4 @@
-#### 3.0.0 - Ovtober 9 2017
+#### 3.0.0 - October 9 2017
 * All type providers now use a ProvidedTypesContext, e.g.
      let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
      ...
