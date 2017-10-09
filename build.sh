@@ -12,7 +12,7 @@ then
 else
   # use mono
 
-  sudo apt-get -y install msbuild mono-complete mono-devel fsharp
+  #sudo apt-get -y install msbuild mono-complete mono-devel fsharp
 
   which mono
   which dotnet

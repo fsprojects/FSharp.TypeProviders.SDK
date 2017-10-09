@@ -1,8 +1,12 @@
 language: csharp
+dist: trusty
 
 mono:
   - weekly
   - nightly
+  - beta
+  - latest
+  - 5.2.0
 
 # weekly, nightly, beta don't work because of msbuild package install problems
 #  beta
