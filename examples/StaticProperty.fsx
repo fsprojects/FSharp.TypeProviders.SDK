@@ -1,5 +1,5 @@
 #if INTERACTIVE
-#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" "../src/AssemblyReader.fs" "../src/AssemblyReaderReflection.fs" "../src/ProvidedTypesContext.fs" 
+#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" 
 #endif
 
 open ProviderImplementation
@@ -13,11 +13,11 @@ type BasicProvider (config : TypeProviderConfig) as this =
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config, false)
+    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
 
     let createTypes () =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, IsStatic = true, GetterCode = (fun args -> <@@ "Hello world" @@>))
+        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, isStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
         myType.AddMember(myProp)
         [myType]
 

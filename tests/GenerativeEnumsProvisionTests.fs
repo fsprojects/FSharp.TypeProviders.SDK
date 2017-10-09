@@ -29,10 +29,10 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
     let asm = Assembly.GetExecutingAssembly()
     let ctxt = ProvidedTypesContext.Create(config, isForGenerated=true)
     let tempAssembly = ProvidedAssembly(Path.ChangeExtension(Path.GetTempFileName(), "dll"))
-    let container = ctxt.ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, IsErased = false)
+    let container = ctxt.ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, isErased = false)
 
     let createEnum name (values: list<string*int>) =
-        let enumType = ctxt.ProvidedTypeDefinition(name, Some typeof<Enum>, IsErased = false)
+        let enumType = ctxt.ProvidedTypeDefinition(name, Some typeof<Enum>, isErased = false)
         enumType.SetEnumUnderlyingType(typeof<int>)
         
         values
@@ -42,7 +42,7 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
         enumType
 
     do
-        let enumContainer = ctxt.ProvidedTypeDefinition("EnumContainer", Some typeof<obj>, IsErased = false)
+        let enumContainer = ctxt.ProvidedTypeDefinition("EnumContainer", Some typeof<obj>, isErased = false)
         let enum = createEnum "NestedEnum" ["Foo", 1; "Bar", 2]
         enumContainer.AddMember enum
         enumContainer.AddMember <| ctxt.ProvidedField("nestedEnumField", enum)

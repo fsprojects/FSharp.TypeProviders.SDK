@@ -6875,41 +6875,41 @@ namespace ProviderImplementation.ProvidedTypes
         /// Create a new provided getter/setter property. It is not initially associated with any specific provided type definition.
         ///
         /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-        member __.ProvidedProperty(propertyName, propertyType, ?IsStatic: bool, ?GetterCode: Expr list -> Expr, ?SetterCode: Expr list -> Expr, ?parameters) =
+        member __.ProvidedProperty(propertyName, propertyType, ?isStatic: bool, ?getterCode: Expr list -> Expr, ?setterCode: Expr list -> Expr, ?parameters) =
           ProvidedProperty(propertyName, 
                            propertyType = (propertyType |> convToTgt),
-                           isStatic = defaultArg IsStatic false,
-                           getterCode = (GetterCode  |> Option.map convCode),
-                           setterCode = (SetterCode |> Option.map convCode), 
+                           isStatic = defaultArg isStatic false,
+                           getterCode = (getterCode  |> Option.map convCode),
+                           setterCode = (setterCode |> Option.map convCode), 
                            parameters = defaultArg parameters [])
 
         /// Create a new provided event. It is not initially associated with any specific provided type definition.
         ///
         /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-        member __.ProvidedEvent(eventName, eventHandlerType, ?IsStatic: bool, ?AdderCode: Expr list -> Expr, ?RemoverCode: Expr list -> Expr) =
+        member __.ProvidedEvent(eventName, eventHandlerType, ?isStatic: bool, ?adderCode: Expr list -> Expr, ?removerCode: Expr list -> Expr) =
           ProvidedEvent(eventName, 
                         eventHandlerType = (eventHandlerType |> convToTgt),
-                        isStatic = defaultArg IsStatic false,
-                        adderCode = (AdderCode  |> Option.map convCode),
-                        removerCode = (RemoverCode  |> Option.map convCode))
+                        isStatic = defaultArg isStatic false,
+                        adderCode = (adderCode  |> Option.map convCode),
+                        removerCode = (removerCode  |> Option.map convCode))
 
         /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
-        member __.ProvidedConstructor(parameters, ?InvokeCode: Expr list -> Expr) =
+        member __.ProvidedConstructor(parameters, ?invokeCode: Expr list -> Expr) =
           ProvidedConstructor(parameters, 
-                              invokeCode = (InvokeCode |> Option.map convCode))
+                              invokeCode = (invokeCode |> Option.map convCode))
 
         /// When making a cross-targeting type provider, use this method instead of the ProvidedMethod constructor from ProvidedTypes
-        member __.ProvidedMethod(methodName, parameters, returnType: Type, ?IsStatic: bool, ?InvokeCode: Expr list -> Expr) =
+        member __.ProvidedMethod(methodName, parameters, returnType: Type, ?isStatic: bool, ?invokeCode: Expr list -> Expr) =
           ProvidedMethod(methodName, parameters, 
                          returnType = (returnType |> convToTgt), 
-                         isStatic = defaultArg IsStatic false, 
-                         invokeCode = (InvokeCode |> Option.map convCode))
+                         isStatic = defaultArg isStatic false, 
+                         invokeCode = (invokeCode |> Option.map convCode))
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        member __.ProvidedTypeDefinition(className, baseType: Type option, ?HideObjectMethods: bool, ?NonNullable: bool, ?IsErased: bool) =
-          let isErased = defaultArg IsErased true
-          let nonNullable = defaultArg NonNullable false
-          let hideObjectMethods = defaultArg HideObjectMethods false
+        member __.ProvidedTypeDefinition(className, baseType: Type option, ?hideObjectMethods: bool, ?nonNullable: bool, ?isErased: bool) =
+          let isErased = defaultArg isErased true
+          let nonNullable = defaultArg nonNullable false
+          let hideObjectMethods = defaultArg hideObjectMethods false
           ProvidedTypeDefinition(className, 
                                  baseType |> Option.map convToTgt, 
                                  convToTgt, 
@@ -6918,10 +6918,10 @@ namespace ProviderImplementation.ProvidedTypes
                                  IsErased=isErased)
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        member __.ProvidedTypeDefinition(assembly, namespaceName, className, baseType: Type option, ?HideObjectMethods: bool, ?NonNullable: bool, ?IsErased: bool) =
-          let isErased = defaultArg IsErased true
-          let nonNullable = defaultArg NonNullable false
-          let hideObjectMethods = defaultArg HideObjectMethods false
+        member __.ProvidedTypeDefinition(assembly, namespaceName, className, baseType: Type option, ?hideObjectMethods: bool, ?nonNullable: bool, ?isErased: bool) =
+          let isErased = defaultArg isErased true
+          let nonNullable = defaultArg nonNullable false
+          let hideObjectMethods = defaultArg hideObjectMethods false
           ProvidedTypeDefinition(assembly, namespaceName, className, 
                                  baseType |> Option.map convToTgt, 
                                  convToTgt, 
