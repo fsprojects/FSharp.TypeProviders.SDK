@@ -32,7 +32,7 @@ it, it should add them all to your F# project. It's probably best not to modify 
 upgrades to the package will ask to replace the previous versions - either submit changes back to this project
 or shadow the relevant functions in a seperate file.
 
-If using Paket, you can also add code files by direct GitHub references.
+If using Paket, you can also add code files by direct GitHub references like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/paket.dependencies#L20-L22) and reference the files in a project file like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/src/FSharp.Data.DesignTime.fsproj#L54-L59).
 
 
 ## The ProvidedTypes API - Cross-Targeting Type Providers
@@ -72,7 +72,7 @@ type BasicProvider (config : TypeProviderConfig) as this =
 
     let createTypes () =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, IsStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
+        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, isStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
         myType.AddMember(myProp)
         [myType]
 
