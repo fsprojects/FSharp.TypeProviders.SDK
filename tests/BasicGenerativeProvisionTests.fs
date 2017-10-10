@@ -49,8 +49,8 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 let ``GenerativePropertyProviderWithStaticParams generates for .NET 4.5 F# 4.0 correctly``() : unit  = 
   if Targets.supportsFSharp40 then 
     let args = [|  box 3; box 4  |] 
-    let runtimeAssembly = Targets.DotNet45FSharp40Refs.[0]
-    let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs
+    let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs()
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
     let typeProviderForNamespaces = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
     let providedTypeDefinition = typeProviderForNamespaces.Namespaces |> Seq.last |> snd |> Seq.last

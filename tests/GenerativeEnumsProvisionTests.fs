@@ -57,7 +57,7 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
 
 let testProvidedAssembly test = 
     if Targets.supportsFSharp40 then
-        let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs
+        let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs()
         let runtimeAssembly = runtimeAssemblyRefs.[0]
         let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
         let tp = GenerativeEnumsProvider(cfg) :> TypeProviderForNamespaces
