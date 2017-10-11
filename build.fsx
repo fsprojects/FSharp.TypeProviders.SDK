@@ -70,7 +70,7 @@ Target "Clean" (fun _ ->
 Target "Restore" (fun _ ->
     exec "dotnet" "restore"
 )
-Target "Compile" (fun _ ->
+Target "Build" (fun _ ->
     exec "dotnet" "build"
 )
 
@@ -87,7 +87,7 @@ Target "RunTests" (fun _ ->
 #else
     exec "dotnet" ("test tests/FSharp.TypeProviders.SDK.Tests.fsproj -c " + config)
     // This also gives console output:
-    //exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" ("/p:Configuration=" + config + " tests/bin/" + config + "/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none")
+    // packages\xunit.runner.console\tools\net452\xunit.console.exe testsbin\Release\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
 #endif
     ()
 )
@@ -104,7 +104,7 @@ Target "NuGet" (fun _ ->
     ==> "NuGet"
 
 "Restore"
-    ==> "Compile"
+    ==> "Build"
 //#if EXAMPLES
 //    ==> "Examples"
 //#endif

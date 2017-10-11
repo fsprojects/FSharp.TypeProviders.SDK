@@ -334,9 +334,6 @@ namespace ProviderImplementation.ProvidedTypes
         /// Set the attributes on the provided type. This fully replaces the default TypeAttributes.
         member SetAttributes: TypeAttributes -> unit
 
-        /// Reset the enclosing type (for generated nested types)
-        member ResetEnclosingType: enclosingType:Type -> unit
-
         /// Add a method, property, nested type or other member to a ProvidedTypeDefinition
         member AddMember: memberInfo:MemberInfo      -> unit
 
@@ -392,9 +389,8 @@ namespace ProviderImplementation.ProvidedTypes
     type ProvidedTypesContext = 
         
         /// Create a context for providing types for a particular rntime target.
-        /// If this context is for a generative type provider then isForGenerated should be set to true.
-        /// If specific assembly renaming replacements are required set assemblyReplacementMap.
-        static member Create : cfg: TypeProviderConfig * isForGenerated: bool * ?assemblyReplacementMap : seq<string*string> -> ProvidedTypesContext
+        /// Specific assembly renaming replacements can be provided using assemblyReplacementMap.
+        static member Create : cfg: TypeProviderConfig * ?assemblyReplacementMap : seq<string*string> -> ProvidedTypesContext
 
         /// Create a new provided static parameter, for use with DefineStaticParamaeters on a provided type definition.
         ///
@@ -461,37 +457,6 @@ namespace ProviderImplementation.ProvidedTypes
 
 
 
-
-#if !NO_GENERATIVE
-    /// A provided generated assembly
-    type ProvidedAssembly =
-        /// Create a provided generated assembly
-        new: assemblyFileName:string -> ProvidedAssembly
-
-        /// Emit the given provided type definitions as part of the assembly
-        /// and adjust the 'Assembly' property of all provided type definitions to return that
-        /// assembly.
-        ///
-        /// The assembly is only emitted when the Assembly property on the root type is accessed for the first time.
-        /// The host F# compiler does this when processing a generative type declaration for the type.
-        member AddTypes: types: ProvidedTypeDefinition list -> unit
-
-        /// <summary>
-        /// Emit the given nested provided type definitions as part of the assembly.
-        /// and adjust the 'Assembly' property of all provided type definitions to return that
-        /// assembly.
-        /// </summary>
-        /// <param name="enclosingTypeNames">A path of type names to wrap the generated types. The generated types are then generated as nested types.</param>
-        member AddNestedTypes: types: ProvidedTypeDefinition list * enclosingGeneratedTypeNames: string list -> unit
-
-#if !FX_NO_LOCAL_FILESYSTEM
-        /// Register that a given file is a provided generated assembly
-        static member RegisterGenerated: fileName:string -> Assembly
-#endif
-
-#endif
-
-
     /// A base type providing default implementations of type provider functionality when all provided
     /// types are of type ProvidedTypeDefinition.
     type TypeProviderForNamespaces =
@@ -535,6 +500,35 @@ namespace ProviderImplementation.ProvidedTypes
 
         interface ITypeProvider
 
+
+#if !NO_GENERATIVE
+    /// A provided generated assembly
+    type ProvidedAssembly =
+        /// Create a provided generated assembly
+        new: assemblyFileName:string * context:ProvidedTypesContext -> ProvidedAssembly
+
+        /// Emit the given provided type definitions as part of the assembly
+        /// and adjust the 'Assembly' property of all provided type definitions to return that
+        /// assembly.
+        ///
+        /// The assembly is only emitted when the Assembly property on the root type is accessed for the first time.
+        /// The host F# compiler does this when processing a generative type declaration for the type.
+        member AddTypes: types: ProvidedTypeDefinition list -> unit
+
+        /// <summary>
+        /// Emit the given nested provided type definitions as part of the assembly.
+        /// and adjust the 'Assembly' property of all provided type definitions to return that
+        /// assembly.
+        /// </summary>
+        /// <param name="enclosingTypeNames">A path of type names to wrap the generated types. The generated types are then generated as nested types.</param>
+        member AddNestedTypes: types: ProvidedTypeDefinition list * enclosingGeneratedTypeNames: string list -> unit
+
+#if !FX_NO_LOCAL_FILESYSTEM
+        /// Register that a given file is a provided generated assembly
+        static member RegisterGenerated: context: ProvidedTypesContext * fileName: string -> Assembly
+#endif
+
+#endif
 
 
 

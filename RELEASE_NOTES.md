@@ -1,6 +1,9 @@
+#### 3.0.1 - October 1 2017
+* Cross-targeting for generative type providers, and reimplement binary reader 
+
 #### 3.0.0 - October 9 2017
 * All type providers now use a ProvidedTypesContext, e.g.
-     let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
+     let ctxt = ProvidedTypesContext.Create(config)
      ...
      let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
     ...
