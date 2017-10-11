@@ -13453,8 +13453,8 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.GetFinalBytes() =
             let assemblyBytes = File.ReadAllBytes assemblyFileName
-            eprintfn "got bytes for generated binary from '%s'" assemblyFileName
-            //File.Delete assemblyFileName
+            //eprintfn "got bytes for generated binary from '%s'" assemblyFileName
+            File.Delete assemblyFileName
             assemblyBytes
 
     type ProvidedAssembly(assemblyFileName: string, context: ProvidedTypesContext) =
