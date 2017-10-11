@@ -1,5 +1,5 @@
 #if INTERACTIVE
-#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" "../src/AssemblyReader.fs" "../src/AssemblyReaderReflection.fs" "../src/ProvidedTypesContext.fs" 
+#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs"
 #load "../src/ProvidedTypesTesting.fs"
 
 #else
@@ -28,9 +28,9 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
     let ctxt = ProvidedTypesContext.Create(config, isForGenerated=true)
     let createType (typeName, n:int) =
         let tmp = Path.ChangeExtension(Path.GetTempFileName(), "dll")
-        let myAssem = ProvidedAssembly(tmp)
+        let myAssem = ProvidedAssembly(tmp, ctxt)
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased=false)
-        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string list>, isStatic = true, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string list>, isStatic = true, getterCode = (fun args -> <@@ Set.toList (Set.ofList [ "Hello world" ]) @@>))
         myType.AddMember(myProp)
         myAssem.AddTypes [myType]
         myType
@@ -62,4 +62,6 @@ let ``GenerativePropertyProviderWithStaticParams generates for .NET 4.5 F# 4.0 c
     Assert.NotEqual(assemContents.Length, 0)
 
 
+    // TEST: Register binary
+    // TEST: Many more F# constructs in generated code, giveing full coverage
 #endif

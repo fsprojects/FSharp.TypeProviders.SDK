@@ -1,5 +1,5 @@
 #if INTERACTIVE
-#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" "../src/AssemblyReader.fs" "../src/AssemblyReaderReflection.fs" "../src/ProvidedTypesContext.fs" 
+#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" 
 #load "../src/ProvidedTypesTesting.fs"
 
 #else
@@ -28,7 +28,7 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
     let ns = "Enums.Provided"
     let asm = Assembly.GetExecutingAssembly()
     let ctxt = ProvidedTypesContext.Create(config, isForGenerated=true)
-    let tempAssembly = ProvidedAssembly(Path.ChangeExtension(Path.GetTempFileName(), "dll"))
+    let tempAssembly = ProvidedAssembly(Path.ChangeExtension(Path.GetTempFileName(), "dll"), ctxt)
     let container = ctxt.ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, isErased = false)
 
     let createEnum name (values: list<string*int>) =

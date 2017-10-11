@@ -1,5 +1,5 @@
 #if INTERACTIVE
-#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" "../src/AssemblyReader.fs" "../src/AssemblyReaderReflection.fs" "../src/ProvidedTypesContext.fs" 
+#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs"
 #load "../src/ProvidedTypesTesting.fs"
 
 #else

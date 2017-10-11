@@ -231,6 +231,7 @@ type internal Testing() =
                         printExpr false true e
 
             and printCall fromPipe printName (mi:MethodInfo) args =
+                //eprintfn "printCall: %s" mi.Name
                 if fromPipe && List.length args = 1 then
                     printName()
                 elif not (hasAttr "CompilationArgumentCountsAttribute" mi) then
