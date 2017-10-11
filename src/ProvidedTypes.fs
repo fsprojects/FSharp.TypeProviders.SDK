@@ -10160,16 +10160,31 @@ namespace ProviderImplementation.ProvidedTypes
             let labelRangeInsideLabelRange lab2pc ls1 ls2 = 
                 rangeInsideRange (labelsToRange lab2pc ls1) (labelsToRange lab2pc ls2) 
 
+// This file still gets used when targeting FSharp.Core 3.1.0.0, e.g. in FSharp.Data
+#if !ABOVE_FSCORE_4_0_0_0
+            let mapFold f acc (array : _[]) =
+                match array.Length with
+                | 0 -> [| |], acc
+                | len ->
+                    let f = OptimizedClosures.FSharpFunc<_,_,_>.Adapt(f)
+                    let mutable acc = acc
+                    let res = Array.zeroCreate len
+                    for i = 0 to array.Length-1 do
+                        let h',s' = f.Invoke(acc,array.[i])
+                        res.[i] <- h'
+                        acc <- s'
+                    res, acc
+#endif
             let findRoots contains vs = 
                 // For each item, either make it a root or make it a child of an existing root
                 let addToRoot roots x = 
                     // Look to see if 'x' is inside one of the roots
                     let roots, found = 
-                        (false, Array.toList roots) ||> List.mapFold (fun found (r, children) -> 
+                        (false, roots) ||> mapFold (fun found (r, children) -> 
                             if found then ((r, children), true)
                             elif contains x r then ((r, Array.append [| x |] children), true) 
                             else ((r, children), false))
-                    let roots = Array.ofList roots
+
                     if found then roots 
                     else 
                         // Find the ones that 'x' encompasses and collapse them
