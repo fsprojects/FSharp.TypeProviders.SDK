@@ -13597,19 +13597,16 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.AddNamespace (namespaceName,types:list<_>) = otherNamespaces.Add (namespaceName,types)
 
-        // FSharp.Data addition: this method is used by Debug.fs
         member __.Namespaces = Seq.readonly otherNamespaces
 
         member this.Invalidate() = invalidateE.Trigger(this,EventArgs())
 
         member __.GetStaticParametersForMethod(mb: MethodBase) =
-            // eprintfn "In GetStaticParametersForMethod"
             match mb with
             | :? ProvidedMethod as t -> t.GetStaticParametersInternal()
             | _ -> [| |]
 
         member __.ApplyStaticArgumentsForMethod(mb: MethodBase, mangledName, objs) =
-            // eprintfn "In ApplyStaticArgumentsForMethod"
             match mb with
             | :? ProvidedMethod as t -> t.ApplyStaticArgumentsInternal(mangledName, objs) :> MethodBase
             | _ -> failwith (sprintf "ApplyStaticArguments: static parameters for method %s are unexpected" mb.Name)
