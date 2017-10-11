@@ -24,7 +24,7 @@ type ErasingProvider (config : TypeProviderConfig) as this =
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
+    let ctxt = ProvidedTypesContext.Create(config)
 
     let createTypes () =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
@@ -49,7 +49,7 @@ type ErasingConstructorProvider (config : TypeProviderConfig) as this =
 
     let ns = "ErasedWithConstructor.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
+    let ctxt = ProvidedTypesContext.Create(config)
 
     let createTypes () =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
@@ -74,7 +74,7 @@ type ErasingProviderWithStaticParams (config : TypeProviderConfig) as this =
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
+    let ctxt = ProvidedTypesContext.Create(config)
 
     let createType (typeName, n:int) =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>)

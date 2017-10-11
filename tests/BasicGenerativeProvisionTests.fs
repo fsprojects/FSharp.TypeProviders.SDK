@@ -25,7 +25,7 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
 
-    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=true)
+    let ctxt = ProvidedTypesContext.Create(config)
     let createType (typeName, n:int) =
         let tmp = Path.ChangeExtension(Path.GetTempFileName(), "dll")
         let myAssem = ProvidedAssembly(tmp, ctxt)
