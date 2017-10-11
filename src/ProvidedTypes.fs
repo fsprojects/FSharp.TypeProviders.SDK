@@ -1443,7 +1443,7 @@ namespace ProviderImplementation.ProvidedTypes
           lazy
             match container with
             | TypeContainer.Namespace (_,nsp) -> nsp
-            | TypeContainer.Type _           -> null
+            | TypeContainer.Type t           -> t.Namespace
             | TypeContainer.TypeToBeDecided -> failwith (sprintf "type '%s' was not added as a member to a declaring type" className)
 
         let declaringType =
@@ -2950,6 +2950,11 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             elif f = 0x00000007 then ILTypeDefAccess.Nested ILMemberAccess.FamilyOrAssembly
             elif f = 0x00000005 then ILTypeDefAccess.Nested ILMemberAccess.Assembly
             else ILTypeDefAccess.Private
+
+        member x.IsNested =
+            match x.Access with 
+            | ILTypeDefAccess.Nested _ -> true
+            | _ -> false
 
         member tdef.IsStructOrEnum =
             match tdef.Kind with
@@ -8789,7 +8794,7 @@ namespace ProviderImplementation.ProvidedTypes
         // Pass 1 - allocate indexes for types 
         //=====================================================================
 
-        let addILTypeName enc (td: ILTypeDef) = enc@[joinILTypeName td.Namespace td.Name]
+        let addILTypeName enc (td: ILTypeDef) = enc@[(if td.IsNested then td.Name else joinILTypeName td.Namespace td.Name)]
 
         let rec GenTypeDefPass1 enc cenv (td:ILTypeDef) = 
           ignore (cenv.typeDefs.AddUniqueEntry "type index" (fun (TdKey (_, _, n)) -> n) (TdKey (enc, td.Namespace, td.Name)))
