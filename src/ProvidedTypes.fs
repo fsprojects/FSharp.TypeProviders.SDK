@@ -10165,11 +10165,11 @@ namespace ProviderImplementation.ProvidedTypes
                 let addToRoot roots x = 
                     // Look to see if 'x' is inside one of the roots
                     let roots, found = 
-                        (false, roots) ||> Array.mapFold (fun found (r, children) -> 
+                        (false, Array.toList roots) ||> List.mapFold (fun found (r, children) -> 
                             if found then ((r, children), true)
                             elif contains x r then ((r, Array.append [| x |] children), true) 
                             else ((r, children), false))
-
+                    let roots = Array.ofList roots
                     if found then roots 
                     else 
                         // Find the ones that 'x' encompasses and collapse them
