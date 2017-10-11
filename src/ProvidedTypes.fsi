@@ -389,9 +389,8 @@ namespace ProviderImplementation.ProvidedTypes
     type ProvidedTypesContext = 
         
         /// Create a context for providing types for a particular rntime target.
-        /// If this context is for a generative type provider then isForGenerated should be set to true.
-        /// If specific assembly renaming replacements are required set assemblyReplacementMap.
-        static member Create : cfg: TypeProviderConfig * isForGenerated: bool * ?assemblyReplacementMap : seq<string*string> -> ProvidedTypesContext
+        /// Specific assembly renaming replacements can be provided using assemblyReplacementMap.
+        static member Create : cfg: TypeProviderConfig * ?assemblyReplacementMap : seq<string*string> -> ProvidedTypesContext
 
         /// Create a new provided static parameter, for use with DefineStaticParamaeters on a provided type definition.
         ///

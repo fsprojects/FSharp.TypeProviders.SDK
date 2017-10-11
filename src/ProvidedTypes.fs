@@ -8024,7 +8024,7 @@ namespace ProviderImplementation.ProvidedTypes
 
     /// Represents the type binding context for the type provider based on the set of assemblies
     /// referenced by the compilation.
-    type ProvidedTypesContext(referencedAssemblyPaths : string list, isForGenerated: bool, assemblyReplacementMap : seq<string*string>) as this =
+    type ProvidedTypesContext(referencedAssemblyPaths : string list, assemblyReplacementMap : seq<string*string>) as this =
 
         /// Find which assembly defines System.Object etc.
         let systemRuntimeScopeRef =
@@ -8221,7 +8221,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericMethod
         member __.MakeGenericMethod(genericMethodDefinition, genericArguments) = ptb.MakeGenericMethod(genericMethodDefinition, genericArguments)
 
-        static member Create (cfg : TypeProviderConfig, isForGenerated: bool, ?assemblyReplacementMap) =
+        static member Create (cfg : TypeProviderConfig, ?assemblyReplacementMap) =
 
             // Use the reflection hack to determine the set of referenced assemblies by reflecting over the SystemRuntimeContainsType
             // closure in the TypeProviderConfig object.
@@ -8253,7 +8253,7 @@ namespace ProviderImplementation.ProvidedTypes
                 failwith (sprintf "Invalid host of cross-targeting type provider. Exception: %A" e)
 
 
-            ProvidedTypesContext(referencedAssemblyPaths, isForGenerated, defaultArg assemblyReplacementMap Seq.empty)
+            ProvidedTypesContext(referencedAssemblyPaths, defaultArg assemblyReplacementMap Seq.empty)
 
 
 

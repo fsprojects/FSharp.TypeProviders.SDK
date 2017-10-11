@@ -41,7 +41,7 @@ Type providers may be used in projects that generate .NET Standard code or targe
 that being used to execute the F# compiler. Use 
 
 ```fsharp
-let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
+let ctxt = ProvidedTypesContext.Create(config)
 ```
 
 to your code and always create provided entities using this ``ctxt`` object:
@@ -68,7 +68,7 @@ type BasicProvider (config : TypeProviderConfig) as this =
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config, isForGenerated=false)
+    let ctxt = ProvidedTypesContext.Create(config)
 
     let createTypes () =
         let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
