@@ -37,8 +37,6 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
         let embedDT = System.DateTime.Now
         // Special TPSDK support for embedding System.DateTimeOffset values
         let embedDTO = System.DateTimeOffset.Now
-        // Special TPSDK support for embedding System.TimeSpace values
-        let embedTS = System.TimeSpan.Zero
         // Special TPSDK support for embedding System.Type values
         let embedType = typeof<int>
         let testCode args = 
@@ -74,7 +72,7 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
                  let z5 = f1 3 + f2 3 4 + f3 4 5 6
                  // Const, Tuple
                  let q1 = (embedM, embedString)
-                 let q2 = (embedM, embedString, embedDT, embedTS, embedType, embedDTO, (1,2,3))
+                 let q2 = (embedM, embedString, embedDT, embedType, embedDTO, (1,2,3))
                  // WhileLoop
                  while false  do ()
                  // FastIntegerForLoop

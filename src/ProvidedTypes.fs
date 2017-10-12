@@ -1324,11 +1324,11 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.Module: Module = notRequired "Module" (nameText())
         override __.GetConstructors _bindingAttr = notRequired "GetConstructors" (nameText())
-        override __.GetMethodImpl(_name, _bindingAttr, _binderBinder, _callConvention, _types, _modifiers) =
+        override __.GetMethodImpl(name, bindingAttr, _binderBinder, _callConvention, _types, _modifiers) =
             match kind with
             | Generic gtd ->
                 let ty = gtd.GetGenericTypeDefinition().MakeGenericType(Array.ofList typeArgs)
-                ty.GetMethod(_name, _bindingAttr)
+                ty.GetMethod(name, bindingAttr)
             | _ -> notRequired "GetMethodImpl" (nameText())
         override __.GetMembers _bindingAttr = notRequired "GetMembers" (nameText())
         override __.GetMethods _bindingAttr = notRequired "GetMethods" (nameText())
@@ -1704,6 +1704,7 @@ namespace ProviderImplementation.ProvidedTypes
             [| for m in this.GetMembers bindingAttr do
                     if m.MemberType = MemberTypes.Constructor then
                         yield (m :?> ConstructorInfo) |]
+
         // Methods
         override __.GetMethodImpl(name, bindingAttr, _binderBinder, _callConvention, _types, _modifiers): MethodInfo =
             let membersWithName =
@@ -1714,6 +1715,7 @@ namespace ProviderImplementation.ProvidedTypes
             | []        -> null
             | [meth]    -> meth :?> MethodInfo
             | _several   -> failwith "GetMethodImpl. not support overloads"
+
 
         override __.GetMethods bindingAttr =
             this.GetMembers bindingAttr
@@ -2883,7 +2885,11 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
         member x.Entries = larr.Force()
         member x.FindByName nm =  getmap().[nm]
         member x.FindByNameAndArity (nm,arity) =  x.FindByName nm |> Array.filter (fun x -> x.Parameters.Length = arity)
-
+        member x.TryFindUniqueByName name =  
+            match x.FindByName(name) with
+            | [| md |] -> Some md 
+            | [| |] -> None
+            | _ -> failwithf "multiple methods exist with name %s" name
 
     [<NoComparison; NoEquality>]
     type ILEventDef =
@@ -7157,23 +7163,13 @@ namespace ProviderImplementation.ProvidedTypes
 
                 let md =
                     match types with
-                    | null ->
-                        match gtd.Metadata.Methods.FindByName(name) with
-                        | [| md |] -> Some md
-                        | [| |] -> None //failwith (sprintf "method %s not found" name)
-                        | _ -> None // failwith (sprintf "multiple methods called '%s' found" name)
+                    | null -> gtd.Metadata.Methods.TryFindUniqueByName(name) 
                     | _ ->
-                        match gtd.Metadata.Methods.FindByNameAndArity(name, types.Length) with
-                        | [| |] ->  None //failwith (sprintf "method %s not found with arity %d" name types.Length)
-                        | mds ->
-                            match mds |> Array.filter (fun md -> eqTypesAndILTypesWithInst typeArgs types md.ParameterTypes) with
-                            | [| |] ->
-                                None
-                                //let md1 = mds.[0]
-                                //failwith (sprintf "no method %s with arity %d found with right types. Comparisons:" name types.Length
-                                //          + ((types, md1.ParameterTypes) ||> Array.map2 (fun a pt -> eqTypeAndILTypeWithInst typeArgs a pt |> sprintf "%A") |> String.concat "\n"))
-                            | [| md |] -> Some md
-                            | _ -> None //failwith (sprintf "multiple methods %s with arity %d found with right types" name types.Length)
+                        let mds = gtd.Metadata.Methods.FindByNameAndArity(name, types.Length) 
+                        match mds |> Array.filter (fun md -> eqTypesAndILTypesWithInst typeArgs types md.ParameterTypes) with
+                        | [| |] -> None
+                        | [| md |] -> Some md
+                        | _ -> failwithf "multiple methods exist with name %s" name
 
                 match md with 
                 | None -> null
@@ -7710,16 +7706,22 @@ namespace ProviderImplementation.ProvidedTypes
             |> optionToObj
 
         override this.GetMethodImpl(name, _bindingFlags, _binder, _callConvention, types, _modifiers)          =
-            inp.Methods.FindByNameAndArity(name, types.Length)
-            |> Array.tryFind (fun md -> eqTypesAndILTypes types md.ParameterTypes)
-            |> Option.map (txILMethodDef this)
-            |> optionToObj
+            let md = 
+                match types with
+                | null -> inp.Methods.TryFindUniqueByName(name)
+                | _ -> 
+                    inp.Methods.FindByNameAndArity(name, types.Length)
+                    |> Array.tryFind (fun md -> eqTypesAndILTypes types md.ParameterTypes)
+            md |> Option.map (txILMethodDef this) |> optionToObj
 
         override this.GetConstructorImpl(_bindingFlags, _binder, _callConvention, types, _modifiers)          =
-            inp.Methods.FindByNameAndArity(".ctor", types.Length)
-            |> Array.tryFind (fun md -> eqTypesAndILTypes types md.ParameterTypes)
-            |> Option.map (txILConstructorDef this)
-            |> optionToObj
+            let md = 
+                match types with
+                | null -> inp.Methods.TryFindUniqueByName(".ctor")
+                | _ -> 
+                    inp.Methods.FindByNameAndArity(".ctor", types.Length)
+                    |> Array.tryFind (fun md -> eqTypesAndILTypes types md.ParameterTypes)
+            md |> Option.map (txILConstructorDef this) |> optionToObj
 
         // Every implementation of System.Type must meaningfully implement these
         override this.MakeGenericType(args) = ContextTypeSymbol(ContextTypeSymbolKind.Generic this, args) :> Type
@@ -13081,14 +13083,14 @@ namespace ProviderImplementation.ProvidedTypes
                         ilg.Emit(I_newobj (transCtor (timeSpanConstructor()), None))
                         ilg.Emit(I_newobj (transCtor (dateTimeOffsetConstructor()), None))
                     | null -> ilg.Emit(I_ldnull)
-                    | _ -> failwithf "unknown constant '%A' in generated method" v
+                    | _ -> failwithf "unknown constant '%A' of type '%O' in generated method. You may need to avoid variable capture in a quotation specifying a type provider." v (v.GetType())
                 if isEmpty expectedState then ()
                 else emitC obj
 
             | Let(v,e,b) ->
                 let ty = transType v.Type
                 let lb = ilg.DeclareLocal ty
-                printfn "declared local %d of original type %O and target type %O for variable %O" lb.LocalIndex v.Type ty  v
+                //printfn "declared local %d of original type %O and target type %O for variable %O" lb.LocalIndex v.Type ty  v
                 localsMap.Add (v, lb)
                 emitExpr ExpectedStackState.Value e
                 ilg.Emit(I_stloc lb.LocalIndex)
@@ -13613,11 +13615,11 @@ namespace ProviderImplementation.ProvidedTypes
             assemblyBuilder.Save ()
             //printfn "re-reading generated binary from '%s'" assemblyFileName
             this.Reader <- Some (ILModuleReaderAfterReadingAllBytes(assemblyFileName, ilg))
-#if DEBUG
-            printfn "generated binary is at '%s'" assemblyFileName
-#else
+//#if DEBUG
+//            printfn "generated binary is at '%s'" assemblyFileName
+//#else
             File.Delete assemblyFileName
-#endif
+//#endif
 
         new (context: ProvidedTypesContext) = 
             let assemblyFileName = Path.ChangeExtension(Path.GetTempFileName(), "dll")
