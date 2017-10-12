@@ -2,13 +2,6 @@
 // 
 // Licensed under the Apache License, Version 2.0, see LICENSE.md in this project
 
-namespace global
-    [<AutoOpen>]
-    module Utils = 
-        let isNull x = match x with null -> true | _ -> false
-        let isNil x = match x with [] -> true | _ -> false
-        let isEmpty x = match x with [| |] -> true | _ -> false
-
 namespace ProviderImplementation.ProvidedTypes
 
     // This file contains a set of helper types and methods for providing types in an implementation
@@ -29,6 +22,79 @@ namespace ProviderImplementation.ProvidedTypes
     open Microsoft.FSharp.Quotations.Patterns
     open Microsoft.FSharp.Quotations.DerivedPatterns
     open Microsoft.FSharp.Core.CompilerServices
+
+    [<AutoOpen>]
+    module Utils = 
+        let isNull x = match x with null -> true | _ -> false
+        let isNil x = match x with [] -> true | _ -> false
+        let isEmpty x = match x with [| |] -> true | _ -> false
+
+        type ConstructorInfo with
+            member m.GetDefinition() = 
+                let dty = m.DeclaringType
+                if (dty.IsGenericType && not dty.IsGenericTypeDefinition) then 
+                    // Search through the original type definition looking for the one with a matching metadata token
+                    let gdty = dty.GetGenericTypeDefinition()
+                    gdty.GetConstructors(BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance) 
+                    |> Array.tryFind (fun c -> c.MetadataToken = m.MetadataToken)
+                    |> function Some m2 -> m2 | None -> failwithf "couldn't rebind %O::%s back to generic constructor definition via metadata token" m.DeclaringType m.Name
+                else
+                    m
+
+        type PropertyInfo  with
+            member m.GetDefinition() = 
+                let dty = m.DeclaringType
+                if (dty.IsGenericType && not dty.IsGenericTypeDefinition) then 
+                    // Search through the original type definition looking for the one with a matching metadata token
+                    let gdty = dty.GetGenericTypeDefinition()
+                    gdty.GetProperties(BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance) 
+                    |> Array.tryFind (fun c -> c.MetadataToken = m.MetadataToken)
+                    |> function Some m2 -> m2 | None -> failwithf "couldn't rebind %O::%s back to generic property definition via metadata token" m.DeclaringType m.Name
+                else
+                    m
+
+
+        type EventInfo  with
+            member m.GetDefinition() = 
+                let dty = m.DeclaringType
+                if (dty.IsGenericType && not dty.IsGenericTypeDefinition) then 
+                    // Search through the original type definition looking for the one with a matching metadata token
+                    let gdty = dty.GetGenericTypeDefinition()
+                    gdty.GetEvents(BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance) 
+                    |> Array.tryFind (fun c -> c.MetadataToken = m.MetadataToken)
+                    |> function Some m2 -> m2 | None -> failwithf "couldn't rebind %O::%s back to generic event definition via metadata token" m.DeclaringType m.Name
+                else
+                    m
+
+
+        type FieldInfo  with
+            member m.GetDefinition() = 
+                let dty = m.DeclaringType
+                if (dty.IsGenericType && not dty.IsGenericTypeDefinition) then 
+                    // Search through the original type definition looking for the one with a matching metadata token
+                    let gdty = dty.GetGenericTypeDefinition()
+                    gdty.GetFields(BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance) 
+                    |> Array.tryFind (fun c -> c.MetadataToken = m.MetadataToken)
+                    |> function Some m2 -> m2 | None -> failwithf "couldn't rebind %O::%s back to generic event definition via metadata token" m.DeclaringType m.Name
+                else
+                    m
+
+        type MethodInfo with
+            member m.GetDefinition() = 
+                let dty = m.DeclaringType
+                if (m.IsGenericMethod && not dty.IsGenericType) then m.GetGenericMethodDefinition()
+                elif (m.IsGenericMethod && (not m.IsGenericMethodDefinition || not dty.IsGenericTypeDefinition)) || 
+                     (dty.IsGenericType && not dty.IsGenericTypeDefinition) then 
+
+                    // Search through ALL the methods on the original type definition looking for the one
+                    // with a matching metadata token
+                    let gdty = if dty.IsGenericType then dty.GetGenericTypeDefinition() else dty
+                    gdty.GetMethods(BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance) 
+                    |> Array.tryFind (fun c -> c.MetadataToken = m.MetadataToken)
+                    |> function Some m2 -> m2 | None -> failwithf "couldn't rebind generic instantiation of %O::%s back to generic method definition via metadata token" m.DeclaringType m.Name
+
+                else
+                   m 
 
     //--------------------------------------------------------------------------------
     // UncheckedQuotations
@@ -65,6 +131,8 @@ namespace ProviderImplementation.ProvidedTypes
         assert (not (isNull mkFE1))
         let mkFE2 = pTy.GetMethod("mkFE2", BindingFlags.Static ||| BindingFlags.Public ||| BindingFlags.NonPublic)
         assert (mkFE2 |> isNull |> not)
+        let mkFE3 = pTy.GetMethod("mkFE3", BindingFlags.Static ||| BindingFlags.Public ||| BindingFlags.NonPublic)
+        assert (mkFE3 |> isNull |> not)
         let mkFEN = pTy.GetMethod("mkFEN", BindingFlags.Static ||| BindingFlags.Public ||| BindingFlags.NonPublic)
         assert (mkFEN |> isNull |> not)
 
@@ -102,6 +170,12 @@ namespace ProviderImplementation.ProvidedTypes
         assert (tupleGetOp |> isNull |> not)
         let letOp = qTy.GetMethod("get_LetOp", BindingFlags.Static ||| BindingFlags.Public ||| BindingFlags.NonPublic)
         assert (letOp |> isNull |> not)
+        let forIntegerRangeLoopOp = qTy.GetMethod("get_ForIntegerRangeLoopOp", BindingFlags.Static ||| BindingFlags.Public ||| BindingFlags.NonPublic)
+        assert (forIntegerRangeLoopOp |> isNull |> not)
+        let whileLoopOp = qTy.GetMethod("get_WhileLoopOp", BindingFlags.Static ||| BindingFlags.Public ||| BindingFlags.NonPublic)
+        assert (whileLoopOp |> isNull |> not)
+        let ifThenElseOp = qTy.GetMethod("get_IfThenElseOp", BindingFlags.Static ||| BindingFlags.Public ||| BindingFlags.NonPublic)
+        assert (ifThenElseOp |> isNull |> not)
 
         type Microsoft.FSharp.Quotations.Expr with
 
@@ -173,6 +247,19 @@ namespace ProviderImplementation.ProvidedTypes
                 let op = letOp.Invoke(null, [| |])
                 mkFE2.Invoke(null, [| box op; box e; box lam |]) :?> Expr
 
+            static member ForIntegerRangeLoopUnchecked (loopVariable, startExpr:Expr, endExpr:Expr, body:Expr) = 
+                let lam = Expr.Lambda(loopVariable, body)
+                let op = forIntegerRangeLoopOp.Invoke(null, [| |])
+                mkFE3.Invoke(null, [| box op; box startExpr; box endExpr; box lam |] ) :?> Expr
+
+            static member WhileLoopUnchecked (guard:Expr, body:Expr) = 
+                let op = whileLoopOp.Invoke(null, [| |])
+                mkFE2.Invoke(null, [| box op; box guard; box body |] ):?> Expr
+
+            static member IfThenElseUnchecked (e:Expr, t:Expr, f:Expr) = 
+                let op = ifThenElseOp.Invoke(null, [| |])
+                mkFE3.Invoke(null, [| box op; box e; box t; box f |] ):?> Expr
+                
         type Shape = Shape of (Expr list -> Expr)
 
         let (|ShapeCombinationUnchecked|ShapeVarUnchecked|ShapeLambdaUnchecked|) e =
@@ -209,6 +296,12 @@ namespace ProviderImplementation.ProvidedTypes
                 | Some obj -> ShapeCombinationUnchecked (Shape (function [obj;value] -> Expr.FieldSetUnchecked (obj, pinfo, value) | _ -> invalidArg "expr" "invalid shape"), [obj; value])
             | Let (var, value, body) ->
                 ShapeCombinationUnchecked (Shape (function [value;Lambda(var, body)] -> Expr.LetUnchecked(var, value, body) | _ -> invalidArg "expr" "invalid shape"), [value; Expr.Lambda(var, body)])
+            | ForIntegerRangeLoop (loopVar, first, last, body) ->
+                ShapeCombinationUnchecked (Shape (function [first; last; Lambda(loopVar, body)] -> Expr.ForIntegerRangeLoopUnchecked (loopVar, first, last, body) | _ -> invalidArg "expr" "invalid shape"), [first; last; Expr.Lambda(loopVar, body)])
+            | WhileLoop (cond, body) ->
+                ShapeCombinationUnchecked (Shape (function [cond; body] -> Expr.WhileLoopUnchecked (cond,  body) | _ -> invalidArg "expr" "invalid shape"), [cond; body])
+            | IfThenElse (g, t, e) ->
+                ShapeCombinationUnchecked (Shape (function [g; t; e] -> Expr.IfThenElseUnchecked (g, t, e) | _ -> invalidArg "expr" "invalid shape"), [g; t; e])
             | TupleGet (expr, i) ->
                 ShapeCombinationUnchecked (Shape (function [expr] -> Expr.TupleGetUnchecked (expr, i) | _ -> invalidArg "expr" "invalid shape"), [expr])
             | ExprShape.ShapeCombination (comb,args) ->
@@ -401,7 +494,7 @@ namespace ProviderImplementation.ProvidedTypes
                 (* let v = if c then b1 else b2 in bexpr => if c then let v = b1 in bexpr else let v = b2 in bexpr *)
                 //
                 // Note, this duplicates "bexpr"
-                Expr.IfThenElse(c, transLetOfByref v b1 bexpr, transLetOfByref v b2 bexpr)
+                Expr.IfThenElseUnchecked(c, transLetOfByref v b1 bexpr, transLetOfByref v b2 bexpr)
                 |> transExpr
             | Var _ ->
                 (* let v = v1 in bexpr => bexpr[v/v1] *)
@@ -470,7 +563,7 @@ namespace ProviderImplementation.ProvidedTypes
                     if fixedValue === value && fixedBody === body then
                         e
                     else
-                        Expr.Let(v, fixedValue, fixedBody)
+                        Expr.LetUnchecked(v, fixedValue, fixedBody)
                 | ShapeVarUnchecked _ -> e
                 | ShapeLambdaUnchecked(v, body) ->
                     let fixedBody = f fallback body
@@ -504,6 +597,7 @@ namespace ProviderImplementation.ProvidedTypes
                     | fixedApplicable -> Expr.Application(fixedApplicable, fixedOperand)
                 | x -> fallback x
             loop expr
+
 
         let inlineValueBindings e =
             let map = Dictionary(HashIdentity.Reference)
@@ -611,7 +705,7 @@ namespace ProviderImplementation.ProvidedTypes
         let mutable token = 0 
         let genToken() =  token <- token + 1; token
         /// Internal code of .NET expects the obj[] returned by GetCustomAttributes to be an Attribute[] even in the case of empty arrays
-        let emptyAttributes = (([| |] : Attribute[]) |> box |> unbox<obj[]>)
+        let emptyAttributes = (([| |]: Attribute[]) |> box |> unbox<obj[]>)
 
         let nonNull str x = if isNull x then failwith ("Null in " + str) else x
 
@@ -761,7 +855,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.HasDefaultParameterValue = Option.isSome optionalValue
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
-    type ProvidedConstructor(parameters: ProvidedParameter list, invokeCode : option<Expr list -> Expr>) =
+    type ProvidedConstructor(parameters: ProvidedParameter list, invokeCode: option<Expr list -> Expr>) =
         inherit ConstructorInfo()
         let parameters = parameters |> List.map (fun p -> p :> ParameterInfo)
         let mutable baseCall = None
@@ -834,7 +928,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetCustomAttributes(_inherit) = emptyAttributes
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
 
-    type ProvidedMethod(methodName: string, parameters: ProvidedParameter list, returnType: Type, isStatic: bool, invokeCode : option<Expr list -> Expr>) =
+    type ProvidedMethod(methodName: string, parameters: ProvidedParameter list, returnType: Type, isStatic: bool, invokeCode: option<Expr list -> Expr>) =
         inherit MethodInfo()
         let argParams = parameters |> List.map (fun p -> p :> ParameterInfo)
 
@@ -866,8 +960,8 @@ namespace ProviderImplementation.ProvidedTypes
         /// Get ParameterInfo[] for the parametric type parameters
         member __.GetStaticParametersInternal() = [| for p in staticParams -> p :> ParameterInfo |]
 
-        /// Instantiate parametrics type
-        member __.ApplyStaticArgumentsInternal(mangledName:string, args:obj[]) =
+        /// Instantiate parametric method
+        member __.ApplyStaticArguments(mangledName:string, args:obj[]) =
             if staticParams.Length>0 then
                 if staticParams.Length <> args.Length then
                     failwith (sprintf "ProvidedTypeDefinition: expecting %d static parameters but given %d for method %s" staticParams.Length args.Length methodName)
@@ -1085,7 +1179,7 @@ namespace ProviderImplementation.ProvidedTypes
     /// Represents an array or other symbolic type involving a provided type as the argument.
     /// See the type provider spec for the methods that must be implemented.
     /// Note that the type provider specification does not require us to implement pointer-equality for provided types.
-    type ProvidedSymbolType(kind: ProvidedSymbolKind, args: Type list, convToTgt: Type -> Type) as this =
+    type ProvidedSymbolType(kind: ProvidedSymbolKind, typeArgs: Type list, convToTgt: Type -> Type) as this =
         inherit TypeDelegator()
 
         let rec isEquivalentTo (thisTy: Type) (otherTy: Type) =
@@ -1096,17 +1190,17 @@ namespace ProviderImplementation.ProvidedTypes
                 | ProvidedSymbolKind.SDArray, [ty] | ProvidedSymbolKind.Array _, [ty] when otherTy.IsArray-> ty.Equals(otherTy.GetElementType())
                 | ProvidedSymbolKind.ByRef, [ty] when otherTy.IsByRef -> ty.Equals(otherTy.GetElementType())
                 | ProvidedSymbolKind.Pointer, [ty] when otherTy.IsPointer -> ty.Equals(otherTy.GetElementType())
-                | ProvidedSymbolKind.Generic baseTy, args -> otherTy.IsGenericType && isEquivalentTo baseTy (otherTy.GetGenericTypeDefinition()) && Seq.forall2 isEquivalentTo args (otherTy.GetGenericArguments())
+                | ProvidedSymbolKind.Generic baseTy, typeArgs -> otherTy.IsGenericType && isEquivalentTo baseTy (otherTy.GetGenericTypeDefinition()) && Seq.forall2 isEquivalentTo typeArgs (otherTy.GetGenericArguments())
                 | _ -> false
             | a, b -> a.Equals b
 
         let nameText() =
-            match kind,args with
+            match kind,typeArgs with
             | ProvidedSymbolKind.SDArray,[arg] -> arg.Name + "[]"
             | ProvidedSymbolKind.Array _,[arg] -> arg.Name + "[*]"
             | ProvidedSymbolKind.Pointer,[arg] -> arg.Name + "*"
             | ProvidedSymbolKind.ByRef,[arg] -> arg.Name + "&"
-            | ProvidedSymbolKind.Generic gty, args -> gty.Name + (sprintf "%A" args)
+            | ProvidedSymbolKind.Generic gty, typeArgs -> gty.Name + (sprintf "%A" typeArgs)
             | ProvidedSymbolKind.FSharpTypeAbbreviation (_,_,path),_ -> path.[path.Length-1]
             | _ -> failwith "unreachable"
 
@@ -1116,8 +1210,8 @@ namespace ProviderImplementation.ProvidedTypes
         static member ConvType (parameters: Type list) (ty:Type) =
             if isNull ty then null
             elif ty.IsGenericType then
-                let args = Array.map (ProvidedSymbolType.ConvType parameters) (ty.GetGenericArguments())
-                ty.GetGenericTypeDefinition().MakeGenericType(args)
+                let typeArgs = Array.map (ProvidedSymbolType.ConvType parameters) (ty.GetGenericArguments())
+                ty.GetGenericTypeDefinition().MakeGenericType(typeArgs)
             elif ty.HasElementType then
                 let ety = ProvidedSymbolType.ConvType parameters (ty.GetElementType())
                 if ty.IsArray then
@@ -1135,19 +1229,19 @@ namespace ProviderImplementation.ProvidedTypes
             else ty
 
         override __.FullName =
-            match kind,args with
+            match kind,typeArgs with
             | ProvidedSymbolKind.SDArray,[arg] -> arg.FullName + "[]"
             | ProvidedSymbolKind.Array _,[arg] -> arg.FullName + "[*]"
             | ProvidedSymbolKind.Pointer,[arg] -> arg.FullName + "*"
             | ProvidedSymbolKind.ByRef,[arg] -> arg.FullName + "&"
-            | ProvidedSymbolKind.Generic gty, args -> gty.FullName + "[" + (args |> List.map (fun arg -> arg.ToString()) |> String.concat ",") + "]"
-            | ProvidedSymbolKind.FSharpTypeAbbreviation (_,nsp,path),args -> String.concat "." (Array.append [| nsp |] path) + (match args with [] -> "" | _ -> args.ToString())
+            | ProvidedSymbolKind.Generic gty, typeArgs -> gty.FullName + "[" + (typeArgs |> List.map (fun arg -> arg.ToString()) |> String.concat ",") + "]"
+            | ProvidedSymbolKind.FSharpTypeAbbreviation (_,nsp,path),typeArgs -> String.concat "." (Array.append [| nsp |] path) + (match typeArgs with [] -> "" | _ -> typeArgs.ToString())
             | _ -> failwith "unreachable"
 
         /// Although not strictly required by the type provider specification, this is required when doing basic operations like FullName on
         /// .NET symbolic types made from this type, e.g. when building Nullable<SomeProvidedType[]>.FullName
         override __.DeclaringType =
-            match kind,args with
+            match kind,typeArgs with
             | ProvidedSymbolKind.SDArray,[arg] -> arg
             | ProvidedSymbolKind.Array _,[arg] -> arg
             | ProvidedSymbolKind.Pointer,[arg] -> arg
@@ -1162,7 +1256,7 @@ namespace ProviderImplementation.ProvidedTypes
                 if otherTy.IsGenericType then
                     let otherGtd = otherTy.GetGenericTypeDefinition()
                     let otherArgs = otherTy.GetGenericArguments()
-                    let yes = gtd.Equals(otherGtd) && Seq.forall2 isEquivalentTo args otherArgs
+                    let yes = gtd.Equals(otherGtd) && Seq.forall2 isEquivalentTo typeArgs otherArgs
                     yes
                     else
                         base.IsAssignableFrom(otherTy)
@@ -1178,7 +1272,7 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedSymbolKind.ByRef -> convToTgt typeof<ValueType>
             | ProvidedSymbolKind.Generic gty  ->
                 if isNull gty.BaseType then null else
-                ProvidedSymbolType.ConvType args gty.BaseType
+                ProvidedSymbolType.ConvType typeArgs gty.BaseType
             | ProvidedSymbolKind.FSharpTypeAbbreviation _ -> convToTgt typeof<obj>
 
         override __.GetArrayRank() = (match kind with ProvidedSymbolKind.Array n -> n | ProvidedSymbolKind.SDArray -> 1 | _ -> invalidOp "non-array type")
@@ -1188,11 +1282,11 @@ namespace ProviderImplementation.ProvidedTypes
         override __.IsPointerImpl() = (match kind with ProvidedSymbolKind.Pointer _ -> true | _ -> false)
         override __.IsPrimitiveImpl() = false
         override __.IsGenericType = (match kind with ProvidedSymbolKind.Generic _ -> true | _ -> false)
-        override __.GetGenericArguments() = (match kind with ProvidedSymbolKind.Generic _ -> args |> List.toArray | _ -> invalidOp "non-generic type")
+        override __.GetGenericArguments() = (match kind with ProvidedSymbolKind.Generic _ -> typeArgs |> List.toArray | _ -> invalidOp "non-generic type")
         override __.GetGenericTypeDefinition() = (match kind with ProvidedSymbolKind.Generic e -> e | _ -> invalidOp "non-generic type")
         override __.IsCOMObjectImpl() = false
         override __.HasElementTypeImpl() = (match kind with ProvidedSymbolKind.Generic _ -> false | _ -> true)
-        override __.GetElementType() = (match kind,args with (ProvidedSymbolKind.Array _  | ProvidedSymbolKind.SDArray | ProvidedSymbolKind.ByRef | ProvidedSymbolKind.Pointer),[e] -> e | _ -> invalidOp "not an array, pointer or byref type")
+        override __.GetElementType() = (match kind,typeArgs with (ProvidedSymbolKind.Array _  | ProvidedSymbolKind.SDArray | ProvidedSymbolKind.ByRef | ProvidedSymbolKind.Pointer),[e] -> e | _ -> invalidOp "not an array, pointer or byref type")
         override this.ToString() = this.FullName
 
         override __.Assembly =
@@ -1207,22 +1301,22 @@ namespace ProviderImplementation.ProvidedTypes
             | _ -> notRequired "Namespace" (nameText())
 
         override __.GetHashCode()                                                                    =
-            match kind,args with
+            match kind,typeArgs with
             | ProvidedSymbolKind.SDArray,[arg] -> 10 + hash arg
             | ProvidedSymbolKind.Array _,[arg] -> 163 + hash arg
             | ProvidedSymbolKind.Pointer,[arg] -> 283 + hash arg
             | ProvidedSymbolKind.ByRef,[arg] -> 43904 + hash arg
-            | ProvidedSymbolKind.Generic gty,_ -> 9797 + hash gty + List.sumBy hash args
+            | ProvidedSymbolKind.Generic gty,_ -> 9797 + hash gty + List.sumBy hash typeArgs
             | ProvidedSymbolKind.FSharpTypeAbbreviation _,_ -> 3092
             | _ -> failwith "unreachable"
 
         override __.Equals(other: obj) =
             match other with
-            | :? ProvidedSymbolType as otherTy -> (kind, args) = (otherTy.Kind, otherTy.Args)
+            | :? ProvidedSymbolType as otherTy -> (kind, typeArgs) = (otherTy.Kind, otherTy.Args)
             | _ -> false
 
         member __.Kind = kind
-        member __.Args = args
+        member __.Args = typeArgs
 
         member __.IsFSharpTypeAbbreviation = match kind with FSharpTypeAbbreviation _ -> true | _ -> false
         // For example, int<kg>
@@ -1233,7 +1327,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetMethodImpl(_name, _bindingAttr, _binderBinder, _callConvention, _types, _modifiers) =
             match kind with
             | Generic gtd ->
-                let ty = gtd.GetGenericTypeDefinition().MakeGenericType(Array.ofList args)
+                let ty = gtd.GetGenericTypeDefinition().MakeGenericType(Array.ofList typeArgs)
                 ty.GetMethod(_name, _bindingAttr)
             | _ -> notRequired "GetMethodImpl" (nameText())
         override __.GetMembers _bindingAttr = notRequired "GetMembers" (nameText())
@@ -1575,8 +1669,8 @@ namespace ProviderImplementation.ProvidedTypes
         /// Get ParameterInfo[] for the parametric type parameters 
         member __.GetStaticParametersInternal() = [| for p in staticParams -> p :> ParameterInfo |]
 
-        /// Instantiate parametrics type
-        member __.MakeParametricType(name:string,args:obj[]) =
+        /// Instantiate parametric type
+        member __.ApplyStaticArguments(name:string, args:obj[]) =
             if staticParams.Length>0 then
                 if staticParams.Length <> args.Length then
                     failwith (sprintf "ProvidedTypeDefinition: expecting %d static parameters but given %d for type %s" staticParams.Length args.Length (fullName.Force()))
@@ -1786,7 +1880,6 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetHashCode() = namespce.GetHashCode() ^^^ className.GetHashCode()
         override __.Equals(that:obj) =
             match that with
-            | null              -> false
             | :? ProvidedTypeDefinition as ti -> Object.ReferenceEquals(this,ti)
             | _                 -> false
 
@@ -2021,6 +2114,22 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
         member x.Retargetable=retargetable
         member x.Version=version
         member x.Locale=locale
+
+        member x.ToAssemblyName() =
+            let asmName = AssemblyName(Name=x.Name)
+            match x.PublicKey with 
+            | USome bytes -> asmName.SetPublicKeyToken(bytes.ToToken())
+            | UNone -> ()
+            match x.Version with 
+            | USome v -> asmName.Version <- v
+            | UNone -> ()
+    #if NETSTANDARD
+            asmName.CultureName <- System.Globalization.CultureInfo.InvariantCulture.Name
+    #else
+            asmName.CultureInfo <- System.Globalization.CultureInfo.InvariantCulture
+    #endif
+            asmName
+
         static member FromAssemblyName (aname:AssemblyName) =
             let locale = UNone
             let publicKey =
@@ -2605,7 +2714,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
           Elements: obj list}
 
     type ILCustomAttrs =
-       abstract Entries : ILCustomAttribute[]
+       abstract Entries: ILCustomAttribute[]
 
     type ILCustomAttrsStatics() =
        static let empty = { new ILCustomAttrs with member __.Entries = [| |] }
@@ -2666,7 +2775,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
         { Name: string
           Constraints: ILTypes
           Attributes: GenericParameterAttributes
-          CustomAttrs : ILCustomAttrs }
+          CustomAttrs: ILCustomAttrs 
+          Token: int }
 
         member x.HasReferenceTypeConstraint= (x.Attributes &&& GenericParameterAttributes.ReferenceTypeConstraint) <> enum 0
         member x.HasNotNullableValueTypeConstraint= (x.Attributes &&& GenericParameterAttributes.NotNullableValueTypeConstraint) <> enum 0
@@ -2685,11 +2795,11 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
           Parameters: ILParameters
           Return: ILReturn
           Body: ILMethodBody option
-          ImplAttributes : MethodImplAttributes
+          ImplAttributes: MethodImplAttributes
           //SecurityDecls: ILPermissions
           //HasSecurity: bool
           IsEntryPoint:bool
-          Attributes : MethodAttributes
+          Attributes: MethodAttributes
           GenericParams: ILGenericParameterDefs
           CustomAttrs: ILCustomAttrs }
         member x.ParameterTypes = x.Parameters |> Array.map (fun p -> p.ParameterType)
@@ -2779,12 +2889,13 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
     type ILEventDef =
         { //EventHandlerType: ILType option
           Name: string
-          Attributes : System.Reflection.EventAttributes
+          Attributes: System.Reflection.EventAttributes
           AddMethod: ILMethodRef
           RemoveMethod: ILMethodRef
           //FireMethod: ILMethodRef option
           //OtherMethods: ILMethodRef[]
-          CustomAttrs: ILCustomAttrs }
+          CustomAttrs: ILCustomAttrs
+          Token: int }
         member x.EventHandlerType = x.AddMethod.ArgTypes.[0]
         member x.IsStatic = x.AddMethod.CallingConv.IsStatic
         member x.IsSpecialName = (x.Attributes &&& EventAttributes.SpecialName) <> enum<_>(0)
@@ -2792,19 +2903,20 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
         override x.ToString() = "event " + x.Name
 
     type ILEventDefs =
-        abstract Entries : ILEventDef[]
+        abstract Entries: ILEventDef[]
 
     [<NoComparison; NoEquality>]
     type ILPropertyDef =
         { Name: string
-          Attributes : System.Reflection.PropertyAttributes
+          Attributes: System.Reflection.PropertyAttributes
           SetMethod: ILMethodRef option
           GetMethod: ILMethodRef option
           CallingConv: ILThisConvention
           PropertyType: ILType
           Init: ILFieldInit option
           IndexParameterTypes: ILTypes
-          CustomAttrs: ILCustomAttrs }
+          CustomAttrs: ILCustomAttrs
+          Token: int }
         member x.IsStatic = (match x.CallingConv with ILThisConvention.Static -> true | _ -> false)
         member x.IndexParameters = 
             x.IndexParameterTypes |> Array.mapi (fun i ty ->
@@ -2818,7 +2930,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
         override x.ToString() = "property " + x.Name
 
     type ILPropertyDefs =
-        abstract Entries : ILPropertyDef[]
+        abstract Entries: ILPropertyDef[]
 
     [<NoComparison; NoEquality>]
     type ILFieldDef =
@@ -2829,7 +2941,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
           LiteralValue:  ILFieldInit option
           Offset:  int32 option
           //Marshal: ILNativeType option
-          CustomAttrs: ILCustomAttrs }
+          CustomAttrs: ILCustomAttrs
+          Token: int }
         override x.ToString() = "field " + x.Name
         member x.IsStatic = x.Attributes &&& FieldAttributes.Static <> enum 0
         member x.IsInitOnly = x.Attributes &&& FieldAttributes.InitOnly <> enum 0
@@ -2847,7 +2960,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
 
     type ILFieldDefs =
-        abstract Entries : ILFieldDef[]
+        abstract Entries: ILFieldDef[]
 
     type ILMethodImplDef =
         { Overrides: ILOverridesSpec
@@ -2855,7 +2968,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
     // Index table by name and arity.
     type ILMethodImplDefs =
-        abstract Entries : ILMethodImplDef[]
+        abstract Entries: ILMethodImplDef[]
 
     [<RequireQualifiedAccess>]
     type ILTypeInit =
@@ -2917,7 +3030,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
           Events: ILEventDefs
           Properties: ILPropertyDefs
           CustomAttrs: ILCustomAttrs
-          Token : int }
+          Token: int }
         static member ComputeKind flags (super: ILType option) (nsp: string uoption) (nm: string) = 
             if (flags &&& 0x00000020) <> 0x0 then ILTypeDefKind.Interface else
             let isEnum = (match super with None -> false | Some ty -> ty.TypeSpec.Namespace = USome "System" && ty.TypeSpec.Name = "Enum")
@@ -2974,7 +3087,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
         override x.ToString() = "type " + x.Name
 
-    and ILTypeDefs(larr : Lazy<(string uoption * string * Lazy<ILTypeDef>)[]>) =
+    and ILTypeDefs(larr: Lazy<(string uoption * string * Lazy<ILTypeDef>)[]>) =
 
         let mutable lmap = null
         let getmap() =
@@ -3011,7 +3124,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
     and [<NoComparison; NoEquality>]
         ILExportedTypeOrForwarder =
         { ScopeRef: ILScopeRef
-          Namespace : string uoption
+          Namespace: string uoption
           Name: string
           IsForwarder: bool 
           Access: ILTypeDefAccess; 
@@ -3087,8 +3200,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
           CustomAttrs: ILCustomAttrs
           Name: string
           TypeDefs: ILTypeDefs
-          SubsystemVersion : int * int
-          UseHighEntropyVA : bool
+          SubsystemVersion: int * int
+          UseHighEntropyVA: bool
           (* Random bits of relatively uninteresting data *)
           SubSystemFlags: int32
           IsDLL: bool
@@ -3129,13 +3242,13 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
           typ_UInt16: ILType
           typ_UInt32: ILType
           typ_UInt64: ILType
-          typ_Single : ILType
+          typ_Single: ILType
           typ_Double: ILType
           typ_Boolean: ILType
           typ_Char: ILType
           typ_IntPtr: ILType
           typ_UIntPtr: ILType
-          systemRuntimeScopeRef : ILScopeRef }
+          systemRuntimeScopeRef: ILScopeRef }
         override x.ToString() = "<ILGlobals>"
 
     [<AutoOpen>]
@@ -3325,7 +3438,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
     [<Struct>]
     type TaggedIndex<'T> =
         val tag: 'T
-        val index : int32
+        val index: int32
         new(tag,index) = { tag=tag; index=index }
 
 
@@ -4064,7 +4177,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             let dWw0 n = int32 (n          &&& 0xFFFFFFFFL)
 
             let get (b:byte[]) n = int32 (Array.get b n)  
-            let zeroCreate n : byte[] = Array.zeroCreate n      
+            let zeroCreate n: byte[] = Array.zeroCreate n      
 
             let sub ( b:byte[]) s l = Array.sub b s l   
             let blit (a:byte[]) b c d e = Array.blit a b c d e 
@@ -4660,7 +4773,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             (* x86: 000000a0 *)
             (* x86: 000000b0 *)
             let dataSegmentAddr = seekReadInt32 is (peOptionalHeaderPhysLoc + 24) (* e.g. 0x0000c000 *)
-            let imageBaseReal = if only64 then dataSegmentAddr else seekReadInt32 is (peOptionalHeaderPhysLoc + 28)  (* Image Base Always 0x400000 (see Section 23.1). - QUERY : no it's not always 0x400000, e.g. 0x034f0000 *)
+            let imageBaseReal = if only64 then dataSegmentAddr else seekReadInt32 is (peOptionalHeaderPhysLoc + 28)  (* Image Base Always 0x400000 (see Section 23.1). - QUERY: no it's not always 0x400000, e.g. 0x034f0000 *)
             let alignVirt = seekReadInt32 is (peOptionalHeaderPhysLoc + 32)   (*  Section Alignment Always 0x2000 (see Section 23.1). *)
             let alignPhys = seekReadInt32 is (peOptionalHeaderPhysLoc + 36)  (* File Alignment Either 0x200 or 0x1000. *)
             (* x86: 000000c0 *)
@@ -5492,7 +5605,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             and seekReadInterfaceImpls numtypars tidx =
                 seekReadIndexedRows (getNumRows ILTableNames.InterfaceImpl,seekReadInterfaceImplRow ,fst,simpleIndexCompare tidx,isSorted ILTableNames.InterfaceImpl,(snd >> seekReadTypeDefOrRef numtypars AsObject [| |]))
 
-            and seekReadGenericParams numtypars (a,b) : ILGenericParameterDefs =
+            and seekReadGenericParams numtypars (a,b): ILGenericParameterDefs =
                 let pars =
                     seekReadIndexedRows
                         (getNumRows ILTableNames.GenericParam,seekReadGenericParamRow,
@@ -5505,7 +5618,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                              seq, {Name=readStringHeap nameIdx
                                    Constraints= constraints
                                    CustomAttrs=cas
-                                   Attributes = enum (int32 flags) }))
+                                   Attributes = enum (int32 flags)
+                                   Token=gpidx }))
                 pars |> Array.sortBy fst |> Array.map snd
 
             and seekReadGenericParamConstraintsUncached numtypars gpidx =
@@ -5602,7 +5716,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                    | tag when tag = ImplementationTag.ExportedType -> failwith "seekReadImplAsScopeRef"
                    | _ -> failwith "seekReadImplAsScopeRef"
 
-            and seekReadTypeRefScope (TaggedIndex(tag,idx) ) : ILTypeRefScope =
+            and seekReadTypeRefScope (TaggedIndex(tag,idx) ): ILTypeRefScope =
                 match tag with
                 | tag when tag = ResolutionScopeTag.Module -> ILTypeRefScope.Top(ILScopeRef.Local)
                 | tag when tag = ResolutionScopeTag.ModuleRef -> ILTypeRefScope.Top(ILScopeRef.Module (seekReadModuleRef idx))
@@ -5638,7 +5752,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                          if hasLayout && not isStatic then
                              Some (seekReadIndexedRow (getNumRows ILTableNames.FieldLayout,seekReadFieldLayoutRow,
                                                        snd,simpleIndexCompare idx,isSorted ILTableNames.FieldLayout,fst)) else None
-                   CustomAttrs=seekReadCustomAttrs (TaggedIndex(HasCustomAttributeTag.FieldDef,idx)) }
+                   CustomAttrs=seekReadCustomAttrs (TaggedIndex(HasCustomAttributeTag.FieldDef,idx)) 
+                   Token = idx }
 
             and seekReadFields (numtypars, hasLayout) fidx1 fidx2 =
                 { new ILFieldDefs with
@@ -5811,7 +5926,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                 let generic = (b &&& e_IMAGE_CEE_CS_CALLCONV_GENERIC) <> 0x0uy
                 generic, Callconv (byteAsHasThis b,cc)
 
-            and seekReadMemberRefAsMethodData numtypars idx : VarArgMethodData =  cacheMemberRefAsMemberData  seekReadMemberRefAsMethodDataUncached (MemberRefAsMspecIdx (numtypars,idx))
+            and seekReadMemberRefAsMethodData numtypars idx: VarArgMethodData =  cacheMemberRefAsMemberData  seekReadMemberRefAsMethodDataUncached (MemberRefAsMspecIdx (numtypars,idx))
 
             and seekReadMemberRefAsMethodDataUncached (MemberRefAsMspecIdx (numtypars,idx)) =
                 let (mrpIdx,nameIdx,typeIdx) = seekReadMemberRefRow idx
@@ -5821,7 +5936,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                 let minst =  Array.init genarity (fun n -> ILType.Var (numtypars+n))
                 (VarArgMethodData(enclTyp, cc, nm, argtys, varargs,retty,minst))
 
-            and seekReadMemberRefAsMethDataNoVarArgs numtypars idx : MethodData =
+            and seekReadMemberRefAsMethDataNoVarArgs numtypars idx: MethodData =
                let (VarArgMethodData(enclTyp, cc, nm, argtys, _varargs, retty,minst)) =  seekReadMemberRefAsMethodData numtypars idx
                (MethodData(enclTyp, cc, nm, argtys, retty,minst))
 
@@ -5887,7 +6002,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
 
             and seekReadParams (retty,argtys) pidx1 pidx2 =
-                let retRes : ILReturn ref =  ref { (* Marshal=None *) Type=retty; CustomAttrs=ILCustomAttrsStatics.Empty }
+                let retRes: ILReturn ref =  ref { (* Marshal=None *) Type=retty; CustomAttrs=ILCustomAttrsStatics.Empty }
                 let paramsRes =
                     argtys
                     |> Array.map (fun ty ->
@@ -5966,7 +6081,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                  RemoveMethod=seekReadMethodSemantics (0x0010,TaggedIndex(HasSemanticsTag.Event,idx))
                  //FireMethod=seekReadOptionalMethodSemantics (0x0020,TaggedIndex(HasSemanticsTag.Event,idx))
                  //OtherMethods = seekReadMultipleMethodSemantics (0x0004, TaggedIndex(HasSemanticsTag.Event, idx))
-                 CustomAttrs=seekReadCustomAttrs (TaggedIndex(HasCustomAttributeTag.Event,idx)) }
+                 CustomAttrs=seekReadCustomAttrs (TaggedIndex(HasCustomAttributeTag.Event,idx)) 
+                 Token = idx}
 
             and seekReadEvents numtypars tidx =
                { new ILEventDefs with
@@ -6004,7 +6120,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                  PropertyType=retty;
                  Init= if (flags &&& 0x1000) = 0 then None else Some (seekReadConstant (TaggedIndex(HasConstantTag.Property,idx)));
                  IndexParameterTypes=argtys;
-                 CustomAttrs=seekReadCustomAttrs (TaggedIndex(HasCustomAttributeTag.Property,idx)) }
+                 CustomAttrs=seekReadCustomAttrs (TaggedIndex(HasCustomAttributeTag.Property,idx))
+                 Token = idx }
 
             and seekReadProperties numtypars tidx =
                { new ILPropertyDefs with
@@ -6335,7 +6452,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                      yield! encodeCustomAttrNamedArg true arg
                  for arg in fieldArgs do 
                      yield! encodeCustomAttrNamedArg false arg |]
-            //eprintfn "mkILCustomAttribMethRef, nnamed = %d, data.Length = %d, data = %A" nnamed data.Length data
+            //printfn "mkILCustomAttribMethRef, nnamed = %d, data.Length = %d, data = %A" nnamed data.Length data
             { Method = mspec;
               Data = data;
               Elements = fixedArgs @ (propArgs |> List.map(fun (ILCustomAttrNamedArg(_,_,e)) -> e)) @ (fieldArgs |> List.map(fun (ILCustomAttrNamedArg(_,_,e)) -> e)) }
@@ -6364,7 +6481,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             | _ ->  failwithf "decodeCustomAttrElemType ilg: sigptr = %d, unrecognized custom element type: %A, bytes = %A" sigptr x bytes
 
         // Parse an IL type signature argument within a custom attribute blob
-        type ILTypeSigParser(tstring : string) =
+        type ILTypeSigParser(tstring: string) =
 
             let mutable startPos = 0
             let mutable currentPos = 0
@@ -6530,7 +6647,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
         let decodeILCustomAttribData ilg (ca: ILCustomAttribute) =
             let bytes = ca.Data
-            //eprintfn "decodeILCustomAttribData, data.Length = %d, data = %A, meth = %A, argtypes = %A " bytes.Length bytes ca.Method.EnclosingType ca.Method.FormalArgTypes
+            //printfn "decodeILCustomAttribData, data.Length = %d, data = %A, meth = %A, argtypes = %A " bytes.Length bytes ca.Method.EnclosingType ca.Method.FormalArgTypes
             let sigptr = 0
             let bb0,sigptr = sigptr_get_byte bytes sigptr
             let bb1,sigptr = sigptr_get_byte bytes sigptr
@@ -6575,9 +6692,9 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                     let n,sigptr = sigptr_get_byte bytes sigptr
                     (argty, box (not (n = 0))), sigptr
                 | ILType.Boxed tspec when tspec.Namespace = USome "System" && tspec.Name = "String" ->
-                    //eprintfn "parsing string, sigptr = %d" sigptr
+                    //printfn "parsing string, sigptr = %d" sigptr
                     let n,sigptr = sigptr_get_serstring_possibly_null bytes sigptr
-                    //eprintfn "got string, sigptr = %d" sigptr
+                    //printfn "got string, sigptr = %d" sigptr
                     (argty, box (match n with None -> null | Some s -> s)), sigptr
                 | ILType.Boxed tspec when tspec.Namespace = USome "System" && tspec.Name = "Type" ->
                     let nOpt,sigptr = sigptr_get_serstring_possibly_null bytes sigptr
@@ -6621,7 +6738,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
             let fixedArgs,sigptr = parseFixed (List.ofArray ca.Method.FormalArgTypes) sigptr
             let nnamed,sigptr = sigptr_get_u16 bytes sigptr
-            //eprintfn "nnamed = %d" nnamed
+            //printfn "nnamed = %d" nnamed
 
             let rec parseNamed acc n sigptr =
                 if n = 0 then List.rev acc else
@@ -6681,7 +6798,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
         let EcmaMscorlibScopeRef = ILScopeRef.Assembly (ILAssemblyRef("mscorlib", UNone, USome EcmaPublicKey, true, UNone, UNone))
 
 //====================================================================================================
-// AssemblyReaderReflection 
+// ContextAssembly 
 //
 // An implementation of reflection objects over on-disk assemblies, sufficient to give
 // System.Type, System.MethodInfo, System.ConstructorInfo etc. objects
@@ -6689,7 +6806,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 // targeting F# type providers.
 
 
-namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
+namespace ProviderImplementation.ProvidedTypes
 
     //
     // The on-disk assemblies are read by AssemblyReader.
@@ -6760,10 +6877,10 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
 
 
     [<AutoOpen>]
-    module Utils =
+    module Utils2 =
         let nullToOption x = match x with null -> None | _ -> Some x
-        let optionToNull x = match x with None -> null | Some x -> x
-        let uoptionToNull x = match x with UNone -> null | USome x -> x
+        let optionToObj x = match x with None -> null | Some x -> x
+        let uoptionToObj x = match x with UNone -> null | USome x -> x
         let notRequired msg nm =
            failwithf "SHOULD NOT BE REQUIRED! %s for %s. Stack trace:\n%s" msg nm (System.Diagnostics.StackTrace().ToString())
 
@@ -6863,7 +6980,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
 
         let rec eqTypeAndILTypeRef (ty1: Type) (ty2: ILTypeRef) =
             ty1.Name = ty2.Name &&
-            ty1.Namespace = (uoptionToNull ty2.Namespace) &&
+            ty1.Namespace = (uoptionToObj ty2.Namespace) &&
             match ty2.Scope with
             | ILTypeRefScope.Top scoref2 -> eqAssemblyAndILScopeRef ty1.Assembly scoref2
             | ILTypeRefScope.Nested tref2 -> ty1.IsNested && eqTypeAndILTypeRef ty1.DeclaringType tref2
@@ -6926,20 +7043,20 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
     /// Represents an array or other symbolic type involving a provided type as the argument.
     /// See the type provider spec for the methods that must be implemented.
     /// Note that the type provider specification does not require us to implement pointer-equality for provided types.
-    and ContextTypeSymbol(kind: ContextTypeSymbolKind, args: Type[]) =
+    and ContextTypeSymbol(kind: ContextTypeSymbolKind, typeArgs: Type[]) =
         inherit Type()
 
         override __.FullName =
-            match kind,args with
+            match kind,typeArgs with
             | ContextTypeSymbolKind.SDArray,[| arg |] -> arg.FullName + "[]"
             | ContextTypeSymbolKind.Array _,[| arg |] -> arg.FullName + "[*]"
             | ContextTypeSymbolKind.Pointer,[| arg |] -> arg.FullName + "*"
             | ContextTypeSymbolKind.ByRef,[| arg |] -> arg.FullName + "&"
-            | ContextTypeSymbolKind.Generic gtd, args -> gtd.FullName + "[" + (args |> Array.map (fun arg -> arg.FullName) |> String.concat ",") + "]"
+            | ContextTypeSymbolKind.Generic gtd, typeArgs -> gtd.FullName + "[" + (typeArgs |> Array.map (fun arg -> arg.FullName) |> String.concat ",") + "]"
             | _ -> failwith "unreachable"
 
         override __.DeclaringType =
-            match kind,args with
+            match kind,typeArgs with
             | ContextTypeSymbolKind.SDArray,[| arg |]
             | ContextTypeSymbolKind.Array _,[| arg |]
             | ContextTypeSymbolKind.Pointer,[| arg |]
@@ -6953,7 +7070,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                 if otherTy.IsGenericType then
                     let otherGtd = otherTy.GetGenericTypeDefinition()
                     let otherArgs = otherTy.GetGenericArguments()
-                    let yes = gtd.Equals(otherGtd) && Seq.forall2 eqType args otherArgs
+                    let yes = gtd.Equals(otherGtd) && Seq.forall2 eqType typeArgs otherArgs
                     yes
                 else
                     base.IsAssignableFrom(otherTy)
@@ -6966,12 +7083,12 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
             | _ -> false
 
         override __.Name =
-            match kind,args with
+            match kind,typeArgs with
             | ContextTypeSymbolKind.SDArray,[| arg |] -> arg.Name + "[]"
             | ContextTypeSymbolKind.Array _,[| arg |] -> arg.Name + "[*]"
             | ContextTypeSymbolKind.Pointer,[| arg |] -> arg.Name + "*"
             | ContextTypeSymbolKind.ByRef,[| arg |] -> arg.Name + "&"
-            | ContextTypeSymbolKind.Generic gtd, _args -> gtd.Name
+            | ContextTypeSymbolKind.Generic gtd, _typeArgs -> gtd.Name
             | _ -> failwith "unreachable"
 
         override __.BaseType =
@@ -6980,10 +7097,10 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
             | ContextTypeSymbolKind.Array _ -> typeof<System.Array>
             | ContextTypeSymbolKind.Pointer -> typeof<System.ValueType>
             | ContextTypeSymbolKind.ByRef -> typeof<System.ValueType>
-            | ContextTypeSymbolKind.Generic gtd  -> instType (args, [| |]) gtd.BaseType
+            | ContextTypeSymbolKind.Generic gtd  -> instType (typeArgs, [| |]) gtd.BaseType
 
         override this.Assembly =
-            match kind, args with
+            match kind, typeArgs with
             | ContextTypeSymbolKind.SDArray,[| arg |]
             | ContextTypeSymbolKind.Array _,[| arg |]
             | ContextTypeSymbolKind.Pointer,[| arg |]
@@ -6992,7 +7109,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
             | _ -> notRequired "Assembly" this.Name
 
         override this.Namespace =
-            match kind, args with
+            match kind, typeArgs with
             | ContextTypeSymbolKind.SDArray,[| arg |]
             | ContextTypeSymbolKind.Array _,[| arg |]
             | ContextTypeSymbolKind.Pointer,[| arg |]
@@ -7007,32 +7124,33 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
         override __.IsPointerImpl() = (match kind with ContextTypeSymbolKind.Pointer _ -> true | _ -> false)
         override __.IsPrimitiveImpl() = false
         override __.IsGenericType = (match kind with ContextTypeSymbolKind.Generic _ -> true | _ -> false)
-        override __.GetGenericArguments() = (match kind with ContextTypeSymbolKind.Generic _ -> args | _ -> [| |])
+        override __.GetGenericArguments() = (match kind with ContextTypeSymbolKind.Generic _ -> typeArgs | _ -> [| |])
         override __.GetGenericTypeDefinition() = (match kind with ContextTypeSymbolKind.Generic e -> (e :> Type) | _ -> invalidOp "non-generic type")
         override __.IsCOMObjectImpl() = false
         override __.HasElementTypeImpl() = (match kind with ContextTypeSymbolKind.Generic _ -> false | _ -> true)
-        override __.GetElementType() = (match kind,args with (ContextTypeSymbolKind.Array _  | ContextTypeSymbolKind.SDArray | ContextTypeSymbolKind.ByRef | ContextTypeSymbolKind.Pointer),[| e |] -> e | _ -> invalidOp (sprintf "%A, %A: not an array, pointer or byref type" kind args))
+        override __.GetElementType() = (match kind,typeArgs with (ContextTypeSymbolKind.Array _  | ContextTypeSymbolKind.SDArray | ContextTypeSymbolKind.ByRef | ContextTypeSymbolKind.Pointer),[| e |] -> e | _ -> invalidOp (sprintf "%A, %A: not an array, pointer or byref type" kind typeArgs))
 
-        override this.Module : Module = notRequired "Module" this.Name
+        override this.Module: Module = notRequired "Module" this.Name
 
         override this.GetHashCode()                                                                    =
-            match kind,args with
+            match kind,typeArgs with
             | ContextTypeSymbolKind.SDArray,[| arg |] -> 10 + hash arg
             | ContextTypeSymbolKind.Array _,[| arg |] -> 163 + hash arg
             | ContextTypeSymbolKind.Pointer,[| arg |] -> 283 + hash arg
             | ContextTypeSymbolKind.ByRef,[| arg |] -> 43904 + hash arg
-            | ContextTypeSymbolKind.Generic gtd,_ -> 9797 + hash gtd + Array.sumBy hash args
+            | ContextTypeSymbolKind.Generic gtd,_ -> gtd.MetadataToken
             | _ -> failwith "unreachable"
 
         override this.Equals(other: obj) =
             match other with
-            | :? ContextTypeSymbol as otherTy -> (kind, args) = (otherTy.Kind, otherTy.Args)
+            | :? ContextTypeSymbol as otherTy -> (kind, typeArgs) = (otherTy.Kind, otherTy.Args)
             | _ -> false
 
         member this.Kind = kind
-        member this.Args = args
+        member this.Args = typeArgs
 
         override this.GetConstructors _bindingAttr = notRequired "GetConstructors" this.Name
+
         override this.GetMethodImpl(name, _bindingAttr, _binderBinder, _callConvention, types, _modifiers) =
             match kind with
             | ContextTypeSymbolKind.Generic gtd ->
@@ -7041,23 +7159,25 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                     match types with
                     | null ->
                         match gtd.Metadata.Methods.FindByName(name) with
-                        | [| md |] -> md
-                        | [| |] -> failwith (sprintf "method %s not found" name)
-                        | _ -> failwith (sprintf "multiple methods called '%s' found" name)
+                        | [| md |] -> Some md
+                        | [| |] -> None //failwith (sprintf "method %s not found" name)
+                        | _ -> None // failwith (sprintf "multiple methods called '%s' found" name)
                     | _ ->
                         match gtd.Metadata.Methods.FindByNameAndArity(name, types.Length) with
-                        | [| |] ->  failwith (sprintf "method %s not found with arity %d" name types.Length)
+                        | [| |] ->  None //failwith (sprintf "method %s not found with arity %d" name types.Length)
                         | mds ->
-                            match mds |> Array.filter (fun md -> eqTypesAndILTypesWithInst args types md.ParameterTypes) with
+                            match mds |> Array.filter (fun md -> eqTypesAndILTypesWithInst typeArgs types md.ParameterTypes) with
                             | [| |] ->
-                                let md1 = mds.[0]
-                                ignore md1
-                                failwith (sprintf "no method %s with arity %d found with right types. Comparisons:" name types.Length
-                                          + ((types, md1.ParameterTypes) ||> Array.map2 (fun a pt -> eqTypeAndILTypeWithInst args a pt |> sprintf "%A") |> String.concat "\n"))
-                            | [| md |] -> md
-                            | _ -> failwith (sprintf "multiple methods %s with arity %d found with right types" name types.Length)
+                                None
+                                //let md1 = mds.[0]
+                                //failwith (sprintf "no method %s with arity %d found with right types. Comparisons:" name types.Length
+                                //          + ((types, md1.ParameterTypes) ||> Array.map2 (fun a pt -> eqTypeAndILTypeWithInst typeArgs a pt |> sprintf "%A") |> String.concat "\n"))
+                            | [| md |] -> Some md
+                            | _ -> None //failwith (sprintf "multiple methods %s with arity %d found with right types" name types.Length)
 
-                gtd.MakeMethodInfo (this, md)
+                match md with 
+                | None -> null
+                | Some md -> gtd.MakeMethodInfo (this, md) 
 
             | _ -> notRequired "ContextTypeSymbol: GetMethodImpl" this.Name
 
@@ -7069,28 +7189,59 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                     match types with
                     | null ->
                         match gtd.Metadata.Methods.FindByName(name) with
-                        | [| md |] -> md
-                        | [| |] -> failwith (sprintf "method %s not found" name)
-                        | _ -> failwith (sprintf "multiple methods called '%s' found" name)
+                        | [| md |] -> Some md 
+                        | _ -> None
                     | _ ->
                         gtd.Metadata.Methods.FindByNameAndArity(name, types.Length)
-                        |> Array.find (fun md -> eqTypesAndILTypesWithInst types args md.ParameterTypes)
-                gtd.MakeConstructorInfo (this, md)
+                        |> Array.tryFind (fun md -> eqTypesAndILTypesWithInst typeArgs types md.ParameterTypes)
+
+                match md with 
+                | None -> null
+                | Some md -> gtd.MakeConstructorInfo (this, md) 
 
             | _ -> notRequired "ContextTypeSymbol: GetConstructorImpl" this.Name
 
+        override this.GetPropertyImpl(name, _bindingAttr, _binder, _returnType, types, _modifiers) = 
+            match kind with
+            | ContextTypeSymbolKind.Generic gtd ->
+                let md =
+                    gtd.Metadata.Properties.Entries
+                    |> Array.tryFind (fun md -> md.Name = name)
+
+                match md with 
+                | None -> null
+                | Some md -> gtd.MakePropertyInfo (this, md) 
+
+            | _ -> notRequired "ContextTypeSymbol: GetPropertyImpl" this.Name
+
+        override this.GetEvent(name, _bindingAttr) = 
+            match kind with
+            | ContextTypeSymbolKind.Generic gtd ->
+                let md = gtd.Metadata.Events.Entries |> Array.tryFind (fun md -> md.Name = name)
+                match md with 
+                | None -> null
+                | Some md -> gtd.MakeEventInfo (this, md) 
+
+            | _ -> notRequired "ContextTypeSymbol: GetEvent" this.Name
+
+        override this.GetField(name, _bindingAttr) = 
+            match kind with
+            | ContextTypeSymbolKind.Generic gtd ->
+                let md = gtd.Metadata.Fields.Entries |> Array.tryFind (fun md -> md.Name = name)
+                match md with 
+                | None -> null
+                | Some md -> gtd.MakeFieldInfo (this, md) 
+
+            | _ -> notRequired "ContextTypeSymbol: GetEvent" this.Name
         override this.AssemblyQualifiedName = "[" + this.Assembly.FullName + "]" + this.FullName
 
         override this.GetMembers _bindingAttr = notRequired "GetMembers" this.Name
         override this.GetMethods _bindingAttr = notRequired "GetMethods" this.Name
-        override this.GetField(_name, _bindingAttr) = notRequired "GetField" this.Name
         override this.GetFields _bindingAttr = notRequired "GetFields" this.Name
         override this.GetInterface(_name, _ignoreCase) = notRequired "GetInterface" this.Name
         override this.GetInterfaces() = notRequired "GetInterfaces" this.Name
-        override this.GetEvent(_name, _bindingAttr) = notRequired "GetEvent" this.Name
         override this.GetEvents _bindingAttr = notRequired "GetEvents" this.Name
         override this.GetProperties _bindingAttr = notRequired "GetProperties" this.Name
-        override this.GetPropertyImpl(_name, _bindingAttr, _binder, _returnType, _types, _modifiers) = notRequired "GetPropertyImpl" this.Name
         override this.GetNestedTypes _bindingAttr = notRequired "GetNestedTypes" this.Name
         override this.GetNestedType(_name, _bindingAttr) = notRequired "GetNestedType" this.Name
         override this.GetAttributeFlagsImpl() = notRequired "GetAttributeFlagsImpl" this.Name
@@ -7114,27 +7265,31 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
 
     and ContextMethodSymbol(gmd: MethodInfo, gargs: Type[]) =
         inherit MethodInfo()
+        let dty = gmd.DeclaringType
+        let dinst = (if dty.IsGenericType then dty.GetGenericArguments() else [| |])
 
         override __.Attributes = gmd.Attributes
         override __.Name = gmd.Name
-        override __.DeclaringType = gmd.DeclaringType
+        override __.DeclaringType = dty
         override __.MemberType = gmd.MemberType
 
-        override __.GetParameters() = gmd.GetParameters() |> Array.map (instParameterInfo (gmd.DeclaringType.GetGenericArguments(), gargs))
+        override __.GetParameters() = gmd.GetParameters() |> Array.map (instParameterInfo (dinst, gargs))
         override __.CallingConvention = gmd.CallingConvention
-        override __.ReturnType = gmd.ReturnType |> instType (gmd.DeclaringType.GetGenericArguments(), gargs)
-        override __.IsGenericMethod = true
+        override __.ReturnType = gmd.ReturnType |> instType (dinst, gargs)
+        override __.GetGenericMethodDefinition() = gmd
+        override __.IsGenericMethod = gmd.IsGenericMethod
         override __.GetGenericArguments() = gargs
         override __.MetadataToken = gmd.MetadataToken
 
         override __.GetCustomAttributesData() = gmd.GetCustomAttributesData()
-
-        override __.GetHashCode() = gmd.GetHashCode()
+        override __.MakeGenericMethod(typeArgs) = ContextMethodSymbol(gmd, typeArgs) :> MethodInfo
+        override __.GetHashCode() = gmd.MetadataToken
         override this.Equals(that:obj) =
             match that with
-            | :? MethodInfo as thatMI -> thatMI.IsGenericMethod && gmd.Equals(thatMI.GetGenericMethodDefinition()) && lengthsEqAndForall2 (gmd.GetGenericArguments()) (thatMI.GetGenericArguments()) (=)
+            | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqType dty that.DeclaringType && lengthsEqAndForall2 (gmd.GetGenericArguments()) (that.GetGenericArguments()) (=)
             | _ -> false
 
+        
         override this.MethodHandle = notRequired "MethodHandle" this.Name
         override this.ReturnParameter = notRequired "ReturnParameter" this.Name
         override this.IsDefined(_attributeType, _inherited) = notRequired "IsDefined" this.Name
@@ -7149,10 +7304,11 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
         override __.ToString() = gmd.ToString() + "@inst"
 
 
+
     /// Clones namespaces, type providers, types and members provided by tp, renaming namespace nsp1 into namespace nsp2.
 
     /// Makes a type definition read from a binary available as a System.Type. Not all methods are implemented.
-    and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly : ILAssemblyRef -> Choice<ContextAssembly,exn>, asm: ContextAssembly, declTyOpt: Type option, inp: ILTypeDef) =
+    and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly: ILAssemblyRef -> Choice<ContextAssembly,exn>, asm: ContextAssembly, declTyOpt: Type option, inp: ILTypeDef) =
         inherit Type()
 
         // Note: For F# type providers we never need to view the custom attributes
@@ -7174,10 +7330,10 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
              :> IList<CustomAttributeData>
 
         /// Makes a parameter definition read from a binary available as a ParameterInfo. Not all methods are implemented.
-        and txILParameter gps (inp : ILParameter) =
+        and txILParameter gps (inp: ILParameter) =
             { new ParameterInfo() with
 
-                override __.Name = uoptionToNull inp.Name
+                override __.Name = uoptionToObj inp.Name
                 override __.ParameterType = inp.ParameterType |> txILType gps
                 override __.RawDefaultValue = (match inp.Default with UNone -> null | USome v -> v)
                 override __.Attributes = inp.Attributes
@@ -7197,13 +7353,12 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
 
                 override __.GetParameters() = inp.Parameters |> Array.map (txILParameter (gps, [| |]))
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
+                override __.MetadataToken = inp.Token
 
-                override __.GetHashCode() = hashILParameterTypes inp.Parameters
-                override __.Equals(that:obj) =
+                override __.GetHashCode() = inp.Token
+                override this.Equals(that:obj) =
                     match that with
-                    | :? ConstructorInfo as that ->
-                        eqType declTy that.DeclaringType &&
-                        eqParametersAndILParameterTypesWithInst gps (that.GetParameters()) inp.Parameters
+                    | :? ConstructorInfo as that -> this.MetadataToken = that.MetadataToken && eqType declTy that.DeclaringType
                     | _ -> false
 
                 override this.IsDefined(attributeType, inherited) = notRequired "IsDefined"  this.Name
@@ -7235,13 +7390,10 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                 override __.IsGenericMethod = (gps2.Length <> 0)
                 override __.IsGenericMethodDefinition = __.IsGenericMethod
 
-                override __.GetHashCode() = hash inp.Name + hashILParameterTypes inp.Parameters
+                override __.GetHashCode() = inp.Token
                 override this.Equals(that:obj) =
                     match that with
-                    | :? MethodInfo as thatMI ->
-                        inp.Name = thatMI.Name &&
-                        eqType this.DeclaringType thatMI.DeclaringType &&
-                        eqParametersAndILParameterTypesWithInst gps (thatMI.GetParameters()) inp.Parameters
+                    | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType 
                     | _ -> false
 
                 override this.MakeGenericMethod(args) = ContextMethodSymbol(this, args) :> MethodInfo
@@ -7263,7 +7415,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                 override __.ToString() = sprintf "ctxt method %s(...) in type %s" inp.Name declTy.FullName  }
 
         /// Makes a property definition read from a binary available as a PropertyInfo. Not all methods are implemented.
-        and txPropertyDefinition declTy gps (inp: ILPropertyDef) =
+        and txILPropertyDef (declTy: Type) (inp: ILPropertyDef) =
+            let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
             { new PropertyInfo() with
 
                 override __.Name = inp.Name
@@ -7272,19 +7425,18 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                 override __.DeclaringType = declTy
 
                 override __.PropertyType = inp.PropertyType |> txILType (gps, [| |])
-                override __.GetGetMethod(_nonPublic) = inp.GetMethod |> Option.map txILMethodRef |> optionToNull
-                override __.GetSetMethod(_nonPublic) = inp.SetMethod |> Option.map txILMethodRef |> optionToNull
+                override __.GetGetMethod(_nonPublic) = inp.GetMethod |> Option.map txILMethodRef |> optionToObj
+                override __.GetSetMethod(_nonPublic) = inp.SetMethod |> Option.map txILMethodRef |> optionToObj
                 override __.GetIndexParameters() = inp.IndexParameters |> Array.map (txILParameter (gps, [| |]))
                 override __.CanRead = inp.GetMethod.IsSome
                 override __.CanWrite = inp.SetMethod.IsSome
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
+                override __.MetadataToken = inp.Token
 
-                override this.GetHashCode() = hash inp.Name
+                override this.GetHashCode() = inp.Token
                 override this.Equals(that:obj) =
                     match that with
-                    | :? PropertyInfo as thatPI ->
-                        inp.Name = thatPI.Name  &&
-                        eqType this.DeclaringType thatPI.DeclaringType
+                    | :? PropertyInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType
                     | _ -> false
 
                 override this.GetValue(obj, invokeAttr, binder, index, culture) = notRequired "GetValue" this.Name
@@ -7298,7 +7450,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                 override __.ToString() = sprintf "ctxt property %s(...) in type %s" inp.Name declTy.Name }
 
         /// Make an event definition read from a binary available as an EventInfo. Not all methods are implemented.
-        and txEventDefinition declTy gps (inp: ILEventDef) =
+        and txILEventDef (declTy: Type) (inp: ILEventDef) =
+            let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
             { new EventInfo() with
 
                 override __.Name = inp.Name
@@ -7310,13 +7463,12 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                 override __.GetAddMethod(_nonPublic) = inp.AddMethod |> txILMethodRef
                 override __.GetRemoveMethod(_nonPublic) = inp.RemoveMethod |> txILMethodRef
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
+                override __.MetadataToken = inp.Token
 
-                override __.GetHashCode() = hash inp.Name
+                override __.GetHashCode() = inp.Token
                 override this.Equals(that:obj) =
                     match that with
-                    | :? EventInfo as thatEI ->
-                        inp.Name = thatEI.Name  &&
-                        eqType this.DeclaringType thatEI.DeclaringType
+                    | :? EventInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType
                     | _ -> false
 
                 override this.GetRaiseMethod(nonPublic) = notRequired "GetRaiseMethod" this.Name
@@ -7328,7 +7480,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                 override __.ToString() = sprintf "ctxt event %s(...) in type %s" inp.Name declTy.FullName }
 
         /// Makes a field definition read from a binary available as a FieldInfo. Not all methods are implemented.
-        and txFieldDefinition declTy gps (inp: ILFieldDef) =
+        and txILFieldDef (declTy: Type) (inp: ILFieldDef) =
+            let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
             { new FieldInfo() with
 
                 override __.Name = inp.Name
@@ -7339,13 +7492,12 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                 override __.FieldType = inp.FieldType |> txILType (gps, [| |])
                 override __.GetRawConstantValue() = match inp.LiteralValue with None -> null | Some v -> v
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
+                override __.MetadataToken = inp.Token
 
-                override __.GetHashCode() = hash inp.Name
+                override __.GetHashCode() = inp.Token
                 override this.Equals(that:obj) =
                     match that with
-                    | :? EventInfo as thatFI ->
-                        inp.Name = thatFI.Name  &&
-                        eqType this.DeclaringType thatFI.DeclaringType
+                    | :? FieldInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType
                     | _ -> false
 
                 override this.ReflectedType = notRequired "ReflectedType" this.Name
@@ -7366,7 +7518,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
             | ILScopeRef.Module _ -> asm
 
         /// Bind a reference to a type
-        and txILTypeRef(tref: ILTypeRef) : Type =
+        and txILTypeRef(tref: ILTypeRef): Type =
             match tref.Scope with
             | ILTypeRefScope.Top scoref -> txScopeRef(scoref).BindType(tref.Namespace, tref.Name)
             | ILTypeRefScope.Nested tref -> txILTypeRef(tref).GetNestedType(tref.Name,BindingFlags.Public ||| BindingFlags.NonPublic)
@@ -7423,6 +7575,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                 override __.GetGenericParameterConstraints() = inp.Constraints |> Array.map (txILType (gpsf()))
 
                 override __.MemberType = enum 0
+                override __.MetadataToken = inp.Token
 
                 override __.Namespace = null //notRequired "Namespace"
                 override this.DeclaringType = notRequired "DeclaringType" this.Name
@@ -7477,7 +7630,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                 override this.GetCustomAttributes(attributeType, inherited) = notRequired "txILGenericParam: GetCustomAttributes" this.Name
                 override this.IsDefined(attributeType, inherited) = notRequired "txILGenericParam: IsDefined" this.Name
                 override this.GetInterface(name, ignoreCase) = notRequired "txILGenericParam: GetInterface" this.Name
-                override this.Module = notRequired "txILGenericParam: Module" this.Name : Module 
+                override this.Module = notRequired "txILGenericParam: Module" this.Name: Module 
                 override this.GetElementType() = notRequired "txILGenericParam: GetElementType" this.Name
                 override this.InvokeMember(name, invokeAttr, binder, target, args, modifiers, culture, namedParameters) = notRequired "txILGenericParam: InvokeMember" this.Name
 
@@ -7489,8 +7642,9 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
 
         override __.Name = inp.Name
         override __.Assembly = (asm :> Assembly)
-        override __.DeclaringType = declTyOpt |> optionToNull
+        override __.DeclaringType = declTyOpt |> optionToObj
         override __.MemberType = if isNested then MemberTypes.NestedType else MemberTypes.TypeInfo
+        override __.MetadataToken = inp.Token
 
         override __.FullName =
             match declTyOpt with
@@ -7501,8 +7655,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
             | Some declTy ->
                 declTy.FullName + "+" + inp.Name
 
-        override __.Namespace = inp.Namespace |> uoptionToNull
-        override __.BaseType = inp.Extends |> Option.map (txILType (gps, [| |])) |> optionToNull
+        override __.Namespace = inp.Namespace |> uoptionToObj
+        override __.BaseType = inp.Extends |> Option.map (txILType (gps, [| |])) |> optionToObj
         override __.GetInterfaces() = inp.Implements |> Array.map (txILType (gps, [| |]))
 
         override this.GetConstructors(_bindingFlags) =
@@ -7515,25 +7669,25 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
 
         override this.GetField(name, _bindingFlags) =
             inp.Fields.Entries
-            |> Array.tryPick (fun p -> if p.Name = name then Some (txFieldDefinition this gps p) else None)
-            |> optionToNull
+            |> Array.tryPick (fun p -> if p.Name = name then Some (txILFieldDef this p) else None)
+            |> optionToObj
 
         override this.GetFields(_bindingFlags) =
             inp.Fields.Entries
-            |> Array.map (txFieldDefinition this gps)
+            |> Array.map (txILFieldDef this)
 
         override this.GetEvent(name, _bindingFlags) =
             inp.Events.Entries
-            |> Array.tryPick (fun ev -> if ev.Name = name then Some (txEventDefinition this gps ev) else None)
-            |> optionToNull
+            |> Array.tryPick (fun ev -> if ev.Name = name then Some (txILEventDef this ev) else None)
+            |> optionToObj
 
         override this.GetEvents(_bindingFlags) =
             inp.Events.Entries
-            |> Array.map (txEventDefinition this gps)
+            |> Array.map (txILEventDef this)
 
         override this.GetProperties(_bindingFlags) =
             inp.Properties.Entries
-            |> Array.map (txPropertyDefinition this gps)
+            |> Array.map (txILPropertyDef this)
 
         override this.GetMembers(_bindingFlags) =
             [| for x in this.GetMethods() do yield (x :> MemberInfo)
@@ -7544,26 +7698,28 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
 
         override this.GetNestedTypes(_bindingFlags) =
             inp.NestedTypes.Entries
-            |> Array.map (asm.txILTypeDef (Some (this :> Type)))
+            |> Array.map (asm.TxILTypeDef (Some (this :> Type)))
 
         // GetNestedType is used for linking to the binding context
         override this.GetNestedType(name, _bindingFlags) =
-            inp.NestedTypes.TryFindByName(UNone, name) |> Option.map (asm.txILTypeDef (Some (this :> Type))) |> optionToNull
+            inp.NestedTypes.TryFindByName(UNone, name) |> Option.map (asm.TxILTypeDef (Some (this :> Type))) |> optionToObj
 
         override this.GetPropertyImpl(name, _bindingFlags, _binder, _returnType, _types, _modifiers) =
             inp.Properties.Entries
-            |> Array.tryPick (fun p -> if p.Name = name then Some (txPropertyDefinition this gps p) else None)
-            |> optionToNull
+            |> Array.tryPick (fun p -> if p.Name = name then Some (txILPropertyDef this p) else None)
+            |> optionToObj
 
         override this.GetMethodImpl(name, _bindingFlags, _binder, _callConvention, types, _modifiers)          =
             inp.Methods.FindByNameAndArity(name, types.Length)
-            |> Array.find (fun md -> eqTypesAndILTypes types md.ParameterTypes)
-            |> txILMethodDef this
+            |> Array.tryFind (fun md -> eqTypesAndILTypes types md.ParameterTypes)
+            |> Option.map (txILMethodDef this)
+            |> optionToObj
 
         override this.GetConstructorImpl(_bindingFlags, _binder, _callConvention, types, _modifiers)          =
             inp.Methods.FindByNameAndArity(".ctor", types.Length)
-            |> Array.find (fun md -> eqTypesAndILTypes types md.ParameterTypes)
-            |> txILConstructorDef this
+            |> Array.tryFind (fun md -> eqTypesAndILTypes types md.ParameterTypes)
+            |> Option.map (txILConstructorDef this)
+            |> optionToObj
 
         // Every implementation of System.Type must meaningfully implement these
         override this.MakeGenericType(args) = ContextTypeSymbol(ContextTypeSymbolKind.Generic this, args) :> Type
@@ -7593,7 +7749,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
         override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
 
         override this.Equals(that:obj) = System.Object.ReferenceEquals (this, that)
-        override this.GetHashCode() =  hash (inp.Namespace, inp.Name)
+        override this.GetHashCode() =  inp.Token
 
         override this.IsAssignableFrom(otherTy) = base.IsAssignableFrom(otherTy) || this.Equals(otherTy)
         override this.IsSubclassOf(otherTy) = base.IsSubclassOf(otherTy) || inp.IsDelegate && otherTy.FullName = "System.Delegate"
@@ -7603,33 +7759,50 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
         override this.ToString() = sprintf "ctxt type %s" this.FullName
 
         override __.GetGenericArguments() = gps
-        override __.GetGenericTypeDefinition() = notRequired "GetGenericTypeDefinition" inp.Name
+        override this.GetGenericTypeDefinition() = (this :> Type)
+
         override __.GetMember(_name, _memberType, _bindingFlags) = notRequired "txILTypeDef: GetMember" inp.Name
         override __.GUID = notRequired "txILTypeDef: GUID" inp.Name
         override __.GetCustomAttributes(_inherited) = notRequired "txILTypeDef: GetCustomAttributes" inp.Name
         override __.GetCustomAttributes(_attributeType, _inherited) = notRequired "txILTypeDef: GetCustomAttributes" inp.Name
         override __.IsDefined(_attributeType, _inherited) = notRequired "txILTypeDef: IsDefined" inp.Name
         override __.GetInterface(_name, _ignoreCase) = notRequired "txILTypeDef: GetInterface" inp.Name
-        override __.Module = notRequired "txILTypeDef: Module"  inp.Name : Module
+        override __.Module = notRequired "txILTypeDef: Module"  inp.Name: Module
         override __.GetElementType() = notRequired "txILTypeDef: GetElementType" inp.Name
         override __.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired "txILTypeDef: InvokeMember" inp.Name
 
         member x.Metadata: ILTypeDef = inp
-        member x.MakeMethodInfo (declTy,md) = txILMethodDef declTy md
-        member x.MakeConstructorInfo (declTy,md) = txILConstructorDef declTy md
+        member x.MakeMethodInfo (declTy: Type, md) = txILMethodDef declTy md
+        member x.MakeConstructorInfo (declTy: Type, md) = txILConstructorDef declTy md
+        member x.MakePropertyInfo (declTy: Type, md) = txILPropertyDef declTy md
+        member x.MakeEventInfo (declTy: Type, md) = txILEventDef declTy md
+        member x.MakeFieldInfo (declTy: Type, md) = txILFieldDef declTy md
 
 
-    and ContextAssembly(ilGlobals, tryBindAssembly: ILAssemblyRef -> Choice<ContextAssembly,exn>, reader: ILModuleReader, location: string) as asm =
+    /// Implements System.Reflection.Assembly backeed by .NET metadata provided by an ILModuleReader
+    and ContextAssembly(ilGlobals, tryBindAssembly: ILAssemblyRef -> Choice<ContextAssembly,exn>, reader: ILModuleReader option, location: string) as asm =
         inherit Assembly()
 
         // A table tracking how type definition objects are translated.
         let txTable = TxTable<Type>()
+        let mutable reader = reader
+        let getReader() = match reader with None -> failwith "the reader on the ContextAssembly has not been set" | Some r -> r
 
-        member __.txILTypeDef (declTyOpt: Type option) (inp: ILTypeDef) =
+        let txILTypeDef (declTyOpt: Type option) (inp: ILTypeDef) =
             txTable.Get inp.Token (fun () -> ContextTypeDefinition(ilGlobals, tryBindAssembly, asm, declTyOpt, inp) :> System.Type)
 
-        override x.GetTypes () = [| for td in reader.ILModuleDef.TypeDefs.Entries -> x.txILTypeDef None td  |]
+        let types = lazy [| for td in getReader().ILModuleDef.TypeDefs.Entries -> txILTypeDef None td  |]
+
+
+        member __.TxILTypeDef declTyOpt inp = txILTypeDef declTyOpt inp
+
+        override x.GetTypes () = types.Force()
+
         override x.Location = location
+
+        member x.Reader with get() = reader  and set v = (if reader.IsSome then failwith "reader on ContextAssembly already set"); reader <- v
+
+        override x.GetReferencedAssemblies() = [| for aref in getReader().ILAssemblyRefs -> aref.ToAssemblyName() |]
 
         override x.GetType (nm:string) =
             if nm.Contains("+") then
@@ -7641,18 +7814,18 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
             elif nm.Contains(".") then
                 let i = nm.LastIndexOf(".")
                 let nsp,nm2 = nm.[0..i-1], nm.[i+1..]
-                x.TryBindType(USome nsp, nm2) |> optionToNull
+                x.TryBindType(USome nsp, nm2) |> optionToObj
             else
-                x.TryBindType(UNone, nm) |> optionToNull
+                x.TryBindType(UNone, nm) |> optionToObj
 
-        override x.GetName () = reader.ILModuleDef.ManifestOfAssembly.GetName()
+        override x.GetName () = getReader().ILModuleDef.ManifestOfAssembly.GetName()
 
         override x.FullName = x.GetName().ToString()
 
         override x.ReflectionOnly = true
 
         override x.GetManifestResourceStream(resourceName:string) =
-            let r = reader.ILModuleDef.Resources.Entries |> Seq.find (fun r -> r.Name = resourceName)
+            let r = getReader().ILModuleDef.Resources.Entries |> Seq.find (fun r -> r.Name = resourceName)
             match r.Location with
             | ILResourceLocation.Local f -> new MemoryStream(f()) :> Stream
             | _ -> notRequired "reading manifest resource %s from non-embedded location" resourceName
@@ -7662,11 +7835,11 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
             | None -> failwithf "failed to bind type %s in assembly %s" nm asm.FullName
             | Some res -> res
 
-        member x.TryBindType(nsp:string uoption, nm:string) : Type option =
-            match reader.ILModuleDef.TypeDefs.TryFindByName(nsp, nm) with
-            | Some td -> asm.txILTypeDef None td |> Some
+        member x.TryBindType(nsp:string uoption, nm:string): Type option =
+            match getReader().ILModuleDef.TypeDefs.TryFindByName(nsp, nm) with
+            | Some td -> asm.TxILTypeDef None td |> Some
             | None ->
-            match reader.ILModuleDef.ManifestOfAssembly.ExportedTypes.TryFindByName(nsp, nm) with
+            match getReader().ILModuleDef.ManifestOfAssembly.ExportedTypes.TryFindByName(nsp, nm) with
             | Some tref ->
                 match tref.ScopeRef with
                 | ILScopeRef.Assembly aref2 ->
@@ -7675,7 +7848,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
                     | Choice1Of2 ass2 -> ass2.TryBindType(nsp, nm)
                     | Choice2Of2 _err -> None
                 | _ ->
-                    eprintfn "unexpected non-forwarder during binding"
+                    printfn "unexpected non-forwarder during binding"
                     None
             | None -> None
 
@@ -7708,7 +7881,6 @@ namespace ProviderImplementation.ProvidedTypes
     open ProviderImplementation.ProvidedTypes
     open ProviderImplementation.ProvidedTypes.AssemblyReader
     open ProviderImplementation.ProvidedTypes.AssemblyReader.Reader
-    open ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
     open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 
     [<AutoOpen>]
@@ -7868,7 +8040,7 @@ namespace ProviderImplementation.ProvidedTypes
           else
               replaceTypeDefinition fwd t
 
-      let replaceProperty fwd (p : PropertyInfo) =
+      let replaceProperty fwd (p: PropertyInfo) =
         if p :? ProvidedProperty then p
         else
           let t = replaceType fwd p.DeclaringType
@@ -7880,10 +8052,10 @@ namespace ProviderImplementation.ProvidedTypes
               (if isStatic then BindingFlags.Static else BindingFlags.Instance)
           let newP = t.GetProperty(p.Name, bindingFlags)
           if isNull newP then
-            failwithf "Property '%O' of type '%O' not found" p t
+            failwithf "Property '%O' of type '%O' not found. This property may be missing in the types available in the target assemblies." p t
           newP
 
-      let replaceField fwd (f : FieldInfo) =
+      let replaceField fwd (f: FieldInfo) =
         if f :? ProvidedField then f
         else
           let t = replaceType fwd f.DeclaringType
@@ -7891,10 +8063,10 @@ namespace ProviderImplementation.ProvidedTypes
             (if f.IsPublic then BindingFlags.Public else BindingFlags.NonPublic) |||
             (if f.IsStatic then BindingFlags.Static else BindingFlags.Instance)
           let newF = t.GetField(f.Name, bindingFlags)
-          if isNull newF then failwithf "Field '%O' of type '%O' not found" f t
+          if isNull newF then failwithf "Field '%O' of type '%O' not found. This field may be missing in the types available in the target assemblies." f t
           newF
 
-      let replaceMethod fwd (m : MethodInfo) =
+      let replaceMethod fwd (m: MethodInfo) =
         if m :? ProvidedMethod then m
         else
           let declTyT = replaceType fwd m.DeclaringType
@@ -7910,17 +8082,17 @@ namespace ProviderImplementation.ProvidedTypes
                 let parameterTypesT = m.GetParameters() |> Array.map (fun p -> replaceType fwd p.ParameterType)
                 declTyT.GetMethod(m.Name, parameterTypesT)
           match mT with
-          | null -> failwithf "Method '%O' not found in type '%O'" m mT
+          | null -> failwithf "Method '%O' not found in type '%O'. This method may be missing in the types available in the target assemblies." m mT
           | _ -> mT
 
-      let replaceConstructor fwd (cons : ConstructorInfo) =
+      let replaceConstructor fwd (cons: ConstructorInfo) =
         if cons :? ProvidedConstructor then cons
         else
             let declTyT = replaceType fwd cons.DeclaringType
             let parameterTypesT = cons.GetParameters() |> Array.map (fun p -> replaceType fwd p.ParameterType)
             let consT = declTyT.GetConstructor(parameterTypesT)
             match consT with
-            | null -> failwithf "Constructor '%O' not found in type '%O'" cons declTyT
+            | null -> failwithf "Constructor '%O' not found in type '%O'. This constructor may be missing in the types available in the target assemblies." cons declTyT
             | _ -> consT
 
       let replaceVar fwd (v: Var) =
@@ -7973,6 +8145,8 @@ namespace ProviderImplementation.ProvidedTypes
             Expr.NewArrayUnchecked (replaceType fwd t, List.map (replaceExpr fwd) exprs)
         | NewTuple (exprs) ->
             Expr.NewTuple (List.map (replaceExpr fwd) exprs)
+        | Lambda (v,expr) ->
+            Expr.Lambda (replaceVar fwd v, replaceExpr fwd expr)
         | TupleGet (expr, i) ->
             Expr.TupleGetUnchecked (replaceExpr fwd expr, i)
         | NewDelegate (t, vars, expr) ->
@@ -8005,16 +8179,15 @@ namespace ProviderImplementation.ProvidedTypes
                         else Expr.CallUnchecked(e,tagMeth,[])
                 | _ -> failwith "unreachable: unexpected result from PreComputeUnionTagMemberInfo"
             let tagNumber = uc.Tag
-            replaceExpr fwd <@@ (%%(tagExpr) : int) = tagNumber @@>
+            replaceExpr fwd <@@ (%%(tagExpr): int) = tagNumber @@>
 
         // Traverse remaining constructs
-        | ShapeVar v ->
+        | ShapeVarUnchecked v ->
             Expr.Var (replaceVar fwd v)
-        | ShapeLambda _ ->
-            failwith ("It's not possible to create a Lambda when cross targetting to a different FSharp.Core.\n" +
-                      "Make sure you're not calling a function with signature A->(B->C) instead of A->B->C (using |> causes this).")
-        | ShapeCombination (o, exprs) ->
-            RebuildShapeCombination (o, List.map (replaceExpr fwd) exprs)
+        | ShapeLambdaUnchecked _ as d ->
+            failwithf "It's not possible to use construct %O when cross targetting to a different FSharp.Core. Make sure you're not calling a function with signature A->(B->C) instead of A->B->C (using |> causes this)." d
+        | ShapeCombinationUnchecked (o, exprs) ->
+            RebuildShapeCombinationUnchecked (o, List.map (replaceExpr fwd) exprs)
 
       /// Gets the equivalent target type
       member __.ConvertDesignTimeTypeToTargetType t = t |> replaceType true
@@ -8029,7 +8202,7 @@ namespace ProviderImplementation.ProvidedTypes
 
     /// Represents the type binding context for the type provider based on the set of assemblies
     /// referenced by the compilation.
-    type ProvidedTypesContext(referencedAssemblyPaths : string list, assemblyReplacementMap : seq<string*string>) as this =
+    type ProvidedTypesContext(referencedAssemblyPaths: string list, assemblyReplacementMap: seq<string*string>) as this =
 
         /// Find which assembly defines System.Object etc.
         let systemRuntimeScopeRef =
@@ -8059,7 +8232,7 @@ namespace ProviderImplementation.ProvidedTypes
               try
                 let simpleName = Path.GetFileNameWithoutExtension path
                 if simpleName = "FSharp.Core" then
-                    let reader = ILModuleReaderAfterReadingAllBytes (path, mkILGlobals EcmaMscorlibScopeRef)
+                    let reader = ILModuleReaderAfterReadingAllBytes (path, mkILGlobals (systemRuntimeScopeRef.Force()))
                     match reader.ILModuleDef.Manifest with
                     | Some m -> match m.Version with USome v -> Some v | UNone -> None
                     | None -> None
@@ -8075,7 +8248,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mkReader ref =
             lazy (try let reader = ILModuleReaderAfterReadingAllBytes(ref, ilGlobals.Force())
-                      Choice1Of2(ContextAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, reader, ref))
+                      Choice1Of2(ContextAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, Some reader, ref))
                   with err -> Choice2Of2 err) 
 
         let readers = [| for ref in referencedAssemblyPaths -> ref,mkReader ref |]
@@ -8084,7 +8257,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let referencedAssemblies() = ([| for (_,asm) in readers do match asm.Force() with Choice2Of2 _ -> () | Choice1Of2 asm -> yield asm :> Assembly |])
 
-        let tryBindAssemblySimple(simpleName:string) : Choice<ContextAssembly, exn> =
+        let tryBindAssemblySimple(simpleName:string): Choice<ContextAssembly, exn> =
             if readersTable.ContainsKey(simpleName) then readersTable.[simpleName].Force()
             else Choice2Of2 (Exception(sprintf "assembly %s not found" simpleName))
 
@@ -8105,9 +8278,9 @@ namespace ProviderImplementation.ProvidedTypes
         let convCode (code: Expr list -> Expr) = 
             (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> code |> replacer.ConvertDesignTimeExprToTargetExpr)
 
-        member internal __.TryBindILAssemblyRef(aref: ILAssemblyRef) : Choice<ContextAssembly, exn> = tryBindAssemblySimple(aref.Name)
+        member internal __.TryBindILAssemblyRef(aref: ILAssemblyRef): Choice<ContextAssembly, exn> = tryBindAssemblySimple(aref.Name)
 
-        member internal __.TryBindAssemblyName(aref: AssemblyName) : Choice<ContextAssembly, exn> = tryBindAssemblySimple(aref.Name)
+        member internal __.TryBindAssemblyName(aref: AssemblyName): Choice<ContextAssembly, exn> = tryBindAssemblySimple(aref.Name)
 
         member __.ConvertDesignTimeTypeToTargetType = convToTgt 
 
@@ -8217,7 +8390,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.ReadRelatedAssembly(fileName) = 
             let reader = ILModuleReaderAfterReadingAllBytes(fileName, ilGlobals.Force()) 
-            ContextAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, reader, fileName) :> Assembly
+            ContextAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, Some reader, fileName) :> Assembly
 
 
         /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericType
@@ -8226,7 +8399,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericMethod
         member __.MakeGenericMethod(genericMethodDefinition, genericArguments) = ptb.MakeGenericMethod(genericMethodDefinition, genericArguments)
 
-        static member Create (cfg : TypeProviderConfig, ?assemblyReplacementMap) =
+        static member Create (cfg: TypeProviderConfig, ?assemblyReplacementMap) =
 
             // Use the reflection hack to determine the set of referenced assemblies by reflecting over the SystemRuntimeContainsType
             // closure in the TypeProviderConfig object.
@@ -8284,7 +8457,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         open ProviderImplementation.ProvidedTypes
         open ProviderImplementation.ProvidedTypes.AssemblyReader
-        open ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
         open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 
         let formatCodeLabel (x:int) = "L"+string x
@@ -8349,7 +8521,7 @@ namespace ProviderImplementation.ProvidedTypes
             let [<Literal>] Blob = 5
             let [<Literal>] String = 6
             let [<Literal>] SimpleIndexMin = 7
-            let SimpleIndex         (t : ILTableName)             = assert (t.Index <= 112); SimpleIndexMin + t.Index
+            let SimpleIndex         (t: ILTableName)             = assert (t.Index <= 112); SimpleIndexMin + t.Index
             let [<Literal>] SimpleIndexMax = 119
 
             let [<Literal>] TypeDefOrRefOrSpecMin = 120
@@ -8441,8 +8613,8 @@ namespace ProviderImplementation.ProvidedTypes
         type BlobIndex = int
         type StringIndex = int
 
-        let BlobIndex (x:BlobIndex) : int = x
-        let StringIndex (x:StringIndex) : int = x
+        let BlobIndex (x:BlobIndex): int = x
+        let StringIndex (x:StringIndex): int = x
 
         let inline combineHash x2 acc = 37 * acc + x2 // (acc <<< 6 + acc >>> 2 + x2 + 0x9e3779b9)
 
@@ -8479,7 +8651,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let SharedRow(elems: RowElement[]) = new SharedRow(elems, hashRow elems)
 
-        /// Special representation : Note, only hashing by name
+        /// Special representation: Note, only hashing by name
         let AssemblyRefRow(s1, s2, s3, s4, l1, b1, nameIdx, str2, b2) = 
             let hashCode = hash nameIdx
             let genericRow = [| UShort s1; UShort s2; UShort s3; UShort s4; ULong l1; Blob b1; StringE nameIdx; StringE str2; Blob b2 |]
@@ -9070,7 +9242,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let GetTypeAsMemberRefParent cenv env ty =
             match GetTypeAsTypeDefOrRef cenv env ty with 
-            | (tag, _) when tag = TypeDefOrRefOrSpecTag.TypeDef -> eprintfn "GetTypeAsMemberRefParent: mspec should have been encoded as mdtMethodDef?"; MemberRefParent (MemberRefParentTag.TypeRef, 1)
+            | (tag, _) when tag = TypeDefOrRefOrSpecTag.TypeDef -> printfn "GetTypeAsMemberRefParent: mspec should have been encoded as mdtMethodDef?"; MemberRefParent (MemberRefParentTag.TypeRef, 1)
             | (tag, tok) when tag = TypeDefOrRefOrSpecTag.TypeRef -> MemberRefParent (MemberRefParentTag.TypeRef, tok)
             | (tag, tok) when tag = TypeDefOrRefOrSpecTag.TypeSpec -> MemberRefParent (MemberRefParentTag.TypeSpec, tok)
             | _ -> failwith "GetTypeAsMemberRefParent"
@@ -9210,10 +9382,10 @@ namespace ProviderImplementation.ProvidedTypes
               cenv.methodDefIdxsByKey.AddUniqueEntry
                  "method" 
                  (fun (key:MethodDefKey) -> 
-                   eprintfn "Duplicate in method table is:"
-                   eprintfn "%s" ("  Type index: "+string key.TypeIdx)
-                   eprintfn "%s" ("  Method name: "+key.Name)
-                   eprintfn "%s" ("  Method arity (num generic params): "+string key.GenericArity)
+                   printfn "Duplicate in method table is:"
+                   printfn "%s" ("  Type index: "+string key.TypeIdx)
+                   printfn "%s" ("  Method name: "+key.Name)
+                   printfn "%s" ("  Method arity (num generic params): "+string key.GenericArity)
                    key.Name
                  )
                  (GetKeyForMethodDef tidx md) 
@@ -9299,14 +9471,14 @@ namespace ProviderImplementation.ProvidedTypes
                   | Some x -> x
                   | None -> raise MethodDefNotFound 
               let (TdKey (tenc, tnsp, tname)) = typeNameOfIdx mdkey.TypeIdx
-              eprintfn "%s" ("The local method '"+(String.concat "." (tenc@[tname]))+"'::'"+mdkey.Name+"' was referenced but not declared")
-              eprintfn "generic arity: %s " (string mdkey.GenericArity)
+              printfn "%s" ("The local method '"+(String.concat "." (tenc@[tname]))+"'::'"+mdkey.Name+"' was referenced but not declared")
+              printfn "generic arity: %s " (string mdkey.GenericArity)
               cenv.methodDefIdxsByKey.dict |> Seq.iter (fun (KeyValue(mdkey2, _)) -> 
                   if mdkey2.TypeIdx = mdkey.TypeIdx && mdkey.Name = mdkey2.Name then 
                       let (TdKey (tenc2, tnsp2, tname2)) = typeNameOfIdx mdkey2.TypeIdx
-                      eprintfn "%s" ("A method in '"+(String.concat "." (tenc2@[tname2]))+"' had the right name but the wrong signature:")
-                      eprintfn "%s" ("generic arity: "+string mdkey2.GenericArity) 
-                      eprintfn "mdkey2: %+A" mdkey2)
+                      printfn "%s" ("A method in '"+(String.concat "." (tenc2@[tname2]))+"' had the right name but the wrong signature:")
+                      printfn "%s" ("generic arity: "+string mdkey2.GenericArity) 
+                      printfn "mdkey2: %+A" mdkey2)
               raise MethodDefNotFound
 
 
@@ -9727,7 +9899,7 @@ namespace ProviderImplementation.ProvidedTypes
                                     // Use the original offsets to compute if the branch is small or large.  This is 
                                     // a safe approximation because code only gets smaller. 
                                     if not (origAvailBrFixups.ContainsKey tg) then 
-                                        eprintfn "%s" ("branch target " + formatCodeLabel tg + " not found in code")
+                                        printfn "%s" ("branch target " + formatCodeLabel tg + " not found in code")
                                     let origDest = 
                                         if origAvailBrFixups.ContainsKey tg then origAvailBrFixups.[tg]
                                         else 666666
@@ -9744,7 +9916,7 @@ namespace ProviderImplementation.ProvidedTypes
                                 false
                           
                           newWhere := !newWhere + i_length
-                          if !newWhere <> newCode.Position then eprintfn "mismatch between newWhere and newCode"
+                          if !newWhere <> newCode.Position then printfn "mismatch between newWhere and newCode"
 
                           tgs |> List.iter (fun tg ->
                                 let origFixupLoc = !origWhere
@@ -9758,10 +9930,10 @@ namespace ProviderImplementation.ProvidedTypes
                                     newReqdBrFixups := (!newWhere, newEndOfInstrIfBig, tg, false) :: !newReqdBrFixups
                                     newCode.EmitInt32 0xf00dd00f (* sanity check *)
                                     newWhere := !newWhere + 4
-                                if !newWhere <> newCode.Position then eprintfn "mismatch between newWhere and newCode"
+                                if !newWhere <> newCode.Position then printfn "mismatch between newWhere and newCode"
                                 origWhere := !origWhere + 4)
                           
-                          if !origWhere <> origEndOfInstr then eprintfn "mismatch between origWhere and origEndOfInstr"
+                          if !origWhere <> origEndOfInstr then printfn "mismatch between origWhere and origEndOfInstr"
 
                   let adjuster  = 
                     let arr = Array.ofList (List.rev !adjustments)
@@ -10155,14 +10327,14 @@ namespace ProviderImplementation.ProvidedTypes
               | ILExceptionClause.TypeCatch (_ty, r1) -> [r1]  
 
 
-            let labelsToRange (lab2pc : Dictionary<ILCodeLabel, int>) p = let (l1, l2) = p in lab2pc.[l1], lab2pc.[l2]
+            let labelsToRange (lab2pc: Dictionary<ILCodeLabel, int>) p = let (l1, l2) = p in lab2pc.[l1], lab2pc.[l2]
 
             let labelRangeInsideLabelRange lab2pc ls1 ls2 = 
                 rangeInsideRange (labelsToRange lab2pc ls1) (labelsToRange lab2pc ls2) 
 
 // This file still gets used when targeting FSharp.Core 3.1.0.0, e.g. in FSharp.Data
 #if !ABOVE_FSCORE_4_0_0_0
-            let mapFold f acc (array : _[]) =
+            let mapFold f acc (array: _[]) =
                 match array.Length with
                 | 0 -> [| |], acc
                 | len ->
@@ -10194,7 +10366,7 @@ namespace ProviderImplementation.ProvidedTypes
             
                 ([| |], vs) ||> Array.fold addToRoot
 
-            let rec makeSEHTree cenv env (pc2pos: int[]) (lab2pc : Dictionary<ILCodeLabel, int>) (exs : ILExceptionSpec[]) = 
+            let rec makeSEHTree cenv env (pc2pos: int[]) (lab2pc: Dictionary<ILCodeLabel, int>) (exs: ILExceptionSpec[]) = 
 
                 let clause_inside_lrange cl lr =
                   List.forall (fun lr1 -> labelRangeInsideLabelRange lab2pc lr1 lr) (lranges_of_clause cl) 
@@ -10230,7 +10402,7 @@ namespace ProviderImplementation.ProvidedTypes
                 trees 
 
 #if EMIT_DEBUG_INFO
-            let rec makeLocalsTree cenv localSigs (pc2pos: int[]) (lab2pc : Dictionary<ILCodeLabel, int>) (exs : ILLocalDebugInfo[]) = 
+            let rec makeLocalsTree cenv localSigs (pc2pos: int[]) (lab2pc: Dictionary<ILCodeLabel, int>) (exs: ILLocalDebugInfo[]) = 
                 let localInsideLocal (locspec1: ILLocalDebugInfo) (locspec2: ILLocalDebugInfo) =
                   labelRangeInsideLabelRange lab2pc locspec1.Range locspec2.Range 
 
@@ -10554,7 +10726,7 @@ namespace ProviderImplementation.ProvidedTypes
                              HasConstant (HasConstantTag.ParamDef, pidx)
                              Blob (GetFieldInitAsBlobIdx cenv i) |]) |> ignore
 
-        let GenReturnAsParamRow (returnv : ILReturn) = 
+        let GenReturnAsParamRow (returnv: ILReturn) = 
             let flags = 0x0000 // || (if returnv.Marshal <> None then 0x2000 else 0x0000)
             UnsharedRow 
                 [| UShort (uint16 flags) 
@@ -11046,7 +11218,7 @@ namespace ProviderImplementation.ProvidedTypes
           let top2 = if isEmpty top then [| mkILTypeDefForGlobalFunctions ilg (emptyILMethods, emptyILFields) |] else top
           Array.append top2 nontop
 
-        let GenModule (cenv : cenv) (modul: ILModuleDef) = 
+        let GenModule (cenv: cenv) (modul: ILModuleDef) = 
             let midx = AddUnsharedRow cenv ILTableNames.Module (GetModuleAsRow cenv modul)
             Array.iter (GenResourcePass3 cenv) modul.Resources.Entries 
             let tds = destTypeDefsWithGlobalFunctionsFirst cenv.ilg modul.TypeDefs
@@ -11062,7 +11234,7 @@ namespace ProviderImplementation.ProvidedTypes
             cenv.GetTable(ILTableNames.GenericParam).SetRowsOfSharedTable (SortTableRows ILTableNames.GenericParam (cenv.GetTable(ILTableNames.GenericParam).GenericRowsOfTable))
             GenTypeDefsPass4 [] cenv tds
 
-        let generateIL requiredDataFixups (desiredMetadataVersion, generatePdb, ilg : ILGlobals, emitTailcalls, deterministic, showTimes)  (m : ILModuleDef) cilStartAddress =
+        let generateIL requiredDataFixups (desiredMetadataVersion, generatePdb, ilg: ILGlobals, emitTailcalls, deterministic, showTimes)  (m: ILModuleDef) cilStartAddress =
             let isDll = m.IsDLL
 
             let cenv = 
@@ -11124,7 +11296,7 @@ namespace ProviderImplementation.ProvidedTypes
                     if isDll then 0x0
                     else getUncodedToken (if epHere then ILTableNames.Method else ILTableNames.File) tok 
                 | None -> 
-                    if not isDll then eprintfn "warning: no entrypoint specified in executable binary"
+                    if not isDll then printfn "warning: no entrypoint specified in executable binary"
                     0x0
 
 #if EMIT_DEBUG_INFO
@@ -11573,7 +11745,7 @@ namespace ProviderImplementation.ProvidedTypes
         //    where physbase = textbase + text raw size
         //         phsrva = roundup(0x2000, 0x0002000 + text virt size)
 
-        let msdosHeader : byte[] = 
+        let msdosHeader: byte[] = 
              [| 0x4duy; 0x5auy; 0x90uy; 0x00uy; 0x03uy; 0x00uy; 0x00uy; 0x00uy
                 0x04uy; 0x00uy; 0x00uy; 0x00uy; 0xFFuy; 0xFFuy; 0x00uy; 0x00uy
                 0xb8uy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x00uy
@@ -11841,12 +12013,12 @@ namespace ProviderImplementation.ProvidedTypes
                         let dataRva = 
                           if kind then
                               let res = dataOffset
-                              if res >= resourcesChunk.size then eprintfn ("resource offset bigger than resource data section");
+                              if res >= resourcesChunk.size then printfn ("resource offset bigger than resource data section");
                               res
                           else 
                               let res = rawdataChunk.addr + dataOffset
-                              if res < rawdataChunk.addr then eprintfn ("data rva before data section");
-                              if res >= rawdataChunk.addr + rawdataChunk.size then eprintfn "%s" ("data rva after end of data section, dataRva = "+string res+", rawdataChunk.addr = "+string rawdataChunk.addr+", rawdataChunk.size = "+string rawdataChunk.size);
+                              if res < rawdataChunk.addr then printfn ("data rva before data section");
+                              if res >= rawdataChunk.addr + rawdataChunk.size then printfn "%s" ("data rva after end of data section, dataRva = "+string res+", rawdataChunk.addr = "+string rawdataChunk.addr+", rawdataChunk.size = "+string rawdataChunk.size);
                               res
                         applyFixup32 metadata metadataOffset dataRva);
                   end;
@@ -11953,7 +12125,7 @@ namespace ProviderImplementation.ProvidedTypes
                     writeInt64 os ((int64)imageBaseReal)    // REVIEW: For 64-bit, we should use a 64-bit image base 
                   else             
                     writeInt32 os dataSectionAddr; // e.g. 0x0000c000           
-                    writeInt32 os imageBaseReal; // Image Base Always 0x400000 (see Section 23.1). - QUERY : no it's not always 0x400000, e.g. 0x034f0000 
+                    writeInt32 os imageBaseReal; // Image Base Always 0x400000 (see Section 23.1). - QUERY: no it's not always 0x400000, e.g. 0x034f0000 
                     
                   writeInt32 os alignVirt;  //  Section Alignment Always 0x2000 (see Section 23.1). 
                   writeInt32 os alignPhys; // File Alignment Either 0x200 or 0x1000. 
@@ -11975,9 +12147,9 @@ namespace ProviderImplementation.ProvidedTypes
                   // DLL Flags Always 0x400 (no unmanaged windows exception handling - see Section 23.1).
                   //  Itanium: see notes at end of file 
                   //  IMAGE_DLLCHARACTERISTICS_NX_COMPAT: See FSharp 1.0 bug 5019 and http://blogs.msdn.com/ed_maurer/archive/2007/12/14/nxcompat-and-the-c-compiler.aspx 
-                  // Itanium : IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE | IMAGE_DLLCHARACTERISTICS_ NO_SEH | IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE | IMAGE_DLLCHARACTERISTICS_NX_COMPAT
-                  // x86 : IMAGE_DLLCHARACTERISTICS_ NO_SEH | IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE | IMAGE_DLLCHARACTERISTICS_NX_COMPAT
-                  // x64 : IMAGE_DLLCHARACTERISTICS_ NO_SEH | IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE | IMAGE_DLLCHARACTERISTICS_NX_COMPAT
+                  // Itanium: IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE | IMAGE_DLLCHARACTERISTICS_ NO_SEH | IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE | IMAGE_DLLCHARACTERISTICS_NX_COMPAT
+                  // x86: IMAGE_DLLCHARACTERISTICS_ NO_SEH | IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE | IMAGE_DLLCHARACTERISTICS_NX_COMPAT
+                  // x64: IMAGE_DLLCHARACTERISTICS_ NO_SEH | IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE | IMAGE_DLLCHARACTERISTICS_NX_COMPAT
                   let dllCharacteristics = 
                     let flags  = 
                         if modul.Is64Bit then (if isItanium then 0x8540 else 0x540)
@@ -12254,7 +12426,7 @@ namespace ProviderImplementation.ProvidedTypes
                 with e ->   
                     (try 
                         os.Dispose()
-                        System.IO.File.Delete outfile 
+                        File.Delete outfile 
                      with _ -> ()) 
                     reraise()
 
@@ -12272,8 +12444,8 @@ namespace ProviderImplementation.ProvidedTypes
 #if EMIT_STRONG_NAME
              signer: ILStrongNameSigner option
 #endif
-             emitTailcalls : bool
-             deterministic : bool
+             emitTailcalls: bool
+             deterministic: bool
              showTimes: bool
              dumpDebugInfo:bool }
 
@@ -12304,7 +12476,6 @@ namespace ProviderImplementation.ProvidedTypes
 
     open ProviderImplementation.ProvidedTypes
     open ProviderImplementation.ProvidedTypes.AssemblyReader
-    open ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
     open ProviderImplementation.ProvidedTypes.UncheckedQuotations
     
 
@@ -12314,6 +12485,7 @@ namespace ProviderImplementation.ProvidedTypes
     type ILGenerator() =
         let mutable locals =  ResizeArray<ILLocal>()
         let mutable instrs =  ResizeArray<ILInstr>()
+        let mutable labelCount =  0
         let mutable labels =  Dictionary<ILCodeLabel,int>()
 
         member x.Content = 
@@ -12328,11 +12500,12 @@ namespace ProviderImplementation.ProvidedTypes
              }
 
         member __.DeclareLocal(ty: ILType) = 
+            let idx = locals.Count
             let local = { Type = ty; IsPinned = false; DebugInfo = None }
             locals.Add(local)
-            ILLocalBuilder(locals.Count)
+            ILLocalBuilder(idx)
 
-        member __.DefineLabel(local) = labels.Count
+        member __.DefineLabel() = labelCount <- labelCount + 1; labelCount
         member __.MarkLabel(label) = labels.[label] <- instrs.Count
         member __.Emit(opcode) = instrs.Add(opcode)
 
@@ -12354,7 +12527,8 @@ namespace ProviderImplementation.ProvidedTypes
               LiteralValue = lit
               Attributes = attrs
               Offset = None
-              CustomAttrs  = mkILCustomAttrs (cattrs.ToArray()) }
+              CustomAttrs  = mkILCustomAttrs (cattrs.ToArray()) 
+              Token = genToken() }
 
     type ILGenericParameterBuilder(nm, attrs: GenericParameterAttributes) =
 
@@ -12368,7 +12542,8 @@ namespace ProviderImplementation.ProvidedTypes
             { Name=nm
               Constraints= constraints.ToArray()
               Attributes = attrs 
-              CustomAttrs  = mkILCustomAttrs (cattrs.ToArray()) }
+              CustomAttrs  = mkILCustomAttrs (cattrs.ToArray())
+              Token = genToken() }
 
     type ILParameterBuilder(ty: ILType) =
 
@@ -12407,7 +12582,7 @@ namespace ProviderImplementation.ProvidedTypes
             ILMethodSpec(this.FormalMethodRef, enclosing, mkILFormalGenericArgs enclosing.TypeSpec.GenericArgs.Length gparams.Count)
 
         member __.Content = 
-            { Token = 0
+            { Token = genToken()
               Name = methodName
               Attributes = attrs
               ImplAttributes = implflags
@@ -12442,7 +12617,8 @@ namespace ProviderImplementation.ProvidedTypes
               CustomAttrs = mkILCustomAttrs (cattrs.ToArray()) 
               PropertyType=retty
               Init= None // TODO if (attrs &&& PropertyAttributes.HasDefault) = 0 then None else 
-              IndexParameterTypes=argtys }
+              IndexParameterTypes=argtys
+              Token = genToken() }
 
     type ILEventBuilder(nm, attrs: EventAttributes, evty) =
 
@@ -12454,11 +12630,12 @@ namespace ProviderImplementation.ProvidedTypes
         member __.SetRemoveOnMethod(mb: ILMethodBuilder) = removeMethod <- Some mb
         member __.SetCustomAttribute(ca) = cattrs.Add(ca)
         member __.Content = 
-           { Name = nm
-             Attributes = attrs
-             AddMethod = addMethod.Value.FormalMethodRef
-             RemoveMethod = removeMethod.Value.FormalMethodRef
-             CustomAttrs = mkILCustomAttrs (cattrs.ToArray())  }
+            { Name = nm
+              Attributes = attrs
+              AddMethod = addMethod.Value.FormalMethodRef
+              RemoveMethod = removeMethod.Value.FormalMethodRef
+              CustomAttrs = mkILCustomAttrs (cattrs.ToArray())  
+              Token = genToken()}
 
     type ILTypeBuilder(scoref, nsp: string uoption, nm: string, attrs: TypeAttributes) =
 
@@ -12484,7 +12661,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member this.DefineField(name, retty, attrs) = let fb = ILFieldBuilder(this.ILType, name, retty, attrs) in fields.Add fb; fb
         member this.DefineMethod(name, attrs, retty, argtys) = let mb = ILMethodBuilder(this.ILType, name, attrs, retty, argtys) in methods.Add mb; mb
-        member this.DefineConstructor(attrs, argtys) = let mb = ILMethodBuilder(this.ILType, ".ctor", attrs, ILType.Void, argtys) in methods.Add mb; mb
+        member this.DefineConstructor(attrs, argtys) = let mb = ILMethodBuilder(this.ILType, ".ctor", attrs  ||| MethodAttributes.SpecialName ||| MethodAttributes.RTSpecialName, ILType.Void, argtys) in methods.Add mb; mb
         member __.DefineProperty(name, attrs, propty, argtys) = let pb = ILPropertyBuilder(name, attrs, propty, argtys) in props.Add pb; pb
         member __.DefineEvent(name, attrs, evty) = let eb = ILEventBuilder(name, attrs, evty) in events.Add eb; eb
         member __.DefineMethodOverride(mimpl) = methodImpls.Add (mimpl)
@@ -12493,7 +12670,13 @@ namespace ProviderImplementation.ProvidedTypes
         member __.AddInterfaceImplementation(ty) = implements.Add(ty)
         member this.DefineTypeInitializer () = let mb = ILMethodBuilder(this.ILType, ".cctor", MethodAttributes.Static ||| MethodAttributes.SpecialName, ILType.Void, [| |]) in methods.Add mb; mb
         member __.SetParent ty = (extends <- Some ty)
-        member this.DefineDefaultConstructor(attrs) = this.DefineConstructor(attrs ||| MethodAttributes.SpecialName, [| |]) 
+        member this.DefineDefaultConstructor(attrs, baseCtor: ILMethodSpec) = 
+            let ctor = this.DefineConstructor(attrs, [| |]) 
+            let ilg = ctor.GetILGenerator()
+            ilg.Emit(I_ldarg 0)
+            ilg.Emit(I_call (Normalcall, baseCtor, None))
+            ilg.Emit(I_ret)
+            ctor
 
 
         member __.Content = 
@@ -12504,7 +12687,7 @@ namespace ProviderImplementation.ProvidedTypes
               Attributes = attrs
               Layout=ILTypeDefLayout.Auto
               Extends=extends
-              Token=0
+              Token=genToken()
             //SecurityDecls=emptyILSecurityDecls; 
             //HasSecurity=false;
               NestedTypes = ILTypeDefs( lazy [| for x in nestedTypes -> let td = x.Content in td.Namespace, td.Name, lazy td |] ) 
@@ -12565,7 +12748,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.MainModule = mb
         member __.Save() = 
             let il = mb.Content
-            let options : BinaryWriter.options = { ilg = ilg; pdbfile = None; portablePDB = false; embeddedPDB = false; embedAllSource = false; embedSourceList = []; sourceLink = ""; emitTailcalls = true; deterministic = false; showTimes = false; dumpDebugInfo = false }
+            let options: BinaryWriter.options = { ilg = ilg; pdbfile = None; portablePDB = false; embeddedPDB = false; embedAllSource = false; embedSourceList = []; sourceLink = ""; emitTailcalls = true; deterministic = false; showTimes = false; dumpDebugInfo = false }
             BinaryWriter.WriteILBinary (fileName, options, il)
         
 
@@ -12577,7 +12760,7 @@ namespace ProviderImplementation.ProvidedTypes
     type CodeGenerator(assemblyMainModule: ILModuleBuilder, 
                        genUniqueTypeName: (unit -> string),
                        implicitCtorArgsAsFields: ILFieldBuilder list,
-                       convToTgt : Type -> Type,
+                       convToTgt: Type -> Type,
                        transType: Type -> ILType,
                        transField: FieldInfo -> ILFieldSpec,
                        transMeth: MethodInfo -> ILMethodSpec,
@@ -12585,7 +12768,7 @@ namespace ProviderImplementation.ProvidedTypes
                        transCtor: ConstructorInfo -> ILMethodSpec,
                        isLiteralEnumField: FieldInfo -> bool,
                        ilg: ILGenerator, 
-                       locals:Dictionary<Quotations.Var,ILLocalBuilder>, 
+                       localsMap:Dictionary<Quotations.Var,ILLocalBuilder>, 
                        parameterVars) =
 
         // TODO: this works over FSharp.Core 4.4.0.0 types and methods. These types need to be retargeted to the target runtime.
@@ -12600,11 +12783,13 @@ namespace ProviderImplementation.ProvidedTypes
 
         let isEmpty s = (s = ExpectedStackState.Empty)
         let isAddress s = (s = ExpectedStackState.Address)
-        let rec emitLambda(callSiteIlg : ILGenerator, v : Quotations.Var, body : Expr, freeVars : seq<Quotations.Var>, locals : Dictionary<_, ILLocalBuilder>, parameters) =
-            let lambda : ILTypeBuilder = assemblyMainModule.DefineType(UNone, genUniqueTypeName(), TypeAttributes.Class)
-            let baseType = typedefof<FSharpFunc<_, _>>.MakeGenericType(v.Type, body.Type)
+        let rec emitLambda(callSiteIlg: ILGenerator, v: Quotations.Var, body: Expr, freeVars: seq<Quotations.Var>, lambdaLocals: Dictionary<_, ILLocalBuilder>, parameters) =
+            let lambda: ILTypeBuilder = assemblyMainModule.DefineType(UNone, genUniqueTypeName(), TypeAttributes.Class)
+            let baseType = convToTgt (typedefof<FSharpFunc<_, _>>.MakeGenericType(v.Type, body.Type))
             lambda.SetParent(transType baseType)
-            let ctor = lambda.DefineDefaultConstructor(MethodAttributes.Public)
+            let baseCtor = baseType.GetConstructor( [| |])
+            if isNull baseCtor then failwithf "Couldn't find default constructor on %O" baseType
+            let ctor = lambda.DefineDefaultConstructor(MethodAttributes.Public, transCtor baseCtor)
             let decl = baseType.GetMethod "Invoke"
             let paramTypes = [| for p in decl.GetParameters() -> transType p.ParameterType |]
             let retType = transType decl.ReturnType
@@ -12638,7 +12823,7 @@ namespace ProviderImplementation.ProvidedTypes
             callSiteIlg.Emit(I_newobj (ctor.FormalMethodSpec, None))
             for (v, f) in fields do
                 callSiteIlg.Emit(I_dup)
-                match locals.TryGetValue v with
+                match localsMap.TryGetValue v with
                 | true, loc ->
                     callSiteIlg.Emit(I_ldloc loc.LocalIndex)
                 | false, _ ->
@@ -12664,11 +12849,11 @@ namespace ProviderImplementation.ProvidedTypes
             | ForIntegerRangeLoop(loopVar, first, last, body) ->
                 // for(loopVar = first..last) body
                 let lb =
-                    match locals.TryGetValue loopVar with
+                    match localsMap.TryGetValue loopVar with
                     | true, lb -> lb
                     | false, _ ->
                         let lb = ilg.DeclareLocal(transType loopVar.Type)
-                        locals.Add(loopVar, lb)
+                        localsMap.Add(loopVar, lb)
                         lb
 
                 // loopVar = first
@@ -12739,7 +12924,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | None ->
 
                 // Try to interpret this as a local
-                match locals.TryGetValue v with
+                match localsMap.TryGetValue v with
                 | true, localBuilder ->
                     let idx = localBuilder.LocalIndex
                     ilg.Emit(if isAddress expectedState  then I_ldloca idx else I_ldloc idx)
@@ -12759,57 +12944,6 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_castclass (transType  targetTy))
 
                 popIfEmptyExpected expectedState
-
-            | SpecificCall <@ (-) @>(None, [t1; t2; _], [a1; a2]) ->
-                assert(t1 = t2)
-                emitExpr ExpectedStackState.Value a1
-                emitExpr ExpectedStackState.Value a2
-                if t1 = typeof<decimal> then
-                    ilg.Emit(mkNormalCall (transMeth (typeof<decimal>.GetMethod "op_Subtraction")))
-                else
-                    ilg.Emit(I_sub)
-                    emitConvIfNecessary t1
-
-                popIfEmptyExpected expectedState
-
-            | SpecificCall <@ (/) @> (None, [t1; t2; _], [a1; a2]) ->
-                assert (t1 = t2)
-                emitExpr ExpectedStackState.Value a1
-                emitExpr ExpectedStackState.Value a2
-                if t1 = typeof<decimal> then
-                    ilg.Emit(mkNormalCall (transMeth (typeof<decimal>.GetMethod "op_Division")))
-                else
-                    match Type.GetTypeCode t1 with
-                    | TypeCode.UInt32
-                    | TypeCode.UInt64
-                    | TypeCode.UInt16
-                    | TypeCode.Byte
-                    | _ when t1 = typeof<unativeint> -> ilg.Emit (I_div_un)
-                    | _ -> ilg.Emit(I_div)
-
-                    emitConvIfNecessary t1
-
-                popIfEmptyExpected expectedState
-
-            | SpecificCall <@ int @>(None, [sourceTy], [v]) ->
-                emitExpr ExpectedStackState.Value v
-                match Type.GetTypeCode(sourceTy) with
-                | TypeCode.String ->
-                    ilg.Emit(mkNormalCall (transMeth (parseInt32Method())))
-                | TypeCode.Single
-                | TypeCode.Double
-                | TypeCode.Int64
-                | TypeCode.UInt64
-                | TypeCode.UInt16
-                | TypeCode.Char
-                | TypeCode.Byte
-                | _ when sourceTy = typeof<nativeint> || sourceTy = typeof<unativeint> ->
-                    ilg.Emit(I_conv DT_I4)
-                | TypeCode.Int32
-                | TypeCode.UInt32
-                | TypeCode.Int16
-                | TypeCode.SByte -> () // no op
-                | _ -> failwith "TODO: search for op_Explicit on sourceTy"
 
             | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray @> (None, [ty], [arr; index]) ->
                 // observable side-effect - IndexOutOfRangeException
@@ -12908,13 +13042,13 @@ namespace ProviderImplementation.ProvidedTypes
                     match v with
                     | :? string as x -> ilg.Emit(I_ldstr x)
                     | :? int8 as x -> ilg.Emit(mk_ldc (int32 x))
-                    | :? uint8 as x -> ilg.Emit(mk_ldc (int32 (int8 x)))
+                    | :? uint8 as x -> ilg.Emit(mk_ldc (int32 x))
                     | :? int16 as x -> ilg.Emit(mk_ldc (int32 x))
-                    | :? uint16 as x -> ilg.Emit(mk_ldc (int32 (int16 x)))
+                    | :? uint16 as x -> ilg.Emit(mk_ldc (int32 x))
                     | :? int32 as x -> ilg.Emit(mk_ldc x)
                     | :? uint32 as x -> ilg.Emit(mk_ldc (int32 x))
                     | :? int64 as x -> ilg.Emit(mk_ldc_i8 x)
-                    | :? uint64 as x -> ilg.Emit(mk_ldc_i8 ( int64 x))
+                    | :? uint64 as x -> ilg.Emit(mk_ldc_i8 (int64 x))
                     | :? char as x -> ilg.Emit(mk_ldc (int32 x))
                     | :? bool as x -> ilg.Emit(mk_ldc (if x then 1 else 0))
                     | :? float32 as x -> ilg.Emit(I_ldc (DT_R4, ILConst.R4 x))
@@ -12952,8 +13086,10 @@ namespace ProviderImplementation.ProvidedTypes
                 else emitC obj
 
             | Let(v,e,b) ->
-                let lb = ilg.DeclareLocal (transType v.Type)
-                locals.Add (v, lb)
+                let ty = transType v.Type
+                let lb = ilg.DeclareLocal ty
+                printfn "declared local %d of original type %O and target type %O for variable %O" lb.LocalIndex v.Type ty  v
+                localsMap.Add (v, lb)
                 emitExpr ExpectedStackState.Value e
                 ilg.Emit(I_stloc lb.LocalIndex)
                 emitExpr expectedState b
@@ -13009,13 +13145,14 @@ namespace ProviderImplementation.ProvidedTypes
 
             | VarSet(v,e) ->
                 emitExpr ExpectedStackState.Value e
-                match locals.TryGetValue v with
+                match localsMap.TryGetValue v with
                 | true, localBuilder ->
                     ilg.Emit(I_stloc localBuilder.LocalIndex)
                 | false, _ ->
                     failwith "unknown parameter/field in assignment. Only assignments to locals are currently supported by TypeProviderEmit"
             | Lambda(v, body) ->
-                emitLambda(ilg, v, body, expr.GetFreeVars(), locals, parameterVars)
+                let lambdaLocals = Dictionary()
+                emitLambda(ilg, v, body, expr.GetFreeVars(), lambdaLocals, parameterVars)
                 popIfEmptyExpected expectedState
             | n ->
                 failwith (sprintf "unknown expression '%A' in generated method" n)
@@ -13023,14 +13160,32 @@ namespace ProviderImplementation.ProvidedTypes
         member __.EmitExpr (expectedState, expr) = emitExpr expectedState expr
 
     //-------------------------------------------------------------------------------------------------
-    // The assembly compiler for generative type providers.
+    // ProvidedAssembly: the assembly compiler for generative type providers.
 
-    type AssemblyGenerator(assemblyFileName, convToTgt, ilg) as this =
-        inherit Assembly()
-        let assemblyShortName = Path.GetFileNameWithoutExtension assemblyFileName
-        let assemblyName = AssemblyName assemblyShortName
-        let assemblyBuilder = ILAssemblyBuilder(assemblyName, assemblyFileName, ilg)
-        let assemblyMainModule = assemblyBuilder.MainModule
+    /// Implements System.Reflection.Assembly backed by an ILModuleReader
+    type ProvidedAssembly(assemblyName:AssemblyName, assemblyFileName: string, context: ProvidedTypesContext) as this =
+
+        inherit ContextAssembly(context.ILGlobals, context.TryBindILAssemblyRef, None, assemblyFileName) 
+       
+        let theTypes = ResizeArray<_>()
+        
+        // The generation of theTypes is triggered by first force of assemblyLazy, either by GetFinalBytes or some other dereference of the Assembly
+        let assemblyLazy =
+            lazy
+                this.Generate()
+                (this :> Assembly)
+
+        static let theTable = ConcurrentDictionary<string, Lazy<byte[]>>()
+
+        do theTable.[assemblyName.ToString()] <- lazy this.GetFinalBytes()
+
+        let convToTgt ty = context.ConvertDesignTimeTypeToTargetType ty
+        let addTypes (providedTypeDefinitions:ProvidedTypeDefinition list, enclosingTypeNames: string list option) =
+            for pt in providedTypeDefinitions do
+                if pt.IsErased then invalidOp ("The provided type "+pt.Name+"is marked as erased and cannot be converted to a generated type. Set 'IsErased=false' on the ProvidedTypeDefinition")
+                theTypes.Add(pt,enclosingTypeNames)
+                pt.SetAssemblyLazyInternal assemblyLazy
+
         let typeMap = Dictionary<ProvidedTypeDefinition,ILTypeBuilder>(HashIdentity.Reference)
         let typeMapExtra = Dictionary<string,ILTypeBuilder>(HashIdentity.Structural)
         let ctorMap = Dictionary<ProvidedConstructor, ILMethodBuilder>(HashIdentity.Reference)
@@ -13056,11 +13211,11 @@ namespace ProviderImplementation.ProvidedTypes
                 | a -> a
             (attributes &&& ~~~TypeAttributes.VisibilityMask) ||| visibilityAttributes
 
-        let rec typeMembers (tb:ILTypeBuilder)  (td : ProvidedTypeDefinition) =
+        let rec typeMembers (tb:ILTypeBuilder)  (td: ProvidedTypeDefinition) =
             for ntd in td.GetNestedTypes(bindAll) do
                 nestedType tb ntd
 
-        and nestedType (tb:ILTypeBuilder)  (ntd : Type) =
+        and nestedType (tb:ILTypeBuilder)  (ntd: Type) =
             match ntd with
             | :? ProvidedTypeDefinition as pntd ->
                 if pntd.IsErased then invalidOp ("The nested provided type "+pntd.Name+" is marked as erased and cannot be converted to a generated type. Set 'IsErased=false' on the ProvidedTypeDefinition")
@@ -13090,20 +13245,21 @@ namespace ProviderImplementation.ProvidedTypes
                 else failwith "unexpected type with element type"
             elif ty.IsValueType then ILType.Value (transTypeSpec ty)
             else ILType.Boxed (transTypeSpec ty)
+
         and transTypeSpec (ty: Type) =
             ILTypeSpec(transTypeRef ty, Array.map transType (ty.GetGenericArguments()))
 
         and transTypeRef (ty: Type) = 
             ILTypeRef(transTypeRefScope ty, uoptionOfObj (if ty.IsNested then null else ty.Namespace), ty.Name)
 
-        and transTypeRefScope (ty: Type) : ILTypeRefScope = 
+        and transTypeRefScope (ty: Type): ILTypeRefScope = 
             match ty.DeclaringType with 
             | null -> 
                 if ty.Assembly = null then failwithf "null assembly for type %s" ty.FullName
                 ILTypeRefScope.Top (transScopeRef ty.Assembly)
             | dt -> ILTypeRefScope.Nested (transTypeRef dt)
 
-        and transScopeRef (assem: Assembly) : ILScopeRef = 
+        and transScopeRef (assem: Assembly): ILScopeRef = 
             if assem = (this :> Assembly) then ILScopeRef.Local
             else ILScopeRef.Assembly (ILAssemblyRef.FromAssemblyName (assem.GetName()))
 
@@ -13112,17 +13268,7 @@ namespace ProviderImplementation.ProvidedTypes
             let dty = m.DeclaringType
 
             // Remove the generic instantiations to get the uninstantiated identity of the method
-            let m2 = 
-                if (dty.IsGenericType && not dty.IsGenericTypeDefinition) then 
-
-                    // Search through ALL the constructors on the original type definition looking for the one
-                    // with a matching metadata token
-                    let gdty = if dty.IsGenericType then dty.GetGenericTypeDefinition() else dty
-                    gdty.GetConstructors(BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance) 
-                    |> Array.tryFind (fun c -> c.MetadataToken = m.MetadataToken)
-                    |> function Some m2 -> m2 | None -> failwithf "couldn't rebind generic instantiation of %O::%s back to generic method definition via metadata token" m.DeclaringType m.Name
-                else
-                    m
+            let m2 = m.GetDefinition()
             let cc = (if m2.IsStatic then ILCallingConv.Static else ILCallingConv.Instance)
             let ptys = [| for p in m2.GetParameters() -> transType p.ParameterType |]
             ILMethodRef (transTypeRef m2.DeclaringType, cc, 0, m2.Name, ptys, ILType.Void)
@@ -13141,26 +13287,13 @@ namespace ProviderImplementation.ProvidedTypes
         let transMethRef (m:MethodInfo) = 
             let dty = m.DeclaringType
             // Remove the generic instantiations to get the uninstantiated identity of the method
-            let m2 = 
-                if (m.IsGenericMethod && not m.IsGenericMethodDefinition) || 
-                   (dty.IsGenericType && not dty.IsGenericTypeDefinition) then 
-
-                    // Search through ALL the methods on the original type definition looking for the one
-                    // with a matching metadata token
-                    let gdty = if dty.IsGenericType then dty.GetGenericTypeDefinition() else dty
-                    gdty.GetMethods(BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance) 
-                    |> Array.tryFind (fun c -> c.MetadataToken = m.MetadataToken)
-                    |> function Some m2 -> m2 | None -> failwithf "couldn't rebind generic instantiation of %O::%s back to generic method definition via metadata token" m.DeclaringType m.Name
-
-                else
-                   m 
-
+            let m2 = m.GetDefinition()
             let ptys = [| for p in m2.GetParameters() -> transType p.ParameterType |]
             let genarity = (if m2.IsGenericMethod then m2.GetGenericArguments().Length else 0)
             let cc = (if m2.IsStatic then ILCallingConv.Static else ILCallingConv.Instance)
             ILMethodRef (transTypeRef m2.DeclaringType, cc, genarity, m2.Name, ptys, transType m2.ReturnType)
 
-        let transMeth (m:MethodInfo) : ILMethodSpec = 
+        let transMeth (m:MethodInfo): ILMethodSpec = 
             match m with 
             | :? ProvidedMethod as pm when methMap.ContainsKey pm -> methMap.[pm].FormalMethodSpec
             | m -> 
@@ -13174,13 +13307,13 @@ namespace ProviderImplementation.ProvidedTypes
             | _ -> false
 
         let iterateTypes f providedTypeDefinitions =
-            let rec typeMembers (ptd : ProvidedTypeDefinition) =
+            let rec typeMembers (ptd: ProvidedTypeDefinition) =
                 let tb = typeMap.[ptd]
                 f tb (Some ptd)
                 for ntd in ptd.GetNestedTypes(bindAll) do
                     nestedType ntd
 
-            and nestedType (ntd : Type) =
+            and nestedType (ntd: Type) =
                 match ntd with
                 | :? ProvidedTypeDefinition as pntd -> typeMembers pntd
                 | _ -> ()
@@ -13209,12 +13342,18 @@ namespace ProviderImplementation.ProvidedTypes
                 let ca = mkILCustomAttribMethRef (transCtor attr.Constructor, constructorArgs, namedProps, namedFields)
                 f ca
 
-        member this.Assembly = this :> Assembly
+        override __.GetName() = assemblyName
         override __.FullName = assemblyName.ToString()
 
         /// Emit the given provided type definitions into an assembly and adjust 'Assembly' property of all type definitions to return that
         /// assembly.
-        member this.Generate(providedTypeDefinitions:(ProvidedTypeDefinition * string list option) list) =
+        member this.Generate() =
+          if this.Reader.IsNone then
+            let ilg = context.ILGlobals
+            let assemblyBuilder = ILAssemblyBuilder(assemblyName, assemblyFileName, ilg)
+            let assemblyMainModule = assemblyBuilder.MainModule
+            let providedTypeDefinitions = theTypes |> Seq.toList
+            theTypes.Clear()
 
             // phase 1 - define types
             for (pt,enclosingGeneratedTypeNames) in providedTypeDefinitions do
@@ -13257,12 +13396,12 @@ namespace ProviderImplementation.ProvidedTypes
             providedTypeDefinitions |> iterateTypes (fun _tb ptd ->
                 match ptd with
                 | None -> ()
-                | Some ptd -> ptd.SetAssemblyInternal this.Assembly)
+                | Some ptd -> ptd.SetAssemblyInternal this)
 
             providedTypeDefinitions |> iterateTypes (fun _tb ptd ->
                 match ptd with
                 | None -> ()
-                | Some ptd -> ptd.SetAssemblyInternal this.Assembly)
+                | Some ptd -> ptd.SetAssemblyInternal this)
 
             // phase 1b - emit base types
             providedTypeDefinitions |> iterateTypes (fun tb ptd ->
@@ -13291,7 +13430,7 @@ namespace ProviderImplementation.ProvidedTypes
                         ctorMap.[pcinfo] <- cb
                     | _ -> ()
 
-                //eprintfn "ptd.Name = %s, ptd.IsEnum = %b" ptd.Name ptd.IsEnum
+                //printfn "ptd.Name = %s, ptd.IsEnum = %b" ptd.Name ptd.IsEnum
                 if ptd.IsEnum then
                     tb.DefineField("value__", transType (ptd.GetEnumUnderlyingType()), FieldAttributes.Public ||| FieldAttributes.SpecialName ||| FieldAttributes.RTSpecialName)
                     |> ignore
@@ -13371,13 +13510,13 @@ namespace ProviderImplementation.ProvidedTypes
                     let cattr = pcinfo.GetCustomAttributesData()
                     defineCustomAttrs cb.SetCustomAttribute cattr
                     let ilg = cb.GetILGenerator()
-                    let locals = Dictionary<Var,ILLocalBuilder>()
+                    let ctorLocals = Dictionary<Var,ILLocalBuilder>()
                     let parameterVars =
                         [| yield Var("this", pcinfo.DeclaringType)
                            for p in pcinfo.GetParameters() do
                                 yield Var(p.Name, p.ParameterType) |]
 
-                    let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convToTgt, transType, transField, transMeth, transMethRef, transCtor, isLiteralEnumField, ilg, locals, parameterVars)
+                    let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convToTgt, transType, transField, transMeth, transMethRef, transCtor, isLiteralEnumField, ilg, ctorLocals, parameterVars)
 
                     let parameters = [| for v in parameterVars -> Expr.Var v |]
 
@@ -13413,7 +13552,8 @@ namespace ProviderImplementation.ProvidedTypes
                     defineCustomAttrs cb.SetCustomAttribute cattr
                     let exprFun = pc.GetInvokeCodeInternal (true, convToTgt)
                     let expr = exprFun [||]
-                    let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convToTgt, transType, transField, transMeth, transMethRef, transCtor, isLiteralEnumField, ilg, new Dictionary<_, _>(), [| |])
+                    let ctorLocals = new Dictionary<_, _>()
+                    let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convToTgt, transType, transField, transMeth, transMethRef, transCtor, isLiteralEnumField, ilg, ctorLocals, [| |])
                     codeGen.EmitExpr (ExpectedStackState.Empty, expr)
                     ilg.Emit I_ret
 
@@ -13437,12 +13577,10 @@ namespace ProviderImplementation.ProvidedTypes
                     let exprFun = pminfo.GetInvokeCodeInternal(true, convToTgt)
                     let expr = exprFun parameters
 
-                    let locals = Dictionary<Var,ILLocalBuilder>()
-                    //eprintfn "Emitting linqCode for %s::%s, code = %s" pminfo.DeclaringType.FullName pminfo.Name (try linqCode.ToString() with _ -> "<error>")
-
+                    let methLocals = Dictionary<Var,ILLocalBuilder>()
 
                     let expectedState = if (transType minfo.ReturnType = ILType.Void) then ExpectedStackState.Empty else ExpectedStackState.Value
-                    let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convToTgt, transType, transField, transMeth, transMethRef, transCtor, isLiteralEnumField, ilg, locals, parameterVars)
+                    let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convToTgt, transType, transField, transMeth, transMethRef, transCtor, isLiteralEnumField, ilg, methLocals, parameterVars)
                     codeGen.EmitExpr (expectedState, expr)
                     ilg.Emit I_ret
                   | _ -> ()
@@ -13471,53 +13609,42 @@ namespace ProviderImplementation.ProvidedTypes
                         let minfo = pinfo.GetSetMethod(true)
                         pb.SetSetMethod (methMap.[minfo :?> ProvidedMethod ]))
 
-            //eprintfn "saving generated binary to '%s'" assemblyFileName
+            //printfn "saving generated binary to '%s'" assemblyFileName
             assemblyBuilder.Save ()
-
-        member __.GetFinalBytes() =
-            let assemblyBytes = File.ReadAllBytes assemblyFileName
-            //eprintfn "got bytes for generated binary from '%s'" assemblyFileName
+            //printfn "re-reading generated binary from '%s'" assemblyFileName
+            this.Reader <- Some (ILModuleReaderAfterReadingAllBytes(assemblyFileName, ilg))
+#if DEBUG
+            printfn "generated binary is at '%s'" assemblyFileName
+#else
             File.Delete assemblyFileName
-            assemblyBytes
+#endif
 
-    type ProvidedAssembly(assemblyFileName: string, context: ProvidedTypesContext) =
-        static let theTable = ConcurrentDictionary<string, Lazy<byte[]>>()
-        let convToTgt = context.ConvertDesignTimeTypeToTargetType
-        let ilg = context.ILGlobals
-        let theTypes = ResizeArray<_>()
-        let assemblyGenerator = AssemblyGenerator(assemblyFileName, convToTgt, ilg)
-        let assemblyLazy =
-            lazy
-                assemblyGenerator.Generate(theTypes |> Seq.toList)
-                assemblyGenerator.Assembly
-    //#if !FX_NO_LOCAL_FILESYSTEM
-        let theAssemblyBytesLazy = lazy assemblyGenerator.GetFinalBytes()
+        new (context: ProvidedTypesContext) = 
+            let assemblyFileName = Path.ChangeExtension(Path.GetTempFileName(), "dll")
+            let simpleName = Path.GetFileNameWithoutExtension(assemblyFileName)
+            ProvidedAssembly(AssemblyName(simpleName), assemblyFileName, context)
+            
+        member this.GetFinalBytes() =
+            assemblyLazy.Force() |> ignore
+            //printfn "got bytes for generated binary from '%s'" assemblyFileName
+            this.Reader.Value.Bytes
 
-        do theTable.[assemblyGenerator.Assembly.FullName] <- theAssemblyBytesLazy
+        member x.AddNestedTypes (types, enclosingGeneratedTypeNames) = addTypes (types, Some enclosingGeneratedTypeNames)
 
-    //#endif
-
-        let add (providedTypeDefinitions:ProvidedTypeDefinition list, enclosingTypeNames: string list option) =
-            for pt in providedTypeDefinitions do
-                if pt.IsErased then invalidOp ("The provided type "+pt.Name+"is marked as erased and cannot be converted to a generated type. Set 'IsErased=false' on the ProvidedTypeDefinition")
-                theTypes.Add(pt,enclosingTypeNames)
-                pt.SetAssemblyLazyInternal assemblyLazy
-
-        member x.AddNestedTypes (types, enclosingGeneratedTypeNames) = add (types, Some enclosingGeneratedTypeNames)
-
-        member x.AddTypes (types) = add (types, None)
+        member x.AddTypes (types) = addTypes (types, None)
 
 //#if !FX_NO_LOCAL_FILESYSTEM
         static member RegisterGenerated (ctxt: ProvidedTypesContext, fileName:string) =
             let assemblyBytes = File.ReadAllBytes fileName
-            //eprintfn "registering assembly in '%s'" fileName
+            //printfn "registering assembly in '%s'" fileName
             let assembly = ctxt.ReadRelatedAssembly(fileName)
-            //eprintfn "registered assembly in '%s', FullName='%s'" fileName assembly.FullName
-            theTable.[assembly.FullName] <- Lazy<_>.CreateFromValue assemblyBytes
+            //printfn "registered assembly in '%s', FullName='%s'" fileName assembly.FullName
+            let key = assembly.GetName().ToString()
+            theTable.[key] <- Lazy<_>.CreateFromValue assemblyBytes
             assembly
 
         static member Table = theTable
-//#endif
+
 
 #endif // NO_GENERATIVE
 
@@ -13542,10 +13669,9 @@ namespace ProviderImplementation.ProvidedTypes
 
     open ProviderImplementation.ProvidedTypes
     open ProviderImplementation.ProvidedTypes.AssemblyReader
-    open ProviderImplementation.ProvidedTypes.AssemblyReaderReflection
     open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 
-    type TypeProviderForNamespaces(namespacesAndTypes : list<(string * list<ProvidedTypeDefinition>)>) as this =
+    type TypeProviderForNamespaces(namespacesAndTypes: list<(string * list<ProvidedTypeDefinition>)>) as this =
         let otherNamespaces = ResizeArray<string * list<ProvidedTypeDefinition>>()
 
         let makeProvidedNamespace (namespaceName:string) (types:ProvidedTypeDefinition list) =
@@ -13554,7 +13680,7 @@ namespace ProviderImplementation.ProvidedTypes
                 member __.GetNestedNamespaces() = [| |]
                 member __.NamespaceName = namespaceName
                 member __.GetTypes() = types |> Array.copy
-                member __.ResolveTypeName typeName : Type =
+                member __.ResolveTypeName typeName: Type =
                     match types |> Array.tryFind (fun ty -> ty.Name = typeName) with
                     | Some ty -> ty
                     | None    -> null
@@ -13590,7 +13716,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 #else
 
-        abstract member ResolveAssembly : args : ResolveEventArgs -> Assembly
+        abstract member ResolveAssembly: args: ResolveEventArgs -> Assembly
 
         default __.ResolveAssembly(args) =
             let expectedName = (AssemblyName(args.Name)).Name + ".dll"
@@ -13607,7 +13733,7 @@ namespace ProviderImplementation.ProvidedTypes
             ignore(IO.Path.GetFullPath folder)
             probingFolders.Add folder
 
-        member __.RegisterRuntimeAssemblyLocationAsProbingFolder (config : TypeProviderConfig) =
+        member __.RegisterRuntimeAssemblyLocationAsProbingFolder (config: TypeProviderConfig) =
             config.RuntimeAssembly
             |> IO.Path.GetDirectoryName
             |> this.RegisterProbingFolder
@@ -13631,7 +13757,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.ApplyStaticArgumentsForMethod(mb: MethodBase, mangledName, objs) =
             match mb with
-            | :? ProvidedMethod as t -> t.ApplyStaticArgumentsInternal(mangledName, objs) :> MethodBase
+            | :? ProvidedMethod as t -> t.ApplyStaticArguments(mangledName, objs) :> MethodBase
             | _ -> failwith (sprintf "ApplyStaticArguments: static parameters for method %s are unexpected" mb.Name)
 
         interface ITypeProvider with
@@ -13642,7 +13768,7 @@ namespace ProviderImplementation.ProvidedTypes
             override __.GetNamespaces() = Array.copy providedNamespaces.Value
 
             member __.GetInvokerExpression(methodBase, parameters) =
-                let rec getInvokerExpression (methodBase : MethodBase) parameters =
+                let rec getInvokerExpression (methodBase: MethodBase) parameters =
 
                     match methodBase with
 
@@ -13699,7 +13825,7 @@ namespace ProviderImplementation.ProvidedTypes
             override __.ApplyStaticArguments(ty,typePathAfterArguments:string[],objs) =
                 let typePathAfterArguments = typePathAfterArguments.[typePathAfterArguments.Length-1]
                 match ty with
-                | :? ProvidedTypeDefinition as t -> (t.MakeParametricType(typePathAfterArguments,objs) :> Type)
+                | :? ProvidedTypeDefinition as t -> (t.ApplyStaticArguments(typePathAfterArguments,objs) :> Type)
                 | _ -> failwith (sprintf "ApplyStaticArguments: static params for type %s are unexpected" ty.FullName)
 
 #if NO_GENERATIVE
@@ -13707,12 +13833,13 @@ namespace ProviderImplementation.ProvidedTypes
                 failwith "no generative assemblies"
 #else
             override __.GetGeneratedAssemblyContents(assembly:Assembly) =
-                //eprintfn "looking up assembly '%s'" assembly.FullName
-                match ProvidedAssembly.Table.TryGetValue assembly.FullName with
+                //printfn "looking up assembly '%s'" assembly.FullName
+                let key = assembly.GetName().ToString()
+                match ProvidedAssembly.Table.TryGetValue key with
                 | true,bytes -> bytes.Force()
                 | _ ->
                     let bytes = File.ReadAllBytes assembly.ManifestModule.FullyQualifiedName
-                    ProvidedAssembly.Table.[assembly.FullName] <- Lazy<_>.CreateFromValue bytes
+                    ProvidedAssembly.Table.[key] <- Lazy<_>.CreateFromValue bytes
                     bytes
 #endif
 

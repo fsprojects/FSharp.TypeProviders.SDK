@@ -369,7 +369,7 @@ namespace ProviderImplementation.ProvidedTypes
         member SuppressRelocation: bool  with get,set
 
         // This method is used by Debug.fs
-        member MakeParametricType: name:string * args:obj[] -> ProvidedTypeDefinition
+        member ApplyStaticArguments: name:string * args:obj[] -> ProvidedTypeDefinition
 
         /// Add a custom attribute to the provided type definition.
         member AddCustomAttribute: CustomAttributeData -> unit
@@ -502,10 +502,22 @@ namespace ProviderImplementation.ProvidedTypes
 
 
 #if !NO_GENERATIVE
+    /// An internal type used in the implementation of ProvidedAssembly
+    [<Class>]
+    type ContextAssembly =
+
+        inherit Assembly
+
     /// A provided generated assembly
     type ProvidedAssembly =
+
+        inherit ContextAssembly
+
         /// Create a provided generated assembly
-        new: assemblyFileName:string * context:ProvidedTypesContext -> ProvidedAssembly
+        new: assemblyName: AssemblyName * assemblyFileName:string * context:ProvidedTypesContext -> ProvidedAssembly
+
+        /// Create a provided generated assembly using a temporary file as the interim assembly storage
+        new: context:ProvidedTypesContext -> ProvidedAssembly
 
         /// Emit the given provided type definitions as part of the assembly
         /// and adjust the 'Assembly' property of all provided type definitions to return that
