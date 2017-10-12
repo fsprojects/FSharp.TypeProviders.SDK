@@ -1450,7 +1450,7 @@ namespace ProviderImplementation.ProvidedTypes
           lazy
             match container with
             | TypeContainer.Namespace _ -> null
-            | TypeContainer.Type enclosingTyp           -> enclosingTyp
+            | TypeContainer.Type enclosingTyp -> enclosingTyp
             | TypeContainer.TypeToBeDecided -> failwith (sprintf "type '%s' was not added as a member to a declaring type" className)
 
         let fullName =
@@ -13092,14 +13092,17 @@ namespace ProviderImplementation.ProvidedTypes
             else ILType.Boxed (transTypeSpec ty)
         and transTypeSpec (ty: Type) =
             ILTypeSpec(transTypeRef ty, Array.map transType (ty.GetGenericArguments()))
+
         and transTypeRef (ty: Type) = 
-            ILTypeRef(transTypeRefScope ty, uoptionOfObj ty.Namespace, ty.Name)
+            ILTypeRef(transTypeRefScope ty, uoptionOfObj (if ty.IsNested then null else ty.Namespace), ty.Name)
+
         and transTypeRefScope (ty: Type) : ILTypeRefScope = 
             match ty.DeclaringType with 
             | null -> 
                 if ty.Assembly = null then failwithf "null assembly for type %s" ty.FullName
                 ILTypeRefScope.Top (transScopeRef ty.Assembly)
             | dt -> ILTypeRefScope.Nested (transTypeRef dt)
+
         and transScopeRef (assem: Assembly) : ILScopeRef = 
             if assem = (this :> Assembly) then ILScopeRef.Local
             else ILScopeRef.Assembly (ILAssemblyRef.FromAssemblyName (assem.GetName()))
