@@ -13233,12 +13233,7 @@ namespace ProviderImplementation.ProvidedTypes
             | _ -> ()
 
         let rec transType (ty:Type) =
-            //match ty with
-            //| :? ProvidedTypeDefinition as ptd ->
-            //    if typeMap.ContainsKey ptd then typeMap.[ptd] :> Type else ty
-            //| _ ->
             if ty.IsGenericParameter then ILType.Var ty.GenericParameterPosition
-            elif ty.Namespace = "System" && ty.Name = "Void" then ILType.Void
             elif ty.HasElementType then
                 let ety = transType (ty.GetElementType())
                 if ty.IsArray then
@@ -13248,6 +13243,7 @@ namespace ProviderImplementation.ProvidedTypes
                 elif ty.IsPointer then ILType.Ptr ety
                 elif ty.IsByRef then ILType.Byref ety
                 else failwith "unexpected type with element type"
+            elif ty.Namespace = "System" && ty.Name = "Void" then ILType.Void
             elif ty.IsValueType then ILType.Value (transTypeSpec ty)
             else ILType.Boxed (transTypeSpec ty)
 
