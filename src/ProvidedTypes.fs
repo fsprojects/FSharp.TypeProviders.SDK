@@ -3097,7 +3097,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
         let mutable lmap = null
         let getmap() =
-            if isNull lmap then
+            if lmap = null then
                 lmap <- Dictionary()
                 for (nsp, nm, ltd) in larr.Force() do
                     let key = nsp, nm
