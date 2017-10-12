@@ -28,7 +28,7 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
     let ns = "Enums.Provided"
     let asm = Assembly.GetExecutingAssembly()
     let ctxt = ProvidedTypesContext.Create(config)
-    let tempAssembly = ProvidedAssembly(Path.ChangeExtension(Path.GetTempFileName(), "dll"), ctxt)
+    let tempAssembly = ProvidedAssembly(ctxt)
     let container = ctxt.ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, isErased = false)
 
     let createEnum name (values: list<string*int>) =

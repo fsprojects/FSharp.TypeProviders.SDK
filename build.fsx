@@ -87,7 +87,7 @@ Target "RunTests" (fun _ ->
 #else
     exec "dotnet" ("test tests/FSharp.TypeProviders.SDK.Tests.fsproj -c " + config)
     // This also gives console output:
-    // packages\xunit.runner.console\tools\net452\xunit.console.exe testsbin\Release\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
+    // .\build Build && packages\xunit.runner.console\tools\net452\xunit.console.exe tests\bin\Debug\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
 #endif
     ()
 )
