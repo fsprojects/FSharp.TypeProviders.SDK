@@ -333,21 +333,21 @@ namespace ProviderImplementation.ProvidedTypes
 
     type QuotationSimplifier(isGenerated: bool, convToTgt: Type -> Type) =
 
-        let rec transExpr q =
+        let rec simplifyExpr q =
             match q with
             // convert NewTuple to the call to the constructor of the Tuple type (only for generated types)
             | NewTuple(items) when isGenerated ->
                 let rec mkCtor args ty =
                     let ctor, restTyOpt = Reflection.FSharpValue.PreComputeTupleConstructorInfo ty
                     match restTyOpt with
-                    | None -> Expr.NewObject(ctor, List.map transExpr args)
+                    | None -> Expr.NewObject(ctor, List.map simplifyExpr args)
                     | Some restTy ->
-                        let curr = [for a in Seq.take 7 args -> transExpr a]
+                        let curr = [for a in Seq.take 7 args -> simplifyExpr a]
                         let rest = List.ofSeq (Seq.skip 7 args)
                         Expr.NewObject(ctor, curr @ [mkCtor rest restTy])
                 let tys = [| for e in items -> e.Type |]
                 let tupleTy = Reflection.FSharpType.MakeTupleType tys
-                transExpr (mkCtor items tupleTy)
+                simplifyExpr (mkCtor items tupleTy)
             // convert TupleGet to the chain of PropertyGet calls (only for generated types)
             | TupleGet(e, i) when isGenerated ->
                 let rec mkGet ty i (e: Expr)  =
@@ -356,7 +356,7 @@ namespace ProviderImplementation.ProvidedTypes
                     match restOpt with
                     | None -> propGet
                     | Some (restTy, restI) -> mkGet restTy restI propGet
-                transExpr (mkGet e.Type i (transExpr e))
+                simplifyExpr (mkGet e.Type i (simplifyExpr e))
             | Value(value, ty) ->
                 if value |> isNull |> not then
                     let tyOfValue = value.GetType()
@@ -365,32 +365,32 @@ namespace ProviderImplementation.ProvidedTypes
             // Eliminate F# property gets to method calls
             | PropertyGet(obj,propInfo,args) ->
                 match obj with
-                | None -> transExpr (Expr.CallUnchecked(propInfo.GetGetMethod(),args))
-                | Some o -> transExpr (Expr.CallUnchecked(transExpr o,propInfo.GetGetMethod(),args))
+                | None -> simplifyExpr (Expr.CallUnchecked(propInfo.GetGetMethod(),args))
+                | Some o -> simplifyExpr (Expr.CallUnchecked(simplifyExpr o,propInfo.GetGetMethod(),args))
             // Eliminate F# property sets to method calls
             | PropertySet(obj,propInfo,args,v) ->
                     match obj with
-                    | None -> transExpr (Expr.CallUnchecked(propInfo.GetSetMethod(),args@[v]))
-                    | Some o -> transExpr (Expr.CallUnchecked(transExpr o,propInfo.GetSetMethod(),args@[v]))
+                    | None -> simplifyExpr (Expr.CallUnchecked(propInfo.GetSetMethod(),args@[v]))
+                    | Some o -> simplifyExpr (Expr.CallUnchecked(simplifyExpr o,propInfo.GetSetMethod(),args@[v]))
             // Eliminate F# function applications to FSharpFunc<_,_>.Invoke calls
             | Application(f,e) ->
-                transExpr (Expr.CallUnchecked(transExpr f, f.Type.GetMethod "Invoke", [ e ]) )
+                simplifyExpr (Expr.CallUnchecked(simplifyExpr f, f.Type.GetMethod "Invoke", [ e ]) )
             | NewUnionCase(ci, es) ->
-                transExpr (Expr.CallUnchecked(Reflection.FSharpValue.PreComputeUnionConstructorInfo ci, es) )
+                simplifyExpr (Expr.CallUnchecked(Reflection.FSharpValue.PreComputeUnionConstructorInfo ci, es) )
             | NewRecord(ci, es) ->
-                transExpr (Expr.NewObjectUnchecked(Reflection.FSharpValue.PreComputeRecordConstructorInfo ci, es) )
+                simplifyExpr (Expr.NewObjectUnchecked(Reflection.FSharpValue.PreComputeRecordConstructorInfo ci, es) )
             | UnionCaseTest(e,uc) ->
                 let tagInfo = Reflection.FSharpValue.PreComputeUnionTagMemberInfo uc.DeclaringType
                 let tagExpr =
                     match tagInfo with
                     | :? PropertyInfo as tagProp ->
-                            transExpr (Expr.PropertyGet(e,tagProp) )
+                            simplifyExpr (Expr.PropertyGet(e,tagProp) )
                     | :? MethodInfo as tagMeth ->
-                            if tagMeth.IsStatic then transExpr (Expr.Call(tagMeth, [e]))
-                            else transExpr (Expr.Call(e,tagMeth,[]))
+                            if tagMeth.IsStatic then simplifyExpr (Expr.Call(tagMeth, [e]))
+                            else simplifyExpr (Expr.Call(e,tagMeth,[]))
                     | _ -> failwith "unreachable: unexpected result from PreComputeUnionTagMemberInfo"
                 let tagNumber = uc.Tag
-                transExpr <@@ (%%(tagExpr): int) = tagNumber @@>
+                simplifyExpr <@@ (%%(tagExpr): int) = tagNumber @@>
 
             // Explicitly handle weird byref variables in lets (used to populate out parameters), since the generic handlers can't deal with byrefs.
             //
@@ -399,14 +399,14 @@ namespace ProviderImplementation.ProvidedTypes
             | Let(v,vexpr,bexpr) when v.Type.IsByRef -> transLetOfByref v vexpr bexpr
 
             // Eliminate recursive let bindings (which are unsupported by the type provider API) to regular let bindings
-            | LetRecursive(bindings, expr) -> transLetRec bindings expr
+            | LetRecursive(bindings, expr) -> simplifyLetRec bindings expr
 
             // Handle the generic cases
-            | ShapeLambdaUnchecked(v,body) -> Expr.Lambda(v, transExpr body)
-            | ShapeCombinationUnchecked(comb,args) -> RebuildShapeCombinationUnchecked(comb,List.map transExpr args)
+            | ShapeLambdaUnchecked(v,body) -> Expr.Lambda(v, simplifyExpr body)
+            | ShapeCombinationUnchecked(comb,args) -> RebuildShapeCombinationUnchecked(comb,List.map simplifyExpr args)
             | ShapeVarUnchecked _ -> q
 
-        and transLetRec bindings expr =
+        and simplifyLetRec bindings expr =
                 // This uses a "lets and sets" approach, converting something like
                 //    let rec even = function
                 //    | 0 -> true
@@ -481,7 +481,7 @@ namespace ProviderImplementation.ProvidedTypes
                 //   body
                 vars
                 |> List.fold (fun b v -> Expr.LetUnchecked(varDict.[v], init v.Type, b)) body
-                |> transExpr
+                |> simplifyExpr
 
 
         and transLetOfByref v vexpr bexpr =
@@ -489,17 +489,17 @@ namespace ProviderImplementation.ProvidedTypes
             | Sequential(e',vexpr') ->
                 (* let v = (e'; vexpr') in bexpr => e'; let v = vexpr' in bexpr *)
                 Expr.Sequential(e', transLetOfByref v vexpr' bexpr)
-                |> transExpr
+                |> simplifyExpr
             | IfThenElse(c,b1,b2) ->
                 (* let v = if c then b1 else b2 in bexpr => if c then let v = b1 in bexpr else let v = b2 in bexpr *)
                 //
                 // Note, this duplicates "bexpr"
                 Expr.IfThenElseUnchecked(c, transLetOfByref v b1 bexpr, transLetOfByref v b2 bexpr)
-                |> transExpr
+                |> simplifyExpr
             | Var _ ->
                 (* let v = v1 in bexpr => bexpr[v/v1] *)
                 bexpr.Substitute(fun v' -> if v = v' then Some vexpr else None)
-                |> transExpr
+                |> simplifyExpr
             | _ ->
                 failwith (sprintf "Unexpected byref binding: %A = %A" v vexpr)
 
@@ -515,7 +515,7 @@ namespace ProviderImplementation.ProvidedTypes
             |> Seq.cast
             |> List.ofSeq
             |> fun l -> List.foldBack(fun o s -> Expr.NewUnionCase(cons, [ converter(o); s ])) l (Expr.NewUnionCase(nil, []))
-            |> transExpr
+            |> simplifyExpr
 
         and getValueConverterForType (ty: Type) =
             if ty.IsArray then
@@ -672,7 +672,7 @@ namespace ProviderImplementation.ProvidedTypes
             loop expr
     #endif
 
-        member __.TranslateExpression q = transExpr q
+        member __.TranslateExpression q = simplifyExpr q
 
         member __.TranslateQuotationToCode qexprf (paramNames: string[]) (argExprs: Expr[]) =
             // Use the real variable names instead of indices, to improve output of Debug.fs
@@ -693,7 +693,7 @@ namespace ProviderImplementation.ProvidedTypes
                     expr
     #endif
 
-            transExpr expr
+            simplifyExpr expr
 
     //--------------------------------------------------------------------------------
     // ProvidedMethod, ProvidedConstructor, ProvidedTypeDefinition and other provided objects
@@ -7158,7 +7158,6 @@ namespace ProviderImplementation.ProvidedTypes
         member this.Kind = kind
         member this.Args = typeArgs
 
-        override this.GetConstructors _bindingAttr = notRequired this "GetConstructors" this.Name
 
         override this.GetMethodImpl(name, _bindingAttr, _binderBinder, _callConvention, types, _modifiers) =
             match kind with
@@ -7178,7 +7177,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | None -> null
                 | Some md -> gtd.MakeMethodInfo (this, md) 
 
-            | _ -> notRequired this "ContextTypeSymbol: GetMethodImpl" this.Name
+            | _ -> notRequired this "GetMethodImpl" this.Name
 
         override this.GetConstructorImpl(_bindingAttr, _binderBinder, _callConvention, types, _modifiers) =
             match kind with
@@ -7198,7 +7197,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | None -> null
                 | Some md -> gtd.MakeConstructorInfo (this, md) 
 
-            | _ -> notRequired this "ContextTypeSymbol: GetConstructorImpl" this.Name
+            | _ -> notRequired this "GetConstructorImpl" this.Name
 
         override this.GetPropertyImpl(name, _bindingAttr, _binder, _returnType, types, _modifiers) = 
             match kind with
@@ -7211,7 +7210,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | None -> null
                 | Some md -> gtd.MakePropertyInfo (this, md) 
 
-            | _ -> notRequired this "ContextTypeSymbol: GetPropertyImpl" this.Name
+            | _ -> notRequired this "GetPropertyImpl" this.Name
 
         override this.GetEvent(name, _bindingAttr) = 
             match kind with
@@ -7221,7 +7220,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | None -> null
                 | Some md -> gtd.MakeEventInfo (this, md) 
 
-            | _ -> notRequired this "ContextTypeSymbol: GetEvent" this.Name
+            | _ -> notRequired this "GetEvent" this.Name
 
         override this.GetField(name, _bindingAttr) = 
             match kind with
@@ -7231,16 +7230,43 @@ namespace ProviderImplementation.ProvidedTypes
                 | None -> null
                 | Some md -> gtd.MakeFieldInfo (this, md) 
 
-            | _ -> notRequired this "ContextTypeSymbol: GetEvent" this.Name
+            | _ -> notRequired this "GetEvent" this.Name
+
+        override this.GetMethods _bindingAttr = 
+            match kind with
+            | ContextTypeSymbolKind.Generic gtd -> 
+                gtd.Metadata.Methods.Entries 
+                |> Array.filter (fun md -> md.Name <> ".ctor" && md.Name <> ".cctor") 
+                |> Array.map (fun md -> gtd.MakeMethodInfo (this, md))
+            | _ -> notRequired this "GetMethods" this.Name
+
+        override this.GetProperties _bindingAttr = 
+            match kind with
+            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Properties.Entries |> Array.map (fun md -> gtd.MakePropertyInfo (this, md))
+            | _ -> notRequired this "GetProperties" this.Name
+
+        override this.GetEvents _bindingAttr = 
+            match kind with
+            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Events.Entries |> Array.map (fun md -> gtd.MakeEventInfo (this, md))
+            | _ -> notRequired this "GetEvents" this.Name
+
+        override this.GetFields _bindingAttr = 
+            match kind with
+            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Fields.Entries |> Array.map (fun md -> gtd.MakeFieldInfo (this, md))
+            | _ -> notRequired this "GetEvents" this.Name
+
+        override this.GetConstructors _bindingAttr = 
+            match kind with
+            | ContextTypeSymbolKind.Generic gtd -> 
+                gtd.Metadata.Methods.Entries 
+                |> Array.filter (fun md -> md.Name = ".ctor" || md.Name = ".cctor") 
+                |> Array.map (fun md -> gtd.MakeConstructorInfo (this, md))
+            | _ -> notRequired this "GetConstructors" this.Name
         override this.AssemblyQualifiedName = "[" + this.Assembly.FullName + "]" + this.FullName
 
         override this.GetMembers _bindingAttr = notRequired this "GetMembers" this.Name
-        override this.GetMethods _bindingAttr = notRequired this "GetMethods" this.Name
-        override this.GetFields _bindingAttr = notRequired this "GetFields" this.Name
         override this.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" this.Name
         override this.GetInterfaces() = notRequired this "GetInterfaces" this.Name
-        override this.GetEvents _bindingAttr = notRequired this "GetEvents" this.Name
-        override this.GetProperties _bindingAttr = notRequired this "GetProperties" this.Name
         override this.GetNestedTypes _bindingAttr = notRequired this "GetNestedTypes" this.Name
         override this.GetNestedType(_name, _bindingAttr) = notRequired this "GetNestedType" this.Name
         override this.GetAttributeFlagsImpl() = notRequired this "GetAttributeFlagsImpl" this.Name
@@ -7664,7 +7690,9 @@ namespace ProviderImplementation.ProvidedTypes
             |> Array.map (txILConstructorDef this)
 
         override this.GetMethods(_bindingFlags) =
-            inp.Methods.Entries |> Array.map (txILMethodDef this)
+            inp.Methods.Entries
+            |> Array.filter (fun x -> x.Name <> ".ctor" && x.Name <> ".cctor")
+            |> Array.map (txILMethodDef this)
 
         override this.GetField(name, _bindingFlags) =
             inp.Fields.Entries
