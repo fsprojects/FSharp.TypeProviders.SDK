@@ -115,9 +115,9 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 [<Fact>]
 let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : unit  = 
     let testCases = 
-        [//("3.259.3.1", (fun _ ->  Targets.hasPortable259Assemblies()), Targets.Portable259FSharp31Refs)
-         //("3.259.4.0", (fun _ ->  Targets.hasPortable259Assemblies() && Targets.supportsFSharp40), Targets.Portable259FSharp40Refs)
-         //("4.3.1.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp31Refs)
+        [("3.259.3.1", (fun _ ->  Targets.hasPortable259Assemblies()), Targets.Portable259FSharp31Refs)
+         ("3.259.4.0", (fun _ ->  Targets.hasPortable259Assemblies() && Targets.supportsFSharp40), Targets.Portable259FSharp40Refs)
+         ("4.3.1.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp31Refs)
          ("4.4.0.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp40Refs) ]
     for (desc, supports, refs) in testCases do
         if supports() then 
@@ -134,8 +134,9 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             let assemContents = (typeProviderForNamespaces :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
             Assert.NotEqual(assemContents.Length, 0)
             let res = [| for r in t.Assembly.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
-            printfn "compilation references for case %s = %A" desc runtimeAssemblyRefs
-            printfn "assembly references for case %s = %s" desc res
+            printfn "----- %s ------- " desc 
+            printfn "compilation references for FSharp.Core target %s = %A" desc runtimeAssemblyRefs
+            printfn "assembly references for FSharp.Core target %s = %s" desc res
             for (desc2, _, _) in testCases do 
                 let contains = res.Contains("FSharp.Core, Version="+desc2)
                 if contains = (desc = desc2) then ()
