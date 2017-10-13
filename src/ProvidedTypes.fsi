@@ -239,8 +239,6 @@ namespace ProviderImplementation.ProvidedTypes
     type ProvidedSymbolType =
         inherit TypeDelegator
 
-        //interface IReflectableType
-
         /// Returns the kind of this symbolic type
         member Kind: ProvidedSymbolKind
 
@@ -455,6 +453,21 @@ namespace ProviderImplementation.ProvidedTypes
         /// Try to get the version of FSharp.Core referenced. May raise an exception if FSharp.Core has not been correctly resolved
         member FSharpCoreAssemblyVersion: Version
 
+         /// Returns a type from the referenced assemblies that corresponds to the given design-time type.  Normally
+         /// this method should not be used directly when authoring a type provider.
+        member ConvertDesignTimeTypeToTargetType: Type -> Type
+
+         /// Returns the design-time type that corresponds to the given type from the referenced assemblies.  Normally
+         /// this method should not be used directly when authoring a type provider.
+        member ConvertTargetTypeToDesignTimeType: Type -> Type
+
+         /// Returns a quotation rebuilt with resepct to the types from the referenced assemblies.  Normally
+         /// this method should not be used directly when authoring a type provider.
+        member ConvertDesignTimeExprToTargetExpr: Expr -> Expr
+
+         /// Returns a quotation rebuilt with resepct to the types from the design-time assemblies. Normally
+         /// this method should not be used directly when authoring a type provider.
+        member ConvertTargetExprToDesignTimeExpr: Expr -> Expr
 
 
     /// A base type providing default implementations of type provider functionality when all provided
