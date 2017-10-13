@@ -29,6 +29,7 @@ namespace ProviderImplementation.ProvidedTypes
         let isNil x = match x with [] -> true | _ -> false
         let isEmpty x = match x with [| |] -> true | _ -> false
 
+
         type ConstructorInfo with
             member m.GetDefinition() = 
                 let dty = m.DeclaringType
@@ -53,6 +54,7 @@ namespace ProviderImplementation.ProvidedTypes
                 else
                     m
 
+            member p.IsStatic = p.CanRead && p.GetGetMethod().IsStatic || p.CanWrite && p.GetSetMethod().IsStatic
 
         type EventInfo  with
             member m.GetDefinition() = 
@@ -95,6 +97,13 @@ namespace ProviderImplementation.ProvidedTypes
 
                 else
                    m 
+
+        let canBindConstructor (bindingFlags: BindingFlags) (c: ConstructorInfo) =
+             bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
+
+        let canBindMethod (bindingFlags: BindingFlags) (c: MethodInfo) =
+             bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
+
 
     //--------------------------------------------------------------------------------
     // UncheckedQuotations
@@ -7173,38 +7182,32 @@ namespace ProviderImplementation.ProvidedTypes
         member this.Args = typeArgs
 
 
-        override this.GetConstructors _bindingAttr = 
+        override this.GetConstructors bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> 
-                gtd.Metadata.Methods.Entries 
-                |> Array.filter (fun md -> md.Name = ".ctor" || md.Name = ".cctor") 
-                |> Array.map (gtd.MakeConstructorInfo this)
+            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Methods.Entries |> Array.filter (fun md -> md.Name = ".ctor" || md.Name = ".cctor")  |> Array.map (gtd.MakeConstructorInfo this) |> Array.filter (canBindConstructor bindingFlags)
             | _ -> notRequired this "GetConstructors" this.Name
 
-        override this.GetMethods _bindingAttr = 
+        override this.GetMethods bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> 
-                gtd.Metadata.Methods.Entries 
-                |> Array.filter (fun md -> md.Name <> ".ctor" && md.Name <> ".cctor") 
-                |> Array.map (gtd.MakeMethodInfo this)
+            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Methods.Entries |> Array.filter (fun md -> md.Name <> ".ctor" && md.Name <> ".cctor")  |> Array.map (gtd.MakeMethodInfo this) |> Array.filter (canBindMethod bindingFlags)
             | _ -> notRequired this "GetMethods" this.Name
 
-        override this.GetFields _bindingAttr = 
+        override this.GetFields bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Fields.Entries |> Array.map (gtd.MakeFieldInfo this)
+            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Fields.Entries |> Array.map (gtd.MakeFieldInfo this) |> Array.filter (canBindField bindingFlags)
             | _ -> notRequired this "GetFields" this.Name
 
-        override this.GetProperties _bindingAttr = 
+        override this.GetProperties bindingAttr = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Properties.Entries |> Array.map (gtd.MakePropertyInfo this)
+            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Properties.Entries |> Array.map (gtd.MakePropertyInfo this) |> Array.filter (canBindProperty bindingFlags)
             | _ -> notRequired this "GetProperties" this.Name
 
-        override this.GetEvents _bindingAttr = 
+        override this.GetEvents bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Events.Entries |> Array.map (gtd.MakeEventInfo this)
+            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Events.Entries |> Array.map (gtd.MakeEventInfo this) |> Array.filter (canBindEvent bindingFlags)
             | _ -> notRequired this "GetEvents" this.Name
 
-        override this.GetNestedTypes _bindingAttr = notRequired this "GetNestedTypes" this.Name
+        override this.GetNestedTypes _bindingFlags = notRequired this "GetNestedTypes" this.Name
 
         override this.GetConstructorImpl(_bindingAttr, _binderBinder, _callConvention, types, _modifiers) =
             match kind with
@@ -8111,12 +8114,7 @@ namespace ProviderImplementation.ProvidedTypes
         if p :? ProvidedProperty then p
         else
           let t = replaceType toTgt p.DeclaringType
-          let isStatic =
-            p.CanRead && p.GetGetMethod().IsStatic ||
-            p.CanWrite && p.GetSetMethod().IsStatic
-          let bindingFlags =
-            BindingFlags.Public ||| BindingFlags.NonPublic |||
-              (if isStatic then BindingFlags.Static else BindingFlags.Instance)
+          let bindingFlags = BindingFlags.Public ||| BindingFlags.NonPublic ||| (if isStatic then BindingFlags.Static else BindingFlags.Instance)
           let newP = t.GetProperty(p.Name, bindingFlags)
           if isNull newP then
             failwithf "Property '%O' of type '%O' not found. This property may be missing in the types available in the target assemblies." p t
@@ -8126,9 +8124,7 @@ namespace ProviderImplementation.ProvidedTypes
         if f :? ProvidedField then f
         else
           let t = replaceType toTgt f.DeclaringType
-          let bindingFlags =
-            (if f.IsPublic then BindingFlags.Public else BindingFlags.NonPublic) |||
-            (if f.IsStatic then BindingFlags.Static else BindingFlags.Instance)
+          let bindingFlags = (if f.IsPublic then BindingFlags.Public else BindingFlags.NonPublic) ||| (if f.IsStatic then BindingFlags.Static else BindingFlags.Instance)
           let newF = t.GetField(f.Name, bindingFlags)
           if isNull newF then failwithf "Field '%O' of type '%O' not found. This field may be missing in the types available in the target assemblies." f t
           newF
