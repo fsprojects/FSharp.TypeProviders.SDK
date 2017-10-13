@@ -55,6 +55,7 @@ namespace ProviderImplementation.ProvidedTypes
                     m
 
             member p.IsStatic = p.CanRead && p.GetGetMethod().IsStatic || p.CanWrite && p.GetSetMethod().IsStatic
+            member p.IsPublic = p.CanRead && p.GetGetMethod().IsPublic || p.CanWrite && p.GetSetMethod().IsPublic
 
         type EventInfo  with
             member m.GetDefinition() = 
@@ -68,6 +69,8 @@ namespace ProviderImplementation.ProvidedTypes
                 else
                     m
 
+            member p.IsStatic = p.GetAddMethod().IsStatic || p.GetRemoveMethod().IsStatic
+            member p.IsPublic = p.GetAddMethod().IsPublic || p.GetRemoveMethod().IsPublic
 
         type FieldInfo  with
             member m.GetDefinition() = 
@@ -104,6 +107,17 @@ namespace ProviderImplementation.ProvidedTypes
         let canBindMethod (bindingFlags: BindingFlags) (c: MethodInfo) =
              bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
 
+        let canBindProperty (bindingFlags: BindingFlags) (c: PropertyInfo) =
+             bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
+
+        let canBindField (bindingFlags: BindingFlags) (c: FieldInfo) =
+             bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
+
+        let canBindEvent (bindingFlags: BindingFlags) (c: EventInfo) =
+             bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
+
+        let canBindNestedType (bindingFlags: BindingFlags) (c: Type) =
+             bindingFlags.HasFlag(BindingFlags.Public) && c.IsNestedPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsNestedPublic
 
     //--------------------------------------------------------------------------------
     // UncheckedQuotations
@@ -1356,7 +1370,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetNestedType(_name, _bindingAttr) = notRequired this "GetNestedType" (nameText())
 
-
         override __.GetConstructors _bindingAttr = notRequired this "GetConstructors" (nameText())
         override this.GetMethods _bindingAttr = notRequired this "GetMethods" (nameText())
 
@@ -1368,14 +1381,10 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetNestedTypes _bindingAttr = notRequired this "GetNestedTypes" (nameText())
 
-
-
         override this.GetMembers _bindingAttr = notRequired this "GetMembers" (nameText())
-
 
         override this.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" (nameText())
         override this.GetInterfaces() = notRequired this "GetInterfaces" (nameText())
-
         override this.GetAttributeFlagsImpl() = notRequired this "GetAttributeFlagsImpl" (nameText())
         override this.UnderlyingSystemType =
             match kind with
@@ -1753,8 +1762,8 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetNestedTypes bindingAttr =
             this.GetMembers bindingAttr
-            |> Array.filter(fun m -> m.MemberType.HasFlag(MemberTypes.NestedType) || m.MemberType.HasFlag(MemberTypes.TypeInfo)) |> Array.map(fun m -> m :?> Type)
-
+            |> Array.filter(fun m -> m.MemberType.HasFlag(MemberTypes.NestedType) || m.MemberType.HasFlag(MemberTypes.TypeInfo)) 
+            |> Array.map(fun m -> m :?> Type)
 
         override this.GetConstructorImpl(bindingAttr, _binder, _callConventions, _types, _modifiers) = 
             let members = this.GetMembers bindingAttr |> Array.filter(fun m -> m.MemberType.HasFlag(MemberTypes.Constructor) && (m.Name = ".ctor"))
@@ -7181,33 +7190,55 @@ namespace ProviderImplementation.ProvidedTypes
         member this.Kind = kind
         member this.Args = typeArgs
 
-
         override this.GetConstructors bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Methods.Entries |> Array.filter (fun md -> md.Name = ".ctor" || md.Name = ".cctor")  |> Array.map (gtd.MakeConstructorInfo this) |> Array.filter (canBindConstructor bindingFlags)
+            | ContextTypeSymbolKind.Generic gtd -> 
+                gtd.Metadata.Methods.Entries 
+                |> Array.filter (fun md -> md.Name = ".ctor" || md.Name = ".cctor")  
+                |> Array.map (gtd.MakeConstructorInfo this) 
+                |> Array.filter (canBindConstructor bindingFlags)
             | _ -> notRequired this "GetConstructors" this.Name
 
         override this.GetMethods bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Methods.Entries |> Array.filter (fun md -> md.Name <> ".ctor" && md.Name <> ".cctor")  |> Array.map (gtd.MakeMethodInfo this) |> Array.filter (canBindMethod bindingFlags)
+            | ContextTypeSymbolKind.Generic gtd -> 
+                gtd.Metadata.Methods.Entries 
+                |> Array.filter (fun md -> md.Name <> ".ctor" && md.Name <> ".cctor")  
+                |> Array.map (gtd.MakeMethodInfo this) 
+                |> Array.filter (canBindMethod bindingFlags)
             | _ -> notRequired this "GetMethods" this.Name
 
         override this.GetFields bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Fields.Entries |> Array.map (gtd.MakeFieldInfo this) |> Array.filter (canBindField bindingFlags)
+            | ContextTypeSymbolKind.Generic gtd -> 
+                gtd.Metadata.Fields.Entries 
+                |> Array.map (gtd.MakeFieldInfo this) 
+                |> Array.filter (canBindField bindingFlags)
             | _ -> notRequired this "GetFields" this.Name
 
-        override this.GetProperties bindingAttr = 
+        override this.GetProperties bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Properties.Entries |> Array.map (gtd.MakePropertyInfo this) |> Array.filter (canBindProperty bindingFlags)
+            | ContextTypeSymbolKind.Generic gtd -> 
+                gtd.Metadata.Properties.Entries 
+                |> Array.map (gtd.MakePropertyInfo this) 
+                |> Array.filter (canBindProperty bindingFlags)
             | _ -> notRequired this "GetProperties" this.Name
 
         override this.GetEvents bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.Events.Entries |> Array.map (gtd.MakeEventInfo this) |> Array.filter (canBindEvent bindingFlags)
+            | ContextTypeSymbolKind.Generic gtd -> 
+                gtd.Metadata.Events.Entries 
+                |> Array.map (gtd.MakeEventInfo this) 
+                |> Array.filter (canBindEvent bindingFlags)
             | _ -> notRequired this "GetEvents" this.Name
 
-        override this.GetNestedTypes _bindingFlags = notRequired this "GetNestedTypes" this.Name
+        override this.GetNestedTypes bindingFlags = 
+            match kind with
+            | ContextTypeSymbolKind.Generic gtd -> 
+                gtd.Metadata.NestedTypes.Entries 
+                |> Array.map (gtd.MakeNestedTypeInfo this) 
+                |> Array.filter (canBindNestedType bindingFlags)
+            | _ -> notRequired this "GetEvents" this.Name
 
         override this.GetConstructorImpl(_bindingAttr, _binderBinder, _callConvention, types, _modifiers) =
             match kind with
@@ -7696,31 +7727,37 @@ namespace ProviderImplementation.ProvidedTypes
         override __.BaseType = inp.Extends |> Option.map (txILType (gps, [| |])) |> Option.toObj
         override __.GetInterfaces() = inp.Implements |> Array.map (txILType (gps, [| |]))
 
-        override this.GetConstructors(_bindingFlags) =
+        override this.GetConstructors(bindingFlags) =
             inp.Methods.Entries
             |> Array.filter (fun x -> x.Name = ".ctor" || x.Name = ".cctor")
             |> Array.map (txILConstructorDef this)
+            |> Array.filter (canBindConstructor bindingFlags)
 
-        override this.GetMethods(_bindingFlags) =
+        override this.GetMethods(bindingFlags) =
             inp.Methods.Entries
             |> Array.filter (fun x -> x.Name <> ".ctor" && x.Name <> ".cctor")
             |> Array.map (txILMethodDef this)
+            |> Array.filter (canBindMethod bindingFlags)
 
-        override this.GetFields(_bindingFlags) =
+        override this.GetFields(bindingFlags) =
             inp.Fields.Entries
             |> Array.map (txILFieldDef this)
+            |> Array.filter (canBindField bindingFlags)
 
-        override this.GetEvents(_bindingFlags) =
+        override this.GetEvents(bindingFlags) =
             inp.Events.Entries
             |> Array.map (txILEventDef this)
+            |> Array.filter (canBindEvent bindingFlags)
 
-        override this.GetProperties(_bindingFlags) =
+        override this.GetProperties(bindingFlags) =
             inp.Properties.Entries
             |> Array.map (txILPropertyDef this)
+            |> Array.filter (canBindProperty bindingFlags)
 
-        override this.GetNestedTypes(_bindingFlags) =
+        override this.GetNestedTypes(bindingFlags) =
             inp.NestedTypes.Entries
             |> Array.map (asm.TxILTypeDef (Some (this :> Type)))
+            |> Array.filter (canBindNestedType bindingFlags)
 
         override this.GetConstructorImpl(_bindingFlags, _binder, _callConvention, types, _modifiers)          =
             let md = 
@@ -7729,7 +7766,9 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> 
                     inp.Methods.FindByNameAndArity(".ctor", types.Length)
                     |> Array.tryFind (fun md -> eqTypesAndILTypes types md.ParameterTypes)
-            md |> Option.map (txILConstructorDef this) |> Option.toObj
+            md 
+            |> Option.map (txILConstructorDef this) 
+            |> Option.toObj
 
         override this.GetMethodImpl(name, _bindingFlags, _binder, _callConvention, types, _modifiers)          =
             let md = 
@@ -7807,15 +7846,15 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetGenericArguments() = gps
         override this.GetGenericTypeDefinition() = (this :> Type)
 
-        override this.GetMember(_name, _memberType, _bindingFlags) = notRequired this "txILTypeDef: GetMember" inp.Name
-        override this.GUID = notRequired this "txILTypeDef: GUID" inp.Name
-        override this.GetCustomAttributes(_inherited) = notRequired this "txILTypeDef: GetCustomAttributes" inp.Name
-        override this.GetCustomAttributes(_attributeType, _inherited) = notRequired this "txILTypeDef: GetCustomAttributes" inp.Name
-        override this.IsDefined(_attributeType, _inherited) = notRequired this "txILTypeDef: IsDefined" inp.Name
-        override this.GetInterface(_name, _ignoreCase) = notRequired this "txILTypeDef: GetInterface" inp.Name
-        override this.Module = notRequired this "txILTypeDef: Module"  inp.Name: Module
-        override this.GetElementType() = notRequired this "txILTypeDef: GetElementType" inp.Name
-        override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "txILTypeDef: InvokeMember" inp.Name
+        override this.GetMember(_name, _memberType, _bindingFlags) = notRequired this "GetMember" inp.Name
+        override this.GUID = notRequired this "GUID" inp.Name
+        override this.GetCustomAttributes(_inherited) = notRequired this "GetCustomAttributes" inp.Name
+        override this.GetCustomAttributes(_attributeType, _inherited) = notRequired this "GetCustomAttributes" inp.Name
+        override this.IsDefined(_attributeType, _inherited) = notRequired this "IsDefined" inp.Name
+        override this.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" inp.Name
+        override this.Module = notRequired this "Module"  inp.Name: Module
+        override this.GetElementType() = notRequired this "GetElementType" inp.Name
+        override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" inp.Name
 
         member x.Metadata: ILTypeDef = inp
         member x.MakeMethodInfo (declTy: Type) md = txILMethodDef declTy md
@@ -7823,6 +7862,7 @@ namespace ProviderImplementation.ProvidedTypes
         member x.MakePropertyInfo (declTy: Type) md = txILPropertyDef declTy md
         member x.MakeEventInfo (declTy: Type) md = txILEventDef declTy md
         member x.MakeFieldInfo (declTy: Type) md = txILFieldDef declTy md
+        member x.MakeNestedTypeInfo (declTy: Type) md =  asm.TxILTypeDef (Some declTy) md
 
 
     /// Implements System.Reflection.Assembly backeed by .NET metadata provided by an ILModuleReader
@@ -8114,10 +8154,9 @@ namespace ProviderImplementation.ProvidedTypes
         if p :? ProvidedProperty then p
         else
           let t = replaceType toTgt p.DeclaringType
-          let bindingFlags = BindingFlags.Public ||| BindingFlags.NonPublic ||| (if isStatic then BindingFlags.Static else BindingFlags.Instance)
+          let bindingFlags = (if p.IsPublic then BindingFlags.Public else BindingFlags.NonPublic) ||| (if p.IsStatic then BindingFlags.Static else BindingFlags.Instance)
           let newP = t.GetProperty(p.Name, bindingFlags)
-          if isNull newP then
-            failwithf "Property '%O' of type '%O' not found. This property may be missing in the types available in the target assemblies." p t
+          if isNull newP then failwithf "Property '%O' of type '%O' not found. This property may be missing in the types available in the target assemblies." p t
           newP
 
       let replaceField toTgt (f: FieldInfo) =
