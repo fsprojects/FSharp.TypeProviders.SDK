@@ -71,7 +71,7 @@ Target "Restore" (fun _ ->
     exec "dotnet" "restore"
 )
 Target "Build" (fun _ ->
-    exec "dotnet" "build"
+    exec "dotnet" ("build -c "+config)
 )
 
 //#if EXAMPLES
@@ -87,7 +87,7 @@ Target "RunTests" (fun _ ->
 #else
     exec "dotnet" ("test tests/FSharp.TypeProviders.SDK.Tests.fsproj -c " + config)
     // This also gives console output:
-    // .\build Build && packages\xunit.runner.console\tools\net452\xunit.console.exe tests\bin\Debug\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
+    // .\build Build -c Debug && packages\xunit.runner.console\tools\net452\xunit.console.exe tests\bin\Debug\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
 #endif
     ()
 )
