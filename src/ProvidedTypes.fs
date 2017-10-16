@@ -862,8 +862,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.ParameterDefaultValueInternal = parameterDefaultValue 
         member __.IsTargetInternal = isTgt
-        member __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
-
         override __.RawDefaultValue = defaultArg parameterDefaultValue null
         override __.Attributes = if parameterDefaultValue.IsNone then enum 0 else ParameterAttributes.Optional
         override __.Position = 0
@@ -872,6 +870,8 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetCustomAttributes(_inherit) = emptyAttributes
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
+
+        override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
     type ProvidedParameter(isTgt: bool, parameterName:string, attrs, parameterType:Type, optionalValue:obj option, customAttributesData) =
     
@@ -1974,7 +1974,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 
 //====================================================================================================
-// AssemblyReader for ProvidedTypesTarget
+// AssemblyReader for ProvidedTypesContext
 //
 // A lightweight .NET assembly reader that fits in a single F# file.  Based on the well-tested Abstract IL
 // binary reader code.  Used by the type provider to read referenced asssemblies.
@@ -8090,7 +8090,7 @@ namespace ProviderImplementation.ProvidedTypes
 
     /// Represents the type binding context for the type provider based on the set of assemblies
     /// referenced by the compilation.
-    type ProvidedTypesTarget(referencedAssemblyPaths: string list, assemblyReplacementMap: (string*string) list) as this =
+    type ProvidedTypesContext(referencedAssemblyPaths: string list, assemblyReplacementMap: (string*string) list) as this =
 
         /// Find which assembly defines System.Object etc.
         let systemRuntimeScopeRef =
@@ -8516,14 +8516,13 @@ namespace ProviderImplementation.ProvidedTypes
         let ptb = ZProvidedTypeBuilder()
 
         /// Gets the equivalent target type
-        member __.ConvertDesignTimeTypeToTargetType t = t |> convTypeToTgt 
+        member __.ConvertDesignTimeTypeToTargetType t = convTypeToTgt t
 
-        /// Gets the equivalent target type
-        member __.ConvertTargetTypeToDesignTimeType t = t |> convTypeToDT 
+        member __.ConvertTargetTypeToDesignTimeType t = convTypeToDT t
 
-        /// Gets an equivalent expression with all the types replaced with runtime equivalents
-        member __.ConvertDesignTimeExprToTargetExpr e = e |> convExprToTgt 
+        member __.ConvertDesignTimeExprToTargetExpr e = convExprToTgt e
 
+        member __.ConvertDesignTimeProvidedTypeDefinitionToTarget ptd = convProvidedTypeDefToTgt ptd
         member __.TryBindILAssemblyRef(aref: ILAssemblyRef): Choice<TargetAssembly, exn> = tryBindAssemblySimple(aref.Name)
 
         member __.TryBindAssemblyName(aref: AssemblyName): Choice<TargetAssembly, exn> = tryBindAssemblySimple(aref.Name)
@@ -8596,7 +8595,7 @@ namespace ProviderImplementation.ProvidedTypes
                 failwith (sprintf "Invalid host of cross-targeting type provider. Exception: %A" e)
 
 
-            ProvidedTypesTarget(referencedAssemblyPaths, assemblyReplacementMap)
+            ProvidedTypesContext(referencedAssemblyPaths, assemblyReplacementMap)
 
 
 
@@ -13309,11 +13308,11 @@ namespace ProviderImplementation.ProvidedTypes
     // ProvidedAssembly: the assembly compiler for generative type providers.
 
     /// Implements System.Reflection.Assembly backed by an ILModuleReader
-    type ProvidedAssembly(assemblyName:AssemblyName, assemblyFileName: string, context: ProvidedTypesTarget) as this =
+    type ProvidedAssembly(assemblyName:AssemblyName, assemblyFileName: string, context: ProvidedTypesContext) as this =
 
         inherit TargetAssembly(context.ILGlobals, context.TryBindILAssemblyRef, None, assemblyFileName) 
        
-        let theTypes = ResizeArray<_>()
+        let theTypes = ResizeArray<ProvidedTypeDefinition * string list option>()
         
         // The generation of theTypes is triggered by first force of assemblyLazy, either by GetFinalBytes or some other dereference of the Assembly
         let assemblyLazy =
@@ -13326,11 +13325,11 @@ namespace ProviderImplementation.ProvidedTypes
         do theTable.[assemblyName.ToString()] <- lazy this.GetFinalBytes()
 
         let convTypeToTgt ty = context.ConvertDesignTimeTypeToTargetType ty
-        let convToDesignTime ty = context.ConvertTargetTypeToDesignTimeType ty
         let addTypes (providedTypeDefinitions:ProvidedTypeDefinition list, enclosingTypeNames: string list option) =
             for pt in providedTypeDefinitions do
                 if pt.IsErased then invalidOp ("The provided type "+pt.Name+"is marked as erased and cannot be converted to a generated type. Set 'IsErased=false' on the ProvidedTypeDefinition")
-                theTypes.Add(pt,enclosingTypeNames)
+                let ptT = context.ConvertDesignTimeProvidedTypeDefinitionToTarget pt
+                theTypes.Add(ptT,enclosingTypeNames)
                 pt.SetAssemblyLazyInternal assemblyLazy
 
         let typeMap = Dictionary<ProvidedTypeDefinition,ILTypeBuilder>(HashIdentity.Reference)
@@ -13489,6 +13488,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// Emit the given provided type definitions into an assembly and adjust 'Assembly' property of all type definitions to return that
         /// assembly.
         member this.Generate() =
+        
           if this.Reader.IsNone then
             let ilg = context.ILGlobals
             let assemblyBuilder = ILAssemblyBuilder(assemblyName, assemblyFileName, ilg)
@@ -13578,10 +13578,10 @@ namespace ProviderImplementation.ProvidedTypes
                 for finfo in ptd.GetFields(bindAll) do
                     let fieldInfo =
                         match finfo with
-                            | :? ProvidedField as pinfo ->
-                                Some (pinfo.Name, transType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesData(), None)
                             | :? ProvidedLiteralField as pinfo ->
                                 Some (pinfo.Name, transType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesData(), Some (pinfo.GetRawConstantValue()))
+                            | :? ProvidedField as pinfo ->
+                                Some (pinfo.Name, transType finfo.FieldType, finfo.Attributes, pinfo.GetCustomAttributesData(), None)
                             | _ -> None
                     match fieldInfo with
                     | Some (name, ty, attr, cattr, constantVal) when not (fieldMap.ContainsKey finfo) ->
@@ -13652,9 +13652,9 @@ namespace ProviderImplementation.ProvidedTypes
                     let ilg = cb.GetILGenerator()
                     let ctorLocals = Dictionary<Var,ILLocalBuilder>()
                     let parameterVars =
-                        [| yield Var("this", convTypeToTgt pcinfo.DeclaringType)
+                        [| yield Var("this",  pcinfo.DeclaringType)
                            for p in pcinfo.GetParameters() do
-                                yield Var(p.Name, convTypeToTgt p.ParameterType) |]
+                                yield Var(p.Name, p.ParameterType) |]
 
                     let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, isLiteralEnumField, ilg, ctorLocals, parameterVars)
 
@@ -13759,7 +13759,7 @@ namespace ProviderImplementation.ProvidedTypes
             File.Delete assemblyFileName
 //#endif
 
-        new (context: ProvidedTypesTarget) = 
+        new (context: ProvidedTypesContext) = 
             let assemblyFileName = Path.ChangeExtension(Path.GetTempFileName(), "dll")
             let simpleName = Path.GetFileNameWithoutExtension(assemblyFileName)
             ProvidedAssembly(AssemblyName(simpleName), assemblyFileName, context)
@@ -13774,7 +13774,7 @@ namespace ProviderImplementation.ProvidedTypes
         member x.AddTypes (types) = addTypes (types, None)
 
 //#if !FX_NO_LOCAL_FILESYSTEM
-        static member RegisterGenerated (ctxt: ProvidedTypesTarget, fileName:string) =
+        static member RegisterGenerated (ctxt: ProvidedTypesContext, fileName:string) =
             let assemblyBytes = File.ReadAllBytes fileName
             //printfn "registering assembly in '%s'" fileName
             let assembly = ctxt.ReadRelatedAssembly(fileName)
@@ -13818,7 +13818,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let disposing = Event<EventHandler,EventArgs>()
 
-        let tgt = ProvidedTypesTarget.Create (config, assemblyReplacementMap)
+        let tgt = ProvidedTypesContext.Create (config, assemblyReplacementMap)
 
         let makeProvidedNamespace (namespaceName:string) (types:ProvidedTypeDefinition list) =
             let types = [| for ty in types -> ty :> Type |]
@@ -13846,7 +13846,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         new (config) = new TypeProviderForNamespaces(config, [], [ ])
 
-        member __.Target = tgt
+        member __.TargetContext = tgt
 
         [<CLIEvent>]
         member __.Disposing = disposing.Publish
@@ -13916,13 +13916,11 @@ namespace ProviderImplementation.ProvidedTypes
                     match methodBase with
 
                     | :? ProvidedMethod as m when (match methodBase.DeclaringType with :? ProvidedTypeDefinition as pt -> pt.IsErased | _ -> true) ->
-                        let convTypeToTgt = id // ok to pass 'id' here as only used for generative expressions, see getFastFuncType
                         let exprFun = m.GetInvokeCodeInternal(false) 
                         let expr = exprFun parameters
                         expr |> expand
 
                     | :? ProvidedConstructor as m when (match methodBase.DeclaringType with :? ProvidedTypeDefinition as pt -> pt.IsErased | _ -> true) ->
-                        let convTypeToTgt = id // ok to pass 'id' here as only used for generative expressions, see getFastFuncType
                         let exprFun = m.GetInvokeCodeInternal(false)
                         let expr = exprFun parameters
                         expr |> expand

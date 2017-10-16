@@ -21,15 +21,13 @@ open Xunit
 
 [<TypeProvider>]
 type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces ()
+    inherit TypeProviderForNamespaces (config)
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-
-    let ctxt = ProvidedTypesContext.Create(config)
     let createType (typeName, n:int) =
-        let myAssem = ProvidedAssembly(ctxt)
-        let myType = ctxt.ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased=false)
+        let myAssem = ProvidedAssembly(this.TargetContext)
+        let myType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased=false)
         let embedString = "test"
         // Special TPSDK support for embedding Decimal values
         let embedM = 5M
@@ -93,19 +91,19 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
         let removerCode (args: Expr list) = <@@ ignore (%%(args.[1]) : System.EventHandler) @@>
         let setterCode (args: Expr list) = <@@ ignore (%%(args.[1]) : string list) @@>
 
-        let myProp = ctxt.ProvidedProperty("MyStaticProperty", typeof<string list>, isStatic = true, getterCode = testCode)
-        let myProp2 = ctxt.ProvidedProperty("MyInstaceProperty", typeof<string list>, isStatic = false, getterCode = testCode, setterCode = setterCode)
-        let myMeth1 = ctxt.ProvidedMethod("MyStaticMethod", [], typeof<string list>, isStatic = true, invokeCode = testCode)
-        let myMeth2 = ctxt.ProvidedMethod("MyInstanceMethod", [], typeof<string list>, isStatic = false, invokeCode = testCode)
-        let myEvent1 = ctxt.ProvidedEvent("MyEvent", typeof<System.EventHandler>, isStatic = false, adderCode = adderCode, removerCode = removerCode)
+        let myProp = ProvidedProperty("MyStaticProperty", typeof<string list>, isStatic = true, getterCode = testCode)
+        let myProp2 = ProvidedProperty("MyInstaceProperty", typeof<string list>, isStatic = false, getterCode = testCode, setterCode = setterCode)
+        let myMeth1 = ProvidedMethod("MyStaticMethod", [], typeof<string list>, isStatic = true, invokeCode = testCode)
+        let myMeth2 = ProvidedMethod("MyInstanceMethod", [], typeof<string list>, isStatic = false, invokeCode = testCode)
+        let myEvent1 = ProvidedEvent("MyEvent", typeof<System.EventHandler>, isStatic = false, adderCode = adderCode, removerCode = removerCode)
         myType.AddMembers [ (myProp :> MemberInfo); (myProp2 :> MemberInfo); (myMeth1 :> MemberInfo); (myMeth2 :> MemberInfo); (myEvent1 :> MemberInfo)]
         myAssem.AddTypes [myType]
         myType
 
     do
-        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let parameters = [ ctxt.ProvidedStaticParameter("Count", typeof<int>) 
-                           ctxt.ProvidedStaticParameter("Count2", typeof<int>, 3) ]
+        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+        let parameters = [ ProvidedStaticParameter("Count", typeof<int>) 
+                           ProvidedStaticParameter("Count2", typeof<int>, 3) ]
         myType.DefineStaticParameters(parameters, (fun typeName args -> createType(typeName, (args.[0] :?> int) + (args.[1] :?> int))))
 
         this.AddNamespace(ns, [myType])

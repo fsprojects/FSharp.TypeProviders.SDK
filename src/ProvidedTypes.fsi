@@ -396,7 +396,8 @@ namespace ProviderImplementation.ProvidedTypes
 
 
     [<Class>]
-    type ProvidedTypesTarget = 
+    /// Represents the context for which code is to be generated. Normally you should not need to use this directly.
+    type ProvidedTypesContext = 
         
         /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericType
         member MakeGenericType: genericTypeDefinition: Type * genericArguments: Type list -> Type
@@ -474,6 +475,11 @@ namespace ProviderImplementation.ProvidedTypes
         [<CLIEvent>]
         member Disposing: IEvent<EventHandler,EventArgs>
 
+        /// The context for which code is eventually to be generated. You should not normally
+        /// need to use this property directly, as translation from the compiler-hosted context to 
+        /// the design-time context will normally be performed automatically.
+        member TargetContext: ProvidedTypesContext
+
         interface ITypeProvider
 
 
@@ -490,10 +496,10 @@ namespace ProviderImplementation.ProvidedTypes
         inherit TargetAssembly
 
         /// Create a provided generated assembly
-        new: assemblyName: AssemblyName * assemblyFileName:string * context:ProvidedTypesTarget -> ProvidedAssembly
+        new: assemblyName: AssemblyName * assemblyFileName:string * context:ProvidedTypesContext -> ProvidedAssembly
 
         /// Create a provided generated assembly using a temporary file as the interim assembly storage
-        new: context:ProvidedTypesTarget -> ProvidedAssembly
+        new: context:ProvidedTypesContext -> ProvidedAssembly
 
         /// Emit the given provided type definitions as part of the assembly
         /// and adjust the 'Assembly' property of all provided type definitions to return that
@@ -513,7 +519,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 #if !FX_NO_LOCAL_FILESYSTEM
         /// Register that a given file is a provided generated assembly
-        static member RegisterGenerated: context: ProvidedTypesTarget * fileName: string -> Assembly
+        static member RegisterGenerated: context: ProvidedTypesContext * fileName: string -> Assembly
 #endif
 
 #endif

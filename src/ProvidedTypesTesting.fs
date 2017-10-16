@@ -465,14 +465,14 @@ type internal Testing() =
                       for param in m.GetParameters() do yield (ProvidedTypeDefinition.EraseType param.ParameterType) }
                 |> Seq.map (fun typ -> Expr.Value(null, typ))
                 |> Array.ofSeq
-                |> m.GetInvokeCodeInternal (false, id)
+                |> m.GetInvokeCodeInternal (false)
 
             let getConstructorBody (c: ProvidedConstructor) =
-                if c.IsImplicitCtor then Expr.Value(()) else
+                if c.IsImplicitConstructor then Expr.Value(()) else
                 seq { for param in c.GetParameters() do yield (ProvidedTypeDefinition.EraseType param.ParameterType) }
                 |> Seq.map (fun typ -> Expr.Value(null, typ))
                 |> Array.ofSeq
-                |> c.GetInvokeCodeInternal (false, id)
+                |> c.GetInvokeCodeInternal (false)
 
             let printExpr x =
                 if not ignoreOutput then
