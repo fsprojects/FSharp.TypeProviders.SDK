@@ -23,11 +23,14 @@ namespace ProviderImplementation.ProvidedTypes
     type ProvidedParameter =
         inherit ParameterInfo
 
+        /// Create a new provided parameter.
+        new : parameterName: string * parameterType: Type * ?isOut: bool * ?optionalValue: obj -> ProvidedParameter
+
         /// Indicates if the parameter is marked as ParamArray
-        member IsParamArray: bool with get,set
+        member IsParamArray: bool with set
 
         /// Indicates if the parameter is marked as ReflectedDefinition
-        member IsReflectedDefinition: bool with get,set
+        member IsReflectedDefinition: bool with set
 
         /// Indicates if the parameter has a default value
         member HasDefaultParameterValue: bool
@@ -36,6 +39,9 @@ namespace ProviderImplementation.ProvidedTypes
     [<Class>]
     type ProvidedStaticParameter =
         inherit ParameterInfo
+
+        /// Create a new provided static parameter, for use with DefineStaticParamaeters on a provided type definition.
+        new: parameterName: string * parameterType: Type * ?parameterDefaultValue: obj -> ProvidedStaticParameter
 
         /// Add XML documentation information to this provided constructor
         member AddXmlDoc: xmlDoc: string -> unit
@@ -48,6 +54,9 @@ namespace ProviderImplementation.ProvidedTypes
     [<Class>]
     type ProvidedConstructor =
         inherit ConstructorInfo
+
+        /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
+        new: parameters: ProvidedParameter list * invokeCode: (Expr list -> Expr) -> ProvidedConstructor
 
         /// Add a 'Obsolete' attribute to this provided constructor
         member AddObsoleteAttribute: message: string * ?isError: bool -> unit
@@ -67,7 +76,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// Set a flag indicating that the constructor acts like an F# implicit constructor, so the
         /// parameters of the constructor become fields and can be accessed using Expr.GlobalVar with the
         /// same name.
-        member IsImplicitCtor: bool with get,set
+        member IsImplicitConstructor: bool with get,set
 
         /// Add definition location information to the provided constructor.
         member AddDefinitionLocation: line:int * column:int * filePath:string -> unit
@@ -75,13 +84,16 @@ namespace ProviderImplementation.ProvidedTypes
         member IsTypeInitializer: bool with get,set
 
         /// This method is for internal use only in the type provider SDK
-        member internal GetInvokeCodeInternal: isGenerated: bool * convToTgt: (Type -> Type) -> (Expr [] -> Expr)
+        member internal GetInvokeCodeInternal: isGenerated: bool -> (Expr [] -> Expr)
 
 
 
     [<Class>]
     type ProvidedMethod =
         inherit MethodInfo
+
+        /// When making a cross-targeting type provider, use this method instead of the ProvidedMethod constructor from ProvidedTypes
+        new: methodName: string * parameters: ProvidedParameter list * returnType: Type * invokeCode: (Expr list -> Expr) * ?isStatic: bool -> ProvidedMethod
 
         /// Add XML documentation information to this provided method
         member AddObsoleteAttribute: message: string * ?isError: bool -> unit
@@ -111,13 +123,16 @@ namespace ProviderImplementation.ProvidedTypes
         member DefineStaticParameters: parameters: ProvidedStaticParameter list * instantiationFunction: (string -> obj[] -> ProvidedMethod) -> unit
 
         /// This method is for internal use only in the type provider SDK
-        member internal GetInvokeCodeInternal: isGenerated: bool * convToTgt: (Type -> Type) -> (Expr [] -> Expr)
+        member internal GetInvokeCodeInternal: isGenerated: bool -> (Expr [] -> Expr)
 
 
     /// Represents an erased provided property.
     [<Class>]
     type ProvidedProperty =
         inherit PropertyInfo
+
+        /// Create a new provided property. It is not initially associated with any specific provided type definition.
+        new: propertyName: string * propertyType: Type * ?getterCode: (Expr list -> Expr) * ?setterCode: (Expr list -> Expr) * ?isStatic: bool * ?indexParameters: ProvidedParameter list -> ProvidedProperty
 
         /// Add a 'Obsolete' attribute to this provided property
         member AddObsoleteAttribute: message: string * ?isError: bool -> unit
@@ -147,6 +162,9 @@ namespace ProviderImplementation.ProvidedTypes
     type ProvidedEvent =
         inherit EventInfo
 
+        /// Create a new provided event. It is not initially associated with any specific provided type definition.
+        new: eventName: string * eventHandlerType: Type * adderCode: (Expr list -> Expr) * removerCode: (Expr list -> Expr) * ?isStatic: bool -> ProvidedEvent
+
         /// Add XML documentation information to this provided constructor
         member AddXmlDoc: xmlDoc: string -> unit
 
@@ -166,30 +184,11 @@ namespace ProviderImplementation.ProvidedTypes
 
     /// Represents an erased provided field.
     [<Class>]
-    type ProvidedLiteralField =
-        inherit FieldInfo
-
-        /// Add a 'Obsolete' attribute to this provided field
-        member AddObsoleteAttribute: message: string * ?isError: bool -> unit
-
-        /// Add XML documentation information to this provided field
-        member AddXmlDoc: xmlDoc: string -> unit
-
-        /// Add XML documentation information to this provided field, where the computation of the documentation is delayed until necessary
-        member AddXmlDocDelayed: xmlDocFunction: (unit -> string) -> unit
-
-        /// Add XML documentation information to this provided field, where the computation of the documentation is delayed until necessary
-        /// The documentation is re-computed  every time it is required.
-        member AddXmlDocComputed: xmlDocFunction: (unit -> string) -> unit
-
-        /// Add definition location information to the provided field.
-        member AddDefinitionLocation: line:int * column:int * filePath:string -> unit
-
-
-    /// Represents an erased provided field.
-    [<Class>]
     type ProvidedField =
         inherit FieldInfo
+
+        /// Create a new provided field. It is not initially associated with any specific provided type definition.
+        new: fieldName: string * fieldType: Type -> ProvidedField
 
         /// Add a 'Obsolete' attribute to this provided field
         member AddObsoleteAttribute: message: string * ?isError: bool -> unit
@@ -208,6 +207,15 @@ namespace ProviderImplementation.ProvidedTypes
         member AddDefinitionLocation: line:int * column:int * filePath:string -> unit
 
         member SetFieldAttributes: attributes: FieldAttributes -> unit
+
+
+    /// Represents an erased provided field.
+    [<Class>]
+    type ProvidedLiteralField =
+        inherit ProvidedField
+
+        /// Create a new provided literal field. It is not initially associated with any specific provided type definition.
+        new: fieldName: string * fieldType: Type * literalValue:obj -> ProvidedLiteralField
 
 
     /// Represents the type constructor in a provided symbol type.
@@ -297,6 +305,12 @@ namespace ProviderImplementation.ProvidedTypes
     type ProvidedTypeDefinition =
         inherit TypeDelegator
 
+        /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
+        new: className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool -> ProvidedTypeDefinition
+
+        /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
+        new: assembly: Assembly * namespaceName: string * className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool  -> ProvidedTypeDefinition
+
         /// Add the given type as an implemented interface.
         member AddInterfaceImplementation: interfaceType: Type -> unit
 
@@ -379,59 +393,11 @@ namespace ProviderImplementation.ProvidedTypes
         /// replaced with the erased-to types
         static member EraseType: typ:Type -> Type
 
-        /// Get or set a utility function to log the creation of root Provided Type. Used to debug caching/invalidation.
-        static member Logger: (string -> unit) option ref
 
 
     [<Class>]
-    type ProvidedTypesContext = 
+    type ProvidedTypesTarget = 
         
-        /// Create a context for providing types for a particular rntime target.
-        /// Specific assembly renaming replacements can be provided using assemblyReplacementMap.
-        static member Create : cfg: TypeProviderConfig * ?assemblyReplacementMap : seq<string*string> -> ProvidedTypesContext
-
-        /// Create a new provided static parameter, for use with DefineStaticParamaeters on a provided type definition.
-        ///
-        /// When making a cross-targeting type provider, use this method instead of the ProvidedParameter constructor from ProvidedTypes
-        member ProvidedStaticParameter: parameterName: string * parameterType: Type * ?parameterDefaultValue: obj -> ProvidedStaticParameter
-
-        /// Create a new provided field. It is not initially associated with any specific provided type definition.
-        ///
-        /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-        member ProvidedField: fieldName: string * fieldType: Type -> ProvidedField
-
-        /// Create a new provided literal field. It is not initially associated with any specific provided type definition.
-        ///
-        /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-        member ProvidedLiteralField: fieldName: string * fieldType: Type * literalValue:obj -> ProvidedLiteralField
-
-        /// Create a new provided parameter.
-        ///
-        /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-        member ProvidedParameter: parameterName: string * parameterType: Type * ?isOut: bool * ?optionalValue: obj -> ProvidedParameter
-
-        /// Create a new provided property. It is not initially associated with any specific provided type definition.
-        ///
-        /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-        member ProvidedProperty: propertyName: string * propertyType: Type * ?isStatic: bool * ?getterCode: (Expr list -> Expr) * ?setterCode: (Expr list -> Expr) * ?parameters: ProvidedParameter list -> ProvidedProperty
-
-        /// Create a new provided event. It is not initially associated with any specific provided type definition.
-        ///
-        /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
-        member ProvidedEvent: eventName: string * eventHandlerType: Type * ?isStatic: bool * ?adderCode: (Expr list -> Expr) * ?removerCode: (Expr list -> Expr) -> ProvidedEvent
-
-        /// When making a cross-targeting type provider, use this method instead of the ProvidedConstructor constructor from ProvidedTypes
-        member ProvidedConstructor: parameters: ProvidedParameter list * ?invokeCode: (Expr list -> Expr) -> ProvidedConstructor
-
-        /// When making a cross-targeting type provider, use this method instead of the ProvidedMethod constructor from ProvidedTypes
-        member ProvidedMethod: methodName: string * parameters: ProvidedParameter list * returnType: Type * ?isStatic: bool * ?invokeCode: (Expr list -> Expr)  -> ProvidedMethod
-
-        /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        member ProvidedTypeDefinition: className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool -> ProvidedTypeDefinition
-
-        /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        member ProvidedTypeDefinition: assembly: Assembly * namespaceName: string * className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool  -> ProvidedTypeDefinition
-
         /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericType
         member MakeGenericType: genericTypeDefinition: Type * genericArguments: Type list -> Type
 
@@ -465,9 +431,6 @@ namespace ProviderImplementation.ProvidedTypes
          /// this method should not be used directly when authoring a type provider.
         member ConvertDesignTimeExprToTargetExpr: Expr -> Expr
 
-         /// Returns a quotation rebuilt with resepct to the types from the design-time assemblies. Normally
-         /// this method should not be used directly when authoring a type provider.
-        member ConvertTargetExprToDesignTimeExpr: Expr -> Expr
 
 
     /// A base type providing default implementations of type provider functionality when all provided
@@ -475,10 +438,10 @@ namespace ProviderImplementation.ProvidedTypes
     type TypeProviderForNamespaces =
 
         /// Initializes a type provider to provide the types in the given namespace.
-        new: namespaceName:string * types: ProvidedTypeDefinition list -> TypeProviderForNamespaces
+        new: config: TypeProviderConfig * namespaceName:string * types: ProvidedTypeDefinition list * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
 
         /// Initializes a type provider
-        new: unit -> TypeProviderForNamespaces
+        new: config: TypeProviderConfig -> TypeProviderForNamespaces
 
         /// Invoked by the type provider to add a namespace of provided types in the specification of the type provider.
         member AddNamespace: namespaceName:string * types: ProvidedTypeDefinition list -> unit
@@ -517,20 +480,20 @@ namespace ProviderImplementation.ProvidedTypes
 #if !NO_GENERATIVE
     /// An internal type used in the implementation of ProvidedAssembly
     [<Class>]
-    type ContextAssembly =
+    type TargetAssembly =
 
         inherit Assembly
 
     /// A provided generated assembly
     type ProvidedAssembly =
 
-        inherit ContextAssembly
+        inherit TargetAssembly
 
         /// Create a provided generated assembly
-        new: assemblyName: AssemblyName * assemblyFileName:string * context:ProvidedTypesContext -> ProvidedAssembly
+        new: assemblyName: AssemblyName * assemblyFileName:string * context:ProvidedTypesTarget -> ProvidedAssembly
 
         /// Create a provided generated assembly using a temporary file as the interim assembly storage
-        new: context:ProvidedTypesContext -> ProvidedAssembly
+        new: context:ProvidedTypesTarget -> ProvidedAssembly
 
         /// Emit the given provided type definitions as part of the assembly
         /// and adjust the 'Assembly' property of all provided type definitions to return that
@@ -550,7 +513,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 #if !FX_NO_LOCAL_FILESYSTEM
         /// Register that a given file is a provided generated assembly
-        static member RegisterGenerated: context: ProvidedTypesContext * fileName: string -> Assembly
+        static member RegisterGenerated: context: ProvidedTypesTarget * fileName: string -> Assembly
 #endif
 
 #endif
