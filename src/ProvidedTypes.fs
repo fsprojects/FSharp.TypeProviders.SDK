@@ -139,7 +139,7 @@ namespace ProviderImplementation.ProvidedTypes
     //   - Likewise, some operations in these quotation values like "expr.Type" may be a bit fragile, possibly returning non cross-targeted types in
     //     the result. However those operations are not used by the F# compiler.
     [<AutoOpen>]
-    module internal UncheckedQuotations =
+    module UncheckedQuotations =
 
         let qTy = typeof<Microsoft.FSharp.Quotations.Var>.Assembly.GetType("Microsoft.FSharp.Quotations.ExprConstInfo")
         assert (not (isNull qTy))
@@ -723,7 +723,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 
     [<AutoOpen>]
-    module internal Misc =
+    module Misc =
 
         let mutable token = 0 
         let genToken() =  token <- token + 1; token
@@ -903,10 +903,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
-        member __.DeclaringTypeImpl
-            with set x =
-                if not (isNull declaringType) then failwith (sprintf "ProvidedConstructor: declaringType already set on '%s'" (nameText()));
-                declaringType <- x
+        member __.SetDeclaringType x = declaringType <- x
 
         member __.BaseConstructorCall
             with set (d:Expr list -> (ConstructorInfo * Expr list)) =
@@ -972,8 +969,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.SetMethodAttrs attributes = methodAttrs <- attributes
         member __.AddMethodAttrs attributes = methodAttrs <- methodAttrs ||| attributes
-        member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
-
+        member __.SetDeclaringType x = declaringType <- x // check: not set twice
 
         /// Abstract a type to a parametric-type. Requires "formal parameters" and "instantiation function".
         member __.DefineStaticParameters(parameters: list<ProvidedStaticParameter>, instantiationFunction: (string -> obj[] -> ProvidedMethod)) =
@@ -1044,10 +1040,9 @@ namespace ProviderImplementation.ProvidedTypes
         let hasGetter() = getterCode.IsSome
         let hasSetter() = setterCode.IsSome
 
-        // Delay construction - to pick up the latest isStatic
         let markSpecialName (m:ProvidedMethod) = m.AddMethodAttrs(MethodAttributes.SpecialName); m
-        let getter = lazy (ProvidedMethod("get_" + propertyName,parameters,propertyType,isStatic=isStatic,DeclaringTypeImpl=declaringType,invokeCode=getterCode) |> markSpecialName)
-        let setter = lazy (ProvidedMethod("set_" + propertyName,parameters @ [ProvidedParameter("value",propertyType,isOut=false,optionalValue=None)],typeof<Void>,isStatic=isStatic,DeclaringTypeImpl=declaringType,invokeCode=setterCode) |> markSpecialName)
+        let getter = ProvidedMethod("get_" + propertyName,parameters,propertyType,isStatic=isStatic,invokeCode=getterCode) |> markSpecialName
+        let setter = ProvidedMethod("set_" + propertyName,parameters @ [ProvidedParameter("value",propertyType,isOut=false,optionalValue=None)],typeof<Void>,isStatic=isStatic,invokeCode=setterCode) |> markSpecialName
 
         let customAttributesImpl = CustomAttributesImpl()
         member __.AddXmlDocComputed xmlDocFunction = customAttributesImpl.AddXmlDocComputed xmlDocFunction
@@ -1058,7 +1053,10 @@ namespace ProviderImplementation.ProvidedTypes
         member __.AddCustomAttribute attribute = customAttributesImpl.AddCustomAttribute attribute
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
-        member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
+        member __.SetDeclaringType x =
+            setter.SetDeclaringType x
+            getter.SetDeclaringType x
+            declaringType <- x // check: not set twice
 
         member __.IsStatic = isStatic
 
@@ -1066,8 +1064,8 @@ namespace ProviderImplementation.ProvidedTypes
         override __.PropertyType = propertyType
         override this.SetValue(_obj, _value, _invokeAttr, _binder, _index, _culture) = notRequired this "SetValue" propertyName
         override this.GetAccessors _nonPublic = notRequired this "nonPublic" propertyName
-        override __.GetGetMethod _nonPublic = if hasGetter() then getter.Force() :> MethodInfo else null
-        override __.GetSetMethod _nonPublic = if hasSetter() then setter.Force() :> MethodInfo else null
+        override __.GetGetMethod _nonPublic = if hasGetter() then getter :> MethodInfo else null
+        override __.GetSetMethod _nonPublic = if hasSetter() then setter :> MethodInfo else null
         override __.GetIndexParameters() = [| for p in parameters -> upcast p |]
         override __.Attributes = PropertyAttributes.None
         override __.CanRead = hasGetter()
@@ -1082,15 +1080,15 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
         override this.IsDefined(_attributeType, _inherit) = notRequired this "IsDefined" propertyName
 
-    type ProvidedEvent(propertyName:string,eventHandlerType:Type, isStatic: bool, adderCode: option<Expr list -> Expr>, removerCode: option<Expr list -> Expr>) =
+    type ProvidedEvent(propertyName:string,dtEventHandlerType:Type, tgtEventHandlerType:Type, isStatic: bool, adderCode: option<Expr list -> Expr>, removerCode: option<Expr list -> Expr>) =
         inherit EventInfo()
 
         let mutable declaringType = null
 
         // Delay construction - to pick up the latest isStatic
         let markSpecialName (m:ProvidedMethod) = m.AddMethodAttrs(MethodAttributes.SpecialName); m
-        let adder = lazy (ProvidedMethod("add_" + propertyName, [ProvidedParameter("handler", eventHandlerType,isOut=false,optionalValue=None)],typeof<Void>,isStatic=isStatic,DeclaringTypeImpl=declaringType,invokeCode=adderCode) |> markSpecialName)
-        let remover = lazy (ProvidedMethod("remove_" + propertyName, [ProvidedParameter("handler", eventHandlerType,isOut=false,optionalValue=None)],typeof<Void>,isStatic=isStatic,DeclaringTypeImpl=declaringType,invokeCode=removerCode) |> markSpecialName)
+        let adder = ProvidedMethod("add_" + propertyName, [ProvidedParameter("handler", dtEventHandlerType,isOut=false,optionalValue=None)],typeof<Void>,isStatic=isStatic,invokeCode=adderCode) |> markSpecialName
+        let remover = ProvidedMethod("remove_" + propertyName, [ProvidedParameter("handler", dtEventHandlerType,isOut=false,optionalValue=None)],typeof<Void>,isStatic=isStatic,invokeCode=removerCode) |> markSpecialName
 
         let customAttributesImpl = CustomAttributesImpl()
         member __.AddXmlDocComputed xmlDocFunction = customAttributesImpl.AddXmlDocComputed xmlDocFunction
@@ -1099,7 +1097,11 @@ namespace ProviderImplementation.ProvidedTypes
         member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
-        member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
+        member __.SetDeclaringType x =
+            adder.SetDeclaringType x
+            remover.SetDeclaringType x
+            declaringType <- x // check: not set twice
+
         member __.IsStatic = isStatic
 
         member __.AdderCode = adderCode.Value
@@ -1107,9 +1109,9 @@ namespace ProviderImplementation.ProvidedTypes
         member __.RemoverCode = removerCode.Value
 
         // Implement overloads
-        override __.EventHandlerType = eventHandlerType
-        override __.GetAddMethod _nonPublic = adder.Force() :> MethodInfo
-        override __.GetRemoveMethod _nonPublic = remover.Force() :> MethodInfo
+        override __.EventHandlerType = tgtEventHandlerType
+        override __.GetAddMethod _nonPublic = adder :> MethodInfo
+        override __.GetRemoveMethod _nonPublic = remover :> MethodInfo
         override __.Attributes = EventAttributes.None
         override __.Name = propertyName
         override __.DeclaringType = declaringType |> nonNull "ProvidedEvent.DeclaringType"
@@ -1134,8 +1136,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
-        member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
-
+        member __.SetDeclaringType x = declaringType <- x
 
         // Implement overloads
         override __.FieldType = fieldType
@@ -1168,7 +1169,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
-        member __.DeclaringTypeImpl with set x = declaringType <- x // check: not set twice
+        member __.SetDeclaringType x = declaringType <- x // check: not set twice
 
         member __.SetFieldAttributes attributes = fieldAttrs <- attributes
         // Implement overloads
@@ -1602,13 +1603,13 @@ namespace ProviderImplementation.ProvidedTypes
 
         let patchUpAddedMemberInfo (this:Type) (m:MemberInfo) =
             match m with
-            | :? ProvidedConstructor as c -> c.DeclaringTypeImpl <- this // patch up "declaring type" on provided MethodInfo
-            | :? ProvidedMethod      as m -> m.DeclaringTypeImpl <- this // patch up "declaring type" on provided MethodInfo
-            | :? ProvidedProperty    as p -> p.DeclaringTypeImpl <- this // patch up "declaring type" on provided MethodInfo
-            | :? ProvidedEvent       as e -> e.DeclaringTypeImpl <- this // patch up "declaring type" on provided MethodInfo
-            | :? ProvidedTypeDefinition  as t -> t.DeclaringTypeImpl <- this
-            | :? ProvidedLiteralField as l -> l.DeclaringTypeImpl <- this
-            | :? ProvidedField as l -> l.DeclaringTypeImpl <- this
+            | :? ProvidedConstructor as c -> c.SetDeclaringType this 
+            | :? ProvidedMethod      as m -> m.SetDeclaringType this 
+            | :? ProvidedProperty    as p -> p.SetDeclaringType this 
+            | :? ProvidedEvent       as e -> e.SetDeclaringType this 
+            | :? ProvidedTypeDefinition  as t -> t.SetDeclaringType this
+            | :? ProvidedLiteralField as l -> l.SetDeclaringType this
+            | :? ProvidedField as l -> l.SetDeclaringType this
             | _ -> ()
 
         let customAttributesImpl = CustomAttributesImpl()
@@ -1723,10 +1724,7 @@ namespace ProviderImplementation.ProvidedTypes
             else
                 failwith (sprintf "ProvidedTypeDefinition: static parameters supplied but not expected for %s" (fullName.Force()))
 
-        member __.DeclaringTypeImpl
-            with set x =
-                match container with TypeContainer.TypeToBeDecided -> () | _ -> failwith (sprintf "container type for '%s' was already set to '%s'" this.FullName x.FullName);
-                container <- TypeContainer.Type  x
+        member __.SetDeclaringType x = container <- TypeContainer.Type  x
 
         // Implement overloads
         override __.Assembly = theAssembly.Force()
@@ -1932,7 +1930,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 
 //====================================================================================================
-// AssemblyReader for ProvidedContext
+// AssemblyReader for ProvidedTypesTarget
 //
 // A lightweight .NET assembly reader that fits in a single F# file.  Based on the well-tested Abstract IL
 // binary reader code.  Used by the type provider to read referenced asssemblies.
@@ -5454,7 +5452,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             let rec seekReadModule (subsys, subsysversion, useHighEntropyVA, ilOnly, only32, is32bitpreferred, only64, platform, isDll, alignVirt, alignPhys, imageBaseReal, ilMetadataVersion) idx =
                 let (_generation, nameIdx, _mvidIdx, _encidIdx, _encbaseidIdx) = seekReadModuleRow idx
                 let ilModuleName = readStringHeap nameIdx
-                //let nativeResources = readNativeResources ctxt
+                //let nativeResources = readNativeResources tgt
 
                 { Manifest =
                      if getNumRows (ILTableNames.Assembly) > 0 then Some (seekReadAssemblyManifest 1)
@@ -6839,7 +6837,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
         let EcmaMscorlibScopeRef = ILScopeRef.Assembly (ILAssemblyRef("mscorlib", UNone, USome EcmaPublicKey, true, UNone, UNone))
 
 //====================================================================================================
-// ContextAssembly 
+// TargetAssembly 
 //
 // An implementation of reflection objects over on-disk assemblies, sufficient to give
 // System.Type, System.MethodInfo, System.ConstructorInfo etc. objects
@@ -7072,42 +7070,42 @@ namespace ProviderImplementation.ProvidedTypes
 
     /// Represents the type constructor in a provided symbol type.
     [<RequireQualifiedAccess>]
-    type ContextTypeSymbolKind =
+    type TargetTypeSymbolKind =
         | SDArray
         | Array of int
         | Pointer
         | ByRef
-        | Generic of ContextTypeDefinition
+        | Generic of TargetTypeDefinition
 
 
     /// Represents an array or other symbolic type involving a provided type as the argument.
     /// See the type provider spec for the methods that must be implemented.
     /// Note that the type provider specification does not require us to implement pointer-equality for provided types.
-    and ContextTypeSymbol(kind: ContextTypeSymbolKind, typeArgs: Type[]) as this =
+    and TargetTypeSymbol(kind: TargetTypeSymbolKind, typeArgs: Type[]) as this =
         inherit TypeDelegator()
         do this.typeImpl <- this
 
         override __.FullName =
             match kind,typeArgs with
-            | ContextTypeSymbolKind.SDArray,[| arg |] -> arg.FullName + "[]"
-            | ContextTypeSymbolKind.Array _,[| arg |] -> arg.FullName + "[*]"
-            | ContextTypeSymbolKind.Pointer,[| arg |] -> arg.FullName + "*"
-            | ContextTypeSymbolKind.ByRef,[| arg |] -> arg.FullName + "&"
-            | ContextTypeSymbolKind.Generic gtd, typeArgs -> gtd.FullName + "[" + (typeArgs |> Array.map (fun arg -> arg.FullName) |> String.concat ",") + "]"
+            | TargetTypeSymbolKind.SDArray,[| arg |] -> arg.FullName + "[]"
+            | TargetTypeSymbolKind.Array _,[| arg |] -> arg.FullName + "[*]"
+            | TargetTypeSymbolKind.Pointer,[| arg |] -> arg.FullName + "*"
+            | TargetTypeSymbolKind.ByRef,[| arg |] -> arg.FullName + "&"
+            | TargetTypeSymbolKind.Generic gtd, typeArgs -> gtd.FullName + "[" + (typeArgs |> Array.map (fun arg -> arg.FullName) |> String.concat ",") + "]"
             | _ -> failwith "unreachable"
 
         override __.DeclaringType =
             match kind,typeArgs with
-            | ContextTypeSymbolKind.SDArray,[| arg |]
-            | ContextTypeSymbolKind.Array _,[| arg |]
-            | ContextTypeSymbolKind.Pointer,[| arg |]
-            | ContextTypeSymbolKind.ByRef,[| arg |] -> arg.DeclaringType
-            | ContextTypeSymbolKind.Generic gtd,_ -> gtd.DeclaringType
+            | TargetTypeSymbolKind.SDArray,[| arg |]
+            | TargetTypeSymbolKind.Array _,[| arg |]
+            | TargetTypeSymbolKind.Pointer,[| arg |]
+            | TargetTypeSymbolKind.ByRef,[| arg |] -> arg.DeclaringType
+            | TargetTypeSymbolKind.Generic gtd,_ -> gtd.DeclaringType
             | _ -> failwith "unreachable"
 
         override __.IsAssignableFrom(otherTy: Type) =
             match kind with
-            | ContextTypeSymbolKind.Generic gtd ->
+            | TargetTypeSymbolKind.Generic gtd ->
                 if otherTy.IsGenericType then
                     let otherGtd = otherTy.GetGenericTypeDefinition()
                     let otherArgs = otherTy.GetGenericArguments()
@@ -7120,71 +7118,71 @@ namespace ProviderImplementation.ProvidedTypes
         override this.IsSubclassOf(otherTy) =
             base.IsSubclassOf(otherTy) ||
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> gtd.Metadata.IsDelegate && otherTy.FullName = "System.Delegate"
+            | TargetTypeSymbolKind.Generic gtd -> gtd.Metadata.IsDelegate && otherTy.FullName = "System.Delegate"
             | _ -> false
 
         override __.Name =
             match kind,typeArgs with
-            | ContextTypeSymbolKind.SDArray,[| arg |] -> arg.Name + "[]"
-            | ContextTypeSymbolKind.Array _,[| arg |] -> arg.Name + "[*]"
-            | ContextTypeSymbolKind.Pointer,[| arg |] -> arg.Name + "*"
-            | ContextTypeSymbolKind.ByRef,[| arg |] -> arg.Name + "&"
-            | ContextTypeSymbolKind.Generic gtd, _typeArgs -> gtd.Name
+            | TargetTypeSymbolKind.SDArray,[| arg |] -> arg.Name + "[]"
+            | TargetTypeSymbolKind.Array _,[| arg |] -> arg.Name + "[*]"
+            | TargetTypeSymbolKind.Pointer,[| arg |] -> arg.Name + "*"
+            | TargetTypeSymbolKind.ByRef,[| arg |] -> arg.Name + "&"
+            | TargetTypeSymbolKind.Generic gtd, _typeArgs -> gtd.Name
             | _ -> failwith "unreachable"
 
         override __.BaseType =
             match kind with
-            | ContextTypeSymbolKind.SDArray -> typeof<System.Array>
-            | ContextTypeSymbolKind.Array _ -> typeof<System.Array>
-            | ContextTypeSymbolKind.Pointer -> typeof<System.ValueType>
-            | ContextTypeSymbolKind.ByRef -> typeof<System.ValueType>
-            | ContextTypeSymbolKind.Generic gtd  -> instType (typeArgs, [| |]) gtd.BaseType
+            | TargetTypeSymbolKind.SDArray -> typeof<System.Array>
+            | TargetTypeSymbolKind.Array _ -> typeof<System.Array>
+            | TargetTypeSymbolKind.Pointer -> typeof<System.ValueType>
+            | TargetTypeSymbolKind.ByRef -> typeof<System.ValueType>
+            | TargetTypeSymbolKind.Generic gtd  -> instType (typeArgs, [| |]) gtd.BaseType
 
         override this.Assembly =
             match kind, typeArgs with
-            | ContextTypeSymbolKind.SDArray,[| arg |]
-            | ContextTypeSymbolKind.Array _,[| arg |]
-            | ContextTypeSymbolKind.Pointer,[| arg |]
-            | ContextTypeSymbolKind.ByRef,[| arg |] -> arg.Assembly
-            | ContextTypeSymbolKind.Generic gtd, _ -> gtd.Assembly
+            | TargetTypeSymbolKind.SDArray,[| arg |]
+            | TargetTypeSymbolKind.Array _,[| arg |]
+            | TargetTypeSymbolKind.Pointer,[| arg |]
+            | TargetTypeSymbolKind.ByRef,[| arg |] -> arg.Assembly
+            | TargetTypeSymbolKind.Generic gtd, _ -> gtd.Assembly
             | _ -> notRequired this "Assembly" this.Name
 
         override this.Namespace =
             match kind, typeArgs with
-            | ContextTypeSymbolKind.SDArray,[| arg |]
-            | ContextTypeSymbolKind.Array _,[| arg |]
-            | ContextTypeSymbolKind.Pointer,[| arg |]
-            | ContextTypeSymbolKind.ByRef,[| arg |] -> arg.Namespace
-            | ContextTypeSymbolKind.Generic gtd, _ -> gtd.Namespace
+            | TargetTypeSymbolKind.SDArray,[| arg |]
+            | TargetTypeSymbolKind.Array _,[| arg |]
+            | TargetTypeSymbolKind.Pointer,[| arg |]
+            | TargetTypeSymbolKind.ByRef,[| arg |] -> arg.Namespace
+            | TargetTypeSymbolKind.Generic gtd, _ -> gtd.Namespace
             | _ -> failwith "unreachable"
 
-        override __.GetArrayRank() = (match kind with ContextTypeSymbolKind.Array n -> n | ContextTypeSymbolKind.SDArray -> 1 | _ -> invalidOp "non-array type")
-        override __.IsValueTypeImpl() = (match kind with ContextTypeSymbolKind.Generic gtd -> gtd.IsValueType | _ -> false)
-        override __.IsArrayImpl() = (match kind with ContextTypeSymbolKind.Array _ | ContextTypeSymbolKind.SDArray -> true | _ -> false)
-        override __.IsByRefImpl() = (match kind with ContextTypeSymbolKind.ByRef _ -> true | _ -> false)
-        override __.IsPointerImpl() = (match kind with ContextTypeSymbolKind.Pointer _ -> true | _ -> false)
+        override __.GetArrayRank() = (match kind with TargetTypeSymbolKind.Array n -> n | TargetTypeSymbolKind.SDArray -> 1 | _ -> invalidOp "non-array type")
+        override __.IsValueTypeImpl() = (match kind with TargetTypeSymbolKind.Generic gtd -> gtd.IsValueType | _ -> false)
+        override __.IsArrayImpl() = (match kind with TargetTypeSymbolKind.Array _ | TargetTypeSymbolKind.SDArray -> true | _ -> false)
+        override __.IsByRefImpl() = (match kind with TargetTypeSymbolKind.ByRef _ -> true | _ -> false)
+        override __.IsPointerImpl() = (match kind with TargetTypeSymbolKind.Pointer _ -> true | _ -> false)
         override __.IsPrimitiveImpl() = false
-        override __.IsGenericType = (match kind with ContextTypeSymbolKind.Generic _ -> true | _ -> false)
-        override __.GetGenericArguments() = (match kind with ContextTypeSymbolKind.Generic _ -> typeArgs | _ -> [| |])
-        override __.GetGenericTypeDefinition() = (match kind with ContextTypeSymbolKind.Generic e -> (e :> Type) | _ -> invalidOp "non-generic type")
+        override __.IsGenericType = (match kind with TargetTypeSymbolKind.Generic _ -> true | _ -> false)
+        override __.GetGenericArguments() = (match kind with TargetTypeSymbolKind.Generic _ -> typeArgs | _ -> [| |])
+        override __.GetGenericTypeDefinition() = (match kind with TargetTypeSymbolKind.Generic e -> (e :> Type) | _ -> invalidOp "non-generic type")
         override __.IsCOMObjectImpl() = false
-        override __.HasElementTypeImpl() = (match kind with ContextTypeSymbolKind.Generic _ -> false | _ -> true)
-        override __.GetElementType() = (match kind,typeArgs with (ContextTypeSymbolKind.Array _  | ContextTypeSymbolKind.SDArray | ContextTypeSymbolKind.ByRef | ContextTypeSymbolKind.Pointer),[| e |] -> e | _ -> invalidOp (sprintf "%A, %A: not an array, pointer or byref type" kind typeArgs))
+        override __.HasElementTypeImpl() = (match kind with TargetTypeSymbolKind.Generic _ -> false | _ -> true)
+        override __.GetElementType() = (match kind,typeArgs with (TargetTypeSymbolKind.Array _  | TargetTypeSymbolKind.SDArray | TargetTypeSymbolKind.ByRef | TargetTypeSymbolKind.Pointer),[| e |] -> e | _ -> invalidOp (sprintf "%A, %A: not an array, pointer or byref type" kind typeArgs))
 
         override this.Module: Module = notRequired this "Module" this.Name
 
         override this.GetHashCode()                                                                    =
             match kind,typeArgs with
-            | ContextTypeSymbolKind.SDArray,[| arg |] -> 10 + hash arg
-            | ContextTypeSymbolKind.Array _,[| arg |] -> 163 + hash arg
-            | ContextTypeSymbolKind.Pointer,[| arg |] -> 283 + hash arg
-            | ContextTypeSymbolKind.ByRef,[| arg |] -> 43904 + hash arg
-            | ContextTypeSymbolKind.Generic gtd,_ -> gtd.MetadataToken
+            | TargetTypeSymbolKind.SDArray,[| arg |] -> 10 + hash arg
+            | TargetTypeSymbolKind.Array _,[| arg |] -> 163 + hash arg
+            | TargetTypeSymbolKind.Pointer,[| arg |] -> 283 + hash arg
+            | TargetTypeSymbolKind.ByRef,[| arg |] -> 43904 + hash arg
+            | TargetTypeSymbolKind.Generic gtd,_ -> gtd.MetadataToken
             | _ -> failwith "unreachable"
 
         override this.Equals(other: obj) =
             match other with
-            | :? ContextTypeSymbol as otherTy -> (kind, typeArgs) = (otherTy.Kind, otherTy.Args)
+            | :? TargetTypeSymbol as otherTy -> (kind, typeArgs) = (otherTy.Kind, otherTy.Args)
             | _ -> false
 
         member this.Kind = kind
@@ -7192,7 +7190,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetConstructors bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> 
+            | TargetTypeSymbolKind.Generic gtd -> 
                 gtd.Metadata.Methods.Entries 
                 |> Array.filter (fun md -> md.Name = ".ctor" || md.Name = ".cctor")  
                 |> Array.map (gtd.MakeConstructorInfo this) 
@@ -7201,7 +7199,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetMethods bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> 
+            | TargetTypeSymbolKind.Generic gtd -> 
                 gtd.Metadata.Methods.Entries 
                 |> Array.filter (fun md -> md.Name <> ".ctor" && md.Name <> ".cctor")  
                 |> Array.map (gtd.MakeMethodInfo this) 
@@ -7210,7 +7208,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetFields bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> 
+            | TargetTypeSymbolKind.Generic gtd -> 
                 gtd.Metadata.Fields.Entries 
                 |> Array.map (gtd.MakeFieldInfo this) 
                 |> Array.filter (canBindField bindingFlags)
@@ -7218,7 +7216,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetProperties bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> 
+            | TargetTypeSymbolKind.Generic gtd -> 
                 gtd.Metadata.Properties.Entries 
                 |> Array.map (gtd.MakePropertyInfo this) 
                 |> Array.filter (canBindProperty bindingFlags)
@@ -7226,7 +7224,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetEvents bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> 
+            | TargetTypeSymbolKind.Generic gtd -> 
                 gtd.Metadata.Events.Entries 
                 |> Array.map (gtd.MakeEventInfo this) 
                 |> Array.filter (canBindEvent bindingFlags)
@@ -7234,7 +7232,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetNestedTypes bindingFlags = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd -> 
+            | TargetTypeSymbolKind.Generic gtd -> 
                 gtd.Metadata.NestedTypes.Entries 
                 |> Array.map (gtd.MakeNestedTypeInfo this) 
                 |> Array.filter (canBindNestedType bindingFlags)
@@ -7242,7 +7240,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetConstructorImpl(_bindingAttr, _binderBinder, _callConvention, types, _modifiers) =
             match kind with
-            | ContextTypeSymbolKind.Generic gtd ->
+            | TargetTypeSymbolKind.Generic gtd ->
                 let name = ".ctor"
                 let md =
                     match types with
@@ -7259,7 +7257,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetMethodImpl(name, _bindingAttr, _binderBinder, _callConvention, types, _modifiers) =
             match kind with
-            | ContextTypeSymbolKind.Generic gtd ->
+            | TargetTypeSymbolKind.Generic gtd ->
                 let md =
                     match types with
                     | null -> gtd.Metadata.Methods.TryFindUniqueByName(name) 
@@ -7274,7 +7272,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetField(name, _bindingAttr) = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd ->
+            | TargetTypeSymbolKind.Generic gtd ->
                 gtd.Metadata.Fields.Entries |> Array.tryFind (fun md -> md.Name = name)
                 |> Option.map (gtd.MakeFieldInfo this) 
                 |> Option.toObj
@@ -7283,7 +7281,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetPropertyImpl(name, _bindingAttr, _binder, _returnType, _types, _modifiers) = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd ->
+            | TargetTypeSymbolKind.Generic gtd ->
                 gtd.Metadata.Properties.Entries
                 |> Array.tryFind (fun md -> md.Name = name)
                 |> Option.map (gtd.MakePropertyInfo this) 
@@ -7293,7 +7291,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetEvent(name, _bindingAttr) = 
             match kind with
-            | ContextTypeSymbolKind.Generic gtd ->
+            | TargetTypeSymbolKind.Generic gtd ->
                 gtd.Metadata.Events.Entries
                 |> Array.tryFind (fun md -> md.Name = name)
                 |> Option.map (gtd.MakeEventInfo this) 
@@ -7320,14 +7318,14 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetCustomAttributes(_inherit) = emptyAttributes
         override this.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
         override this.IsDefined(_attributeType, _inherit) = false
-        override this.MakeArrayType() = ContextTypeSymbol(ContextTypeSymbolKind.SDArray, [| this |]) :> Type
-        override this.MakeArrayType arg = ContextTypeSymbol(ContextTypeSymbolKind.Array arg, [| this |]) :> Type
-        override this.MakePointerType() = ContextTypeSymbol(ContextTypeSymbolKind.Pointer, [| this |]) :> Type
-        override this.MakeByRefType() = ContextTypeSymbol(ContextTypeSymbolKind.ByRef, [| this |]) :> Type
+        override this.MakeArrayType() = TargetTypeSymbol(TargetTypeSymbolKind.SDArray, [| this |]) :> Type
+        override this.MakeArrayType arg = TargetTypeSymbol(TargetTypeSymbolKind.Array arg, [| this |]) :> Type
+        override this.MakePointerType() = TargetTypeSymbol(TargetTypeSymbolKind.Pointer, [| this |]) :> Type
+        override this.MakeByRefType() = TargetTypeSymbol(TargetTypeSymbolKind.ByRef, [| this |]) :> Type
 
         override this.ToString() = this.FullName
 
-    and ContextMethodSymbol(gmd: MethodInfo, gargs: Type[]) =
+    and TargetMethodSymbol(gmd: MethodInfo, gargs: Type[]) =
         inherit MethodInfo()
         let dty = gmd.DeclaringType
         let dinst = (if dty.IsGenericType then dty.GetGenericArguments() else [| |])
@@ -7346,7 +7344,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MetadataToken = gmd.MetadataToken
 
         override __.GetCustomAttributesData() = gmd.GetCustomAttributesData()
-        override __.MakeGenericMethod(typeArgs) = ContextMethodSymbol(gmd, typeArgs) :> MethodInfo
+        override __.MakeGenericMethod(typeArgs) = TargetMethodSymbol(gmd, typeArgs) :> MethodInfo
         override __.GetHashCode() = gmd.MetadataToken
         override this.Equals(that:obj) =
             match that with
@@ -7372,7 +7370,7 @@ namespace ProviderImplementation.ProvidedTypes
     /// Clones namespaces, type providers, types and members provided by tp, renaming namespace nsp1 into namespace nsp2.
 
     /// Makes a type definition read from a binary available as a System.Type. Not all methods are implemented.
-    and ContextTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly: ILAssemblyRef -> Choice<ContextAssembly,exn>, asm: ContextAssembly, declTyOpt: Type option, inp: ILTypeDef) as this =
+    and TargetTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly: ILAssemblyRef -> Choice<TargetAssembly,exn>, asm: TargetAssembly, declTyOpt: Type option, inp: ILTypeDef) as this =
         inherit TypeDelegator()
 
         // Note: For F# type providers we never need to view the custom attributes
@@ -7460,7 +7458,7 @@ namespace ProviderImplementation.ProvidedTypes
                     | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType 
                     | _ -> false
 
-                override this.MakeGenericMethod(args) = ContextMethodSymbol(this, args) :> MethodInfo
+                override this.MakeGenericMethod(args) = TargetMethodSymbol(this, args) :> MethodInfo
 
                 override __.MetadataToken = inp.Token
 
@@ -7603,7 +7601,7 @@ namespace ProviderImplementation.ProvidedTypes
             if isNull meth then failwith (sprintf "method reference '%A' not resolved" mref)
             meth
 
-        /// Convert an ILType read from a binary to a System.Type backed by ContextTypeDefinitions
+        /// Convert an ILType read from a binary to a System.Type backed by TargetTypeDefinitions
         and txILType gps (ty: ILType) =
 
             match ty with
@@ -7663,10 +7661,10 @@ namespace ProviderImplementation.ProvidedTypes
                 override this.GetMembers(_bindingFlags) = notRequired this "GetMembers" this.Name
 
                 override this.MakeGenericType(args) = notRequired this "MakeGenericType" this.Name
-                override this.MakeArrayType() = ContextTypeSymbol(ContextTypeSymbolKind.SDArray, [| this |]) :> Type
-                override this.MakeArrayType arg = ContextTypeSymbol(ContextTypeSymbolKind.Array arg, [| this |]) :> Type
-                override this.MakePointerType() = ContextTypeSymbol(ContextTypeSymbolKind.Pointer, [| this |]) :> Type
-                override this.MakeByRefType() = ContextTypeSymbol(ContextTypeSymbolKind.ByRef, [| this |]) :> Type
+                override this.MakeArrayType() = TargetTypeSymbol(TargetTypeSymbolKind.SDArray, [| this |]) :> Type
+                override this.MakeArrayType arg = TargetTypeSymbol(TargetTypeSymbolKind.Array arg, [| this |]) :> Type
+                override this.MakePointerType() = TargetTypeSymbol(TargetTypeSymbolKind.Pointer, [| this |]) :> Type
+                override this.MakeByRefType() = TargetTypeSymbol(TargetTypeSymbolKind.ByRef, [| this |]) :> Type
 
                 override __.GetAttributeFlagsImpl() = TypeAttributes.Public ||| TypeAttributes.Class ||| TypeAttributes.Sealed
 
@@ -7807,11 +7805,11 @@ namespace ProviderImplementation.ProvidedTypes
 
 
         // Every implementation of System.Type must meaningfully implement these
-        override this.MakeGenericType(args) = ContextTypeSymbol(ContextTypeSymbolKind.Generic this, args) :> Type
-        override this.MakeArrayType() = ContextTypeSymbol(ContextTypeSymbolKind.SDArray, [| this |]) :> Type
-        override this.MakeArrayType arg = ContextTypeSymbol(ContextTypeSymbolKind.Array arg, [| this |]) :> Type
-        override this.MakePointerType() = ContextTypeSymbol(ContextTypeSymbolKind.Pointer, [| this |]) :> Type
-        override this.MakeByRefType() = ContextTypeSymbol(ContextTypeSymbolKind.ByRef, [| this |]) :> Type
+        override this.MakeGenericType(args) = TargetTypeSymbol(TargetTypeSymbolKind.Generic this, args) :> Type
+        override this.MakeArrayType() = TargetTypeSymbol(TargetTypeSymbolKind.SDArray, [| this |]) :> Type
+        override this.MakeArrayType arg = TargetTypeSymbol(TargetTypeSymbolKind.Array arg, [| this |]) :> Type
+        override this.MakePointerType() = TargetTypeSymbol(TargetTypeSymbolKind.Pointer, [| this |]) :> Type
+        override this.MakeByRefType() = TargetTypeSymbol(TargetTypeSymbolKind.ByRef, [| this |]) :> Type
 
         override __.GetAttributeFlagsImpl() =
             let attr = TypeAttributes.Public ||| TypeAttributes.Class
@@ -7866,13 +7864,13 @@ namespace ProviderImplementation.ProvidedTypes
 
 
     /// Implements System.Reflection.Assembly backeed by .NET metadata provided by an ILModuleReader
-    and ContextAssembly(ilGlobals, tryBindAssembly: ILAssemblyRef -> Choice<ContextAssembly,exn>, reader: ILModuleReader option, location: string) as asm =
+    and TargetAssembly(ilGlobals, tryBindAssembly: ILAssemblyRef -> Choice<TargetAssembly,exn>, reader: ILModuleReader option, location: string) as asm =
         inherit Assembly()
 
         // A table tracking how type definition objects are translated.
         let txTable = TxTable<Type>()
         let mutable reader = reader
-        let getReader() = match reader with None -> failwith "the reader on the ContextAssembly has not been set" | Some r -> r
+        let getReader() = match reader with None -> failwith "the reader on the TargetAssembly has not been set" | Some r -> r
 
         let txILTypeDef (declTyOpt: Type option) (inp: ILTypeDef) =
             txTable.Get inp.Token (fun () -> 
@@ -7884,6 +7882,7 @@ namespace ProviderImplementation.ProvidedTypes
                 match inp.Namespace, inp.Name with 
                 | USome "System", "Boolean" -> typeof<bool>
                 | USome "System", "String"->  typeof<string>
+                | USome "System", "Void"->  typeof<Void>
                 | USome "System", "Object"->  typeof<obj>
                 | USome "System", "Int32" ->  typeof<int32>
                 | USome "System", "SByte" ->  typeof<sbyte>
@@ -7898,7 +7897,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | USome "System", "Double" ->  typeof<double>
                 | USome "System", "Single" ->  typeof<single>
                 | USome "System", "Char" ->  typeof<char>
-                | _ -> ContextTypeDefinition(ilGlobals, tryBindAssembly, asm, declTyOpt, inp) :> System.Type)
+                | _ -> TargetTypeDefinition(ilGlobals, tryBindAssembly, asm, declTyOpt, inp) :> System.Type)
 
         let types = lazy [| for td in getReader().ILModuleDef.TypeDefs.Entries -> txILTypeDef None td  |]
 
@@ -7909,7 +7908,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override x.Location = location
 
-        member x.Reader with get() = reader  and set v = (if reader.IsSome then failwith "reader on ContextAssembly already set"); reader <- v
+        member x.Reader with get() = reader  and set v = (if reader.IsSome then failwith "reader on TargetAssembly already set"); reader <- v
 
         override x.GetReferencedAssemblies() = [| for aref in getReader().ILAssemblyRefs -> aref.ToAssemblyName() |]
 
@@ -7965,7 +7964,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 
 //====================================================================================================
-// ProvidedTypeContext
+// ProvidedTypeTarget
 //
 // A binding context for cross-targeting type providers
 
@@ -8037,282 +8036,17 @@ namespace ProviderImplementation.ProvidedTypes
     ///    ProvidedConstructor,
     ///    ProvidedMethod
     /// should be replaced by
-    ///    bindingContext.ProvidedTypeDefinition
-    ///    bindingContext.ProvidedParameter,
-    ///    bindingContext.ProvidedProperty
-    ///    bindingContext.ProvidedConstructor,
-    ///    bindingContext.ProvidedMethod
+    ///    bindingTarget.ProvidedTypeDefinition
+    ///    bindingTarget.ProvidedParameter,
+    ///    bindingTarget.ProvidedProperty
+    ///    bindingTarget.ProvidedConstructor,
+    ///    bindingTarget.ProvidedMethod
     ///
-    type AssemblyReplacer(designTimeAssemblies: Lazy<Assembly[]>, referencedAssemblies: Lazy<Assembly[]>, ?assemblyReplacementMap) =
-
-      let assemblyReplacementMap = defaultArg assemblyReplacementMap Seq.empty
-
-      /// When translating quotations, Expr.Var's are translated to new variable respecting reference equality.
-      let varTableFwd = Dictionary<Var, Var>()
-      let varTableBwd = Dictionary<Var, Var>()
-      let typeCacheFwd = Dictionary<Type, Type>()
-      let typeCacheBwd = Dictionary<Type, Type>()
-
-      let fixName (fullName:string) =
-          if fullName.StartsWith("FSI_") then
-              // when F# Interactive is the host of the design time assembly,
-              // all namespaces are prefixed with FSI_, in the runtime assembly
-              // the name won't have that prefix
-              fullName.Substring(fullName.IndexOf('.') + 1)
-          else
-              fullName
-
-      let tryGetTypeFromAssembly (originalAssemblyName:string) fullName (asm:Assembly) =
-            // if the original assembly of the type being replaced is in `assemblyReplacementMap`,
-            // then we only map it to assemblies with a name specified in `assemblyReplacementMap`
-            let notRestrictedOrMatching =
-                assemblyReplacementMap
-                |> Seq.forall (fun (originalName:string, newName:string) ->
-                    if originalAssemblyName.StartsWith originalName then asm.FullName.StartsWith(newName)
-                    else true)
-
-            if not notRestrictedOrMatching then None
-            elif asm.FullName.StartsWith "FSI-ASSEMBLY" then
-                // when F# Interactive is the host of the design time assembly,
-                // for each type in the runtime assembly there might be multiple
-                // versions (FSI_0001.FullTypeName, FSI_0002.FullTypeName, etc).
-                // Get the last one.
-                asm.GetTypes()
-                |> Seq.filter (fun t -> fixName t.FullName = fullName)
-                |> Seq.sortBy (fun t -> t.FullName)
-                |> Seq.toList
-                |> function [] -> None | xs -> Some (Seq.last xs, false)
-            else
-                asm.GetType fullName |> function null -> None | x -> Some (x, true)
-
-
-      let replaceTypeDefinition toTgt (t:Type) =
-          let cache = (if toTgt then typeCacheFwd else typeCacheBwd)
-          match cache.TryGetValue(t) with
-          | true, newT -> newT
-          | false, _ ->
-                let asms = (if toTgt then referencedAssemblies.Force() else designTimeAssemblies.Force())
-                let fullName = fixName t.FullName
-
-                // For normal type provider hosts like fsc.exe System.Void is a special case and these
-                // hosts expect it to always be provided as [FSharp.Core 4.4.0.0]typeof<System.Void>.
-                // This is really a mistake in ExtensionTyping.fs in the F# compiler which calls
-                // typeof<System.Void>.Equals(ty).
-                if fullName = "System.Void" then typeof<System.Void> else
-
-                match Array.choose (tryGetTypeFromAssembly t.Assembly.FullName fullName) asms |> Seq.distinct |> Seq.toArray with
-                //| [| (newT, canSave) |] ->
-                //     if canSave then cache.[t] <- newT
-                //     newT
-                //| r when r.Length > 1 ->
-                //    let msg =
-                //        if toTgt then sprintf "The type '%O' utilized by a type provider was found in multiple assemblies in the reference assembly set '%A'. You may need to adjust your assembly references to avoid ambiguities." t referencedAssemblies
-                //        else sprintf "The type '%O' utilized by a type provider was not found in the assembly set '%A' used by the type provider itself. Please report this problem to the project site for the type provider." t designTimeAssemblies
-                //    failwith msg
-                | r when r.Length > 0 ->
-                     let (newT, canSave) = r.[0]
-                     if canSave then cache.[t] <- newT
-                     newT
-                | _ ->
-                    let msg =
-                        if toTgt then sprintf "The type '%O' utilized by a type provider was not found in reference assembly set '%A'. You may be referencing a portable profile which contains fewer types than those needed by the type provider you are using." t (referencedAssemblies.Force())
-                        elif designTimeAssemblies.Force().Length = 0 then
-                            sprintf "A failure occured while determining compilation references"
-                        else sprintf "The runtime-time type '%O' utilized by a type provider was not found in the compilation-time assembly set '%A'. You may be referencing a portable profile which contains fewer types than those needed by the type provider you are using. Please report this problem to the project site for the type provider." t (designTimeAssemblies.Force())
-                    failwith msg
-
-
-      let rec replaceType toTgt (t:Type) =
-          if t :? ProvidedTypeDefinition then t
-          // Don't try to translate F# abbreviations
-          elif t :? ProvidedSymbolType && (t :?> ProvidedSymbolType).IsFSharpTypeAbbreviation then t
-          // Types annotated with units-of-measure
-          elif t :? ProvidedSymbolType && (t :?> ProvidedSymbolType).IsFSharpUnitAnnotated then
-              let genericType = t.GetGenericTypeDefinition()
-              let newT = replaceTypeDefinition toTgt genericType
-              let typeArguments = t.GetGenericArguments() |> Array.map (replaceType toTgt) |> Array.toList
-              ProvidedMeasureBuilder.Default.AnnotateType(newT, typeArguments)
-          elif t.IsGenericType && not t.IsGenericTypeDefinition then
-              let genericType = t.GetGenericTypeDefinition()
-              let newT = replaceTypeDefinition toTgt genericType
-              let typeArguments = t.GetGenericArguments() |> Array.map (replaceType toTgt)
-              newT.MakeGenericType(typeArguments)
-          elif t.IsGenericParameter then t
-          elif t.IsArray || t.IsByRef || t.IsPointer then
-              let elemType = t.GetElementType()
-              let elemTypeT = replaceType toTgt elemType
-              if t.IsArray then
-                  let rank = t.GetArrayRank()
-                  if rank = 1 then elemTypeT.MakeArrayType() else elemTypeT.MakeArrayType(t.GetArrayRank())
-              elif t.IsByRef then elemTypeT.MakeByRefType()
-              else elemTypeT.MakePointerType()
-
-          else
-              replaceTypeDefinition toTgt t
-
-      let replaceProperty toTgt (p: PropertyInfo) =
-        if p :? ProvidedProperty then p
-        else
-          let t = replaceType toTgt p.DeclaringType
-          let bindingFlags = (if p.IsPublic then BindingFlags.Public else BindingFlags.NonPublic) ||| (if p.IsStatic then BindingFlags.Static else BindingFlags.Instance)
-          let newP = t.GetProperty(p.Name, bindingFlags)
-          if isNull newP then failwithf "Property '%O' of type '%O' not found. This property may be missing in the types available in the target assemblies." p t
-          newP
-
-      let replaceField toTgt (f: FieldInfo) =
-        if f :? ProvidedField then f
-        else
-          let t = replaceType toTgt f.DeclaringType
-          let bindingFlags = (if f.IsPublic then BindingFlags.Public else BindingFlags.NonPublic) ||| (if f.IsStatic then BindingFlags.Static else BindingFlags.Instance)
-          let newF = t.GetField(f.Name, bindingFlags)
-          if isNull newF then failwithf "Field '%O' of type '%O' not found. This field may be missing in the types available in the target assemblies." f t
-          newF
-
-      let replaceMethod toTgt (m: MethodInfo) =
-        if m :? ProvidedMethod then m
-        else
-          let declTyT = replaceType toTgt m.DeclaringType
-          let mT =
-              if m.IsGenericMethod then
-                let genericMethod = m.GetGenericMethodDefinition()
-                let parameterTypesT = genericMethod.GetParameters() |> Array.map (fun p -> replaceType toTgt p.ParameterType)
-                let genericMethodT = declTyT.GetMethod(genericMethod.Name,parameterTypesT)
-                if isNull genericMethodT then null else
-                let typeArgumentsT =  m.GetGenericArguments() |> Array.map (replaceType toTgt)
-                genericMethodT.MakeGenericMethod(typeArgumentsT)
-              else
-                let parameterTypesT = m.GetParameters() |> Array.map (fun p -> replaceType toTgt p.ParameterType)
-                declTyT.GetMethod(m.Name, parameterTypesT)
-          match mT with
-          | null -> failwithf "Method '%O' not found in type '%O'. This method may be missing in the types available in the target assemblies." m mT
-          | _ -> mT
-
-      let replaceConstructor toTgt (cons: ConstructorInfo) =
-        if cons :? ProvidedConstructor then cons
-        else
-            let declTyT = replaceType toTgt cons.DeclaringType
-            let parameterTypesT = cons.GetParameters() |> Array.map (fun p -> replaceType toTgt p.ParameterType)
-            let consT = declTyT.GetConstructor(parameterTypesT)
-            match consT with
-            | null -> failwithf "Constructor '%O' not found in type '%O'. This constructor may be missing in the types available in the target assemblies." cons declTyT
-            | _ -> consT
-
-      let replaceVar toTgt (v: Var) =
-         if toTgt then 
-             if v.Type :? ProvidedTypeDefinition then v
-             else
-                 match varTableFwd.TryGetValue v with
-                 | true, v -> v
-                 | false, _ ->
-                     // It's a variable local to the quotation
-                     let newVar = Var (v.Name, replaceType toTgt v.Type, v.IsMutable)
-                     // store it so we reuse it from now on
-                     varTableFwd.Add(v, newVar)
-                     varTableBwd.Add(newVar, v)
-                     newVar
-         else
-             if v.Type :? ProvidedTypeDefinition then v
-             else
-                 match varTableBwd.TryGetValue v with
-                 | true, v -> v
-                 | false, _ ->
-                     let newVar = Var (v.Name, replaceType toTgt v.Type, v.IsMutable)
-                     // store the original var as we'll have to revert to it later
-                     varTableFwd.Add(newVar, v)
-                     varTableBwd.Add(v, newVar)
-                     newVar
-
-      let rec replaceExpr toTgt quotation =
-
-        match quotation with
-        | Call (obj, m, args) ->
-            let mR = replaceMethod toTgt m
-            let argsR = List.map (replaceExpr toTgt) args
-            match obj with
-            | Some obj -> Expr.CallUnchecked (replaceExpr toTgt obj, mR, argsR)
-            | None -> Expr.CallUnchecked (mR, argsR)
-        | PropertyGet (obj, p, indexArgs) ->
-            let pR = replaceProperty toTgt p
-            let indexArgsR = List.map (replaceExpr toTgt) indexArgs
-            match obj with
-            | Some obj -> Expr.PropertyGetUnchecked (replaceExpr toTgt obj, pR, indexArgsR)
-            | None -> Expr.PropertyGetUnchecked (pR, indexArgsR)
-        | PropertySet (obj, p, indexArgs, value) ->
-            let pR = replaceProperty toTgt p
-            let indexArgsR = List.map (replaceExpr toTgt) indexArgs
-            match obj with
-            | Some obj -> Expr.PropertySetUnchecked (replaceExpr toTgt obj, pR, replaceExpr toTgt value, indexArgsR)
-            | None -> Expr.PropertySetUnchecked (pR, replaceExpr toTgt value, indexArgsR)
-        | NewObject (c, exprs) ->
-            let exprsR = List.map (replaceExpr toTgt) exprs
-            Expr.NewObjectUnchecked (replaceConstructor toTgt c, exprsR)
-        | Coerce (expr, t) ->
-            Expr.Coerce (replaceExpr toTgt expr, replaceType toTgt t)
-        | NewArray (t, exprs) ->
-            Expr.NewArrayUnchecked (replaceType toTgt t, List.map (replaceExpr toTgt) exprs)
-        | NewTuple (exprs) ->
-            Expr.NewTuple (List.map (replaceExpr toTgt) exprs)
-        | Lambda (v,expr) ->
-            Expr.Lambda (replaceVar toTgt v, replaceExpr toTgt expr)
-        | TupleGet (expr, i) ->
-            Expr.TupleGetUnchecked (replaceExpr toTgt expr, i)
-        | NewDelegate (t, vars, expr) ->
-            Expr.NewDelegateUnchecked (replaceType toTgt t, List.map (replaceVar toTgt) vars, replaceExpr toTgt expr)
-        | FieldGet (obj, f) ->
-            match obj with
-            | Some obj -> Expr.FieldGetUnchecked (replaceExpr toTgt obj, replaceField toTgt f)
-            | None -> Expr.FieldGetUnchecked (replaceField toTgt f)
-        | FieldSet (obj, f, value) ->
-            match obj with
-            | Some obj -> Expr.FieldSetUnchecked (replaceExpr toTgt obj, replaceField toTgt f, replaceExpr toTgt value)
-            | None -> Expr.FieldSetUnchecked (replaceField toTgt f, replaceExpr toTgt value)
-        | Let (var, value, body) ->
-            Expr.LetUnchecked(replaceVar toTgt var, replaceExpr toTgt value, replaceExpr toTgt body)
-
-        // Eliminate some F# constructs which do not cross-target well
-        | Application(f,e) ->
-            replaceExpr toTgt (Expr.CallUnchecked(f, f.Type.GetMethod "Invoke", [ e ]) )
-        | NewUnionCase(ci, es) ->
-            replaceExpr toTgt (Expr.CallUnchecked(Reflection.FSharpValue.PreComputeUnionConstructorInfo ci, es) )
-        | NewRecord(ci, es) ->
-            replaceExpr toTgt (Expr.NewObjectUnchecked(FSharpValue.PreComputeRecordConstructorInfo ci, es) )
-        | UnionCaseTest(e,uc) ->
-            let tagInfo = FSharpValue.PreComputeUnionTagMemberInfo uc.DeclaringType
-            let tagExpr =
-                match tagInfo with
-                | :? PropertyInfo as tagProp -> Expr.PropertyGetUnchecked(e,tagProp)
-                | :? MethodInfo as tagMeth ->
-                        if tagMeth.IsStatic then Expr.CallUnchecked(tagMeth, [e])
-                        else Expr.CallUnchecked(e,tagMeth,[])
-                | _ -> failwith "unreachable: unexpected result from PreComputeUnionTagMemberInfo"
-            let tagNumber = uc.Tag
-            replaceExpr toTgt <@@ (%%(tagExpr): int) = tagNumber @@>
-
-        // Traverse remaining constructs
-        | ShapeVarUnchecked v ->
-            Expr.Var (replaceVar toTgt v)
-        | ShapeLambdaUnchecked _ as d ->
-            failwithf "It's not possible to use construct %O when cross targetting to a different FSharp.Core. Make sure you're not calling a function with signature A->(B->C) instead of A->B->C (using |> causes this)." d
-        | ShapeCombinationUnchecked (o, exprs) ->
-            RebuildShapeCombinationUnchecked (o, List.map (replaceExpr toTgt) exprs)
-
-      /// Gets the equivalent target type
-      member __.ConvertDesignTimeTypeToTargetType t = t |> replaceType true
-
-      /// Gets the equivalent target type
-      member __.ConvertTargetTypeToDesignTimeType t = t |> replaceType false
-
-      /// Gets an equivalent expression with all the types replaced with runtime equivalents
-      member __.ConvertDesignTimeExprToTargetExpr e = e |> replaceExpr true
-
-      /// Gets an equivalent expression with all the types replaced with designTime equivalents
-      member __.ConvertTargetExprToDesignTimeExpr e = e |> replaceExpr false
-
 
 
     /// Represents the type binding context for the type provider based on the set of assemblies
     /// referenced by the compilation.
-    type ProvidedTypesContext(referencedAssemblyPaths: string list, assemblyReplacementMap: seq<string*string>) as this =
+    type ProvidedTypesTarget(referencedAssemblyPaths: string list, assemblyReplacementMap: seq<string*string>) as this =
 
         /// Find which assembly defines System.Object etc.
         let systemRuntimeScopeRef =
@@ -8358,16 +8092,17 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mkReader ref =
             lazy (try let reader = ILModuleReaderAfterReadingAllBytes(ref, ilGlobals.Force())
-                      Choice1Of2(ContextAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, Some reader, ref))
+                      Choice1Of2(TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, Some reader, ref))
                   with err -> Choice2Of2 err) 
 
         let readers = [| for ref in referencedAssemblyPaths -> ref,mkReader ref |]
 
         let readersTable =  [| for (ref, asm) in readers do let simpleName = Path.GetFileNameWithoutExtension ref in yield simpleName, asm |] |> Map.ofArray
 
-        let referencedAssemblies() = ([| for (_,asm) in readers do match asm.Force() with Choice2Of2 _ -> () | Choice1Of2 asm -> yield asm :> Assembly |])
+        let referencedAssemblies = 
+            lazy ([| for (_,asm) in readers do match asm.Force() with Choice2Of2 _ -> () | Choice1Of2 asm -> yield asm :> Assembly |])
 
-        let tryBindAssemblySimple(simpleName:string): Choice<ContextAssembly, exn> =
+        let tryBindAssemblySimple(simpleName:string): Choice<TargetAssembly, exn> =
             if readersTable.ContainsKey(simpleName) then readersTable.[simpleName].Force()
             else Choice2Of2 (Exception(sprintf "assembly %s not found" simpleName))
 
@@ -8379,26 +8114,274 @@ namespace ProviderImplementation.ProvidedTypes
                     if not (isNull asm) then
                         yield asm |]
 
-        let replacer = AssemblyReplacer (designTimeAssemblies, (lazy referencedAssemblies()), assemblyReplacementMap)
+        //let replacer = AssemblyReplacer (designTimeAssemblies, referencedAssemblies, assemblyReplacementMap)
 
-        let convToTgt ty = replacer.ConvertDesignTimeTypeToTargetType ty
+        /// When translating quotations, Expr.Var's are translated to new variable respecting reference equality.
+        let varTableFwd = Dictionary<Var, Var>()
+        let varTableBwd = Dictionary<Var, Var>()
+        let typeCacheFwd = Dictionary<Type, Type>()
+        let typeCacheBwd = Dictionary<Type, Type>()
+
+        let fixName (fullName:string) =
+          if fullName.StartsWith("FSI_") then
+              // when F# Interactive is the host of the design time assembly,
+              // all namespaces are prefixed with FSI_, in the runtime assembly
+              // the name won't have that prefix
+              fullName.Substring(fullName.IndexOf('.') + 1)
+          else
+              fullName
+
+        let tryGetTypeFromAssembly (originalAssemblyName:string) fullName (asm:Assembly) =
+            // if the original assembly of the type being replaced is in `assemblyReplacementMap`,
+            // then we only map it to assemblies with a name specified in `assemblyReplacementMap`
+            let notRestrictedOrMatching =
+                assemblyReplacementMap
+                |> Seq.forall (fun (originalName:string, newName:string) ->
+                    if originalAssemblyName.StartsWith originalName then asm.FullName.StartsWith(newName)
+                    else true)
+
+            if not notRestrictedOrMatching then None
+            elif asm.FullName.StartsWith "FSI-ASSEMBLY" then
+                // when F# Interactive is the host of the design time assembly,
+                // for each type in the runtime assembly there might be multiple
+                // versions (FSI_0001.FullTypeName, FSI_0002.FullTypeName, etc).
+                // Get the last one.
+                asm.GetTypes()
+                |> Seq.filter (fun t -> fixName t.FullName = fullName)
+                |> Seq.sortBy (fun t -> t.FullName)
+                |> Seq.toList
+                |> function [] -> None | xs -> Some (Seq.last xs, false)
+            else
+                asm.GetType fullName |> function null -> None | x -> Some (x, true)
+
+
+        let replaceTypeDefinition toTgt (t:Type) =
+            let cache = (if toTgt then typeCacheFwd else typeCacheBwd)
+            match cache.TryGetValue(t) with
+            | true, newT -> newT
+            | false, _ ->
+                match t with 
+                | :? ProvidedTypeDefinition as ptd -> 
+                    ProvidedTypeDefinition(ptd.Name, ptd.BaseType |> Option.map convToTgt, 
+                                           convToTgt,
+                                           HideObjectMethods=ptd.HideObjectMethods, 
+                                           NonNullable=nonNullable, 
+                                           IsErased=isErased)
+                | _ -> 
+
+                let asms = (if toTgt then referencedAssemblies.Force() else designTimeAssemblies.Force())
+                let fullName = fixName t.FullName
+
+                match Array.choose (tryGetTypeFromAssembly t.Assembly.FullName fullName) asms |> Seq.distinct |> Seq.toArray with
+                | r when r.Length > 0 ->
+                     let (newT, canSave) = r.[0]
+                     if canSave then cache.[t] <- newT
+                     newT
+                | _ ->
+                    let msg =
+                        if toTgt then sprintf "The type '%O' utilized by a type provider was not found in reference assembly set '%A'. You may be referencing a portable profile which contains fewer types than those needed by the type provider you are using." t (referencedAssemblies.Force())
+                        elif designTimeAssemblies.Force().Length = 0 then
+                            sprintf "A failure occured while determining compilation references"
+                        else sprintf "The runtime-time type '%O' utilized by a type provider was not found in the compilation-time assembly set '%A'. You may be referencing a portable profile which contains fewer types than those needed by the type provider you are using. Please report this problem to the project site for the type provider." t (designTimeAssemblies.Force())
+                    failwith msg
+
+
+        let rec replaceType toTgt (t:Type) =
+              if t :? ProvidedTypeDefinition then t
+              // Don't try to translate F# abbreviations
+              elif t :? ProvidedSymbolType && (t :?> ProvidedSymbolType).IsFSharpTypeAbbreviation then t
+              // Types annotated with units-of-measure
+              elif t :? ProvidedSymbolType && (t :?> ProvidedSymbolType).IsFSharpUnitAnnotated then
+                  let genericType = t.GetGenericTypeDefinition()
+                  let newT = replaceTypeDefinition toTgt genericType
+                  let typeArguments = t.GetGenericArguments() |> Array.map (replaceType toTgt) |> Array.toList
+                  ProvidedMeasureBuilder.Default.AnnotateType(newT, typeArguments)
+              elif t.IsGenericType && not t.IsGenericTypeDefinition then
+                  let genericType = t.GetGenericTypeDefinition()
+                  let newT = replaceTypeDefinition toTgt genericType
+                  let typeArguments = t.GetGenericArguments() |> Array.map (replaceType toTgt)
+                  newT.MakeGenericType(typeArguments)
+              elif t.IsGenericParameter then t
+              elif t.IsArray || t.IsByRef || t.IsPointer then
+                  let elemType = t.GetElementType()
+                  let elemTypeT = replaceType toTgt elemType
+                  if t.IsArray then
+                      let rank = t.GetArrayRank()
+                      if rank = 1 then elemTypeT.MakeArrayType() else elemTypeT.MakeArrayType(t.GetArrayRank())
+                  elif t.IsByRef then elemTypeT.MakeByRefType()
+                  else elemTypeT.MakePointerType()
+
+              else
+                  replaceTypeDefinition toTgt t
+
+        let replaceProperty toTgt (p: PropertyInfo) =
+            if p :? ProvidedProperty then p
+            else
+              let t = replaceType toTgt p.DeclaringType
+              let bindingFlags = (if p.IsPublic then BindingFlags.Public else BindingFlags.NonPublic) ||| (if p.IsStatic then BindingFlags.Static else BindingFlags.Instance)
+              let newP = t.GetProperty(p.Name, bindingFlags)
+              if isNull newP then failwithf "Property '%O' of type '%O' not found. This property may be missing in the types available in the target assemblies." p t
+              newP
+
+        let replaceField toTgt (f: FieldInfo) =
+            if f :? ProvidedField then f
+            else
+              let t = replaceType toTgt f.DeclaringType
+              let bindingFlags = (if f.IsPublic then BindingFlags.Public else BindingFlags.NonPublic) ||| (if f.IsStatic then BindingFlags.Static else BindingFlags.Instance)
+              let newF = t.GetField(f.Name, bindingFlags)
+              if isNull newF then failwithf "Field '%O' of type '%O' not found. This field may be missing in the types available in the target assemblies." f t
+              newF
+
+        let replaceMethod toTgt (m: MethodInfo) =
+            if m :? ProvidedMethod then m
+            else
+              let declTyT = replaceType toTgt m.DeclaringType
+              let mT =
+                  if m.IsGenericMethod then
+                    let genericMethod = m.GetGenericMethodDefinition()
+                    let parameterTypesT = genericMethod.GetParameters() |> Array.map (fun p -> replaceType toTgt p.ParameterType)
+                    let genericMethodT = declTyT.GetMethod(genericMethod.Name,parameterTypesT)
+                    if isNull genericMethodT then null else
+                    let typeArgumentsT =  m.GetGenericArguments() |> Array.map (replaceType toTgt)
+                    genericMethodT.MakeGenericMethod(typeArgumentsT)
+                  else
+                    let parameterTypesT = m.GetParameters() |> Array.map (fun p -> replaceType toTgt p.ParameterType)
+                    declTyT.GetMethod(m.Name, parameterTypesT)
+              match mT with
+              | null -> failwithf "Method '%O' not found in type '%O'. This method may be missing in the types available in the target assemblies." m mT
+              | _ -> mT
+
+        let replaceConstructor toTgt (cons: ConstructorInfo) =
+            if cons :? ProvidedConstructor then cons
+            else
+                let declTyT = replaceType toTgt cons.DeclaringType
+                let parameterTypesT = cons.GetParameters() |> Array.map (fun p -> replaceType toTgt p.ParameterType)
+                let consT = declTyT.GetConstructor(parameterTypesT)
+                match consT with
+                | null -> failwithf "Constructor '%O' not found in type '%O'. This constructor may be missing in the types available in the target assemblies." cons declTyT
+                | _ -> consT
+
+        let replaceVar toTgt (v: Var) =
+         if toTgt then 
+            match varTableFwd.TryGetValue v with
+            | true, v -> v
+            | false, _ ->
+                // It's a variable local to the quotation
+                let newVar = Var (v.Name, replaceType toTgt v.Type, v.IsMutable)
+                // store it so we reuse it from now on
+                varTableFwd.Add(v, newVar)
+                varTableBwd.Add(newVar, v)
+                newVar
+         else
+            match varTableBwd.TryGetValue v with
+            | true, v -> v
+            | false, _ ->
+                let newVar = Var (v.Name, replaceType toTgt v.Type, v.IsMutable)
+                // store the original var as we'll have to revert to it later
+                varTableBwd.Add(v, newVar)
+                varTableFwd.Add(newVar, v)
+                newVar
+
+        let rec replaceExpr toTgt quotation =
+
+            match quotation with
+            | Call (obj, m, args) ->
+                let mR = replaceMethod toTgt m
+                let argsR = List.map (replaceExpr toTgt) args
+                match obj with
+                | Some obj -> Expr.CallUnchecked (replaceExpr toTgt obj, mR, argsR)
+                | None -> Expr.CallUnchecked (mR, argsR)
+            | PropertyGet (obj, p, indexArgs) ->
+                let pR = replaceProperty toTgt p
+                let indexArgsR = List.map (replaceExpr toTgt) indexArgs
+                match obj with
+                | Some obj -> Expr.PropertyGetUnchecked (replaceExpr toTgt obj, pR, indexArgsR)
+                | None -> Expr.PropertyGetUnchecked (pR, indexArgsR)
+            | PropertySet (obj, p, indexArgs, value) ->
+                let pR = replaceProperty toTgt p
+                let indexArgsR = List.map (replaceExpr toTgt) indexArgs
+                match obj with
+                | Some obj -> Expr.PropertySetUnchecked (replaceExpr toTgt obj, pR, replaceExpr toTgt value, indexArgsR)
+                | None -> Expr.PropertySetUnchecked (pR, replaceExpr toTgt value, indexArgsR)
+            | NewObject (c, exprs) ->
+                let exprsR = List.map (replaceExpr toTgt) exprs
+                Expr.NewObjectUnchecked (replaceConstructor toTgt c, exprsR)
+            | Coerce (expr, t) ->
+                Expr.Coerce (replaceExpr toTgt expr, replaceType toTgt t)
+            | NewArray (t, exprs) ->
+                Expr.NewArrayUnchecked (replaceType toTgt t, List.map (replaceExpr toTgt) exprs)
+            | NewTuple (exprs) ->
+                Expr.NewTuple (List.map (replaceExpr toTgt) exprs)
+            | Lambda (v,expr) ->
+                Expr.Lambda (replaceVar toTgt v, replaceExpr toTgt expr)
+            | TupleGet (expr, i) ->
+                Expr.TupleGetUnchecked (replaceExpr toTgt expr, i)
+            | NewDelegate (t, vars, expr) ->
+                Expr.NewDelegateUnchecked (replaceType toTgt t, List.map (replaceVar toTgt) vars, replaceExpr toTgt expr)
+            | FieldGet (obj, f) ->
+                match obj with
+                | Some obj -> Expr.FieldGetUnchecked (replaceExpr toTgt obj, replaceField toTgt f)
+                | None -> Expr.FieldGetUnchecked (replaceField toTgt f)
+            | FieldSet (obj, f, value) ->
+                match obj with
+                | Some obj -> Expr.FieldSetUnchecked (replaceExpr toTgt obj, replaceField toTgt f, replaceExpr toTgt value)
+                | None -> Expr.FieldSetUnchecked (replaceField toTgt f, replaceExpr toTgt value)
+            | Let (var, value, body) ->
+                Expr.LetUnchecked(replaceVar toTgt var, replaceExpr toTgt value, replaceExpr toTgt body)
+
+            // Eliminate some F# constructs which do not cross-target well
+            | Application(f,e) ->
+                replaceExpr toTgt (Expr.CallUnchecked(f, f.Type.GetMethod "Invoke", [ e ]) )
+            | NewUnionCase(ci, es) ->
+                replaceExpr toTgt (Expr.CallUnchecked(Reflection.FSharpValue.PreComputeUnionConstructorInfo ci, es) )
+            | NewRecord(ci, es) ->
+                replaceExpr toTgt (Expr.NewObjectUnchecked(FSharpValue.PreComputeRecordConstructorInfo ci, es) )
+            | UnionCaseTest(e,uc) ->
+                let tagInfo = FSharpValue.PreComputeUnionTagMemberInfo uc.DeclaringType
+                let tagExpr =
+                    match tagInfo with
+                    | :? PropertyInfo as tagProp -> Expr.PropertyGetUnchecked(e,tagProp)
+                    | :? MethodInfo as tagMeth ->
+                            if tagMeth.IsStatic then Expr.CallUnchecked(tagMeth, [e])
+                            else Expr.CallUnchecked(e,tagMeth,[])
+                    | _ -> failwith "unreachable: unexpected result from PreComputeUnionTagMemberInfo"
+                let tagNumber = uc.Tag
+                replaceExpr toTgt <@@ (%%(tagExpr): int) = tagNumber @@>
+
+            // Traverse remaining constructs
+            | ShapeVarUnchecked v ->
+                Expr.Var (replaceVar toTgt v)
+            | ShapeLambdaUnchecked _ as d ->
+                failwithf "It's not possible to use construct %O when cross targetting to a different FSharp.Core. Make sure you're not calling a function with signature A->(B->C) instead of A->B->C (using |> causes this)." d
+            | ShapeCombinationUnchecked (o, exprs) ->
+                RebuildShapeCombinationUnchecked (o, List.map (replaceExpr toTgt) exprs)
+
+        let convToTgt ty = ty |> replaceType true
 
         let ptb = ZProvidedTypeBuilder(convToTgt)
 
         let convCode (code: Expr list -> Expr) = 
-            (fun args -> args |> List.map replacer.ConvertTargetExprToDesignTimeExpr |> code |> replacer.ConvertDesignTimeExprToTargetExpr)
+            (fun tgtArgs -> 
+                let dtArgs = List.map (replaceExpr false) tgtArgs
+                let dtCode = code dtArgs
+                let tgtCode = replaceExpr true dtCode
+                tgtCode)
 
-        member internal __.TryBindILAssemblyRef(aref: ILAssemblyRef): Choice<ContextAssembly, exn> = tryBindAssemblySimple(aref.Name)
+        /// Gets the equivalent target type
+        member __.ConvertDesignTimeTypeToTargetType t = t |> replaceType true
 
-        member internal __.TryBindAssemblyName(aref: AssemblyName): Choice<ContextAssembly, exn> = tryBindAssemblySimple(aref.Name)
+        /// Gets the equivalent target type
+        member __.ConvertTargetTypeToDesignTimeType t = t |> replaceType false
 
-        member __.ConvertDesignTimeTypeToTargetType ty = replacer.ConvertDesignTimeTypeToTargetType ty 
-        member __.ConvertTargetTypeToDesignTimeType ty = replacer.ConvertTargetTypeToDesignTimeType ty 
+        /// Gets an equivalent expression with all the types replaced with runtime equivalents
+        member __.ConvertDesignTimeExprToTargetExpr e = e |> replaceExpr true
 
+        /// Gets an equivalent expression with all the types replaced with designTime equivalents
+        member __.ConvertTargetExprToDesignTimeExpr e = e |> replaceExpr false
 
-        member __.ConvertDesignTimeExprToTargetExpr e = replacer.ConvertDesignTimeExprToTargetExpr e
+        member __.TryBindILAssemblyRef(aref: ILAssemblyRef): Choice<TargetAssembly, exn> = tryBindAssemblySimple(aref.Name)
 
-        member __.ConvertTargetExprToDesignTimeExpr e = replacer.ConvertTargetExprToDesignTimeExpr e
+        member __.TryBindAssemblyName(aref: AssemblyName): Choice<TargetAssembly, exn> = tryBindAssemblySimple(aref.Name)
 
         member __.ILGlobals = ilGlobals.Value
 
@@ -8415,7 +8398,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.ReferencedAssemblyPaths = referencedAssemblyPaths
 
-        member __.ReferencedAssemblies =  referencedAssemblies()
+        member __.ReferencedAssemblies =  referencedAssemblies.Force()
 
         member x.FSharpCoreAssemblyVersion = fsharpCoreRefVersion.Force()
 
@@ -8456,6 +8439,7 @@ namespace ProviderImplementation.ProvidedTypes
                            isStatic = defaultArg isStatic false,
                            getterCode = (getterCode  |> Option.map convCode),
                            setterCode = (setterCode |> Option.map convCode), 
+                           // TODO: convert parameters
                            parameters = defaultArg parameters [])
 
         /// Create a new provided event. It is not initially associated with any specific provided type definition.
@@ -8463,7 +8447,8 @@ namespace ProviderImplementation.ProvidedTypes
         /// When making a cross-targeting type provider, use this method instead of the ProvidedProperty constructor from ProvidedTypes
         member __.ProvidedEvent(eventName, eventHandlerType, ?isStatic: bool, ?adderCode: Expr list -> Expr, ?removerCode: Expr list -> Expr) =
           ProvidedEvent(eventName, 
-                        eventHandlerType = (eventHandlerType |> convToTgt),
+                        dtEventHandlerType = eventHandlerType,
+                        tgtEventHandlerType = (eventHandlerType |> convToTgt),
                         isStatic = defaultArg isStatic false,
                         adderCode = (adderCode  |> Option.map convCode),
                         removerCode = (removerCode  |> Option.map convCode))
@@ -8481,16 +8466,7 @@ namespace ProviderImplementation.ProvidedTypes
                          invokeCode = (invokeCode |> Option.map convCode))
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        member __.ProvidedTypeDefinition(className, baseType: Type option, ?hideObjectMethods: bool, ?nonNullable: bool, ?isErased: bool) =
-          let isErased = defaultArg isErased true
-          let nonNullable = defaultArg nonNullable false
-          let hideObjectMethods = defaultArg hideObjectMethods false
-          ProvidedTypeDefinition(className, 
-                                 baseType |> Option.map convToTgt, 
-                                 convToTgt, 
-                                 HideObjectMethods=hideObjectMethods, 
-                                 NonNullable=nonNullable, 
-                                 IsErased=isErased)
+        //member __.ProvidedTypeDefinition(className, baseType: Type option, ?hideObjectMethods: bool, ?nonNullable: bool, ?isErased: bool) =
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
         member __.ProvidedTypeDefinition(assembly, namespaceName, className, baseType: Type option, ?hideObjectMethods: bool, ?nonNullable: bool, ?isErased: bool) =
@@ -8506,7 +8482,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.ReadRelatedAssembly(fileName) = 
             let reader = ILModuleReaderAfterReadingAllBytes(fileName, ilGlobals.Force()) 
-            ContextAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, Some reader, fileName) :> Assembly
+            TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, Some reader, fileName) :> Assembly
 
 
         /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericType
@@ -8547,7 +8523,7 @@ namespace ProviderImplementation.ProvidedTypes
                 failwith (sprintf "Invalid host of cross-targeting type provider. Exception: %A" e)
 
 
-            ProvidedTypesContext(referencedAssemblyPaths, defaultArg assemblyReplacementMap Seq.empty)
+            ProvidedTypesTarget(referencedAssemblyPaths, defaultArg assemblyReplacementMap Seq.empty)
 
 
 
@@ -8916,7 +8892,7 @@ namespace ProviderImplementation.ProvidedTypes
         type TypeDefTableKey = TdKey of string list * string uoption * string 
 
         //---------------------------------------------------------------------
-        // The Writer Context
+        // The Writer Target
         //---------------------------------------------------------------------
 
         [<NoComparison; NoEquality; RequireQualifiedAccess>]
@@ -13260,9 +13236,9 @@ namespace ProviderImplementation.ProvidedTypes
     // ProvidedAssembly: the assembly compiler for generative type providers.
 
     /// Implements System.Reflection.Assembly backed by an ILModuleReader
-    type ProvidedAssembly(assemblyName:AssemblyName, assemblyFileName: string, context: ProvidedTypesContext) as this =
+    type ProvidedAssembly(assemblyName:AssemblyName, assemblyFileName: string, context: ProvidedTypesTarget) as this =
 
-        inherit ContextAssembly(context.ILGlobals, context.TryBindILAssemblyRef, None, assemblyFileName) 
+        inherit TargetAssembly(context.ILGlobals, context.TryBindILAssemblyRef, None, assemblyFileName) 
        
         let theTypes = ResizeArray<_>()
         
@@ -13713,7 +13689,7 @@ namespace ProviderImplementation.ProvidedTypes
             File.Delete assemblyFileName
 //#endif
 
-        new (context: ProvidedTypesContext) = 
+        new (context: ProvidedTypesTarget) = 
             let assemblyFileName = Path.ChangeExtension(Path.GetTempFileName(), "dll")
             let simpleName = Path.GetFileNameWithoutExtension(assemblyFileName)
             ProvidedAssembly(AssemblyName(simpleName), assemblyFileName, context)
@@ -13728,7 +13704,7 @@ namespace ProviderImplementation.ProvidedTypes
         member x.AddTypes (types) = addTypes (types, None)
 
 //#if !FX_NO_LOCAL_FILESYSTEM
-        static member RegisterGenerated (ctxt: ProvidedTypesContext, fileName:string) =
+        static member RegisterGenerated (ctxt: ProvidedTypesTarget, fileName:string) =
             let assemblyBytes = File.ReadAllBytes fileName
             //printfn "registering assembly in '%s'" fileName
             let assembly = ctxt.ReadRelatedAssembly(fileName)
@@ -13765,20 +13741,23 @@ namespace ProviderImplementation.ProvidedTypes
     open ProviderImplementation.ProvidedTypes.AssemblyReader
     open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 
-    type TypeProviderForNamespaces(namespacesAndTypes: list<(string * list<ProvidedTypeDefinition>)>) as this =
+    type TypeProviderForNamespaces(cfg: TypeProviderConfig, namespacesAndTypes: list<(string * list<ProvidedTypeDefinition>)>, assemblyReplacementMap: seq<string*string> option) as this =
         let otherNamespaces = ResizeArray<string * list<ProvidedTypeDefinition>>()
+        let assemblyReplacementMap = defaultArg assemblyReplacementMap Seq.empty
+
+        let invalidateE = new Event<EventHandler,EventArgs>()
+
+        let disposing = Event<EventHandler,EventArgs>()
+
+        let tgt = ProvidedTypesTarget.Create cfg
 
         let makeProvidedNamespace (namespaceName:string) (types:ProvidedTypeDefinition list) =
             let types = [| for ty in types -> ty :> Type |]
-            {new IProvidedNamespace with
-                member __.GetNestedNamespaces() = [| |]
-                member __.NamespaceName = namespaceName
-                member __.GetTypes() = types |> Array.copy
-                member __.ResolveTypeName typeName: Type =
-                    match types |> Array.tryFind (fun ty -> ty.Name = typeName) with
-                    | Some ty -> ty
-                    | None    -> null
-            }
+            { new IProvidedNamespace with
+                  member __.GetNestedNamespaces() = [| |]
+                  member __.NamespaceName = namespaceName
+                  member __.GetTypes() = types |> Array.copy
+                  member __.ResolveTypeName typeName = types |> Array.tryFind (fun ty -> ty.Name = typeName) |> Option.toObj }
 
         let providedNamespaces =
             lazy [| for (namespaceName,types) in namespacesAndTypes do
@@ -13786,18 +13765,16 @@ namespace ProviderImplementation.ProvidedTypes
                     for (namespaceName,types) in otherNamespaces do
                          yield makeProvidedNamespace namespaceName types |]
 
-        let invalidateE = new Event<EventHandler,EventArgs>()
-
-        let disposing = Event<EventHandler,EventArgs>()
-
 #if !FX_NO_LOCAL_FILESYSTEM
         let probingFolders = ResizeArray()
         let handler = ResolveEventHandler(fun _ args -> this.ResolveAssembly(args))
         do AppDomain.CurrentDomain.add_AssemblyResolve handler
 #endif
 
-        new (namespaceName:string,types:list<ProvidedTypeDefinition>) = new TypeProviderForNamespaces([(namespaceName,types)])
-        new () = new TypeProviderForNamespaces([])
+        new (cfg, namespaceName, types, assemblyReplacementMap) = new TypeProviderForNamespaces(cfg, [(namespaceName,types)], assemblyReplacementMap)
+        new (cfg, assemblyReplacementMap) = new TypeProviderForNamespaces(cfg, [], assemblyReplacementMap)
+
+        member __.Target = tgt
 
         [<CLIEvent>]
         member __.Disposing = disposing.Publish
