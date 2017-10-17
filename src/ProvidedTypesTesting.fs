@@ -40,8 +40,12 @@ type internal Testing() =
         let (?<-) cfg prop value =
             let ty = cfg.GetType()
             match ty.GetProperty(prop,BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic) with
-            | null -> ty.GetField(prop,BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic).SetValue(cfg, value)|> ignore
-            | p -> p.GetSetMethod(nonPublic = true).Invoke(cfg, [| box value |]) |> ignore
+            | null -> 
+                let fld = ty.GetField(prop,BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic)
+                if fld = null then failwith ("expected TypeProviderConfig to have a property or field "+prop)
+                fld.SetValue(cfg, value)|> ignore
+            | p -> 
+                p.GetSetMethod(nonPublic = true).Invoke(cfg, [| box value |]) |> ignore
         cfg?ResolutionFolder <- resolutionFolder
         cfg?RuntimeAssembly <- runtimeAssembly
         cfg?ReferencedAssemblies <- Array.zeroCreate<string> 0
@@ -66,9 +70,12 @@ type internal Testing() =
     static member GenerateProvidedTypeInstantiation (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list, typeProviderForNamespacesConstructor, args) =
         let cfg = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder, runtimeAssembly, runtimeAssemblyRefs)
 
-        let typeProviderForNamespaces = typeProviderForNamespacesConstructor cfg :> TypeProviderForNamespaces
+        let tp = typeProviderForNamespacesConstructor cfg :> TypeProviderForNamespaces
 
-        let providedTypeDefinition = typeProviderForNamespaces.Namespaces |> Seq.last |> snd |> Seq.last
+        let providedNamespace = tp.Namespaces.[0] 
+        let providedTypes  = providedNamespace.GetTypes()
+        let providedType = providedTypes.[0] 
+        let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
 
         match args with
         | [||] -> providedTypeDefinition
@@ -506,7 +513,7 @@ type internal Testing() =
                 if not signatureOnly then
                     cons |> getConstructorBody |> printExpr
 
-            | :? ProvidedLiteralField as field ->
+            | :? ProvidedField as field ->
                 let value =
                     if signatureOnly then ""
                     else field.GetRawConstantValue() |> printObj

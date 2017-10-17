@@ -28,14 +28,14 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
     let ns = "Enums.Provided"
     let asm = Assembly.GetExecutingAssembly()
     let tempAssembly = ProvidedAssembly(this.TargetContext)
-    let container = ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, isErased = false)
+    let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
 
     let createEnum name (values: list<string*int>) =
         let enumType = ProvidedTypeDefinition(name, Some typeof<Enum>, isErased = false)
         enumType.SetEnumUnderlyingType(typeof<int>)
         
         values
-        |> List.map (fun (name, value) -> ProvidedLiteralField(name, enumType, value))
+        |> List.map (fun (name, value) -> ProvidedField.Literal(name, enumType, value))
         |> enumType.AddMembers
         
         enumType
@@ -60,7 +60,10 @@ let testProvidedAssembly test =
         let runtimeAssembly = runtimeAssemblyRefs.[0]
         let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
         let tp = GenerativeEnumsProvider(cfg) :> TypeProviderForNamespaces
-        let providedTypeDefinition = tp.Namespaces |> Seq.last |> snd |> Seq.last
+        let providedNamespace = tp.Namespaces.[0] 
+        let providedTypes  = providedNamespace.GetTypes()
+        let providedType = providedTypes.[0] 
+        let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
         Assert.Equal("Container", providedTypeDefinition.Name)
 
         let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)

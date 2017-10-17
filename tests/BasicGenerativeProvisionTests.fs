@@ -27,7 +27,7 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
     let asm = Assembly.GetExecutingAssembly()
     let createType (typeName, n:int) =
         let myAssem = ProvidedAssembly(this.TargetContext)
-        let myType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased=false)
+        let myType = ProvidedTypeDefinition(myAssem, ns, typeName, Some typeof<obj>, isErased=false)
         let embedString = "test"
         // Special TPSDK support for embedding Decimal values
         let embedM = 5M
@@ -55,6 +55,16 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
                  let s6 = System.Collections.Generic.List<int>()
                  // NewObj on generic reference type
                  let s7 = System.Collections.Generic.Dictionary<int,int>()
+                 let s8 = [1] |> List.map (fun x -> x + 1) |> List.map (fun x -> x + 2) 
+                 let s9 = match [1] with a :: b -> a | [] -> 5
+                 let s9 = match Choice1Of2 4 with Choice1Of2 a -> a | Choice2Of2 () -> 5
+                 let s10 = match Choice1Of3 4 with Choice1Of3 a -> a | Choice2Of3 ()  | Choice3Of3 () -> 5
+                 let s11 = { contents = 4 }
+                 let s12 x = s11.contents <- x
+                 let s13 x = s11.Value <- x
+                 let rec s14 x = if x = 0 then 1 else s14 (x-1) + s14 (x-1)
+                 let rec s14 x = if x = 0 then 1 else s15 x + s15 x
+                 and s15 x = s14 (x-1)
 
                  //Arithmetic - note, operations such as + are emitted as a call to the method in the F# library, even over integers
                  let z1 = 1 + 1 - 1 * 1 / 1
@@ -123,15 +133,18 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             let runtimeAssemblyRefs = refs()
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
-            let typeProviderForNamespaces = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
-            let providedTypeDefinition = typeProviderForNamespaces.Namespaces |> Seq.last |> snd |> Seq.last
+            let tp = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
+            let providedNamespace = tp.Namespaces.[0] 
+            let providedTypes  = providedNamespace.GetTypes()
+            let providedType = providedTypes.[0] 
+            let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
             let typeName = providedTypeDefinition.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
 
             let t = providedTypeDefinition.ApplyStaticArguments(typeName, staticArgs)
-            Assert.True(match t.Assembly with :? ProvidedAssembly -> true | _ -> false)
-            let assemContents = (typeProviderForNamespaces :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
+            let asmt = match t.Assembly with :? ProvidedAssembly as pa -> pa | _ -> failwith "expected a ProvidedAssembly"
+            let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
             Assert.NotEqual(assemContents.Length, 0)
-            let res = [| for r in t.Assembly.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
+            let res = [| for r in asmt.GetTargetAssembly().GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
             printfn "----- %s ------- " desc 
             printfn "compilation references for FSharp.Core target %s = %A" desc runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" desc res
@@ -143,5 +156,7 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
 
 
     // TEST: Register binary
-    // TEST: Many more F# constructs in generated code, giveing full coverage
+    // TEST: More F# constructs in generated code, giving full coverage
+    // TEST: Base calls and implicit constructors
+    // TEST: Right pipe
 #endif

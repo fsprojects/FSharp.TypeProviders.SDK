@@ -208,14 +208,8 @@ namespace ProviderImplementation.ProvidedTypes
 
         member SetFieldAttributes: attributes: FieldAttributes -> unit
 
-
-    /// Represents an erased provided field.
-    [<Class>]
-    type ProvidedLiteralField =
-        inherit ProvidedField
-
         /// Create a new provided literal field. It is not initially associated with any specific provided type definition.
-        new: fieldName: string * fieldType: Type * literalValue:obj -> ProvidedLiteralField
+        static member Literal : fieldName: string * fieldType: Type * literalValue:obj -> ProvidedField
 
 
     /// Represents the type constructor in a provided symbol type.
@@ -399,38 +393,35 @@ namespace ProviderImplementation.ProvidedTypes
     /// Represents the context for which code is to be generated. Normally you should not need to use this directly.
     type ProvidedTypesContext = 
         
-        /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericType
-        member MakeGenericType: genericTypeDefinition: Type * genericArguments: Type list -> Type
+        /// Try to find the given target assembly in the context
+        member TryBindTargetAssembly: aref: AssemblyName -> Choice<Assembly, exn> 
 
-        /// When making a cross-targeting type provider, use this method instead of ProvidedTypeBuilder.MakeGenericMethod
-        member MakeGenericMethod: genericMethodDefinition: MethodInfo * genericArguments: Type list -> MethodInfo
-
-        /// Try to find the given assembly in the context
-        member TryBindAssembly: aref: AssemblyName -> Choice<Assembly, exn> 
-
-        /// Try to find the given assembly in the context
-        member TryBindAssemblyBySimpleName: assemblyName: string  -> Choice<Assembly, exn> 
+        /// Try to find the given target assembly in the context
+        member TryBindTargetAssemblyBySimpleName: assemblyName: string  -> Choice<Assembly, exn> 
 
         /// Get the list of referenced assemblies determined by the type provider configuration
         member ReferencedAssemblyPaths: string list
 
         /// Get the resolved referenced assemblies determined by the type provider configuration
-        member ReferencedAssemblies : Assembly[]
+        member GetTargetAssemblies : unit -> Assembly[]
+
+        /// Get the set of design-time assemblies available to use as a basis for authoring provided types
+        member GetSourceAssemblies : unit -> Assembly[]
 
         /// Try to get the version of FSharp.Core referenced. May raise an exception if FSharp.Core has not been correctly resolved
         member FSharpCoreAssemblyVersion: Version
 
          /// Returns a type from the referenced assemblies that corresponds to the given design-time type.  Normally
          /// this method should not be used directly when authoring a type provider.
-        member ConvertDesignTimeTypeToTargetType: Type -> Type
+        member ConvertSourceTypeToTarget: Type -> Type
 
-         /// Returns the design-time type that corresponds to the given type from the referenced assemblies.  Normally
+         /// Returns the design-time type that corresponds to the given type from the target referenced assemblies.  Normally
          /// this method should not be used directly when authoring a type provider.
-        member ConvertTargetTypeToDesignTimeType: Type -> Type
+        member ConvertTargetTypeToSource: Type -> Type
 
-         /// Returns a quotation rebuilt with resepct to the types from the referenced assemblies.  Normally
+         /// Returns a quotation rebuilt with resepct to the types from the target referenced assemblies.  Normally
          /// this method should not be used directly when authoring a type provider.
-        member ConvertDesignTimeExprToTargetExpr: Expr -> Expr
+        member ConvertSourceExprToTarget: Expr -> Expr
 
 
 
@@ -448,7 +439,7 @@ namespace ProviderImplementation.ProvidedTypes
         member AddNamespace: namespaceName:string * types: ProvidedTypeDefinition list -> unit
 
         /// Invoked by the type provider to get all provided namespaces with their provided types.
-        member Namespaces: seq<string * ProvidedTypeDefinition list>
+        member Namespaces: IProvidedNamespace[]
 
         /// Invoked by the type provider to invalidate the information provided by the provider
         member Invalidate: unit -> unit
@@ -484,16 +475,10 @@ namespace ProviderImplementation.ProvidedTypes
 
 
 #if !NO_GENERATIVE
-    /// An internal type used in the implementation of ProvidedAssembly
-    [<Class>]
-    type TargetAssembly =
-
-        inherit Assembly
-
     /// A provided generated assembly
     type ProvidedAssembly =
 
-        inherit TargetAssembly
+        inherit Assembly
 
         /// Create a provided generated assembly
         new: assemblyName: AssemblyName * assemblyFileName:string * context:ProvidedTypesContext -> ProvidedAssembly
@@ -517,9 +502,14 @@ namespace ProviderImplementation.ProvidedTypes
         /// <param name="enclosingTypeNames">A path of type names to wrap the generated types. The generated types are then generated as nested types.</param>
         member AddNestedTypes: types: ProvidedTypeDefinition list * enclosingGeneratedTypeNames: string list -> unit
 
+        /// Get the corresponding assembly with respect to the target assemblies
+        member GetTargetAssembly: unit -> Assembly
+
 #if !FX_NO_LOCAL_FILESYSTEM
-        /// Register that a given file is a provided generated assembly
-        static member RegisterGenerated: context: ProvidedTypesContext * fileName: string -> Assembly
+        /// Register that a given file is a provided generated target assembly, e.g. an assembly produced by an external
+        /// code generation tool.  This assembly should be a target assembly, i.e. use the same asssembly references
+        /// as given by TargetContext.ReferencedAssemblyPaths
+        static member RegisterGeneratedTargetAssembly: context: ProvidedTypesContext * fileName: string -> Assembly
 #endif
 
 #endif
