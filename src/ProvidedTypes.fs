@@ -41,6 +41,22 @@ namespace ProviderImplementation.ProvidedTypes
             Debug.Assert (false, msg)
             raise (NotSupportedException msg)
 
+
+        let adjustTypeAttributes isNested attrs =
+            let visibilityAttributes =
+                match attrs &&& TypeAttributes.VisibilityMask with
+                | TypeAttributes.Public when isNested -> TypeAttributes.NestedPublic
+                | TypeAttributes.NotPublic when isNested -> TypeAttributes.NestedAssembly
+                | TypeAttributes.NestedPublic when not isNested -> TypeAttributes.Public
+                | TypeAttributes.NestedAssembly
+                | TypeAttributes.NestedPrivate
+                | TypeAttributes.NestedFamORAssem
+                | TypeAttributes.NestedFamily
+                | TypeAttributes.NestedFamANDAssem when not isNested -> TypeAttributes.NotPublic
+                | a -> a
+            (attrs &&& ~~~TypeAttributes.VisibilityMask) ||| visibilityAttributes
+
+
         type ConstructorInfo with
             member m.GetDefinition() = 
                 let dty = m.DeclaringType
@@ -1124,29 +1140,13 @@ namespace ProviderImplementation.ProvidedTypes
                 :> IList<_>
 
 
-        let adjustTypeAttributes attributes isNested =
-            let visibilityAttributes =
-                match attributes &&& TypeAttributes.VisibilityMask with
-                | TypeAttributes.Public when isNested -> TypeAttributes.NestedPublic
-                | TypeAttributes.NotPublic when isNested -> TypeAttributes.NestedAssembly
-                | TypeAttributes.NestedPublic when not isNested -> TypeAttributes.Public
-                | TypeAttributes.NestedAssembly
-                | TypeAttributes.NestedPrivate
-                | TypeAttributes.NestedFamORAssem
-                | TypeAttributes.NestedFamily
-                | TypeAttributes.NestedFamANDAssem when not isNested -> TypeAttributes.NotPublic
-                | a -> a
-            (attributes &&& ~~~TypeAttributes.VisibilityMask) ||| visibilityAttributes
-
-
-
-    type ProvidedStaticParameter(isTgt: bool, parameterName:string,parameterType:Type,parameterDefaultValue:obj option, customAttributesData) =
+    type ProvidedStaticParameter(isTgt: bool, parameterName:string, parameterType:Type, parameterDefaultValue:obj option, customAttributesData) =
         inherit ParameterInfo()
 
         let customAttributesImpl = CustomAttributesImpl(customAttributesData)
 
-        new (parameterName:string,parameterType:Type,?parameterDefaultValue:obj) = 
-            ProvidedStaticParameter(false, parameterName,parameterType,None, (K [| |]))
+        new (parameterName:string, parameterType:Type, ?parameterDefaultValue:obj) = 
+            ProvidedStaticParameter(false, parameterName, parameterType, parameterDefaultValue, (K [| |]))
 
         member __.AddXmlDocDelayed xmlDocFunction = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
         member __.AddXmlDocComputed xmlDocFunction = customAttributesImpl.AddXmlDocComputed xmlDocFunction
@@ -1187,7 +1187,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.Name = parameterName
         override __.ParameterType = parameterType
-        override __.Attributes = base.Attributes ||| attrs
+        override __.Attributes = attrs
         override __.RawDefaultValue = defaultArg optionalValue null
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
@@ -1293,7 +1293,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.SetDeclaringType x = declaringType <- x // check: not set twice
 
         /// Abstract a type to a parametric-type. Requires "formal parameters" and "instantiation function".
-        member __.DefineStaticParameters(parameters: list<ProvidedStaticParameter>, instantiationFunction: (string -> obj[] -> ProvidedMethod)) =
+        member __.DefineStaticParameters(parameters: ProvidedStaticParameter list, instantiationFunction: (string -> obj[] -> ProvidedMethod)) =
             staticParams      <- parameters
             staticParamsApply <- Some instantiationFunction
 
@@ -1552,7 +1552,7 @@ namespace ProviderImplementation.ProvidedTypes
       | Type of Type
       | TypeToBeDecided
 
-    type ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, baseType: (unit -> Type option), attributes: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, initialData, customAttributesData, nonNullable, hideObjectMethods) as this =
+    type ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, baseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, initialData, customAttributesData, nonNullable, hideObjectMethods) as this =
         inherit TypeDelegator()
 
         static let defaultAttributes isErased = 
@@ -1562,7 +1562,7 @@ namespace ProviderImplementation.ProvidedTypes
             enum (if isErased then int32 TypeProviderTypeAttributes.IsErased else 0)
 
         // state
-        let mutable attributes   = attributes
+        let mutable attrs   = attrs
         let mutable enumUnderlyingType = lazy getEnumUnderlyingType()
         let mutable baseType =  lazy baseType()
         let mutable membersKnown = ResizeArray<MemberInfo>()
@@ -1667,14 +1667,16 @@ namespace ProviderImplementation.ProvidedTypes
             let isErased = defaultArg isErased true
             let nonNullable = defaultArg nonNullable false
             let hideObjectMethods = defaultArg hideObjectMethods false
-            if not isErased && assembly.GetType().Name <> "ProvidedAssembly" then failwithf "a non-erased (i.e. generative) ProvidedTypeDefinition '%s.%s' was placed in an assembly '%s' that is not a ProvidedAssembly" namespaceName className (assembly.GetName().Name)
-            ProvidedTypeDefinition(false, TypeContainer.Namespace (assembly,namespaceName), className, K baseType, defaultAttributes isErased, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
+            let attrs = defaultAttributes isErased
+            //if not isErased && assembly.GetType().Name <> "ProvidedAssembly" then failwithf "a non-erased (i.e. generative) ProvidedTypeDefinition '%s.%s' was placed in an assembly '%s' that is not a ProvidedAssembly" namespaceName className (assembly.GetName().Name)
+            ProvidedTypeDefinition(false, TypeContainer.Namespace (assembly,namespaceName), className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
 
         new (className:string, baseType, ?hideObjectMethods, ?nonNullable, ?isErased) = 
             let isErased = defaultArg isErased true
             let nonNullable = defaultArg nonNullable false
             let hideObjectMethods = defaultArg hideObjectMethods false
-            ProvidedTypeDefinition(false, TypeContainer.TypeToBeDecided, className, K baseType, defaultAttributes isErased, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
+            let attrs = defaultAttributes isErased
+            ProvidedTypeDefinition(false, TypeContainer.TypeToBeDecided, className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
 
         // state ops
 
@@ -1792,7 +1794,7 @@ namespace ProviderImplementation.ProvidedTypes
             getMembers() |> Array.filter(fun m->0<>(int(m.MemberType &&& mt)) && m.Name = name)
 
         // Attributes, etc..
-        override __.GetAttributeFlagsImpl() = adjustTypeAttributes attributes this.IsNested
+        override __.GetAttributeFlagsImpl() = adjustTypeAttributes this.IsNested attrs 
 
         // .NET uses "IsSubclassOf(typeof(ValueType))" which only works for reflection context
         override this.IsValueTypeImpl() = 
@@ -1839,8 +1841,9 @@ namespace ProviderImplementation.ProvidedTypes
 
         // Get the model
         member __.IsTarget = isTgt
+        member __.AttributesRaw = attrs
         member __.EnumUnderlyingTypeInternal() = enumUnderlyingType.Force()
-        member __.ContainerInternal = container
+        member __.Container = container
         member __.BaseTypeInternal() = baseType.Force()
         member __.StaticParams = staticParams
         member __.StaticParamsApply = staticParamsApply
@@ -1860,7 +1863,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.SetEnumUnderlyingType(ty) = enumUnderlyingType <- lazy Some ty
         member __.SetBaseType t = baseType <- lazy Some t
         member __.SetBaseTypeDelayed baseTypeFunction = baseType <- lazy (Some (baseTypeFunction()))
-        member __.SetAttributes x = attributes <- x
+        member __.SetAttributes x = attrs <- x
 
         // Add MemberInfos
         member __.AddMembersDelayed(membersFunction: unit -> list<#MemberInfo>) =
@@ -1914,7 +1917,7 @@ namespace ProviderImplementation.ProvidedTypes
                 loop topTypes)
 
         /// Abstract a type to a parametric-type. Requires "formal parameters" and "instantiation function".
-        member __.DefineStaticParameters(parameters: list<ProvidedStaticParameter>, instantiationFunction: (string -> obj[] -> ProvidedTypeDefinition)) =
+        member __.DefineStaticParameters(parameters: ProvidedStaticParameter list, instantiationFunction: (string -> obj[] -> ProvidedTypeDefinition)) =
             staticParams      <- parameters
             staticParamsApply <- Some instantiationFunction
 
@@ -1936,16 +1939,16 @@ namespace ProviderImplementation.ProvidedTypes
         member __.SetDeclaringType x = container <- TypeContainer.Type  x
 
         member __.IsErased
-            with get() = (attributes &&& enum (int32 TypeProviderTypeAttributes.IsErased)) <> enum 0
+            with get() = (attrs &&& enum (int32 TypeProviderTypeAttributes.IsErased)) <> enum 0
             and set v =
-               if v then attributes <- attributes ||| enum (int32 TypeProviderTypeAttributes.IsErased)
-               else attributes <- attributes &&& ~~~(enum (int32 TypeProviderTypeAttributes.IsErased))
+               if v then attrs <- attrs ||| enum (int32 TypeProviderTypeAttributes.IsErased)
+               else attrs <- attrs &&& ~~~(enum (int32 TypeProviderTypeAttributes.IsErased))
 
         member __.SuppressRelocation
-            with get() = (attributes &&& enum (int32 TypeProviderTypeAttributes.SuppressRelocate)) <> enum 0
+            with get() = (attrs &&& enum (int32 TypeProviderTypeAttributes.SuppressRelocate)) <> enum 0
             and set v =
-               if v then attributes <- attributes ||| enum (int32 TypeProviderTypeAttributes.SuppressRelocate)
-               else attributes <- attributes &&& ~~~(enum (int32 TypeProviderTypeAttributes.SuppressRelocate))
+               if v then attrs <- attrs ||| enum (int32 TypeProviderTypeAttributes.SuppressRelocate)
+               else attrs <- attrs &&& ~~~(enum (int32 TypeProviderTypeAttributes.SuppressRelocate))
 
 
         static member PatchUpAddedMemberInfo (this:Type) (m:MemberInfo) =
@@ -6499,7 +6502,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             | null     -> [| et_STRING  |]// yes, the 0xe prefix is used when passing a "null" to a property or argument of type "object" here
             | :? single   -> [| et_R4 |]
             | :? double   -> [| et_R8 |]
-            | :? (obj[]) as arr   -> failwith "TODO: can't yet emit arrays in attributes" // [| yield et_SZARRAY; yield! encodeCustomAttrElemType elemTy |]
+            | :? (obj[]) as arr   -> failwith "TODO: can't yet emit arrays in attrs" // [| yield et_SZARRAY; yield! encodeCustomAttrElemType elemTy |]
             | _   -> failwith "unexpected value in custom attribute" 
 
         /// Given a custom attribute element, encode it to a binary representation according to the rules in Ecma 335 Partition II.
@@ -6801,7 +6804,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                 | ILType.Boxed tspec when tspec.Namespace = USome "System" && tspec.Name = "Type" ->
                     let nOpt,sigptr = sigptr_get_serstring_possibly_null bytes sigptr
                     match nOpt with
-                    | None -> (argty, box null) , sigptr // TODO: read System.Type attributes
+                    | None -> (argty, box null) , sigptr // TODO: read System.Type attrs
                     | Some n ->
                     try
                         let parser = ILTypeSigParser(n)
@@ -7115,20 +7118,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         let eqParametersAndILParameterTypesWithInst inst2 (ps1: ParameterInfo[])  (ps2: ILParameters) =
             lengthsEqAndForall2 ps1 ps2 (fun p1 p2 -> eqTypeAndILTypeWithInst inst2 p1.ParameterType p2.ParameterType)
-
-        let adjustTypeAttributes isNested attributes =
-            let visibilityAttributes =
-                match attributes &&& TypeAttributes.VisibilityMask with
-                | TypeAttributes.Public when isNested -> TypeAttributes.NestedPublic
-                | TypeAttributes.NotPublic when isNested -> TypeAttributes.NestedAssembly
-                | TypeAttributes.NestedPublic when not isNested -> TypeAttributes.Public
-                | TypeAttributes.NestedAssembly
-                | TypeAttributes.NestedPrivate
-                | TypeAttributes.NestedFamORAssem
-                | TypeAttributes.NestedFamily
-                | TypeAttributes.NestedFamANDAssem when not isNested -> TypeAttributes.NotPublic
-                | a -> a
-            (attributes &&& ~~~TypeAttributes.VisibilityMask) ||| visibilityAttributes
 
 
     /// Represents the type constructor in a provided symbol type.
@@ -8252,7 +8241,7 @@ namespace ProviderImplementation.ProvidedTypes
             | true, newT -> newT
             | false, _ ->
                 match t with 
-                | :? ProvidedTypeDefinition as ptd when toTgt && ptd.IsErased -> 
+                | :? ProvidedTypeDefinition as ptd when toTgt (* && ptd.IsErased *) -> 
                     if ptd.IsTarget then failwithf "unexpected erased target ProvidedTypeDefinition '%O'" ptd
                     // recursively get the provided type.
                     convTypeDefToTgt t
@@ -8476,9 +8465,9 @@ namespace ProviderImplementation.ProvidedTypes
         and convProvidedTypeDefToTgt (x: ProvidedTypeDefinition) =
             if x.IsTarget then failwithf "unexpected target type definition '%O'" x
             let rec xT = 
-                ProvidedTypeDefinition(true, x.ContainerInternal, x.Name, 
+                ProvidedTypeDefinition(true, x.Container, x.Name, 
                                         (x.BaseTypeInternal >> Option.map convTypeToTgt), 
-                                        x.Attributes, 
+                                        x.AttributesRaw, 
                                         (x.EnumUnderlyingTypeInternal >> Option.map convTypeToTgt), 
                                         x.StaticParams |> List.map convStaticParameterDefToTgt, 
                                         x.StaticParamsApply |> Option.map (fun f s p ->  f s p |> convProvidedTypeDefToTgt),
@@ -8508,7 +8497,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         and convStaticParameterDefToTgt (x: ProvidedStaticParameter) = 
             Debug.Assert (not x.IsTarget, "unexpected target ProvidedStaticParameter")
-            ProvidedStaticParameter(x.Name, x.ParameterType,  x.ParameterDefaultValue) 
+            ProvidedStaticParameter(x.Name, x.ParameterType,  ?parameterDefaultValue=x.ParameterDefaultValue) 
             
         and convMemberDefToTgt declTyT (x: MemberInfo) = 
             let xT : MemberInfo = 
@@ -8600,13 +8589,6 @@ namespace ProviderImplementation.ProvidedTypes
         member __.GetSourceAssemblies() =  getSourceAssemblies()
 
         member x.FSharpCoreAssemblyVersion = fsharpCoreRefVersion.Force()
-
-        /// Create a new provided static parameter, for use with DefineStaticParamaeters on a provided type definition.
-        ///
-        /// When making a cross-targeting type provider, use this method instead of the ProvidedParameter constructor from ProvidedTypes
-        member __.ProvidedStaticParameter(parameterName, parameterType, ?parameterDefaultValue) =
-          ProvidedStaticParameter(parameterName, parameterType, ?parameterDefaultValue=parameterDefaultValue)
-
         member __.ReadRelatedAssembly(fileName) = 
             let reader = ILModuleReaderAfterReadingAllBytes(fileName, ilGlobals.Force()) 
             TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, Some reader, fileName) :> Assembly
@@ -13400,20 +13382,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         let bindAll = BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance
 
-        let adjustTypeAttributes attributes isNested =
-            let visibilityAttributes =
-                match attributes &&& TypeAttributes.VisibilityMask with
-                | TypeAttributes.Public when isNested -> TypeAttributes.NestedPublic
-                | TypeAttributes.NotPublic when isNested -> TypeAttributes.NestedAssembly
-                | TypeAttributes.NestedPublic when not isNested -> TypeAttributes.Public
-                | TypeAttributes.NestedAssembly
-                | TypeAttributes.NestedPrivate
-                | TypeAttributes.NestedFamORAssem
-                | TypeAttributes.NestedFamily
-                | TypeAttributes.NestedFamANDAssem when not isNested -> TypeAttributes.NotPublic
-                | a -> a
-            (attributes &&& ~~~TypeAttributes.VisibilityMask) ||| visibilityAttributes
-
         let rec typeMembers (tb:ILTypeBuilder)  (td: ProvidedTypeDefinition) =
             Debug.Assert(td.IsTarget, "expected a target ProvidedTypeDefinition in nested type")
             for ntd in td.GetNestedTypes(bindAll) do
@@ -13425,7 +13393,7 @@ namespace ProviderImplementation.ProvidedTypes
                 if pntd.IsErased then failwith ("The nested provided type "+pntd.Name+" is marked as erased and cannot be converted to a generated type. Set 'IsErased=false' on the ProvidedTypeDefinition")
                 Debug.Assert(pntd.IsTarget, "expected a target ProvidedTypeDefinition in nested type")
                 // Adjust the attributes - we're codegen'ing this type as nested
-                let attributes = adjustTypeAttributes ntd.Attributes true
+                let attributes = adjustTypeAttributes true ntd.Attributes 
                 let ntb = tb.DefineNestedType(pntd.Name,attributes)
                 typeMap.[pntd] <- ntb
                 typeMembers ntb pntd
@@ -13563,7 +13531,7 @@ namespace ProviderImplementation.ProvidedTypes
                     let attributes = pt.Attributes &&& ~~~(enum (int32 TypeProviderTypeAttributes.SuppressRelocate))
                                                     &&& ~~~(enum (int32 TypeProviderTypeAttributes.IsErased))
                     // Adjust the attributes - we're codegen'ing as non-nested
-                    let attributes = adjustTypeAttributes attributes false
+                    let attributes = adjustTypeAttributes false attributes
                     let tb = assemblyMainModule.DefineType(uoptionOfObj pt.Namespace, pt.Name, attributes)
                     typeMap.[pt] <- tb
                     typeMembers tb pt
@@ -13580,7 +13548,7 @@ namespace ProviderImplementation.ProvidedTypes
                                 // OK, the implied nested type is not defined, define it now
                                 let attributes = TypeAttributes.Public ||| TypeAttributes.Class ||| TypeAttributes.Sealed
                                 // Filter out the additional TypeProviderTypeAttributes flags
-                                let attributes = adjustTypeAttributes attributes otb.IsSome
+                                let attributes = adjustTypeAttributes otb.IsSome attributes
                                 let tb =
                                     match otb with
                                     | None -> let nsp, n = splitILTypeName n in assemblyMainModule.DefineType(nsp, n,attributes)
@@ -13846,7 +13814,8 @@ namespace ProviderImplementation.ProvidedTypes
         let addTypes (providedTypeDefinitions:ProvidedTypeDefinition list, enclosingTypeNames: string list option) =
             for pt in providedTypeDefinitions do
                 if pt.IsErased then failwith ("The provided type "+pt.Name+"is marked as erased and cannot be converted to a generated type. Set 'IsErased=false' on the ProvidedTypeDefinition")
-                if pt.IsTarget then failwithf "expected '%O' to be a source ProvidedTypeDefinition. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" pt
+                if pt.IsTarget then failwithf "Expected '%O' to be a source ProvidedTypeDefinition. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" pt
+                if not (Object.ReferenceEquals(this, pt.Assembly)) then failwithf "Mismached assemblies for a ProvidedTypeDefinition - you are adding the type '%O' to assembly '%O' but it was already given assembly '%O' as its assembly when it was created. These should match." pt assemblyName.Name (pt.Assembly.GetName().Name)
                 theTypes.Add (pt, enclosingTypeNames)
                 pt.SetAssemblyInternal (this :> Assembly)
 
@@ -14028,28 +13997,6 @@ namespace ProviderImplementation.ProvidedTypes
 
             member __.GetInvokerExpression(methodBaseT, parametersT) =
 
-                let exprT =
-                    match methodBaseT with
-                    | :? ProvidedMethod as m when (match methodBaseT.DeclaringType with :? ProvidedTypeDefinition as pt -> pt.IsErased | _ -> true) ->
-                        let exprFunT = m.GetInvokeCodeInternal(false) 
-                        exprFunT parametersT
-
-                    | :? ProvidedConstructor as m when (match methodBaseT.DeclaringType with :? ProvidedTypeDefinition as pt -> pt.IsErased | _ -> true) ->
-                        let exprFunT = m.GetInvokeCodeInternal(false)
-                        exprFunT parametersT
-
-                    // Otherwise, assume this is a generative assembly and just emit a call to the constructor or method
-                    | :?  ConstructorInfo as cinfoT ->
-                        Expr.NewObjectUnchecked(cinfoT, Array.toList parametersT)
-
-                    | :? MethodInfo as minfoT ->
-                        if minfoT.IsStatic then
-                            Expr.CallUnchecked(minfoT, Array.toList parametersT)
-                        else
-                            Expr.CallUnchecked(parametersT.[0], minfoT, Array.toList parametersT.[1..])
-
-                    | _ -> failwith ("TypeProviderForNamespaces.GetInvokerExpression: not a ProvidedMethod/ProvidedConstructor/ConstructorInfo/MethodInfo, name=" + methodBaseT.Name + " class=" + methodBaseT.GetType().FullName)
-
                 /// This checks that the GetInvokeCodeInternal doesn't return things containing calls to other provided methods or constructors.
                 let rec check expr =
                     match expr with
@@ -14059,7 +14006,28 @@ namespace ProviderImplementation.ProvidedTypes
                     | ShapeVarUnchecked v -> Expr.Var v
                     | ShapeLambdaUnchecked(v, body) -> Expr.Lambda(v, check body)
 
-                check exprT
+                match methodBaseT with
+                | :? ProvidedMethod as m when (match methodBaseT.DeclaringType with :? ProvidedTypeDefinition as pt -> pt.IsErased | _ -> true) ->
+                    let exprFunT = m.GetInvokeCodeInternal(false) 
+                    let exprT = exprFunT parametersT
+                    check exprT
+
+                | :? ProvidedConstructor as m when (match methodBaseT.DeclaringType with :? ProvidedTypeDefinition as pt -> pt.IsErased | _ -> true) ->
+                    let exprFunT = m.GetInvokeCodeInternal(false)
+                    let exprT = exprFunT parametersT
+                    check exprT
+
+                // Otherwise, assume this is a generative assembly and just emit a call to the constructor or method
+                | :?  ConstructorInfo as cinfoT ->
+                    Expr.NewObjectUnchecked(cinfoT, Array.toList parametersT)
+
+                | :? MethodInfo as minfoT ->
+                    if minfoT.IsStatic then
+                        Expr.CallUnchecked(minfoT, Array.toList parametersT)
+                    else
+                        Expr.CallUnchecked(parametersT.[0], minfoT, Array.toList parametersT.[1..])
+
+                | _ -> failwith ("TypeProviderForNamespaces.GetInvokerExpression: not a ProvidedMethod/ProvidedConstructor/ConstructorInfo/MethodInfo, name=" + methodBaseT.Name + " class=" + methodBaseT.GetType().FullName)
 
             member __.GetStaticParameters(ty) =
                 match ty with
