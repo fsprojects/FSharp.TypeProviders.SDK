@@ -13836,7 +13836,6 @@ namespace ProviderImplementation.ProvidedTypes
         static member Table = theTable
 
 
-#endif // NO_GENERATIVE
 
 
     type ProvidedAssembly(assemblyName:AssemblyName, assemblyFileName: string, context: ProvidedTypesContext) as this =
@@ -13900,6 +13899,8 @@ namespace ProviderImplementation.ProvidedTypes
 
         static member RegisterGeneratedTargetAssembly (ctxt: ProvidedTypesContext, fileName:string) =
             ProvidedTargetAssembly.RegisterGenerated (ctxt, fileName)
+
+#endif // NO_GENERATIVE
 
 //-------------------------------------------------------------------------------------------------
 // TypeProviderForNamespaces

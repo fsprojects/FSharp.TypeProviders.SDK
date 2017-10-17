@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+     <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+     <DefineConstants>NO_GENERATIVE</DefineConstants>
+     <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <Import Project="..\..\fsc.props" />
+  <ItemGroup>
+    <Compile Include="..\..\src\ProvidedTypes.fsi">
+      <Link>ProvidedTypes.fsi</Link>
+    </Compile>
+    <Compile Include="..\..\src\ProvidedTypes.fs">
+      <Link>ProvidedTypes.fs</Link>
+    </Compile>
+    <Compile Include="StaticProperty.fs" />
+  </ItemGroup>
+</Project>
