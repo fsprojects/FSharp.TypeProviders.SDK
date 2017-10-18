@@ -8,13 +8,8 @@ mono:
   - latest
   - 5.2.0
 
-# weekly, nightly, beta don't work because of msbuild package install problems
-#  beta
 
-# 5.4.0 doesn't work because of missing SDK build things for F# new styleprojects + msbuild
-#  - latest
-
-# 5.2.0 doesn't work because of missing SDK build things for F# new styleprojects + msbuild
+# 5.2.0 doesn't work because we like to use installed F# compiler which can produce netstandard 2.0 code
 #  - 5.2.0
 
 dotnet: 2.0.0
