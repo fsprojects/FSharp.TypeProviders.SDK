@@ -1,3 +1,20 @@
+#### 4.0.0 - October 17 2017
+* Config parameter new passed to ``TypeProviderForNamespaces``, i.e. ``inherit TypeProviderForNamespaces(config)``
+* ProvidedTypesContext now internal to ``TypeProviderForNamespaces``.  You can access it using ``this.TargetContext`` in the ``TypeProviderForNamespaces`` object
+* Calls such as ``ctxt.ProvidedTypeDefinition(...)`` become just ``ProvidedTypeDefinition`` once again
+* ``ProvidedLiteralField`` --> ``ProvidedField.Literal``
+* Bug fixes to context translation based on further testing
+* ``ProvidedTypesContext.MakeGenericType`` --> ``ProvidedTypeBuilder.MakeGenericType``
+* ``ProvidedTypesContext.MakeGenericMethod`` --> ``ProvidedTypeBuilder.MakeGenericMethod``
+* More internal consistency checking of translation, better diagnostics
+* Some getters removed from public API.
+* ``IsImplicitCtor`` --> ``IsImplicitConstructor``
+* ``ProvidedTypeDefinition.Logger`` removed
+* ``TryBindAssembly*`` --> ``TryBindTargetAssembly*``
+* ``RegisterGenerated`` --> ``RegisterGeneratedTargetAssembly``
+* ``tp.TargetContext`` added to access the target context of referenced assemblies
+
+
 #### 3.0.1 - October 1 2017
 * Cross-targeting for generative type providers, and reimplement binary reader 
 

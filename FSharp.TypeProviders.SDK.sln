@@ -5,15 +5,11 @@ VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.TypeProviders.SDK", "src\FSharp.TypeProviders.SDK.fsproj", "{6EBFDE55-9687-40A9-8C1A-6E204ECB117F}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{B3B9D21D-D7A9-4DB8-B7D2-A3F414990881}"
-	ProjectSection(SolutionItems) = preProject
-		examples\ErasedWithConstructor.fsx = examples\ErasedWithConstructor.fsx
-		examples\ErasedWithConstructor.Tests.fsx = examples\ErasedWithConstructor.Tests.fsx
-		examples\StaticProperty.fsx = examples\StaticProperty.fsx
-		examples\StaticProperty.Tests.fsx = examples\StaticProperty.Tests.fsx
-	EndProjectSection
-EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.TypeProviders.SDK.Tests", "tests\FSharp.TypeProviders.SDK.Tests.fsproj", "{5EF9FF95-1C75-458A-983A-168E43945913}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Example.ErasedWithConstructor", "examples\ErasedWithConstructor\ErasedWithConstructor.fsproj", "{5EF9FF95-1C75-458A-983A-168E43945914}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Example.StaticProperty", "examples\StaticProperty\StaticProperty.fsproj", "{5EF9FF95-1C75-458A-983A-168E43945915}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,6 +25,14 @@ Global
 		{5EF9FF95-1C75-458A-983A-168E43945913}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5EF9FF95-1C75-458A-983A-168E43945913}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5EF9FF95-1C75-458A-983A-168E43945913}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5EF9FF95-1C75-458A-983A-168E43945914}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5EF9FF95-1C75-458A-983A-168E43945914}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5EF9FF95-1C75-458A-983A-168E43945914}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5EF9FF95-1C75-458A-983A-168E43945914}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5EF9FF95-1C75-458A-983A-168E43945915}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5EF9FF95-1C75-458A-983A-168E43945915}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5EF9FF95-1C75-458A-983A-168E43945915}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5EF9FF95-1C75-458A-983A-168E43945915}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

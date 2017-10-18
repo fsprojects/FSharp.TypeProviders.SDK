@@ -21,15 +21,13 @@ open Xunit
 
 [<TypeProvider>]
 type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces ()
+    inherit TypeProviderForNamespaces (config)
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-
-    let ctxt = ProvidedTypesContext.Create(config)
     let createType (typeName, n:int) =
-        let myAssem = ProvidedAssembly(ctxt)
-        let myType = ctxt.ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased=false)
+        let myAssem = ProvidedAssembly(this.TargetContext)
+        let myType = ProvidedTypeDefinition(myAssem, ns, typeName, Some typeof<obj>, isErased=false)
         let embedString = "test"
         // Special TPSDK support for embedding Decimal values
         let embedM = 5M
@@ -57,6 +55,16 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
                  let s6 = System.Collections.Generic.List<int>()
                  // NewObj on generic reference type
                  let s7 = System.Collections.Generic.Dictionary<int,int>()
+                 let s8 = [1] |> List.map (fun x -> x + 1) |> List.map (fun x -> x + 2) 
+                 let s9 = match [1] with a :: b -> a | [] -> 5
+                 let s9 = match Choice1Of2 4 with Choice1Of2 a -> a | Choice2Of2 () -> 5
+                 let s10 = match Choice1Of3 4 with Choice1Of3 a -> a | Choice2Of3 ()  | Choice3Of3 () -> 5
+                 let s11 = { contents = 4 }
+                 let s12 x = s11.contents <- x
+                 let s13 x = s11.Value <- x
+                 let rec s14 x = if x = 0 then 1 else s14 (x-1) + s14 (x-1)
+                 let rec s14 x = if x = 0 then 1 else s15 x + s15 x
+                 and s15 x = s14 (x-1)
 
                  //Arithmetic - note, operations such as + are emitted as a call to the method in the F# library, even over integers
                  let z1 = 1 + 1 - 1 * 1 / 1
@@ -93,19 +101,19 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
         let removerCode (args: Expr list) = <@@ ignore (%%(args.[1]) : System.EventHandler) @@>
         let setterCode (args: Expr list) = <@@ ignore (%%(args.[1]) : string list) @@>
 
-        let myProp = ctxt.ProvidedProperty("MyStaticProperty", typeof<string list>, isStatic = true, getterCode = testCode)
-        let myProp2 = ctxt.ProvidedProperty("MyInstaceProperty", typeof<string list>, isStatic = false, getterCode = testCode, setterCode = setterCode)
-        let myMeth1 = ctxt.ProvidedMethod("MyStaticMethod", [], typeof<string list>, isStatic = true, invokeCode = testCode)
-        let myMeth2 = ctxt.ProvidedMethod("MyInstanceMethod", [], typeof<string list>, isStatic = false, invokeCode = testCode)
-        let myEvent1 = ctxt.ProvidedEvent("MyEvent", typeof<System.EventHandler>, isStatic = false, adderCode = adderCode, removerCode = removerCode)
+        let myProp = ProvidedProperty("MyStaticProperty", typeof<string list>, isStatic = true, getterCode = testCode)
+        let myProp2 = ProvidedProperty("MyInstaceProperty", typeof<string list>, isStatic = false, getterCode = testCode, setterCode = setterCode)
+        let myMeth1 = ProvidedMethod("MyStaticMethod", [], typeof<string list>, isStatic = true, invokeCode = testCode)
+        let myMeth2 = ProvidedMethod("MyInstanceMethod", [], typeof<string list>, isStatic = false, invokeCode = testCode)
+        let myEvent1 = ProvidedEvent("MyEvent", typeof<System.EventHandler>, isStatic = false, adderCode = adderCode, removerCode = removerCode)
         myType.AddMembers [ (myProp :> MemberInfo); (myProp2 :> MemberInfo); (myMeth1 :> MemberInfo); (myMeth2 :> MemberInfo); (myEvent1 :> MemberInfo)]
         myAssem.AddTypes [myType]
         myType
 
     do
-        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let parameters = [ ctxt.ProvidedStaticParameter("Count", typeof<int>) 
-                           ctxt.ProvidedStaticParameter("Count2", typeof<int>, 3) ]
+        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+        let parameters = [ ProvidedStaticParameter("Count", typeof<int>) 
+                           ProvidedStaticParameter("Count2", typeof<int>, 3) ]
         myType.DefineStaticParameters(parameters, (fun typeName args -> createType(typeName, (args.[0] :?> int) + (args.[1] :?> int))))
 
         this.AddNamespace(ns, [myType])
@@ -125,13 +133,20 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             let runtimeAssemblyRefs = refs()
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
-            let typeProviderForNamespaces = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
-            let providedTypeDefinition = typeProviderForNamespaces.Namespaces |> Seq.last |> snd |> Seq.last
+            let tp = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
+            let providedNamespace = tp.Namespaces.[0] 
+            let providedTypes  = providedNamespace.GetTypes()
+            let providedType = providedTypes.[0] 
+            let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
             let typeName = providedTypeDefinition.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
 
             let t = providedTypeDefinition.ApplyStaticArguments(typeName, staticArgs)
-            Assert.True(match t.Assembly with :? ProvidedAssembly -> true | _ -> false)
-            let assemContents = (typeProviderForNamespaces :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
+
+            match t.Assembly with 
+            | :? ProvidedAssembly -> failwithf "did not expect a ProvidedAssembly - context translation hould have ensured that a ProvidedTargetAssembly is reported to the compiler"  
+            | _ -> ()
+
+            let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
             Assert.NotEqual(assemContents.Length, 0)
             let res = [| for r in t.Assembly.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
             printfn "----- %s ------- " desc 
@@ -145,5 +160,7 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
 
 
     // TEST: Register binary
-    // TEST: Many more F# constructs in generated code, giveing full coverage
+    // TEST: More F# constructs in generated code, giving full coverage
+    // TEST: Base calls and implicit constructors
+    // TEST: Right pipe
 #endif

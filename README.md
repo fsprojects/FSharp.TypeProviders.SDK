@@ -32,25 +32,10 @@ it, it should add them all to your F# project. It's probably best not to modify 
 upgrades to the package will ask to replace the previous versions - either submit changes back to this project
 or shadow the relevant functions in a seperate file.
 
-If using Paket, you can also add code files by direct GitHub references like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/paket.dependencies#L20-L22) and reference the files in a project file like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/src/FSharp.Data.DesignTime.fsproj#L54-L59).
+If using Paket, you can also add code files by direct GitHub references like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/paket.dependencies#L20-L22) and reference the files in a project file like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/src/FSharp.Data.Source.fsproj#L54-L59).
 
 
-## The ProvidedTypes API - Cross-Targeting Type Providers
-
-Type providers may be used in projects that generate .NET Standard code or target other .NET Frameworks than
-that being used to execute the F# compiler. Use 
-
-```fsharp
-let ctxt = ProvidedTypesContext.Create(config)
-```
-
-to your code and always create provided entities using this ``ctxt`` object:
-
-```fsharp
-let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-```
-
-This is shown in the example below.
+Type providers may be used in projects that generate .NET Standard code or target other .NET Frameworks than that being used to execute the F# compiler. 
 
 ## The ProvidedTypes API - A Basic Type Provider
 
@@ -64,15 +49,14 @@ open System.Reflection
 
 [<TypeProvider>]
 type BasicProvider (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces ()
+    inherit TypeProviderForNamespaces (config)
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config)
 
     let createTypes () =
-        let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let myProp = ctxt.ProvidedProperty("MyProperty", typeof<string>, isStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
+        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+        let myProp = ProvidedProperty("MyProperty", typeof<string>, isStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
         myType.AddMember(myProp)
         [myType]
 

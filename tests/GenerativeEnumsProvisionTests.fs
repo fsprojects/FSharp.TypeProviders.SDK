@@ -23,33 +23,32 @@ open ProviderImplementation.ProvidedTypesTesting
 
 [<TypeProvider>]
 type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces ()
+    inherit TypeProviderForNamespaces (config)
 
     let ns = "Enums.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let ctxt = ProvidedTypesContext.Create(config)
-    let tempAssembly = ProvidedAssembly(ctxt)
-    let container = ctxt.ProvidedTypeDefinition(asm, ns, "Container", Some typeof<obj>, isErased = false)
+    let tempAssembly = ProvidedAssembly(this.TargetContext)
+    let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
 
     let createEnum name (values: list<string*int>) =
-        let enumType = ctxt.ProvidedTypeDefinition(name, Some typeof<Enum>, isErased = false)
+        let enumType = ProvidedTypeDefinition(name, Some typeof<Enum>, isErased = false)
         enumType.SetEnumUnderlyingType(typeof<int>)
         
         values
-        |> List.map (fun (name, value) -> ctxt.ProvidedLiteralField(name, enumType, value))
+        |> List.map (fun (name, value) -> ProvidedField.Literal(name, enumType, value))
         |> enumType.AddMembers
         
         enumType
 
     do
-        let enumContainer = ctxt.ProvidedTypeDefinition("EnumContainer", Some typeof<obj>, isErased = false)
+        let enumContainer = ProvidedTypeDefinition("EnumContainer", Some typeof<obj>, isErased = false)
         let enum = createEnum "NestedEnum" ["Foo", 1; "Bar", 2]
         enumContainer.AddMember enum
-        enumContainer.AddMember <| ctxt.ProvidedField("nestedEnumField", enum)
-        container.AddMember <| enumContainer
+        enumContainer.AddMember (ProvidedField("nestedEnumField", enum))
+        container.AddMember enumContainer
 
         let topLevelEnum = createEnum "TopLevelEnum" ["One", 1; "Two", 2]
-        enumContainer.AddMember <| ctxt.ProvidedField("topLevelEnumField", topLevelEnum)
+        enumContainer.AddMember (ProvidedField("topLevelEnumField", topLevelEnum))
         container.AddMember topLevelEnum
     
         tempAssembly.AddTypes [container]
@@ -61,7 +60,10 @@ let testProvidedAssembly test =
         let runtimeAssembly = runtimeAssemblyRefs.[0]
         let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
         let tp = GenerativeEnumsProvider(cfg) :> TypeProviderForNamespaces
-        let providedTypeDefinition = tp.Namespaces |> Seq.last |> snd |> Seq.last
+        let providedNamespace = tp.Namespaces.[0] 
+        let providedTypes  = providedNamespace.GetTypes()
+        let providedType = providedTypes.[0] 
+        let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
         Assert.Equal("Container", providedTypeDefinition.Name)
 
         let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
