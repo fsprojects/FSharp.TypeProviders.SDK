@@ -13806,7 +13806,7 @@ namespace ProviderImplementation.ProvidedTypes
 #if DEBUG
             printfn "generated binary is at '%s'" assemblyFileName
 #else
-            //File.Delete assemblyFileName
+            File.Delete assemblyFileName
 #endif
         member this.GetFinalBytes() =
             assemblyLazy.Force() |> ignore
