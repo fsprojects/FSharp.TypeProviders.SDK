@@ -1404,7 +1404,6 @@ namespace ProviderImplementation.ProvidedTypes
         member __.Getter = getter
         member __.Setter = setter
 
-        // Implement overloads
         override __.PropertyType = propertyType
         override this.SetValue(_obj, _value, _invokeAttr, _binder, _index, _culture) = notRequired this "SetValue" propertyName
         override this.GetAccessors _nonPublic = notRequired this "nonPublic" propertyName
@@ -1429,7 +1428,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mutable declaringType = null
 
-
         let customAttributesImpl = CustomAttributesImpl(customAttributesData)
 
         new (eventName, eventHandlerType, adderCode, removerCode, ?isStatic) = 
@@ -1445,8 +1443,9 @@ namespace ProviderImplementation.ProvidedTypes
         member __.AddDefinitionLocation(line,column,filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
 
         member __.SetDeclaringType x =
-            match adder() with :? ProvidedMethod as a -> a.SetDeclaringType x | _ -> ()
-            match remover() with :? ProvidedMethod as r -> r.SetDeclaringType x | _ -> ()
+            if not isTgt then 
+                match adder() with :? ProvidedMethod as a -> a.SetDeclaringType x | _ -> ()
+                match remover() with :? ProvidedMethod as r -> r.SetDeclaringType x | _ -> ()
             declaringType <- x
 
         member __.IsStatic = isStatic
@@ -1454,7 +1453,6 @@ namespace ProviderImplementation.ProvidedTypes
         member __.Remover = remover()
         member __.BelongsToTargetModel = isTgt
 
-        // Implement overloads
         override __.EventHandlerType = eventHandlerType
         override __.GetAddMethod _nonPublic = adder() 
         override __.GetRemoveMethod _nonPublic = remover()

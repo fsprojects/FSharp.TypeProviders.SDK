@@ -141,10 +141,14 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             let typeName = providedTypeDefinition.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
 
             let t = providedTypeDefinition.ApplyStaticArguments(typeName, staticArgs)
-            let asmt = match t.Assembly with :? ProvidedAssembly as pa -> pa | _ -> failwith "expected a ProvidedAssembly"
+
+            match t.Assembly with 
+            | :? ProvidedAssembly -> failwithf "did not expect a ProvidedAssembly - context translation hould have ensured that a ProvidedTargetAssembly is reported to the compiler"  
+            | _ -> ()
+
             let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
             Assert.NotEqual(assemContents.Length, 0)
-            let res = [| for r in asmt.GetTargetAssembly().GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
+            let res = [| for r in t.Assembly.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
             printfn "----- %s ------- " desc 
             printfn "compilation references for FSharp.Core target %s = %A" desc runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" desc res
