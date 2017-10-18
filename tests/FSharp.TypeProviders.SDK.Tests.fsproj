@@ -5,7 +5,7 @@
      <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
      <IsPackable>false</IsPackable>
   </PropertyGroup>
-  <Import Project="..\..\fsc.props" />
+  <Import Project="..\fsc.props" />
   <ItemGroup>
     <None Include="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
