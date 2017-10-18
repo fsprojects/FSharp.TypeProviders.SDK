@@ -6,7 +6,7 @@ mono:
   - nightly
   - beta
   - latest
-  - 5.2.0
+  - 5.4.0
 
 
 # 5.2.0 doesn't work because we like to use installed F# compiler which can produce netstandard 2.0 code
