@@ -401,16 +401,6 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> false
             | a, b -> a.Equals b
 
-        let nameText() =
-            match kind,typeArgs with
-            | ProvidedSymbolKind.SDArray,[arg] -> arg.Name + "[]"
-            | ProvidedSymbolKind.Array _,[arg] -> arg.Name + "[*]"
-            | ProvidedSymbolKind.Pointer,[arg] -> arg.Name + "*"
-            | ProvidedSymbolKind.ByRef,[arg] -> arg.Name + "&"
-            | ProvidedSymbolKind.Generic gty, typeArgs -> gty.Name + (sprintf "%A" typeArgs)
-            | ProvidedSymbolKind.FSharpTypeAbbreviation (_,_,path),_ -> path.[path.Length-1]
-            | _ -> failwith "unreachable"
-
         do this.typeImpl <- this
 
         /// Substitute types for type variables.
@@ -469,7 +459,15 @@ namespace ProviderImplementation.ProvidedTypes
                         base.IsAssignableFrom(otherTy)
             | _ -> base.IsAssignableFrom(otherTy)
 
-        override __.Name = nameText()
+        override __.Name = 
+            match kind,typeArgs with
+            | ProvidedSymbolKind.SDArray,[arg] -> arg.Name + "[]"
+            | ProvidedSymbolKind.Array _,[arg] -> arg.Name + "[*]"
+            | ProvidedSymbolKind.Pointer,[arg] -> arg.Name + "*"
+            | ProvidedSymbolKind.ByRef,[arg] -> arg.Name + "&"
+            | ProvidedSymbolKind.Generic gty, typeArgs -> gty.Name
+            | ProvidedSymbolKind.FSharpTypeAbbreviation (_,_,path),_ -> path.[path.Length-1]
+            | _ -> failwith "unreachable"
 
         override __.BaseType =
             match kind with
@@ -496,7 +494,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetElementType() = (match kind,typeArgs with (ProvidedSymbolKind.Array _  | ProvidedSymbolKind.SDArray | ProvidedSymbolKind.ByRef | ProvidedSymbolKind.Pointer),[e] -> e | _ -> failwithf "not an array, pointer or byref type")
         override this.ToString() = this.FullName
 
-        override __.Assembly =
+        override this.Assembly =
             match kind, typeArgs with
             | ProvidedSymbolKind.FSharpTypeAbbreviation (assembly,_nsp,_path), _ -> assembly
             | ProvidedSymbolKind.Generic gty, _ -> gty.Assembly
@@ -504,9 +502,9 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedSymbolKind.Array _,[arg] -> arg.Assembly
             | ProvidedSymbolKind.Pointer,[arg] -> arg.Assembly
             | ProvidedSymbolKind.ByRef,[arg] -> arg.Assembly
-            | _ -> notRequired this "Assembly" (nameText())
+            | _ -> notRequired this "Assembly" this.FullName
 
-        override __.Namespace =
+        override this.Namespace =
             match kind,typeArgs with
             | ProvidedSymbolKind.SDArray,[arg] -> arg.Namespace
             | ProvidedSymbolKind.Array _,[arg] -> arg.Namespace
@@ -514,7 +512,7 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedSymbolKind.ByRef,[arg] -> arg.Namespace
             | ProvidedSymbolKind.Generic gty,_ -> gty.Namespace
             | ProvidedSymbolKind.FSharpTypeAbbreviation (_assembly,nsp,_path),_ -> nsp
-            | _ -> notRequired this "Namespace" (nameText())
+            | _ -> notRequired this "Namespace" this.FullName
 
         override x.Module = x.Assembly.ManifestModule
 
@@ -544,41 +542,41 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetConstructorImpl(_bindingFlags, _binder, _callConventions, _types, _modifiers) = null
 
-        override __.GetMethodImpl(name, bindingFlags, _binderBinder, _callConvention, _types, _modifiers) =
+        override this.GetMethodImpl(name, bindingFlags, _binderBinder, _callConvention, _types, _modifiers) =
             match kind with
             | Generic gtd ->
                 let ty = gtd.GetGenericTypeDefinition().MakeGenericType(Array.ofList typeArgs)
                 ty.GetMethod(name, bindingFlags)
-            | _ -> notRequired this "GetMethodImpl" (nameText())
+            | _ -> notRequired this "GetMethodImpl" this.FullName
 
 
-        override this.GetField(_name, _bindingFlags) = notRequired this "GetField" (nameText())
+        override this.GetField(_name, _bindingFlags) = notRequired this "GetField" this.FullName
 
-        override this.GetPropertyImpl(_name, _bindingFlags, _binder, _returnType, _types, _modifiers) = notRequired this "GetPropertyImpl" (nameText())
+        override this.GetPropertyImpl(_name, _bindingFlags, _binder, _returnType, _types, _modifiers) = notRequired this "GetPropertyImpl" this.FullName
 
-        override this.GetEvent(_name, _bindingFlags) = notRequired this "GetEvent" (nameText())
+        override this.GetEvent(_name, _bindingFlags) = notRequired this "GetEvent" this.FullName
 
-        override this.GetNestedType(_name, _bindingFlags) = notRequired this "GetNestedType" (nameText())
+        override this.GetNestedType(_name, _bindingFlags) = notRequired this "GetNestedType" this.FullName
 
-        override __.GetConstructors _bindingFlags = notRequired this "GetConstructors" (nameText())
+        override this.GetConstructors _bindingFlags = notRequired this "GetConstructors" this.FullName
 
-        override this.GetMethods _bindingFlags = notRequired this "GetMethods" (nameText())
+        override this.GetMethods _bindingFlags = notRequired this "GetMethods" this.FullName
 
-        override this.GetFields _bindingFlags = notRequired this "GetFields" (nameText())
+        override this.GetFields _bindingFlags = notRequired this "GetFields" this.FullName
 
-        override this.GetProperties _bindingFlags = notRequired this "GetProperties" (nameText())
+        override this.GetProperties _bindingFlags = notRequired this "GetProperties" this.FullName
 
-        override this.GetEvents _bindingFlags = notRequired this "GetEvents" (nameText())
+        override this.GetEvents _bindingFlags = notRequired this "GetEvents" this.FullName
 
-        override this.GetNestedTypes _bindingFlags = notRequired this "GetNestedTypes" (nameText())
+        override this.GetNestedTypes _bindingFlags = notRequired this "GetNestedTypes" this.FullName
 
-        override this.GetMembers _bindingFlags = notRequired this "GetMembers" (nameText())
+        override this.GetMembers _bindingFlags = notRequired this "GetMembers" this.FullName
 
-        override this.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" (nameText())
+        override this.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" this.FullName
 
-        override this.GetInterfaces() = notRequired this "GetInterfaces" (nameText())
+        override this.GetInterfaces() = notRequired this "GetInterfaces" this.FullName
 
-        override this.GetAttributeFlagsImpl() = notRequired this "GetAttributeFlagsImpl" (nameText())
+        override this.GetAttributeFlagsImpl() = notRequired this "GetAttributeFlagsImpl" this.FullName
 
         override this.UnderlyingSystemType =
             match kind with
@@ -591,15 +589,15 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetCustomAttributesData() =  ([| |] :> IList<_>)
 
-        override this.MemberType = notRequired this "MemberType" (nameText())
+        override this.MemberType = notRequired this "MemberType" this.FullName
 
-        override this.GetMember(_name,_mt,_bindingFlags) = notRequired this "GetMember" (nameText())
+        override this.GetMember(_name,_mt,_bindingFlags) = notRequired this "GetMember" this.FullName
 
-        override this.GUID = notRequired this "GUID" (nameText())
+        override this.GUID = notRequired this "GUID" this.FullName
 
-        override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" (nameText())
+        override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" this.FullName
 
-        override this.AssemblyQualifiedName = notRequired this "AssemblyQualifiedName" (nameText())
+        override this.AssemblyQualifiedName = notRequired this "AssemblyQualifiedName" this.FullName
 
         override this.GetCustomAttributes(_inherit) = emptyAttributes
 
@@ -1228,7 +1226,6 @@ namespace ProviderImplementation.ProvidedTypes
         let mutable declaringType = null: Type
         let mutable isImplicitCtor = isImplicitCtor
         let mutable attrs = attrs
-        let nameText () = sprintf "constructor for %s" (if isNull declaringType then "<not yet known type>" else declaringType.FullName)
         let isStatic() = attrs.HasFlag(MethodAttributes.Static)
 
         let customAttributesImpl = CustomAttributesImpl(customAttributesData)
@@ -1250,11 +1247,11 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.SetDeclaringType x = declaringType <- x
 
-        member __.BaseConstructorCall
+        member this.BaseConstructorCall
             with set (d:Expr list -> (ConstructorInfo * Expr list)) =
                 match baseCall with
                 | None -> baseCall <- Some d
-                | Some _ -> failwithf "ProvidedConstructor: base call already given for '%s'" (nameText())
+                | Some _ -> failwithf "ProvidedConstructor: base call already given for '%s'" this.Name
 
         member __.GetInvokeCodeInternal(isGenerated) =
             // Use the real variable names instead of indices, to improve output of Debug.fs
@@ -1285,11 +1282,11 @@ namespace ProviderImplementation.ProvidedTypes
         override __.DeclaringType = declaringType |> nonNull "ProvidedConstructor.DeclaringType"
         override __.IsDefined(_attributeType, _inherit) = true
 
-        override this.Invoke(_invokeAttr, _binder, _parameters, _culture) = notRequired this "Invoke" (nameText())
-        override this.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired this "Invoke" (nameText())
-        override this.ReflectedType = notRequired this "ReflectedType" (nameText())
-        override this.GetMethodImplementationFlags() = notRequired this "GetMethodImplementationFlags" (nameText())
-        override this.MethodHandle = notRequired this "MethodHandle" (nameText())
+        override this.Invoke(_invokeAttr, _binder, _parameters, _culture) = notRequired this "Invoke" this.Name
+        override this.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired this "Invoke" this.Name
+        override this.ReflectedType = notRequired this "ReflectedType" this.Name
+        override this.GetMethodImplementationFlags() = notRequired this "GetMethodImplementationFlags" this.Name
+        override this.MethodHandle = notRequired this "MethodHandle" this.Name
         override __.GetCustomAttributes(_inherit) = emptyAttributes
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
@@ -13022,6 +13019,7 @@ namespace ProviderImplementation.ProvidedTypes
             let fields = ResizeArray()
             for v in freeVars do
                 let f = lambda.DefineField(v.Name, transType v.Type, FieldAttributes.Assembly)
+                //Debug.Assert (v.Name <> "formatValue")
                 fields.Add(v, f)
 
             let lambdaLocals = Dictionary()
@@ -13452,9 +13450,13 @@ namespace ProviderImplementation.ProvidedTypes
             else ILType.Boxed (transTypeSpec ty)
 
         and transTypeSpec (ty: Type) =
-            ILTypeSpec(transTypeRef ty, Array.map transType (ty.GetGenericArguments()))
+            if ty.IsGenericType then 
+                 ILTypeSpec(transTypeRef (ty.GetGenericTypeDefinition()), Array.map transType (ty.GetGenericArguments()))
+            else 
+                 ILTypeSpec(transTypeRef ty, [| |])
 
         and transTypeRef (ty: Type) = 
+            let ty = if ty.IsGenericType then ty.GetGenericTypeDefinition() else ty
             ILTypeRef(transTypeRefScope ty, uoptionOfObj (if ty.IsNested then null else ty.Namespace), ty.Name)
 
         and transTypeRefScope (ty: Type): ILTypeRefScope = 
@@ -13472,7 +13474,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         let transCtorRef (m:ConstructorInfo) = 
             let dty = m.DeclaringType
-
             // Remove the generic instantiations to get the uninstantiated identity of the method
             let m2 = m.GetDefinition()
             let cc = (if m2.IsStatic then ILCallingConv.Static else ILCallingConv.Instance)
@@ -13489,7 +13490,9 @@ namespace ProviderImplementation.ProvidedTypes
             if (match f with :? ProvidedField as f -> not f.BelongsToTargetModel | _ -> false) then failwithf "expected '%O' to belong to the target model" f
             match f with 
             | :? ProvidedField as pf when fieldMap.ContainsKey pf -> fieldMap.[pf].FormalFieldSpec
-            | f -> ILFieldSpec(ILFieldRef (transTypeRef f.DeclaringType, f.Name, transType f.FieldType), transType f.DeclaringType)
+            | f -> 
+                let f2 = f.GetDefinition()
+                ILFieldSpec(ILFieldRef (transTypeRef f2.DeclaringType, f2.Name, transType f2.FieldType), transType f.DeclaringType)
 
         let transMethRef (m:MethodInfo) = 
             if (match m with :? ProvidedMethod as m -> not m.BelongsToTargetModel | _ -> false) then failwithf "expected '%O' to belong to the target model" m
