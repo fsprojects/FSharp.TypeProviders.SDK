@@ -2212,7 +2212,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                    | null | [| |] -> UNone
                    | bytes -> USome (PublicKeyToken bytes)
                | bytes ->
-                   USome (PublicKey bytes)
+                   USome (PublicKey.KeyAsToken(bytes))
 
             let version =
                match aname.Version with
