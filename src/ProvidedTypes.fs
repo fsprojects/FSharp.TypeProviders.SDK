@@ -449,11 +449,11 @@ namespace ProviderImplementation.ProvidedTypes
         /// .NET symbolic types made from this type, e.g. when building Nullable<SomeProvidedType[]>.FullName
         override __.DeclaringType =
             match kind,typeArgs with
-            | ProvidedSymbolKind.SDArray,[arg] -> arg
-            | ProvidedSymbolKind.Array _,[arg] -> arg
-            | ProvidedSymbolKind.Pointer,[arg] -> arg
-            | ProvidedSymbolKind.ByRef,[arg] -> arg
-            | ProvidedSymbolKind.Generic gty,_ -> gty
+            | ProvidedSymbolKind.SDArray,[arg] -> null
+            | ProvidedSymbolKind.Array _,[arg] -> null
+            | ProvidedSymbolKind.Pointer,[arg] -> null
+            | ProvidedSymbolKind.ByRef,[arg] -> null
+            | ProvidedSymbolKind.Generic gty,_ -> gty.DeclaringType
             | ProvidedSymbolKind.FSharpTypeAbbreviation _,_ -> null
             | _ -> failwith "unreachable"
 
@@ -534,9 +534,11 @@ namespace ProviderImplementation.ProvidedTypes
             | _ -> false
 
         member __.Kind = kind
+
         member __.Args = typeArgs
 
         member __.IsFSharpTypeAbbreviation = match kind with FSharpTypeAbbreviation _ -> true | _ -> false
+
         // For example, int<kg>
         member __.IsFSharpUnitAnnotated = match kind with ProvidedSymbolKind.Generic gtd -> not gtd.IsGenericTypeDefinition | _ -> false
 
@@ -559,6 +561,7 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetNestedType(_name, _bindingFlags) = notRequired this "GetNestedType" (nameText())
 
         override __.GetConstructors _bindingFlags = notRequired this "GetConstructors" (nameText())
+
         override this.GetMethods _bindingFlags = notRequired this "GetMethods" (nameText())
 
         override this.GetFields _bindingFlags = notRequired this "GetFields" (nameText())
@@ -572,8 +575,11 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetMembers _bindingFlags = notRequired this "GetMembers" (nameText())
 
         override this.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" (nameText())
+
         override this.GetInterfaces() = notRequired this "GetInterfaces" (nameText())
+
         override this.GetAttributeFlagsImpl() = notRequired this "GetAttributeFlagsImpl" (nameText())
+
         override this.UnderlyingSystemType =
             match kind with
             | ProvidedSymbolKind.SDArray
@@ -582,17 +588,29 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedSymbolKind.FSharpTypeAbbreviation _
             | ProvidedSymbolKind.ByRef -> upcast this
             | ProvidedSymbolKind.Generic gty -> gty.UnderlyingSystemType
+
         override __.GetCustomAttributesData() =  ([| |] :> IList<_>)
+
         override this.MemberType = notRequired this "MemberType" (nameText())
+
         override this.GetMember(_name,_mt,_bindingFlags) = notRequired this "GetMember" (nameText())
+
         override this.GUID = notRequired this "GUID" (nameText())
+
         override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" (nameText())
+
         override this.AssemblyQualifiedName = notRequired this "AssemblyQualifiedName" (nameText())
+
         override this.GetCustomAttributes(_inherit) = emptyAttributes
+
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
+
         override __.IsDefined(_attributeType, _inherit) = false
+
         override this.MakeArrayType() = ProvidedSymbolType(ProvidedSymbolKind.SDArray, [this]) :> Type
+
         override this.MakeArrayType arg = ProvidedSymbolType(ProvidedSymbolKind.Array arg, [this]) :> Type
+
         override __.MetadataToken = 
             match kind with
             | ProvidedSymbolKind.SDArray -> typeof<Array>.MetadataToken
@@ -7539,8 +7557,8 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.DeclaringType = declTy
 
                 override __.PropertyType = inp.PropertyType |> txILType (gps, [| |])
-                override __.GetGetMethod(_nonPublic) = inp.GetMethod |> Option.map txILMethodRef |> Option.toObj
-                override __.GetSetMethod(_nonPublic) = inp.SetMethod |> Option.map txILMethodRef |> Option.toObj
+                override __.GetGetMethod(_nonPublic) = inp.GetMethod |> Option.map (txILMethodRef declTy) |> Option.toObj
+                override __.GetSetMethod(_nonPublic) = inp.SetMethod |> Option.map (txILMethodRef declTy) |> Option.toObj
                 override __.GetIndexParameters() = inp.IndexParameters |> Array.map (txILParameter (gps, [| |]))
                 override __.CanRead = inp.GetMethod.IsSome
                 override __.CanWrite = inp.SetMethod.IsSome
@@ -7574,8 +7592,8 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.DeclaringType = declTy
 
                 override __.EventHandlerType = inp.EventHandlerType |> txILType (gps, [| |])
-                override __.GetAddMethod(_nonPublic) = inp.AddMethod |> txILMethodRef 
-                override __.GetRemoveMethod(_nonPublic) = inp.RemoveMethod |> txILMethodRef
+                override __.GetAddMethod(_nonPublic) = inp.AddMethod |> txILMethodRef declTy
+                override __.GetRemoveMethod(_nonPublic) = inp.RemoveMethod |> txILMethodRef declTy
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
                 override __.MetadataToken = inp.Token
 
@@ -7647,8 +7665,7 @@ namespace ProviderImplementation.ProvidedTypes
             cons
 
         /// Bind a reference to a method
-        and txILMethodRef (mref: ILMethodRef) =
-            let declTy = mref.EnclosingTypeRef |> txILTypeRef
+        and txILMethodRef (declTy: Type) (mref: ILMethodRef) =
             let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
             let argTypes = mref.ArgTypes |> Array.map (txILType (gps, [| |]))
             let meth = declTy.GetMethod(mref.Name, bindAll, null, argTypes, null)
@@ -8311,6 +8328,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         and convMethodRefToTgt (m: MethodInfo) =
             Debug.Assert((match m with :? ProvidedMethod as x -> not x.BelongsToTargetModel | _ -> true), "unexpected target ProvidedMethod")
+            //Debug.Assert (m.Name <> "get_Item1" || m.DeclaringType.Name <> "Tuple`2")
             let declTyT = convTypeToTgt m.DeclaringType
             let mT =
                 if m.IsGenericMethod then
@@ -13487,6 +13505,7 @@ namespace ProviderImplementation.ProvidedTypes
             match m with 
             | :? ProvidedMethod as pm when methMap.ContainsKey pm -> methMap.[pm].FormalMethodSpec
             | m -> 
+                //Debug.Assert (m.Name <> "get_Item1" || m.DeclaringType.Name <> "Tuple`2")
                 let mref = transMethRef m
                 let minst = (if m.IsGenericMethod then Array.map transType (m.GetGenericArguments()) else [| |])
                 ILMethodSpec(mref, transType m.DeclaringType, minst)
