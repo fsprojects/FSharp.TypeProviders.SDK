@@ -7,8 +7,6 @@ module FSharp.TypeProviders.SDK.Tests.BasicGenerativeTests
 #endif
 
 open System.Reflection
-open System.IO
-open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Quotations
@@ -25,8 +23,8 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
-    let createType (typeName, n:int) =
-        let myAssem = ProvidedAssembly(this.TargetContext)
+    let createType (typeName, _) =
+        let myAssem = ProvidedAssembly()
         let myType = ProvidedTypeDefinition(myAssem, ns, typeName, Some typeof<obj>, isErased=false)
         let embedString = "test"
         // Special TPSDK support for embedding Decimal values
@@ -37,7 +35,7 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
         let embedDTO = System.DateTimeOffset.Now
         // Special TPSDK support for embedding System.Type values
         let embedType = typeof<int>
-        let testCode args = 
+        let testCode _args = 
              <@@ // NewArray
                  let arr = [| 1;2;3;4 |]
                  // Coerce

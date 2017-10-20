@@ -438,14 +438,13 @@ namespace ProviderImplementation.ProvidedTypes
         /// Although not strictly required by the type provider specification, this is required when doing basic operations like FullName on
         /// .NET symbolic types made from this type, e.g. when building Nullable<SomeProvidedType[]>.FullName
         override __.DeclaringType =
-            match kind,typeArgs with
-            | ProvidedSymbolKind.SDArray,[arg] -> null
-            | ProvidedSymbolKind.Array _,[arg] -> null
-            | ProvidedSymbolKind.Pointer,[arg] -> null
-            | ProvidedSymbolKind.ByRef,[arg] -> null
-            | ProvidedSymbolKind.Generic gty,_ -> gty.DeclaringType
-            | ProvidedSymbolKind.FSharpTypeAbbreviation _,_ -> null
-            | _ -> failwith "unreachable"
+            match kind with
+            | ProvidedSymbolKind.SDArray -> null
+            | ProvidedSymbolKind.Array _ -> null
+            | ProvidedSymbolKind.Pointer -> null
+            | ProvidedSymbolKind.ByRef -> null
+            | ProvidedSymbolKind.Generic gty -> gty.DeclaringType
+            | ProvidedSymbolKind.FSharpTypeAbbreviation _ -> null
 
         override __.IsAssignableFrom(otherTy: Type) =
             match kind with
@@ -465,7 +464,7 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedSymbolKind.Array _,[arg] -> arg.Name + "[*]"
             | ProvidedSymbolKind.Pointer,[arg] -> arg.Name + "*"
             | ProvidedSymbolKind.ByRef,[arg] -> arg.Name + "&"
-            | ProvidedSymbolKind.Generic gty, typeArgs -> gty.Name
+            | ProvidedSymbolKind.Generic gty, _typeArgs -> gty.Name
             | ProvidedSymbolKind.FSharpTypeAbbreviation (_,_,path),_ -> path.[path.Length-1]
             | _ -> failwith "unreachable"
 
@@ -540,7 +539,7 @@ namespace ProviderImplementation.ProvidedTypes
         // For example, int<kg>
         member __.IsFSharpUnitAnnotated = match kind with ProvidedSymbolKind.Generic gtd -> not gtd.IsGenericTypeDefinition | _ -> false
 
-        override this.GetConstructorImpl(_bindingFlags, _binder, _callConventions, _types, _modifiers) = null
+        override __.GetConstructorImpl(_bindingFlags, _binder, _callConventions, _types, _modifiers) = null
 
         override this.GetMethodImpl(name, bindingFlags, _binderBinder, _callConvention, _types, _modifiers) =
             match kind with
@@ -599,7 +598,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.AssemblyQualifiedName = notRequired this "AssemblyQualifiedName" this.FullName
 
-        override this.GetCustomAttributes(_inherit) = emptyAttributes
+        override __.GetCustomAttributes(_inherit) = emptyAttributes
 
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
 
@@ -1200,7 +1199,7 @@ namespace ProviderImplementation.ProvidedTypes
         new (parameterName:string, parameterType:Type, ?isOut:bool, ?optionalValue:obj) = 
             ProvidedParameter(false, parameterName, parameterType, isOut, optionalValue)
 
-        new (isTgt, parameterName:string, parameterType:Type, isOut:bool option, optionalValue:obj option) = 
+        new (_isTgt, parameterName:string, parameterType:Type, isOut:bool option, optionalValue:obj option) = 
             let isOut = defaultArg isOut false
             let attrs = (if isOut then ParameterAttributes.Out else enum 0) |||
                         (match optionalValue with None -> enum 0 | Some _ -> ParameterAttributes.Optional ||| ParameterAttributes.HasDefault)
@@ -1715,7 +1714,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member this.ErasedBaseType = ProvidedTypeDefinition.EraseType(this.BaseType)
 
-        override this.GetConstructors bindingFlags =
+        override __.GetConstructors bindingFlags =
             getMembers() 
             |> Array.choose (function :? ConstructorInfo as c when memberBinds false bindingFlags c.IsStatic c.IsPublic -> Some c | _ -> None)
 
@@ -1749,7 +1748,7 @@ namespace ProviderImplementation.ProvidedTypes
             if xs.Length > 1 then failwith "GetConstructorImpl. not support overloads"
             if xs.Length > 0 then xs.[0] else null
 
-        override __.GetMethodImpl(name, bindingFlags, _binderBinder, _callConvention, types, _modifiers): MethodInfo =
+        override __.GetMethodImpl(name, bindingFlags, _binderBinder, _callConvention, _types, _modifiers): MethodInfo =
             let xs = this.GetMethods bindingFlags |> Array.filter (fun m -> m.Name = name)
             if xs.Length > 1 then failwith "GetMethodImpl. not support overloads"
             if xs.Length > 0 then xs.[0] else null
@@ -1758,7 +1757,7 @@ namespace ProviderImplementation.ProvidedTypes
             let xs = this.GetFields bindingFlags |> Array.filter (fun m -> m.Name = name)
             if xs.Length > 0 then xs.[0] else null
 
-        override __.GetPropertyImpl(name, bindingFlags, binder, returnType, types, modifiers) =
+        override __.GetPropertyImpl(name, bindingFlags, _binder, _returnType, _types, _modifiers) =
             let xs = this.GetProperties bindingFlags |> Array.filter (fun m -> m.Name = name)
             if xs.Length > 0 then xs.[0] else null
 
@@ -2018,9 +2017,9 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
     module Utils =
         [<Struct>]
         type StructOption<'T> (hasValue: bool, value: 'T) =
-            member x.IsNone = not hasValue
-            member x.HasValue = hasValue
-            member x.Value = value
+            member __.IsNone = not hasValue
+            member __.HasValue = hasValue
+            member __.Value = value
 
         type uoption<'T> = StructOption<'T>
 
@@ -2049,8 +2048,6 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             | USome ns -> ns + "." + nm
 
         let uoptionOfObj x = match x with null -> UNone | s -> USome s
-
-
 
         let singleOfBits (x:int32) = System.BitConverter.ToSingle(System.BitConverter.GetBytes(x),0)
         let doubleOfBits (x:int64) = System.BitConverter.Int64BitsToDouble(x)
@@ -2196,12 +2193,12 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
     [<Sealed>]
     type ILAssemblyRef(name: string, hash: byte[] uoption, publicKey: PublicKey uoption, retargetable: bool, version: Version uoption, locale: string uoption)  =
-        member x.Name=name
-        member x.Hash=hash
-        member x.PublicKey=publicKey
-        member x.Retargetable=retargetable
-        member x.Version=version
-        member x.Locale=locale
+        member __.Name=name
+        member __.Hash=hash
+        member __.PublicKey=publicKey
+        member __.Retargetable=retargetable
+        member __.Version=version
+        member __.Locale=locale
 
         member x.ToAssemblyName() =
             let asmName = AssemblyName(Name=x.Name)
@@ -2281,10 +2278,10 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
 
     type ILModuleRef(name:string, hasMetadata: bool, hash: byte[] uoption) =
-        member x.Name=name
-        member x.HasMetadata=hasMetadata
-        member x.Hash=hash
-        override x.ToString() = "module " + name
+        member __.Name=name
+        member __.HasMetadata=hasMetadata
+        member __.Hash=hash
+        override __.ToString() = "module " + name
 
 
     [<RequireQualifiedAccess>]
@@ -2398,11 +2395,11 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
 
     and ILTypeSpec(typeRef: ILTypeRef, inst: ILGenericArgs) =
-        member x.TypeRef = typeRef
+        member __.TypeRef = typeRef
         member x.Scope = x.TypeRef.Scope
         member x.Name = x.TypeRef.Name
         member x.Namespace = x.TypeRef.Namespace
-        member x.GenericArgs = inst
+        member __.GenericArgs = inst
         member x.BasicQualifiedName =
             let tc = x.TypeRef.BasicQualifiedName
             if x.GenericArgs.Length = 0 then
@@ -7437,7 +7434,7 @@ namespace ProviderImplementation.ProvidedTypes
     /// Clones namespaces, type providers, types and members provided by tp, renaming namespace nsp1 into namespace nsp2.
 
     /// Makes a type definition read from a binary available as a System.Type. Not all methods are implemented.
-    and TargetTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly: ILAssemblyRef -> Choice<TargetAssembly,exn>, asm: TargetAssembly, declTyOpt: Type option, inp: ILTypeDef) as this =
+    and TargetTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly: ILAssemblyRef -> Choice<Assembly,exn>, asm: TargetAssembly, declTyOpt: Type option, inp: ILTypeDef) as this =
         inherit TypeDelegator()
 
         // Note: For F# type providers we never need to view the custom attributes
@@ -7643,13 +7640,13 @@ namespace ProviderImplementation.ProvidedTypes
         and txScopeRef(sref: ILScopeRef) =
             match sref with
             | ILScopeRef.Assembly aref -> match tryBindAssembly aref with Choice1Of2 asm -> asm | Choice2Of2 exn -> raise exn
-            | ILScopeRef.Local -> asm
-            | ILScopeRef.Module _ -> asm
+            | ILScopeRef.Local -> (asm :> Assembly)
+            | ILScopeRef.Module _ -> (asm :> Assembly)
 
         /// Bind a reference to a type
         and txILTypeRef(tref: ILTypeRef): Type =
             match tref.Scope with
-            | ILTypeRefScope.Top scoref -> txScopeRef(scoref).BindType(tref.Namespace, tref.Name)
+            | ILTypeRefScope.Top scoref -> txScopeRef(scoref).GetType(joinILTypeName tref.Namespace tref.Name)
             | ILTypeRefScope.Nested encl -> txILTypeRef(encl).GetNestedType(tref.Name,bindAll)
 
         /// Bind a reference to a constructor
@@ -7936,7 +7933,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MetadataToken = hash location
 
     /// Implements System.Reflection.Assembly backed by .NET metadata provided by an ILModuleReader
-    and TargetAssembly(ilGlobals, tryBindAssembly: ILAssemblyRef -> Choice<TargetAssembly,exn>, reader: ILModuleReader option, location: string) as asm =
+    and TargetAssembly(ilGlobals, tryBindAssembly: ILAssemblyRef -> Choice<Assembly,exn>, reader: ILModuleReader option, location: string) as asm =
         inherit Assembly()
 
         // A table tracking how type definition objects are translated.
@@ -8010,7 +8007,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.TxILTypeDef declTyOpt inp = txILTypeDef declTyOpt inp
 
-        member x.Reader with get() = reader  and set v = (if reader.IsSome then failwith "reader on TargetAssembly already set"); reader <- v
+        member __.Reader with get() = reader  and set v = (if reader.IsSome then failwith "reader on TargetAssembly already set"); reader <- v
 
         member x.BindType(nsp:string uoption, nm:string) =
             match x.TryBindType(nsp, nm) with
@@ -8027,7 +8024,10 @@ namespace ProviderImplementation.ProvidedTypes
                 | ILScopeRef.Assembly aref2 ->
                     let ass2opt = tryBindAssembly(aref2)
                     match ass2opt with
-                    | Choice1Of2 ass2 -> ass2.TryBindType(nsp, nm)
+                    | Choice1Of2 ass2 -> 
+                        match ass2.GetType(joinILTypeName nsp nm)  with 
+                        | null -> None
+                        | ty -> Some ty
                     | Choice2Of2 _err -> None
                 | _ ->
                     printfn "unexpected non-forwarder during binding"
@@ -8037,8 +8037,70 @@ namespace ProviderImplementation.ProvidedTypes
         override x.ToString() = "tgt assembly " + x.FullName
 
 
+
+    type ProvidedAssembly(isTgt: bool, assemblyName:AssemblyName, assemblyFileName: string) as this =
+      
+        inherit Assembly()
+        let theTypes = ResizeArray<ProvidedTypeDefinition[] * string list option>()
+        
+        let addTypes (providedTypeDefinitions:ProvidedTypeDefinition[], enclosingTypeNames: string list option) =
+            for pt in providedTypeDefinitions do
+                if pt.IsErased then failwith ("The provided type "+pt.Name+"is marked as erased and cannot be converted to a generated type. Set 'IsErased=false' on the ProvidedTypeDefinition")
+                if not isTgt && pt.BelongsToTargetModel then failwithf "Expected '%O' to be a source ProvidedTypeDefinition. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" pt
+                if isTgt && not pt.BelongsToTargetModel then failwithf "Expected '%O' to be a target ProvidedTypeDefinition. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" pt
+                if not (Object.ReferenceEquals(this, pt.Assembly)) then failwithf "Mismached assemblies for a ProvidedTypeDefinition - you are adding the type '%O' to assembly '%O' but it was already given assembly '%O' as its assembly when it was created. These should match." pt assemblyName.Name (pt.Assembly.GetName().Name)
+                pt.SetAssemblyInternal (K (this :> Assembly))
+            theTypes.Add (providedTypeDefinitions, enclosingTypeNames)
+
+        let theTypesArray = lazy (theTypes.ToArray() |> Array.collect (function (ptds, None) -> Array.map (fun ptd -> (ptd :> Type)) ptds | _ -> [| |]))
+
+        override x.GetReferencedAssemblies() = notRequired x "GetReferencedAssemblies" (assemblyName.ToString())
+
+        override __.GetName() = assemblyName
+
+        override __.FullName = assemblyName.ToString()
+
+        override __.Location = assemblyFileName
+
+        override __.ReflectionOnly = true
+
+        override __.GetTypes () = theTypesArray.Force()
+
+        override x.GetType (nm: string) = 
+            if nm.Contains("+") then
+                let i = nm.LastIndexOf("+")
+                let enc,nm2 = nm.[0..i-1], nm.[i+1..]
+                match x.GetType(enc) with
+                | null -> null
+                | t -> t.GetNestedType(nm2,bindAll)
+            else
+                theTypesArray.Force() 
+                |> Array.tryPick (fun ty -> if ty.FullName = nm then Some ty else None) 
+                |> Option.toObj
+        
+        new () = 
+            let assemblyFileName = Path.ChangeExtension(Path.GetTempFileName(), "dll")
+            let simpleName = Path.GetFileNameWithoutExtension(assemblyFileName)
+            ProvidedAssembly(AssemblyName(simpleName), assemblyFileName)
+
+        new (assemblyName, assemblyFileName) = 
+            ProvidedAssembly(false, assemblyName, assemblyFileName)
+
+        member __.BelongsToTargetModel = isTgt
+
+        member __.AddNestedTypes (types, enclosingGeneratedTypeNames) = 
+            addTypes (Array.ofList types, Some enclosingGeneratedTypeNames)
+
+        member __.AddTypes (types) = 
+            addTypes (Array.ofList types, None)
+
+        member __.AddTheTypes (types, enclosingGeneratedTypeNames) = 
+            addTypes (types, enclosingGeneratedTypeNames)
+
+        member __.GetTheTypes () = theTypes.ToArray()
+
 //====================================================================================================
-// ProvidedTypeTarget
+// ProvidedTypesContext
 //
 // A binding context for cross-targeting type providers
 
@@ -8166,10 +8228,10 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mkReader ref =
             try let reader = ILModuleReaderAfterReadingAllBytes(ref, ilGlobals.Force())
-                Choice1Of2(TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, Some reader, ref))
+                Choice1Of2(TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRefToTgt, Some reader, ref) :> Assembly)
             with err -> Choice2Of2 err
 
-        let targetAssembliesTable_ =  ConcurrentDictionary<_,_>()
+        let targetAssembliesTable_ =  ConcurrentDictionary<string,Choice<Assembly,_>>()
         let targetAssemblies_ = ResizeArray<Assembly>()
         let targetAssembliesQueue = ResizeArray<_>()
         do targetAssembliesQueue.Add (fun () -> 
@@ -8187,7 +8249,7 @@ namespace ProviderImplementation.ProvidedTypes
         let getTargetAssemblies() =  flush(); targetAssemblies_.ToArray()
         let getTargetAssembliesTable() = flush(); targetAssembliesTable_
 
-        let tryBindAssemblySimple(simpleName:string): Choice<TargetAssembly, exn> =
+        let tryBindAssemblySimple(simpleName:string): Choice<Assembly, exn> =
             let table = getTargetAssembliesTable()
             if table.ContainsKey(simpleName) then table.[simpleName]
             else Choice2Of2 (Exception(sprintf "assembly %s not found" simpleName))
@@ -8211,6 +8273,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// When translating quotations, Expr.Var's are translated to new variable respecting reference equality.
         let varTableFwd = Dictionary<Var, Var>()
         let varTableBwd = Dictionary<Var, Var>()
+        let assemblyTableFwd = Dictionary<Assembly, Assembly>()
         let typeTableFwd = Dictionary<Type, Type>()
         let typeTableBwd = Dictionary<Type, Type>()
 
@@ -8231,7 +8294,12 @@ namespace ProviderImplementation.ProvidedTypes
                 |> Seq.exists (fun (originalName:string, newName:string) ->
                     originalAssemblyName.StartsWith originalName && not (asm.FullName.StartsWith(newName)))
 
-            if restrictedAndMatching then None
+            // Check if the assembly can be queried for types yet.  Cross-assembly recursive linking back to generated assemblies
+            // is not supported in some cases where recursive linking is needed during the process of generation itself.
+            let canQuery = (match asm with :? TargetAssembly as t  -> t.Reader.IsSome | _ -> true)
+
+            if not canQuery then None
+            elif restrictedAndMatching then None
             elif asm.FullName.StartsWith "FSI-ASSEMBLY" then
                 // when F# Interactive is the host of the design time assembly,
                 // for each type in the runtime assembly there might be multiple
@@ -8483,8 +8551,20 @@ namespace ProviderImplementation.ProvidedTypes
           match typeTableFwd.TryGetValue(x) with
           | true, newT -> (newT :?> ProvidedTypeDefinition)
           | false, _ ->
+            let container = 
+                match x.Container with 
+                | TypeContainer.Namespace(assemf, nm) ->
+                    TypeContainer.Namespace((fun () -> 
+                        match assemf() with 
+                        | :? ProvidedAssembly as assembly -> convProvidedAssembly assembly
+                        | a -> a), nm)
+                | c -> c // nested types patched below
+
+            // Create the type definition with contents mapped to the target
+            // Use a 'let rec' to allow access to the target as the declaring
+            // type of the contents in a delayed way.
             let rec xT : ProvidedTypeDefinition = 
-                ProvidedTypeDefinition(true, x.Container, x.Name, 
+                ProvidedTypeDefinition(true, container, x.Name, 
                                         (x.BaseTypeInternal >> Option.map convTypeToTgt), 
                                         x.AttributesRaw, 
                                         (x.EnumUnderlyingTypeInternal >> Option.map convTypeToTgt), 
@@ -8499,6 +8579,7 @@ namespace ProviderImplementation.ProvidedTypes
                                         (x.GetCustomAttributesData >> convCustomAttributesDataToTgt),
                                         x.HideObjectMethods, 
                                         x.NonNullable) 
+
             Debug.Assert(not (typeTableFwd.ContainsKey(x)))
             typeTableFwd.[x] <- xT
             if x.IsNested then
@@ -8575,6 +8656,21 @@ namespace ProviderImplementation.ProvidedTypes
         and convProvidedMethodDefToTgt declTyT (x: ProvidedMethod) = 
             convMemberDefToTgt declTyT x :?> ProvidedMethod
 
+        and convProvidedAssembly (assembly: ProvidedAssembly) = 
+          match assemblyTableFwd.TryGetValue(assembly) with
+          | true, newT -> newT
+          | false, _ ->
+            let tgtAssembly = ProvidedAssembly(true, assembly.GetName(), assembly.Location) 
+
+            for (types, enclosingGeneratedTypeNames) in assembly.GetTheTypes() do 
+                let typesT = Array.map convProvidedTypeDefToTgt types
+                tgtAssembly.AddTheTypes (typesT, enclosingGeneratedTypeNames) 
+
+            assemblyTableFwd.Add(assembly, tgtAssembly)
+            this.AddSourceAssembly(assembly)
+            this.AddTargetAssembly(assembly.GetName(), tgtAssembly)
+            (tgtAssembly :> Assembly)
+
         let rec convNamespaceToTgt (x: IProvidedNamespace) =
             { new IProvidedNamespace with
                   member __.GetNestedNamespaces() = Array.map convNamespaceToTgt (x.GetNestedNamespaces())
@@ -8591,22 +8687,13 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.ConvertSourceNamespaceToTarget ns = convNamespaceToTgt ns
         member __.ConvertSourceProvidedTypeDefinitionToTarget ptd = convProvidedTypeDefToTgt ptd
-        member __.TryBindILAssemblyRef(aref: ILAssemblyRef): Choice<TargetAssembly, exn> = tryBindAssemblySimple(aref.Name)
+        member __.TryBindILAssemblyRefToTgt(aref: ILAssemblyRef): Choice<Assembly, exn> = tryBindAssemblySimple(aref.Name)
 
-        member __.TryBindTargetAssemblyName(aref: AssemblyName): Choice<TargetAssembly, exn> = tryBindAssemblySimple(aref.Name)
+        member __.TryBindAssemblyNameToTgt(aref: AssemblyName): Choice<Assembly, exn> = tryBindAssemblySimple(aref.Name)
+
+        member __.TryBindSimpleAssemblyNameToTgt(assemblyName: string) = tryBindAssemblySimple(assemblyName) 
 
         member __.ILGlobals = ilGlobals.Value
-
-        member __.TryBindTargetAssembly(aref: AssemblyName) =
-            match tryBindAssemblySimple(aref.Name) with 
-            | Choice1Of2 asm -> Choice1Of2(asm :> Assembly)
-            | Choice2Of2 exn ->  Choice2Of2 exn
-
-        member __.TryBindTargetAssemblyBySimpleName(assemblyName: string) =
-            match tryBindAssemblySimple(assemblyName) with 
-            | Choice1Of2 asm -> Choice1Of2(asm :> Assembly)
-            | Choice2Of2 exn ->  Choice2Of2 exn
-
 
         member __.ReferencedAssemblyPaths = referencedAssemblyPaths
 
@@ -8615,14 +8702,15 @@ namespace ProviderImplementation.ProvidedTypes
         member __.GetSourceAssemblies() =  getSourceAssemblies()
 
         member x.FSharpCoreAssemblyVersion = fsharpCoreRefVersion.Force()
+
         member __.ReadRelatedAssembly(fileName) = 
             let reader = ILModuleReaderAfterReadingAllBytes(fileName, ilGlobals.Force()) 
-            TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRef, Some reader, fileName) :> Assembly
+            TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRefToTgt, Some reader, fileName) :> Assembly
 
         member __.AddSourceAssembly(asm: Assembly) = 
             sourceAssembliesQueue.Add (fun () -> [| asm |])
 
-        member __.AddTargetAssembly(asmName: AssemblyName, asm: TargetAssembly) = 
+        member __.AddTargetAssembly(asmName: AssemblyName, asm: Assembly) = 
             targetAssembliesQueue.Add (fun () -> 
                 targetAssembliesTable_.[asmName.Name] <- Choice1Of2 asm
                 targetAssemblies_.Add asm)
@@ -12665,7 +12753,7 @@ namespace ProviderImplementation.ProvidedTypes
             |> ignore
 
 //====================================================================================================
-// ProvidedAssembly - the assembly compiler for generative type providers
+// ProvidedAssembly - model for generated assembly fragments
 
 namespace ProviderImplementation.ProvidedTypes
 
@@ -13381,31 +13469,8 @@ namespace ProviderImplementation.ProvidedTypes
     // ProvidedTargetAssembly: the assembly compiler for generative type providers.
 
     /// Implements System.Reflection.Assembly backed by ILModuleReader over generated bytes 
-    type ProvidedTargetAssembly(assemblyName:AssemblyName, assemblyFileName: string, context: ProvidedTypesContext) as this =
+    type AssemblyCompiler(targetAssembly: ProvidedAssembly, context: ProvidedTypesContext) =
 
-        inherit TargetAssembly(context.ILGlobals, context.TryBindILAssemblyRef, None, assemblyFileName) 
-
-        // The generation of theTypes is triggered by first force of assemblyLazy, either by GetFinalBytes or some other dereference of the Assembly
-        let assemblyLazy =
-            lazy
-                this.Generate()
-                (this :> Assembly)
-
-        static let theTable = ConcurrentDictionary<string, Lazy<byte[]>>()
-
-        let convTypeToTgt ty = context.ConvertSourceTypeToTarget ty
-
-        let theTypesT = ResizeArray<ProvidedTypeDefinition * string list option>()
-
-        do theTable.[assemblyName.ToString()] <- lazy this.GetFinalBytes()
-
-        let addTypes (providedTypeDefinitions:ProvidedTypeDefinition list, enclosingTypeNames: string list option) =
-            for pt in providedTypeDefinitions do
-                Debug.Assert(not pt.BelongsToTargetModel, "expected a source ProvidedTypeDefinition")
-                let ptT = context.ConvertSourceProvidedTypeDefinitionToTarget pt
-                Debug.Assert(ptT.BelongsToTargetModel, "expected a target ProvidedTypeDefinition")
-                theTypesT.Add(ptT,enclosingTypeNames)
-                ptT.SetAssemblyInternal (fun () -> assemblyLazy.Force())
 
         let typeMap = Dictionary<ProvidedTypeDefinition,ILTypeBuilder>(HashIdentity.Reference)
         let typeMapExtra = Dictionary<string,ILTypeBuilder>(HashIdentity.Structural)
@@ -13416,12 +13481,13 @@ namespace ProviderImplementation.ProvidedTypes
             // lambda name should be unique across all types that all type provider might contribute in result assembly
             sprintf "Lambda%O" (Guid.NewGuid())
 
-        let rec typeMembers (tb:ILTypeBuilder)  (td: ProvidedTypeDefinition) =
+        let convTypeToTgt ty = context.ConvertSourceTypeToTarget ty
+        let rec defineNestedTypes (tb:ILTypeBuilder)  (td: ProvidedTypeDefinition) =
             Debug.Assert(td.BelongsToTargetModel, "expected a target ProvidedTypeDefinition in nested type")
             for ntd in td.GetNestedTypes(bindAll) do
-                nestedType tb ntd
+                defineNestedType tb ntd
 
-        and nestedType (tb:ILTypeBuilder)  (ntd: Type) =
+        and defineNestedType (tb:ILTypeBuilder)  (ntd: Type) =
             match ntd with
             | :? ProvidedTypeDefinition as pntd ->
                 if pntd.IsErased then failwith ("The nested provided type "+pntd.Name+" is marked as erased and cannot be converted to a generated type. Set 'IsErased=false' on the ProvidedTypeDefinition")
@@ -13430,7 +13496,7 @@ namespace ProviderImplementation.ProvidedTypes
                 let attributes = adjustTypeAttributes true ntd.Attributes 
                 let ntb = tb.DefineNestedType(pntd.Name,attributes)
                 typeMap.[pntd] <- ntb
-                typeMembers ntb pntd
+                defineNestedTypes ntb pntd
             | _ -> ()
 
         let rec transType (ty:Type) =
@@ -13467,8 +13533,8 @@ namespace ProviderImplementation.ProvidedTypes
             | dt -> ILTypeRefScope.Nested (transTypeRef dt)
 
         and transScopeRef (assem: Assembly): ILScopeRef = 
-            if assem = (this :> Assembly) then ILScopeRef.Local
-            elif assem.GetName().Name = this.GetName().Name then failwith "unexpected non-equivalent assemblies have the same name"
+            if assem = (targetAssembly :> Assembly) then ILScopeRef.Local
+            elif assem.GetName().Name = targetAssembly.GetName().Name then failwith "unexpected non-equivalent assemblies have the same name"
             else ILScopeRef.Assembly (ILAssemblyRef.FromAssemblyName (assem.GetName()))
 
 
@@ -13549,29 +13615,18 @@ namespace ProviderImplementation.ProvidedTypes
                 let ca = mkILCustomAttribMethRef (transCtorSpec attr.Constructor, constructorArgs, namedProps, namedFields)
                 f ca
 
-        override x.GetName () = assemblyName
-
-        override x.FullName = x.GetName().ToString()
-
-        member x.AddNestedTypes (types, enclosingGeneratedTypeNames) = addTypes (types, Some enclosingGeneratedTypeNames)
-
-        member x.AddTypes (types) = addTypes (types, None)
-
-        /// Emit the given provided type definitions into an assembly and adjust 'Assembly' property of all type definitions to return that
-        /// assembly.
-        member this.Generate() =
-        
-          if this.Reader.IsNone then
+        member __.Compile() =
+            let providedTypeDefinitionsT = targetAssembly.GetTheTypes() |> Array.collect (fun (tds,nsps) -> Array.map (fun td -> (td,nsps)) tds)
             let ilg = context.ILGlobals
+            let assemblyName = targetAssembly.GetName()
+            let assemblyFileName = targetAssembly.Location
             let assemblyBuilder = ILAssemblyBuilder(assemblyName, assemblyFileName, ilg)
             let assemblyMainModule = assemblyBuilder.MainModule
-            let providedTypeDefinitionsT = theTypesT.ToArray()
-            theTypesT.Clear()
 
             // Set the Assembly on the type definitions
             for (ptdT,_) in providedTypeDefinitionsT do
                 if not ptdT.BelongsToTargetModel then failwithf "expected '%O' to belong to the target model" ptdT
-                ptdT.SetAssemblyInternal (K (this :> Assembly))
+                ptdT.SetAssemblyInternal (K (targetAssembly :> Assembly))
 
             // phase 1 - define types
             for (pt,enclosingGeneratedTypeNames) in providedTypeDefinitionsT do
@@ -13584,7 +13639,7 @@ namespace ProviderImplementation.ProvidedTypes
                     let attributes = adjustTypeAttributes false attributes
                     let tb = assemblyMainModule.DefineType(uoptionOfObj pt.Namespace, pt.Name, attributes)
                     typeMap.[pt] <- tb
-                    typeMembers tb pt
+                    defineNestedTypes tb pt
 
                 | Some ns ->
                     let otb,_ =
@@ -13608,7 +13663,7 @@ namespace ProviderImplementation.ProvidedTypes
                                 typeMapExtra.[fullName] <- tb
                                 tb
                             (Some tb, fullName))
-                    nestedType otb.Value pt
+                    defineNestedType otb.Value pt
 
 
             // phase 1b - emit base types
@@ -13824,94 +13879,17 @@ namespace ProviderImplementation.ProvidedTypes
             //printfn "saving generated binary to '%s'" assemblyFileName
             assemblyBuilder.Save ()
             //printfn "re-reading generated binary from '%s'" assemblyFileName
-            this.Reader <- Some (ILModuleReaderAfterReadingAllBytes(assemblyFileName, ilg))
+            let reader = ILModuleReaderAfterReadingAllBytes(assemblyFileName, ilg)
 #if DEBUG
             printfn "generated binary is at '%s'" assemblyFileName
 #else
             File.Delete assemblyFileName
 #endif
-        member this.GetFinalBytes() =
-            assemblyLazy.Force() |> ignore
-            //printfn "got bytes for generated binary from '%s'" assemblyFileName
-            this.Reader.Value.Bytes
+            reader.Bytes
 
 //#if !FX_NO_LOCAL_FILESYSTEM
-        static member RegisterGenerated (ctxt: ProvidedTypesContext, fileName:string) =
-            let assemblyBytes = File.ReadAllBytes fileName
-            //printfn "registering assembly in '%s'" fileName
-            let assembly = ctxt.ReadRelatedAssembly(fileName)
-            //printfn "registered assembly in '%s', FullName='%s'" fileName assembly.FullName
-            let key = assembly.GetName().ToString()
-            theTable.[key] <- Lazy<_>.CreateFromValue assemblyBytes
-            assembly
-
-        static member Table = theTable
 
 
-
-
-    type ProvidedAssembly(assemblyName:AssemblyName, assemblyFileName: string, context: ProvidedTypesContext) as this =
-      
-        inherit Assembly()
-        let theTypes = ResizeArray<ProvidedTypeDefinition * string list option>()
-        
-        let addTypes (providedTypeDefinitions:ProvidedTypeDefinition list, enclosingTypeNames: string list option) =
-            for pt in providedTypeDefinitions do
-                if pt.IsErased then failwith ("The provided type "+pt.Name+"is marked as erased and cannot be converted to a generated type. Set 'IsErased=false' on the ProvidedTypeDefinition")
-                if pt.BelongsToTargetModel then failwithf "Expected '%O' to be a source ProvidedTypeDefinition. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" pt
-                if not (Object.ReferenceEquals(this, pt.Assembly)) then failwithf "Mismached assemblies for a ProvidedTypeDefinition - you are adding the type '%O' to assembly '%O' but it was already given assembly '%O' as its assembly when it was created. These should match." pt assemblyName.Name (pt.Assembly.GetName().Name)
-                theTypes.Add (pt, enclosingTypeNames)
-                pt.SetAssemblyInternal (K (this :> Assembly))
-
-        let theTypesArray = lazy (theTypes.ToArray() |> Array.choose (function (ptd, None) -> Some (ptd :> Type) | _ -> None))
-
-        let tgtAssembly = ProvidedTargetAssembly(assemblyName, assemblyFileName, context) 
-
-        do context.AddSourceAssembly(this)
-        do context.AddTargetAssembly(assemblyName, tgtAssembly)
-
-        override x.GetReferencedAssemblies() = notRequired x "GetReferencedAssemblies" (assemblyName.ToString())
-
-        override __.GetName() = assemblyName
-
-        override __.FullName = assemblyName.ToString()
-
-        override __.Location = assemblyFileName
-
-        override __.ReflectionOnly = true
-
-        override x.GetTypes () = theTypesArray.Force()
-
-        override x.GetType (nm: string) = 
-            if nm.Contains("+") then
-                let i = nm.LastIndexOf("+")
-                let enc,nm2 = nm.[0..i-1], nm.[i+1..]
-                match x.GetType(enc) with
-                | null -> null
-                | t -> t.GetNestedType(nm2,bindAll)
-            else
-                theTypesArray.Force() 
-                |> Array.tryPick (fun ty -> if ty.FullName = nm then Some ty else None) 
-                |> Option.toObj
-        
-
-        new (context: ProvidedTypesContext) = 
-            let assemblyFileName = Path.ChangeExtension(Path.GetTempFileName(), "dll")
-            let simpleName = Path.GetFileNameWithoutExtension(assemblyFileName)
-            ProvidedAssembly(AssemblyName(simpleName), assemblyFileName, context)
-
-        member x.AddNestedTypes (types, enclosingGeneratedTypeNames) = 
-            addTypes (types, Some enclosingGeneratedTypeNames)
-            tgtAssembly.AddNestedTypes (types, enclosingGeneratedTypeNames) 
-
-        member x.AddTypes (types) = 
-            addTypes (types, None)
-            tgtAssembly.AddTypes (types) 
-
-        member x.GetTargetAssembly() = (tgtAssembly :> Assembly)
-
-        static member RegisterGeneratedTargetAssembly (ctxt: ProvidedTypesContext, fileName:string) =
-            ProvidedTargetAssembly.RegisterGenerated (ctxt, fileName)
 
 #endif // NO_GENERATIVE
 
@@ -13952,6 +13930,10 @@ namespace ProviderImplementation.ProvidedTypes
                     member __.ResolveTypeName typeName = typesSrc |> Array.tryFind (fun ty -> ty.Name = typeName) |> Option.toObj }
             let nsT = ctxt.ConvertSourceNamespaceToTarget nsSrc
             nsT
+
+#if !NO_GENERATIVE
+        let theTable = ConcurrentDictionary<string, byte[]>()
+#endif
 
         let namespacesT = ResizeArray<IProvidedNamespace>()
 
@@ -14095,11 +14077,27 @@ namespace ProviderImplementation.ProvidedTypes
             member __.GetGeneratedAssemblyContents(assembly:Assembly) =
                 //printfn "looking up assembly '%s'" assembly.FullName
                 let key = assembly.GetName().ToString()
-                match ProvidedTargetAssembly.Table.TryGetValue key with
-                | true,bytes -> bytes.Force()
+                match theTable.TryGetValue key with
+                | true,bytes -> bytes
                 | _ ->
-                    let bytes = File.ReadAllBytes assembly.ManifestModule.FullyQualifiedName
-                    ProvidedTargetAssembly.Table.[key] <- Lazy<_>.CreateFromValue bytes
+                    let bytes = 
+                        match assembly with 
+                        | :? ProvidedAssembly as targetAssembly -> AssemblyCompiler(targetAssembly, ctxt).Compile()
+                        | _ -> File.ReadAllBytes assembly.ManifestModule.FullyQualifiedName
+                    theTable.[key] <- bytes
                     bytes
+
+#if !NO_GENERATIVE
+        member __.RegisterGeneratedTargetAssembly (fileName:string) =
+            let assemblyBytes = File.ReadAllBytes fileName
+            //printfn "registering assembly in '%s'" fileName
+            let assembly = ctxt.ReadRelatedAssembly(fileName)
+            ctxt.AddTargetAssembly(assembly.GetName(), assembly)
+            //printfn "registered assembly in '%s', FullName='%s'" fileName assembly.FullName
+            let key = assembly.GetName().ToString()
+            theTable.[key] <- assemblyBytes
+            assembly
+
+#endif 
 #endif
 
