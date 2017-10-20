@@ -10,7 +10,6 @@ module FSharp.TypeProviders.SDK.Tests.StaticProperty
 open System
 open System.IO
 open System.Reflection
-open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Core.CompilerServices
@@ -27,12 +26,12 @@ type ErasingProvider (config : TypeProviderConfig) as this =
 
     let createTypes () =
         let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let myStaticGetterProp = ProvidedProperty("MyStaticGetterProperty", typeof<string list>, isStatic = true, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
-        let myStaticSetterProp = ProvidedProperty("MyStaticSetterProperty", typeof<string list>, isStatic = true, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>), setterCode = (fun args -> <@@ () @@>))
-        let myStaticMethod = ProvidedMethod("MyStaticMethod", [ ProvidedParameter("paramName",typeof<string list>) ], typeof<string list>, isStatic = true, invokeCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
-        let myGetterProp = ProvidedProperty("MyGetterProperty", typeof<string list>, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
-        let mySetterProp = ProvidedProperty("MySetterProperty", typeof<string list>, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>), setterCode = (fun args -> <@@ () @@>))
-        let myMethod = ProvidedMethod("MyMethod", [ ProvidedParameter("paramName",typeof<string list>) ], typeof<string list>, invokeCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let myStaticGetterProp = ProvidedProperty("MyStaticGetterProperty", typeof<string list>, isStatic = true, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let myStaticSetterProp = ProvidedProperty("MyStaticSetterProperty", typeof<string list>, isStatic = true, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>), setterCode = (fun _args -> <@@ () @@>))
+        let myStaticMethod = ProvidedMethod("MyStaticMethod", [ ProvidedParameter("paramName",typeof<string list>) ], typeof<string list>, isStatic = true, invokeCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let myGetterProp = ProvidedProperty("MyGetterProperty", typeof<string list>, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let mySetterProp = ProvidedProperty("MySetterProperty", typeof<string list>, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>), setterCode = (fun _args -> <@@ () @@>))
+        let myMethod = ProvidedMethod("MyMethod", [ ProvidedParameter("paramName",typeof<string list>) ], typeof<string list>, invokeCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
         myType.AddMembers [myStaticGetterProp; myStaticSetterProp; myGetterProp; mySetterProp]
         myType.AddMembers [myStaticMethod; myMethod ]
 
@@ -52,7 +51,7 @@ type ErasingConstructorProvider (config : TypeProviderConfig) as this =
     let createTypes () =
         let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
 
-        let ctor = ProvidedConstructor([], invokeCode = fun args -> <@@ ["My internal state"] :> obj @@>)
+        let ctor = ProvidedConstructor([], invokeCode = fun _args -> <@@ ["My internal state"] :> obj @@>)
         myType.AddMember(ctor)
 
         let ctor2 = ProvidedConstructor([ProvidedParameter("InnerState", typeof<string list>)], invokeCode = fun args -> <@@ (%%(args.[0]):string list) :> obj @@>)
@@ -73,9 +72,9 @@ type ErasingProviderWithStaticParams (config : TypeProviderConfig) as this =
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
 
-    let createType (typeName, n:int) =
+    let createType (typeName, _n:int) =
         let myType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>)
-        let myProp = ProvidedProperty("MyGetterProperty", typeof<string list>, isStatic = true, getterCode = (fun args -> <@@ Set.ofList [ "Hello world" ] @@>))
+        let myProp = ProvidedProperty("MyGetterProperty", typeof<string list>, isStatic = true, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
         myType.AddMember(myProp)
         myType
 
@@ -204,16 +203,16 @@ let primitives =
       "System.Char",  typeof<char>, box '1' ]
 
 let nonPrimitives = 
-    [ "System.DateTime", typeof<System.DateTime>, box System.DateTime.Now
-      "System.TimeSpan", typeof<System.TimeSpan>, box System.TimeSpan.Zero
-      "System.DayOfWeek", typeof<System.DayOfWeek>, box System.DayOfWeek.Friday ]
+    [ "System.DateTime", typeof<DateTime>, box DateTime.Now
+      "System.TimeSpan", typeof<TimeSpan>, box TimeSpan.Zero
+      "System.DayOfWeek", typeof<DayOfWeek>, box DayOfWeek.Friday ]
 
 [<Fact>]
 let ``Check target primitive types are identical to design-time types``() : unit  = 
     let refs = Targets.DotNet45FSharp31Refs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
-    let mscorlib31 = match tp.TargetContext.TryBindTargetAssemblyBySimpleName("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
     // primitive types with element types are ALWAYS equivalent the design-time types
     for tname, sourceType, _ in primitives do
         let targetType = mscorlib31.GetType(tname)
@@ -224,7 +223,7 @@ let ``Check target non-primitive types are different to design-time types``() : 
     let refs = Targets.DotNet45FSharp31Refs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
-    let mscorlib31 = match tp.TargetContext.TryBindTargetAssemblyBySimpleName("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
     // non-primitive types should be _not_ be equal - we should see the target type in the referenced assemblies
     for tname, sourceType, _ in nonPrimitives do
         let targetType = mscorlib31.GetType(tname)
@@ -235,7 +234,7 @@ let ``Check type remapping functions work for primitives``() : unit  =
     let refs = Targets.DotNet45FSharp31Refs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
-    let mscorlib31 = match tp.TargetContext.TryBindTargetAssemblyBySimpleName("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
     for tname, sourceType, _ in primitives do
         let targetType = mscorlib31.GetType(tname)
         Assert.Equal(targetType, tp.TargetContext.ConvertSourceTypeToTarget sourceType)
@@ -247,7 +246,7 @@ let ``Check type remapping functions work for nonPrimtives``() : unit  =
     let refs = Targets.DotNet45FSharp31Refs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
-    let mscorlib31 = match tp.TargetContext.TryBindTargetAssemblyBySimpleName("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
     for tname, sourceType, _ in nonPrimitives do
         let targetType = mscorlib31.GetType(tname)
         // TODO: determine why this one is failing....
@@ -260,14 +259,14 @@ let ``Check can create Expr Value nodes for primitive types``() : unit  =
     let refs = Targets.DotNet45FSharp31Refs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
-    let mscorlib31 = match tp.TargetContext.TryBindTargetAssemblyBySimpleName("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
     // primitive types with element types are ALWAYS equivalent the design-time types
-    for tname, sourceType, sampleValue in primitives do
+    for tname, _sourceType, sampleValue in primitives do
         let targetType = mscorlib31.GetType(tname)
         Quotations.Expr.Value(sampleValue, targetType) |> ignore // does not throw
 
     // We expect Expr.Value to fail for non-primitive compile-time types.  This is a check in the F# quotations library
-    for tname, sourceType, sampleValue in nonPrimitives do
+    for _tname, sourceType, sampleValue in nonPrimitives do
        Quotations.Expr.Value(sampleValue, sourceType) |> ignore // no exception
 
 [<Fact>]
@@ -275,9 +274,9 @@ let ``Check can't create Expr Value nodes for non-primitive types``() : unit  =
     let refs = Targets.DotNet45FSharp31Refs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
-    let mscorlib31 = match tp.TargetContext.TryBindTargetAssemblyBySimpleName("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
     // We expect Expr.Value to fail for non-primitive compile-time types.  This is a check in the F# quotations library
-    for tname, sourceType, sampleValue in nonPrimitives do
+    for tname, _sourceType, sampleValue in nonPrimitives do
         try 
            let targetType = mscorlib31.GetType(tname)
            Quotations.Expr.Value(sampleValue, targetType) |> ignore

@@ -13,10 +13,8 @@ module FSharp.TypeProviders.SDK.Tests.GenerativeEnumsProvisionTests
 
 open System
 open System.Reflection
-open System.IO
 open Microsoft.FSharp.Core.CompilerServices
 open Xunit
-open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 
@@ -26,8 +24,7 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces (config)
 
     let ns = "Enums.Provided"
-    let asm = Assembly.GetExecutingAssembly()
-    let tempAssembly = ProvidedAssembly(this.TargetContext)
+    let tempAssembly = ProvidedAssembly()
     let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
 
     let createEnum name (values: list<string*int>) =
@@ -70,7 +67,7 @@ let testProvidedAssembly test =
         let assembly = Assembly.Load assemContents
         assembly.ExportedTypes |> Seq.find (fun ty -> ty.Name = "Container") |> test
 
-let runningOnMono = try System.Type.GetType("Mono.Runtime") <> null with e -> false 
+let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false 
 
 [<Fact>]
 let ``Enums are generated correctly``() =

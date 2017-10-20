@@ -388,16 +388,47 @@ namespace ProviderImplementation.ProvidedTypes
         static member EraseType: typ:Type -> Type
 
 
+#if !NO_GENERATIVE
+    /// A provided generated assembly
+    type ProvidedAssembly =
+
+        inherit Assembly
+
+        /// Create a provided generated assembly
+        new: assemblyName: AssemblyName * assemblyFileName:string -> ProvidedAssembly
+
+        /// Create a provided generated assembly using a temporary file as the interim assembly storage
+        new: unit -> ProvidedAssembly
+
+        /// Emit the given provided type definitions as part of the assembly
+        /// and adjust the 'Assembly' property of all provided type definitions to return that
+        /// assembly.
+        ///
+        /// The assembly is only emitted when the Assembly property on the root type is accessed for the first time.
+        /// The host F# compiler does this when processing a generative type declaration for the type.
+        member AddTypes: types: ProvidedTypeDefinition list -> unit
+
+        /// <summary>
+        /// Emit the given nested provided type definitions as part of the assembly.
+        /// and adjust the 'Assembly' property of all provided type definitions to return that
+        /// assembly.
+        /// </summary>
+        /// <param name="enclosingTypeNames">A path of type names to wrap the generated types. The generated types are then generated as nested types.</param>
+        member AddNestedTypes: types: ProvidedTypeDefinition list * enclosingGeneratedTypeNames: string list -> unit
+
+#endif
+
+
 
     [<Class>]
     /// Represents the context for which code is to be generated. Normally you should not need to use this directly.
     type ProvidedTypesContext = 
         
         /// Try to find the given target assembly in the context
-        member TryBindTargetAssembly: aref: AssemblyName -> Choice<Assembly, exn> 
+        member TryBindAssemblyNameToTarget: aref: AssemblyName -> Choice<Assembly, exn> 
 
         /// Try to find the given target assembly in the context
-        member TryBindTargetAssemblyBySimpleName: assemblyName: string  -> Choice<Assembly, exn> 
+        member TryBindSimpleAssemblyNameToTarget: assemblyName: string  -> Choice<Assembly, exn> 
 
         /// Get the list of referenced assemblies determined by the type provider configuration
         member ReferencedAssemblyPaths: string list
@@ -423,7 +454,11 @@ namespace ProviderImplementation.ProvidedTypes
          /// this method should not be used directly when authoring a type provider.
         member ConvertSourceExprToTarget: Expr -> Expr
 
+        /// Read the assembly related to this context
+        member ReadRelatedAssembly: fileName: string -> Assembly
 
+        /// Read the assembly related to this context
+        member ReadRelatedAssembly: bytes: byte[] -> Assembly
 
     /// A base type providing default implementations of type provider functionality when all provided
     /// types are of type ProvidedTypeDefinition.
@@ -463,6 +498,13 @@ namespace ProviderImplementation.ProvidedTypes
 
 #endif
 
+#if !NO_GENERATIVE
+        /// Register that a given file is a provided generated target assembly, e.g. an assembly produced by an external
+        /// code generation tool.  This assembly should be a target assembly, i.e. use the same asssembly references
+        /// as given by TargetContext.ReferencedAssemblyPaths
+        member RegisterGeneratedTargetAssembly: fileName: string -> Assembly
+#endif
+
         [<CLIEvent>]
         member Disposing: IEvent<EventHandler,EventArgs>
 
@@ -472,48 +514,6 @@ namespace ProviderImplementation.ProvidedTypes
         member TargetContext: ProvidedTypesContext
 
         interface ITypeProvider
-
-
-#if !NO_GENERATIVE
-    /// A provided generated assembly
-    type ProvidedAssembly =
-
-        inherit Assembly
-
-        /// Create a provided generated assembly
-        new: assemblyName: AssemblyName * assemblyFileName:string * context:ProvidedTypesContext -> ProvidedAssembly
-
-        /// Create a provided generated assembly using a temporary file as the interim assembly storage
-        new: context:ProvidedTypesContext -> ProvidedAssembly
-
-        /// Emit the given provided type definitions as part of the assembly
-        /// and adjust the 'Assembly' property of all provided type definitions to return that
-        /// assembly.
-        ///
-        /// The assembly is only emitted when the Assembly property on the root type is accessed for the first time.
-        /// The host F# compiler does this when processing a generative type declaration for the type.
-        member AddTypes: types: ProvidedTypeDefinition list -> unit
-
-        /// <summary>
-        /// Emit the given nested provided type definitions as part of the assembly.
-        /// and adjust the 'Assembly' property of all provided type definitions to return that
-        /// assembly.
-        /// </summary>
-        /// <param name="enclosingTypeNames">A path of type names to wrap the generated types. The generated types are then generated as nested types.</param>
-        member AddNestedTypes: types: ProvidedTypeDefinition list * enclosingGeneratedTypeNames: string list -> unit
-
-        /// Get the corresponding assembly with respect to the target assemblies
-        member GetTargetAssembly: unit -> Assembly
-
-#if !FX_NO_LOCAL_FILESYSTEM
-        /// Register that a given file is a provided generated target assembly, e.g. an assembly produced by an external
-        /// code generation tool.  This assembly should be a target assembly, i.e. use the same asssembly references
-        /// as given by TargetContext.ReferencedAssemblyPaths
-        static member RegisterGeneratedTargetAssembly: context: ProvidedTypesContext * fileName: string -> Assembly
-#endif
-
-#endif
-
 
 
     module internal UncheckedQuotations =
