@@ -6,6 +6,7 @@
 module FSharp.TypeProviders.SDK.Tests.BasicGenerativeTests
 #endif
 
+open System
 open System.Reflection
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
@@ -14,6 +15,7 @@ open Microsoft.FSharp.Core.CompilerServices
 open Xunit
 
 #nowarn "760" // IDisposable needs new
+
 
 #if !NO_GENERATIVE
 
@@ -117,15 +119,15 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
         this.AddNamespace(ns, [myType])
 
 
+let testCases() = 
+    [("3.259.3.1", (fun _ ->  Targets.hasPortable259Assemblies()), Targets.Portable259FSharp31Refs)
+     ("3.259.4.0", (fun _ ->  Targets.hasPortable259Assemblies() && Targets.supportsFSharp40), Targets.Portable259FSharp40Refs)
+     ("4.3.1.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp31Refs)
+     ("4.4.0.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp40Refs) ]
 
 [<Fact>]
 let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : unit  = 
-    let testCases = 
-        [("3.259.3.1", (fun _ ->  Targets.hasPortable259Assemblies()), Targets.Portable259FSharp31Refs)
-         ("3.259.4.0", (fun _ ->  Targets.hasPortable259Assemblies() && Targets.supportsFSharp40), Targets.Portable259FSharp40Refs)
-         ("4.3.1.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp31Refs)
-         ("4.4.0.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp40Refs) ]
-    for (desc, supports, refs) in testCases do
+    for (desc, supports, refs) in testCases() do
         if supports() then 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
@@ -141,24 +143,93 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             let t = providedTypeDefinition.ApplyStaticArguments(typeName, staticArgs)
 
             match t.Assembly with 
-            | :? ProvidedAssembly -> failwithf "did not expect a ProvidedAssembly - context translation hould have ensured that a ProvidedTargetAssembly is reported to the compiler"  
-            | _ -> ()
+            | :? ProvidedAssembly -> ()
+            | _ -> failwithf "expected a ProvidedAssembly"  
 
             let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
             Assert.NotEqual(assemContents.Length, 0)
-            let res = [| for r in t.Assembly.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
+            
+            // re-read the assembly with the more complete reader to allow us to look at generated references
+            let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
+            let res = [| for r in assem.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
             printfn "----- %s ------- " desc 
             printfn "compilation references for FSharp.Core target %s = %A" desc runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" desc res
-            for (desc2, _, _) in testCases do 
+            for (desc2, _, _) in testCases() do 
+                let contains = res.Contains("FSharp.Core, Version="+desc2)
+                if contains = (desc = desc2) then ()
+                elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+"in output")
+                else failwith ("failed to find reference to FSharp.Core, Version="+desc2+"in output" )
+
+[<TypeProvider>]
+type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces (config)
+
+    let ns = "StaticProperty.Provided"
+    let asm = Assembly.GetExecutingAssembly()
+    let createType (typeName, _) =
+        let myAssem = ProvidedAssembly()
+        let myBaseType = ProvidedTypeDefinition(myAssem, ns, typeName+"BaseType", Some typeof<obj>, isErased=false)
+        let myCtorOnBaseType = ProvidedConstructor([ProvidedParameter("implicitCtorFieldName",typeof<int>)], invokeCode = (fun _args -> <@@ () @@>), IsImplicitConstructor=true)
+        // Note: myType refers to another generated type as its base class.  
+        let myType = ProvidedTypeDefinition(myAssem, ns, typeName, Some (myBaseType :> Type), isErased=false)
+
+        // Note: this method refers to another generated type as its return type
+        let myMeth1 = ProvidedMethod("MyInstanceMethodOnBaseType", [], myBaseType, isStatic = false, invokeCode = (fun _args -> Expr.NewObject(myCtorOnBaseType, [Expr.Value(1)])))
+        // Note: this method refers to another generated type as its return type
+        let myMeth2 = ProvidedMethod("MyInstanceMethod", [], myBaseType, isStatic = false, invokeCode = (fun _args -> Expr.NewObject(myCtorOnBaseType, [Expr.Value(1)])))
+        myBaseType.AddMembers [ (myCtorOnBaseType :> MemberInfo); (myMeth1 :> MemberInfo) ]
+        myType.AddMembers [ (myMeth2 :> MemberInfo) ]
+        myAssem.AddTypes [myBaseType; myType]
+        myType
+
+    do
+        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+        let parameters = [ ProvidedStaticParameter("Count", typeof<int>) 
+                           ProvidedStaticParameter("Count2", typeof<int>, 3) ]
+        myType.DefineStaticParameters(parameters, (fun typeName args -> createType(typeName, (args.[0] :?> int) + (args.[1] :?> int))))
+
+        this.AddNamespace(ns, [myType])
+
+
+
+[<Fact>]
+let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for correctly``() : unit  = 
+    for (desc, supports, refs) in testCases() do
+        if supports() then 
+            let staticArgs = [|  box 3; box 4  |] 
+            let runtimeAssemblyRefs = refs()
+            let runtimeAssembly = runtimeAssemblyRefs.[0]
+            let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
+            let tp = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
+            let providedNamespace = tp.Namespaces.[0] 
+            let providedTypes  = providedNamespace.GetTypes()
+            let providedType = providedTypes.[0] 
+            let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
+            let typeName = providedTypeDefinition.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
+
+            let t = providedTypeDefinition.ApplyStaticArguments(typeName, staticArgs)
+
+            match t.Assembly with 
+            | :? ProvidedAssembly -> ()
+            | _ -> failwithf "expected a ProvidedAssembly"  
+
+            let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
+            Assert.NotEqual(assemContents.Length, 0)
+            
+            // re-read the assembly with the more complete reader to allow us to look at generated references
+            let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
+            let res = [| for r in assem.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
+            printfn "----- %s ------- " desc 
+            printfn "compilation references for FSharp.Core target %s = %A" desc runtimeAssemblyRefs
+            printfn "assembly references for FSharp.Core target %s = %s" desc res
+            for (desc2, _, _) in testCases() do 
                 let contains = res.Contains("FSharp.Core, Version="+desc2)
                 if contains = (desc = desc2) then ()
                 elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+"in output")
                 else failwith ("failed to find reference to FSharp.Core, Version="+desc2+"in output" )
 
 
-    // TEST: Register binary
-    // TEST: More F# constructs in generated code, giving full coverage
-    // TEST: Base calls and implicit constructors
-    // TEST: Right pipe
+    // TESTING TODO: Register binary
+    // TESTING TODO: field defs
 #endif

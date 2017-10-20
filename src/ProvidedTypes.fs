@@ -8038,19 +8038,17 @@ namespace ProviderImplementation.ProvidedTypes
 
 
 
-    type ProvidedAssembly(isTgt: bool, assemblyName:AssemblyName, assemblyFileName: string) as this =
+    type ProvidedAssembly(isTgt: bool, assemblyName:AssemblyName, assemblyFileName: string) =
       
         inherit Assembly()
         let theTypes = ResizeArray<ProvidedTypeDefinition[] * string list option>()
         
-        let addTypes (providedTypeDefinitions:ProvidedTypeDefinition[], enclosingTypeNames: string list option) =
-            for pt in providedTypeDefinitions do
+        let addTypes (ptds:ProvidedTypeDefinition[], enclosingTypeNames: string list option) =
+            for pt in ptds do
                 if pt.IsErased then failwith ("The provided type "+pt.Name+"is marked as erased and cannot be converted to a generated type. Set 'IsErased=false' on the ProvidedTypeDefinition")
                 if not isTgt && pt.BelongsToTargetModel then failwithf "Expected '%O' to be a source ProvidedTypeDefinition. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" pt
                 if isTgt && not pt.BelongsToTargetModel then failwithf "Expected '%O' to be a target ProvidedTypeDefinition. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" pt
-                if not (Object.ReferenceEquals(this, pt.Assembly)) then failwithf "Mismached assemblies for a ProvidedTypeDefinition - you are adding the type '%O' to assembly '%O' but it was already given assembly '%O' as its assembly when it was created. These should match." pt assemblyName.Name (pt.Assembly.GetName().Name)
-                pt.SetAssemblyInternal (K (this :> Assembly))
-            theTypes.Add (providedTypeDefinitions, enclosingTypeNames)
+            theTypes.Add (ptds, enclosingTypeNames)
 
         let theTypesArray = lazy (theTypes.ToArray() |> Array.collect (function (ptds, None) -> Array.map (fun ptd -> (ptd :> Type)) ptds | _ -> [| |]))
 
@@ -8689,9 +8687,9 @@ namespace ProviderImplementation.ProvidedTypes
         member __.ConvertSourceProvidedTypeDefinitionToTarget ptd = convProvidedTypeDefToTgt ptd
         member __.TryBindILAssemblyRefToTgt(aref: ILAssemblyRef): Choice<Assembly, exn> = tryBindAssemblySimple(aref.Name)
 
-        member __.TryBindAssemblyNameToTgt(aref: AssemblyName): Choice<Assembly, exn> = tryBindAssemblySimple(aref.Name)
+        member __.TryBindAssemblyNameToTarget(aref: AssemblyName): Choice<Assembly, exn> = tryBindAssemblySimple(aref.Name)
 
-        member __.TryBindSimpleAssemblyNameToTgt(assemblyName: string) = tryBindAssemblySimple(assemblyName) 
+        member __.TryBindSimpleAssemblyNameToTarget(assemblyName: string) = tryBindAssemblySimple(assemblyName) 
 
         member __.ILGlobals = ilGlobals.Value
 
@@ -8701,11 +8699,18 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.GetSourceAssemblies() =  getSourceAssemblies()
 
-        member x.FSharpCoreAssemblyVersion = fsharpCoreRefVersion.Force()
+        member __.FSharpCoreAssemblyVersion = fsharpCoreRefVersion.Force()
 
-        member __.ReadRelatedAssembly(fileName) = 
-            let reader = ILModuleReaderAfterReadingAllBytes(fileName, ilGlobals.Force()) 
-            TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRefToTgt, Some reader, fileName) :> Assembly
+        member this.ReadRelatedAssembly(fileName) = 
+            let ilg = ilGlobals.Force()
+            let reader = ILModuleReaderAfterReadingAllBytes(fileName, ilg) 
+            TargetAssembly(ilg, this.TryBindILAssemblyRefToTgt, Some reader, fileName) :> Assembly
+
+        member this.ReadRelatedAssembly(bytes:byte[]) = 
+            let fileName = "file.dll"
+            let ilg = ilGlobals.Force()
+            let reader = ILModuleReader(fileName, ByteFile(bytes), ilg, true)
+            TargetAssembly(ilg, this.TryBindILAssemblyRefToTgt, Some reader, fileName) :> Assembly
 
         member __.AddSourceAssembly(asm: Assembly) = 
             sourceAssembliesQueue.Add (fun () -> [| asm |])

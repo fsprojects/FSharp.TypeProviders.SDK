@@ -425,10 +425,10 @@ namespace ProviderImplementation.ProvidedTypes
     type ProvidedTypesContext = 
         
         /// Try to find the given target assembly in the context
-        member TryBindAssemblyNameToTgt: aref: AssemblyName -> Choice<Assembly, exn> 
+        member TryBindAssemblyNameToTarget: aref: AssemblyName -> Choice<Assembly, exn> 
 
         /// Try to find the given target assembly in the context
-        member TryBindSimpleAssemblyNameToTgt: assemblyName: string  -> Choice<Assembly, exn> 
+        member TryBindSimpleAssemblyNameToTarget: assemblyName: string  -> Choice<Assembly, exn> 
 
         /// Get the list of referenced assemblies determined by the type provider configuration
         member ReferencedAssemblyPaths: string list
@@ -454,7 +454,11 @@ namespace ProviderImplementation.ProvidedTypes
          /// this method should not be used directly when authoring a type provider.
         member ConvertSourceExprToTarget: Expr -> Expr
 
+        /// Read the assembly related to this context
+        member ReadRelatedAssembly: fileName: string -> Assembly
 
+        /// Read the assembly related to this context
+        member ReadRelatedAssembly: bytes: byte[] -> Assembly
 
     /// A base type providing default implementations of type provider functionality when all provided
     /// types are of type ProvidedTypeDefinition.
