@@ -300,3 +300,68 @@ let ``Check can't create Expr Value nodes for non-primitive types``() : unit  =
            Quotations.Expr.Value(sampleValue, targetType) |> ignore
         with _ -> () // ok
           
+
+
+[<Fact>]
+let ``test basic binding context net45``() =
+   let refs = Targets.DotNet45FSharp40Refs()
+   let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+   use tp1 = new TypeProviderForNamespaces(config)
+   let ctxt1 = tp1.TargetContext
+
+   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
+   | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d,"System.Object"))
+   | Choice2Of2 err -> raise err
+
+[<Fact>]
+let ``test basic binding context portable7``() =
+ if Targets.hasPortable7Assemblies() then
+   let refs = Targets.Portable7FSharp40Refs()
+   let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+   use tp1 = new TypeProviderForNamespaces(config)
+   let ctxt1 = tp1.TargetContext
+
+   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("System.Runtime")) with
+   | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d,"System.Object"))
+   | Choice2Of2 err -> raise err
+   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
+   | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d, "System.Object"))
+   | Choice2Of2 err -> raise err
+
+[<Fact>]
+let ``test basic binding context portable259``() =
+ if Targets.hasPortable259Assemblies() then
+   let refs = Targets.Portable259FSharp40Refs()
+   let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+   use tp1 = new TypeProviderForNamespaces(config)
+   let ctxt1 = tp1.TargetContext
+
+   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("System.Runtime")) with
+   | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d, "System.Object"))
+   | Choice2Of2 err -> raise err
+
+   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
+   | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d, "System.Object"))
+   | Choice2Of2 err -> raise err
+
+   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("System.Runtime")) with
+   | Choice1Of2 asm -> asm.GetType("System.DateTimeOffset").FullName |> (fun d -> Assert.Equal(d, "System.DateTimeOffset"))
+   | Choice2Of2 err -> raise err
+
+   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
+   | Choice1Of2 asm -> asm.GetType("System.DateTimeOffset").FullName |> (fun d -> Assert.Equal(d, "System.DateTimeOffset"))
+   | Choice2Of2 err -> raise err
+
+   // On this profile there is s forwarder for DateTimeOffset in mscorlib.dll
+   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
+   | Choice1Of2 asm -> 
+       printfn "-=======================" 
+       printfn "asm.Location = '%s'" asm.Location
+       printfn "refs = %A" refs
+       let ty = asm.GetType("System.DateTimeOffset")
+       printfn "ty = %A" ty
+       printfn "ty.Assembly = %A" ty.Assembly
+       printfn "ty.Assembly.Location = %s" ty.Assembly.Location
+       ty.Assembly.GetName().Name |> (fun d -> Assert.Equal("System.Runtime", d))
+       printfn "-=======================" 
+   | Choice2Of2 err -> raise err
