@@ -13881,16 +13881,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         let ctxt = ProvidedTypesContext.Create (config, assemblyReplacementMap)
 
-        let makeProvidedNamespace (namespaceName:string) (typesSrc:ProvidedTypeDefinition list) =
-            let typesSrc = [| for ty in typesSrc -> ty :> Type |]
-            let nsSrc = 
-                { new IProvidedNamespace with
-                    member __.GetNestedNamespaces() = [| |]
-                    member __.NamespaceName = namespaceName
-                    member __.GetTypes() = typesSrc 
-                    member __.ResolveTypeName typeName = typesSrc |> Array.tryFind (fun ty -> ty.Name = typeName) |> Option.toObj }
-            let nsT = ctxt.ConvertSourceNamespaceToTarget nsSrc
-            nsT
 
 #if !NO_GENERATIVE
         let theTable = ConcurrentDictionary<string, byte[]>()
@@ -13902,10 +13892,10 @@ namespace ProviderImplementation.ProvidedTypes
             | :? ProvidedTypeDefinition as pt when pt.IsErased || pt.GetStaticParametersInternal().Length > 0 || not config.IsHostedExecution -> t
             | _ -> 
                 (this :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly) |> ignore
-                printfn "t.Assembly = %O" t.Assembly
-                printfn "t.Assembly.Location = %O" t.Assembly.Location
-                printfn "t.FullName = %O" t.FullName
-                printfn "t.Assembly.GetTypes() = %A" (t.Assembly.GetTypes())
+                //printfn "t.Assembly = %O" t.Assembly
+                //printfn "t.Assembly.Location = %O" t.Assembly.Location
+                //printfn "t.FullName = %O" t.FullName
+                //printfn "t.Assembly.GetTypes() = %A" (t.Assembly.GetTypes())
                 let tyName = t.FullName.Replace(",","\\,")
                 let resTy = t.Assembly.GetType(tyName)
                 if resTy = null then failwithf "couldn't find type '%s' in assembly '%O'" tyName t.Assembly
@@ -13914,6 +13904,17 @@ namespace ProviderImplementation.ProvidedTypes
 #else
         let ensureCompiled (t: Type) = t
 #endif
+
+        let makeProvidedNamespace (namespaceName:string) (typesSrc:ProvidedTypeDefinition list) =
+            let typesSrc = [| for ty in typesSrc -> ty :> Type |]
+            let nsSrc = 
+                { new IProvidedNamespace with
+                    member __.GetNestedNamespaces() = [| |]
+                    member __.NamespaceName = namespaceName
+                    member __.GetTypes() = typesSrc |> Array.map ensureCompiled
+                    member __.ResolveTypeName typeName = typesSrc |> Array.tryFind (fun ty -> ty.Name = typeName) |> Option.map ensureCompiled |> Option.toObj }
+            let nsT = ctxt.ConvertSourceNamespaceToTarget nsSrc
+            nsT
 
         let namespacesT = ResizeArray<IProvidedNamespace>()
 
