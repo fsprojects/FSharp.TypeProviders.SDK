@@ -4,6 +4,8 @@
 
 namespace ProviderImplementation.ProvidedTypes
 
+    #nowarn "1182"
+
     // This file contains a set of helper types and methods for providing types in an implementation
     // of ITypeProvider.
     //
@@ -41,10 +43,10 @@ namespace ProviderImplementation.ProvidedTypes
         /// Internal code of .NET expects the obj[] returned by GetCustomAttributes to be an Attribute[] even in the case of empty arrays
         let emptyAttributes = (([| |]: Attribute[]) |> box |> unbox<obj[]>)
 
-        let nonNull str x = if isNull x then failwith ("Null in " + str) else x
+        let nonNull str x = if isNull x then failwithf "Null in '%s', stacktrace = '%s'" str Environment.StackTrace else x
 
         let notRequired this opname item =
-            let msg = sprintf "The operation '%s' on item '%s' should not be called on provided type, member or parameter of type '%O'. Stack trace:\n%s" opname item (this.GetType()) (System.Diagnostics.StackTrace().ToString())
+            let msg = sprintf "The operation '%s' on item '%s' should not be called on provided type, member or parameter of type '%O'. Stack trace:\n%s" opname item (this.GetType()) Environment.StackTrace
             Debug.Assert (false, msg)
             raise (NotSupportedException msg)
 
@@ -72,7 +74,7 @@ namespace ProviderImplementation.ProvidedTypes
                     let gdty = dty.GetGenericTypeDefinition()
                     gdty.GetConstructors(bindAll) 
                     |> Array.tryFind (fun c -> c.MetadataToken = m.MetadataToken)
-                    |> function Some m2 -> m2 | None -> failwithf "couldn't rebind %O::%s back to generic constructor definition via metadata token" m.DeclaringType m.Name
+                    |> function Some m2 -> m2 | None -> failwithf "couldn't rebind %O::%s back to generic constructor definition via metadata token, stacktrace = '%s'" m.DeclaringType m.Name Environment.StackTrace
                 else
                     m
 
@@ -1327,15 +1329,15 @@ namespace ProviderImplementation.ProvidedTypes
         member __.GetStaticParametersInternal() = [| for p in staticParams -> p :> ParameterInfo |]
 
         /// Instantiate parametric method
-        member __.ApplyStaticArguments(mangledName:string, args:obj[]) =
+        member this.ApplyStaticArguments(mangledName:string, args:obj[]) =
+            if staticParams.Length <> args.Length then
+                failwithf "ProvidedMethod: expecting %d static parameters but given %d for method %s" staticParams.Length args.Length methodName
             if staticParams.Length > 0 then
-                if staticParams.Length <> args.Length then
-                    failwithf "ProvidedMethod: expecting %d static parameters but given %d for method %s" staticParams.Length args.Length methodName
                 match staticParamsApply with
                 | None -> failwith "ProvidedMethod: DefineStaticParameters was not called"
                 | Some f -> f mangledName args
             else
-                failwithf "ProvidedMethod: static parameters supplied but not expected for method %s. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" methodName
+                this
 
         member x.GetInvokeCodeInternal(isGenerated) =
             // Use the real variable names instead of indices, to improve output of Debug.fs
@@ -1700,7 +1702,7 @@ namespace ProviderImplementation.ProvidedTypes
             match container with
             | TypeContainer.Namespace (theAssembly,_) -> theAssembly()
             | TypeContainer.Type t           -> t.Assembly
-            | TypeContainer.TypeToBeDecided -> failwithf "type '%s' was not added as a member to a declaring type" className
+            | TypeContainer.TypeToBeDecided -> failwithf "type '%s' was not yet added as a member to a declaring type, stacktrace = %s" className Environment.StackTrace
 
         override __.FullName = 
             match container with
@@ -1758,7 +1760,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetMethodImpl(name, bindingFlags, _binderBinder, _callConvention, _types, _modifiers): MethodInfo =
             let xs = this.GetMethods bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 1 then failwith "GetMethodImpl. not support overloads"
+            if xs.Length > 1 then failwithf "GetMethodImpl. not support overloads, name = '%s', methods - '%A', callstack = '%A'" name xs Environment.StackTrace
             if xs.Length > 0 then xs.[0] else null
 
         override this.GetField(name, bindingFlags) =
@@ -1937,15 +1939,14 @@ namespace ProviderImplementation.ProvidedTypes
 
         /// Instantiate parametric type
         member this.ApplyStaticArguments(name:string, args:obj[]) =
+            if staticParams.Length <> args.Length then
+                failwithf "ProvidedTypeDefinition: expecting %d static parameters but given %d for type %s" staticParams.Length args.Length this.FullName
             if staticParams.Length > 0 then
-                if staticParams.Length <> args.Length then
-                    failwithf "ProvidedTypeDefinition: expecting %d static parameters but given %d for type %s" staticParams.Length args.Length this.FullName
                 match staticParamsApply with
                 | None -> failwith "ProvidedTypeDefinition: DefineStaticParameters was not called"
                 | Some f -> f name args
-
             else
-                failwithf "ProvidedTypeDefinition: static parameters supplied but not expected for %s" this.FullName
+                this
 
         member __.SetDeclaringType x = container <- TypeContainer.Type x
 
@@ -2013,6 +2014,8 @@ namespace ProviderImplementation.ProvidedTypes
 // binary reader code.  Used by the type provider to read referenced asssemblies.
 
 namespace ProviderImplementation.ProvidedTypes.AssemblyReader
+
+    #nowarn "1182"
 
     open System
     open System.Collections.Generic
@@ -6886,6 +6889,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
 namespace ProviderImplementation.ProvidedTypes
 
+    #nowarn "1182"
+
     //
     // The on-disk assemblies are read by AssemblyReader.
     //
@@ -8079,6 +8084,8 @@ namespace ProviderImplementation.ProvidedTypes
 
 
     #nowarn "8796"
+    #nowarn "1182"
+
     open System
     open System.Diagnostics
     open System.IO
@@ -8718,6 +8725,8 @@ namespace ProviderImplementation.ProvidedTypes
 #if !NO_GENERATIVE
 
 namespace ProviderImplementation.ProvidedTypes
+
+    #nowarn "1182"
     module BinaryWriter =
 
         open System
@@ -12721,6 +12730,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 namespace ProviderImplementation.ProvidedTypes
 
+    #nowarn "1182"
     open System
     open System.Diagnostics
     open System.IO
@@ -13867,6 +13877,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 namespace ProviderImplementation.ProvidedTypes
 
+    #nowarn "1182"
     open System
     open System.Diagnostics
     open System.IO
