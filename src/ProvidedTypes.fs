@@ -1583,6 +1583,10 @@ namespace ProviderImplementation.ProvidedTypes
     type ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, baseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, initialData, customAttributesData, nonNullable, hideObjectMethods) as this =
         inherit TypeDelegator()
 
+        do match container, !ProvidedTypeDefinition.Logger with
+           | TypeContainer.Namespace _, Some logger when not isTgt -> logger (sprintf "Creating ProvidedTypeDefinition %s [%d]" className (System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode this))
+           | _ -> ()
+
         static let defaultAttributes isErased = 
             TypeAttributes.Public ||| 
             TypeAttributes.Class ||| 
@@ -2005,6 +2009,8 @@ namespace ProviderImplementation.ProvidedTypes
             | :? ProvidedTypeDefinition  as t -> t.SetDeclaringType this
             | :? ProvidedField as l -> l.SetDeclaringType this
             | _ -> ()
+
+        static member Logger: (string -> unit) option ref = ref None
 
 
 //====================================================================================================

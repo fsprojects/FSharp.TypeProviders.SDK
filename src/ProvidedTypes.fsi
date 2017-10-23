@@ -387,6 +387,9 @@ namespace ProviderImplementation.ProvidedTypes
         /// replaced with the erased-to types
         static member EraseType: typ:Type -> Type
 
+        /// Get or set a utility function to log the creation of root Provided Type. Used to debug caching/invalidation.
+        static member Logger: (string -> unit) option ref
+
 
 #if !NO_GENERATIVE
     /// A provided generated assembly
