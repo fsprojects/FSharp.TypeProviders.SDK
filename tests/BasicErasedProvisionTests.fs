@@ -365,3 +365,36 @@ let ``test basic binding context portable259``() =
        ty.Assembly.GetName().Name |> (fun d -> Assert.Equal("System.Runtime", d))
        printfn "-=======================" 
    | Choice2Of2 err -> raise err
+
+[<Fact>]
+let ``test basic symbol type ops``() =
+   let refs = Targets.DotNet45FSharp40Refs()
+   let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+   use tp = new TypeProviderForNamespaces(config)
+   let ctxt = tp.TargetContext
+
+   //let fscore =  ctxt1.TryBindAssemblyNameToTarget(AssemblyName("FSharp.Core")) 
+   let decimalT = typeof<decimal>
+   let kg = ProvidedMeasureBuilder.Default.SI "kg"
+   let t1 = ProvidedMeasureBuilder.Default.AnnotateType(decimalT, [ kg ])
+
+   match kg with :? ProvidedSymbolType as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedSymbolType"
+   match t1 with :? ProvidedSymbolType as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedSymbolType#2"
+
+   let t1T = ctxt.ConvertSourceTypeToTarget t1
+   let kgT = ctxt.ConvertSourceTypeToTarget kg
+   match kgT with :? ProvidedSymbolType as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedSymbolType#3"
+   match t1T with :? ProvidedSymbolType as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedSymbolType#4"
+
+   let t2 = ProvidedTypeBuilder.MakeGenericType(typedefof<int*int>, [ t1; t1 ])
+
+   let t2T = ctxt.ConvertSourceTypeToTarget t2
+   match t2 with :? ProvidedSymbolType as st -> Assert.True(not st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedSymbolType#2b"
+   match t2 with :? ProvidedSymbolType as st -> Assert.True(not st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedSymbolType#2c"
+
+   Assert.True(t2T.GetType().Name = "TargetTypeSymbol")
+   Assert.True(not t2.IsGenericTypeDefinition) 
+   Assert.True(not t2T.IsGenericTypeDefinition) 
+   Assert.True(t2.IsGenericType) 
+   Assert.True(t2T.IsGenericType) 
+

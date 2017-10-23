@@ -2515,13 +2515,13 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
 
     type ILMethodRef(parent: ILTypeRef, callconv: ILCallingConv, genericArity: int, name: string, args: ILTypes, ret: ILType) =
-        member x.EnclosingTypeRef = parent
-        member x.CallingConv = callconv
-        member x.Name = name
-        member x.GenericArity = genericArity
-        member x.ArgCount = args.Length
-        member x.ArgTypes = args
-        member x.ReturnType = ret
+        member __.EnclosingTypeRef = parent
+        member __.CallingConv = callconv
+        member __.Name = name
+        member __.GenericArity = genericArity
+        member __.ArgCount = args.Length
+        member __.ArgTypes = args
+        member __.ReturnType = ret
 
         member x.CallingSignature = ILCallingSignature (x.CallingConv,x.ArgTypes,x.ReturnType)
         override x.ToString() = x.EnclosingTypeRef.ToString() + "::" + x.Name + "(...)"
@@ -7962,9 +7962,9 @@ namespace ProviderImplementation.ProvidedTypes
         let types = lazy [| for td in getReader().ILModuleDef.TypeDefs.Entries -> txILTypeDef None td  |]
 
 
-        override x.GetReferencedAssemblies() = [| for aref in getReader().ILAssemblyRefs -> aref.ToAssemblyName() |]
+        override __.GetReferencedAssemblies() = [| for aref in getReader().ILAssemblyRefs -> aref.ToAssemblyName() |]
 
-        override x.GetTypes () = types.Force()
+        override __.GetTypes () = types.Force()
 
         override x.GetType (nm:string) =
             if nm.Contains("+") then

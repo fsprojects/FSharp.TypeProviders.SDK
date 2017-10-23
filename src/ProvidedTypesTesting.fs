@@ -132,18 +132,18 @@ type internal Testing() =
 
         let rec toString useFullName (t: Type) =
 
-            let hasUnitOfMeasure = t.Name.Contains("[")
+            let hasUnitOfMeasure = (match t with :? ProvidedSymbolType as p -> p.IsFSharpUnitAnnotated | _ -> false) 
 
             let innerToString (t: Type) =
                 match t with
-                | _ when t.Name = typeof<bool>.Name -> "bool"
-                | _ when t.Name = typeof<obj>.Name -> "obj"
-                | _ when t.Name = typeof<int>.Name -> "int"
-                | _ when t.Name = typeof<int64>.Name -> "int64"
-                | _ when t.Name = typeof<float>.Name -> "float"
-                | _ when t.Name = typeof<float32>.Name -> "float32"
-                | _ when t.Name = typeof<decimal>.Name -> "decimal"
-                | _ when t.Name = typeof<string>.Name -> "string"
+                | _ when t.Name = typeof<bool>.Name && not hasUnitOfMeasure -> "bool"
+                | _ when t.Name = typeof<obj>.Name && not hasUnitOfMeasure  -> "obj"
+                | _ when t.Name = typeof<int>.Name && not hasUnitOfMeasure  -> "int"
+                | _ when t.Name = typeof<int64>.Name && not hasUnitOfMeasure  -> "int64"
+                | _ when t.Name = typeof<float>.Name && not hasUnitOfMeasure  -> "float"
+                | _ when t.Name = typeof<float32>.Name && not hasUnitOfMeasure  -> "float32"
+                | _ when t.Name = typeof<decimal>.Name && not hasUnitOfMeasure  -> "decimal"
+                | _ when t.Name = typeof<string>.Name && not hasUnitOfMeasure  -> "string"
                 | _ when t.Name = typeof<Void>.Name -> "()"
                 | _ when t.Name = typeof<unit>.Name -> "()"
                 | t when t.IsArray -> (t.GetElementType() |> toString useFullName) + "[]"
