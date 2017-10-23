@@ -7,7 +7,9 @@ module FSharp.TypeProviders.SDK.Tests.BasicGenerativeTests
 #endif
 
 open System
+open System.IO
 open System.Reflection
+open System.Reflection.Emit
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Quotations
@@ -125,6 +127,13 @@ let testCases() =
      ("4.3.1.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp31Refs)
      ("4.4.0.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp40Refs) ]
 
+let hostedTestCases() = 
+#if !NETSTANDARD && !NETCOREAPP2_0
+    [("4.4.0.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp40Refs) ]
+#else
+    []    
+#endif
+
 [<Fact>]
 let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : unit  = 
     for (desc, supports, refs) in testCases() do
@@ -137,10 +146,9 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             let providedNamespace = tp.Namespaces.[0] 
             let providedTypes  = providedNamespace.GetTypes()
             let providedType = providedTypes.[0] 
-            let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
-            let typeName = providedTypeDefinition.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
+            let typeName = providedType.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
 
-            let t = providedTypeDefinition.ApplyStaticArguments(typeName, staticArgs)
+            let t = (tp :> ITypeProvider).ApplyStaticArguments(providedType, [| typeName |], staticArgs)
 
             match t.Assembly with 
             | :? ProvidedAssembly -> ()
@@ -205,10 +213,9 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for co
             let providedNamespace = tp.Namespaces.[0] 
             let providedTypes  = providedNamespace.GetTypes()
             let providedType = providedTypes.[0] 
-            let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
-            let typeName = providedTypeDefinition.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
+            let typeName = providedType.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
 
-            let t = providedTypeDefinition.ApplyStaticArguments(typeName, staticArgs)
+            let t = (tp :> ITypeProvider).ApplyStaticArguments(providedType, [| typeName |], staticArgs)
 
             match t.Assembly with 
             | :? ProvidedAssembly -> ()
@@ -229,6 +236,44 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for co
                 elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+"in output")
                 else failwith ("failed to find reference to FSharp.Core, Version="+desc2+"in output" )
 
+#if !NETSTANDARD && !NETCOREAPP2_0
+[<Fact>]
+let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for hosted execution correctly``() : unit  = 
+    for (desc, supports, refs) in hostedTestCases() do
+        if supports() then 
+            let staticArgs = [|  box 3; box 4  |] 
+            let runtimeAssemblyRefs = refs()
+            let runtimeAssembly = runtimeAssemblyRefs.[0]
+            let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs, isHostedExecution=true) 
+            let tp = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
+            let providedNamespace = tp.Namespaces.[0] 
+            let providedTypes  = providedNamespace.GetTypes()
+            let providedType = providedTypes.[0] 
+            let typeName = providedType.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
+
+            let t = (tp :> ITypeProvider).ApplyStaticArguments(providedType, [| typeName |], staticArgs)
+
+            match t.Assembly with 
+            | :? ProvidedAssembly -> failwithf "did not expect a ProvidedAssembly - when used in hosted execution a type provider should return a Reflection.Load assembly"  
+            | _ -> ()
+
+            // OK, now check we can do a little bit of reflection emit against the types coming from this assembly
+            let tmpFile = Path.GetTempFileName()
+            let assemblyFileName = Path.ChangeExtension(tmpFile, "dll")
+            File.Delete(tmpFile)
+            let simpleName = Path.GetFileNameWithoutExtension(assemblyFileName)
+            let asmName = AssemblyName(simpleName)
+            let currentDom  = AppDomain.CurrentDomain
+            let asmB = currentDom.DefineDynamicAssembly(asmName, AssemblyBuilderAccess.RunAndSave, ".")
+            let modB = asmB.DefineDynamicModule(simpleName,  Path.GetFileName assemblyFileName)
+            let typB = modB.DefineType("A", TypeAttributes.Sealed ||| TypeAttributes.Class)
+            let methB = typB.DefineMethod("M", MethodAttributes.Static)
+        
+            methB.SetParameters( [| |])
+            methB.SetReturnType(t)
+
+
+#endif
 
     // TESTING TODO: Register binary
     // TESTING TODO: field defs

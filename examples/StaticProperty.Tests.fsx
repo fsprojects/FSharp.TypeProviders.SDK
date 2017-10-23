@@ -1,10 +1,9 @@
 #if INTERACTIVE
-#r @"../test/StaticProperty.dll"
+#r @"StaticProperty\bin\Release\net461\StaticProperty.dll"
 #endif
 
 open StaticProperty.Provided
 
-[<Fact>]
-let ``Static property should have been created`` () =
-    Assert.Equal("Hello world", MyType.MyProperty)
+let t1 = MyType.MyProperty
+let t2 = typeof<MyType>
     
