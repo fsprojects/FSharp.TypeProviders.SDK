@@ -2020,6 +2020,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             member __.IsNone = not hasValue
             member __.HasValue = hasValue
             member __.Value = value
+            override __.ToString() = if hasValue then match box value with null -> "null" | x -> x.ToString() else "<none>"
 
         type uoption<'T> = StructOption<'T>
 
@@ -2911,45 +2912,6 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
         member md.CallingSignature =  ILCallingSignature (md.CallingConv,md.ParameterTypes,md.Return.Type)
         override x.ToString() = "method " + x.Name
-(*
-            let flags = 
-                GetMemberAccessFlags md.Access |||
-                (if md.IsClassInitializer || md.IsStatic then 0x0010 else 0x0) |||
-                (if md.IsFinal then 0x0020 else 0x0) |||
-                (if md.IsVirtual then 0x0040 else 0x0) |||
-                (if md.IsHideBySig then 0x0080 else 0x0) |||
-                (if md.IsCheckAccessOnOverride then 0x0200 else 0x0) |||
-                (if md.IsNewSlot then 0x0100 else 0x0) |||
-                (if md.IsAbstract then 0x0400 else 0x0) |||
-                (if md.IsSpecialName then 0x0800 else 0x0) |||
-#if EMIT_PINVOKE
-                (if (match md.Body.Contents with MethodBody.PInvoke _ -> true | _ -> false) then 0x2000 else 0x0) |||
-                (if md.IsUnmanagedExport then 0x0008 else 0x0) |||
-                (if md.IsReqSecObj then 0x8000 else 0x0) |||
-                (if md.HasSecurity || not md.SecurityDecls.Entries.IsEmpty then 0x4000 else 0x0) |||
-#endif
-                (if md.IsRTSpecialName then 0x1000 else 0x0) ||| // RTSpecialName 
-                0x0000
-
-           
-            let implflags = 
-#if EMIT_PINVOKE
-                (match  md.mdCodeKind with 
-                 | MethodCodeKind.Native -> 0x0001
-                 | MethodCodeKind.Runtime -> 0x0003
-                 | MethodCodeKind.IL  -> 0x0000) |||
-#endif
-                (if md.IsInternalCall then 0x1000 else 0x0000) |||
-                (if md.IsManaged then 0x0000 else 0x0004) |||
-                (if md.IsForwardRef then 0x0010 else 0x0000) |||
-                (if md.IsPreserveSig then 0x0080 else 0x0000) |||
-                (if md.IsSynchronized then 0x0020 else 0x0000) |||
-                (if md.IsMustRun then 0x0040 else 0x0000) |||
-                (if (md.IsNoInline || (match md.Body with Some il -> il.NoInlining | _ -> false)) then 0x0008 else 0x0000) |||
-                (if (md.IsAggressiveInline || (match md.Body with Some il -> il.AggressiveInlining | _ -> false)) then 0x0100 else 0x0000) |||
-                0x0000
-
-*)
 
     type ILMethodDefs(larr: Lazy<ILMethodDef[]>) =
 
@@ -3032,7 +2994,6 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
           //Marshal: ILNativeType option
           CustomAttrs: ILCustomAttrs
           Token: int }
-        override x.ToString() = "field " + x.Name
         member x.IsStatic = x.Attributes &&& FieldAttributes.Static <> enum 0
         member x.IsInitOnly = x.Attributes &&& FieldAttributes.InitOnly <> enum 0
         member x.IsLiteral = x.Attributes &&& FieldAttributes.Literal <> enum 0
@@ -3046,6 +3007,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                   // NotSerialized = (flags &&& 0x0080) <> 0
                   // IsSpecialName = (flags &&& 0x0200) <> 0 || (flags &&& 0x0400) <> 0 (* REVIEW: RTSpecialName *)
         member x.Access = ILMemberAccess.OfFlags (int x.Attributes)
+        override x.ToString() = "field " + x.Name
 
 
     type ILFieldDefs =
@@ -3340,7 +3302,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
           typ_IntPtr: ILType
           typ_UIntPtr: ILType
           systemRuntimeScopeRef: ILScopeRef }
-        override x.ToString() = "<ILGlobals>"
+        override __.ToString() = "<ILGlobals>"
 
     [<AutoOpen>]
 
@@ -7170,7 +7132,7 @@ namespace ProviderImplementation.ProvidedTypes
                     base.IsAssignableFrom(otherTy)
             | _ -> base.IsAssignableFrom(otherTy)
 
-        override this.IsSubclassOf(otherTy) =
+        override __.IsSubclassOf(otherTy) =
             base.IsSubclassOf(otherTy) ||
             match kind with
             | TargetTypeSymbolKind.Generic gtd -> gtd.Metadata.IsDelegate && otherTy.FullName = "System.Delegate"
@@ -7235,7 +7197,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override x.Module = x.Assembly.ManifestModule
 
-        override this.GetHashCode()                                                                    =
+        override __.GetHashCode()                                                                    =
             match kind,typeArgs with
             | TargetTypeSymbolKind.SDArray,[| arg |] -> 10 + hash arg
             | TargetTypeSymbolKind.Array _,[| arg |] -> 163 + hash arg
@@ -7244,13 +7206,13 @@ namespace ProviderImplementation.ProvidedTypes
             | TargetTypeSymbolKind.Generic gtd,_ -> gtd.MetadataToken
             | _ -> failwith "unreachable"
 
-        override this.Equals(other: obj) =
+        override __.Equals(other: obj) =
             match other with
             | :? TargetTypeSymbol as otherTy -> (kind, typeArgs) = (otherTy.Kind, otherTy.Args)
             | _ -> false
 
-        member this.Kind = kind
-        member this.Args = typeArgs
+        member __.Kind = kind
+        member __.Args = typeArgs
 
         override this.GetConstructors bindingFlags = 
             match kind with
@@ -7374,14 +7336,15 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.UnderlyingSystemType = (this :> Type)
 
-        override this.GetCustomAttributesData() =  ([| |] :> IList<_>)
+        override __.GetCustomAttributesData() =  ([| |] :> IList<_>)
+        override __.GetCustomAttributes(_inherit) = emptyAttributes
+        override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
+        override __.IsDefined(_attributeType, _inherit) = false
+
         override this.MemberType = notRequired this "MemberType" this.Name
         override this.GetMember(_name,_mt,_bindingFlags) = notRequired this "GetMember" this.Name
         override this.GUID = notRequired this "GUID" this.Name
         override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" this.Name
-        override this.GetCustomAttributes(_inherit) = emptyAttributes
-        override this.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
-        override this.IsDefined(_attributeType, _inherit) = false
         override this.MakeArrayType() = TargetTypeSymbol(TargetTypeSymbolKind.SDArray, [| this |]) :> Type
         override this.MakeArrayType arg = TargetTypeSymbol(TargetTypeSymbolKind.Array arg, [| this |]) :> Type
         override this.MakePointerType() = TargetTypeSymbol(TargetTypeSymbolKind.Pointer, [| this |]) :> Type
@@ -7424,8 +7387,8 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetMethodImplementationFlags() = notRequired this "GetMethodImplementationFlags" this.Name
         override this.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired this "Invoke" this.Name
         override this.ReflectedType = notRequired this "ReflectedType" this.Name
-        override this.GetCustomAttributes(_inherited) = emptyAttributes
-        override this.GetCustomAttributes(_attributeType, _inherited) = emptyAttributes
+        override __.GetCustomAttributes(_inherited) = emptyAttributes
+        override __.GetCustomAttributes(_attributeType, _inherited) = emptyAttributes
 
         override __.ToString() = gmd.ToString() + "@inst"
 
@@ -7559,7 +7522,7 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
                 override __.MetadataToken = inp.Token
 
-                override this.GetHashCode() = inp.Token
+                override __.GetHashCode() = inp.Token
                 override this.Equals(that:obj) =
                     match that with
                     | :? PropertyInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType
@@ -7897,10 +7860,10 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
 
         override this.Equals(that:obj) = System.Object.ReferenceEquals (this, that)
-        override this.GetHashCode() =  inp.Token
+        override __.GetHashCode() =  inp.Token
 
         override this.IsAssignableFrom(otherTy: Type) = base.IsAssignableFrom(otherTy) || this.Equals(otherTy)
-        override this.IsSubclassOf(otherTy) = base.IsSubclassOf(otherTy) || inp.IsDelegate && otherTy.FullName = "System.Delegate"
+        override __.IsSubclassOf(otherTy) = base.IsSubclassOf(otherTy) || inp.IsDelegate && otherTy.FullName = "System.Delegate"
 
         override this.AssemblyQualifiedName = "[" + this.Assembly.FullName + "]" + this.FullName
 
@@ -7920,13 +7883,13 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetElementType() = notRequired this "GetElementType" inp.Name
         override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" inp.Name
 
-        member x.Metadata: ILTypeDef = inp
-        member x.MakeMethodInfo (declTy: Type) md = txILMethodDef declTy md
-        member x.MakeConstructorInfo (declTy: Type) md = txILConstructorDef declTy md
-        member x.MakePropertyInfo (declTy: Type) md = txILPropertyDef declTy md
-        member x.MakeEventInfo (declTy: Type) md = txILEventDef declTy md
-        member x.MakeFieldInfo (declTy: Type) md = txILFieldDef declTy md
-        member x.MakeNestedTypeInfo (declTy: Type) md =  asm.TxILTypeDef (Some declTy) md
+        member __.Metadata: ILTypeDef = inp
+        member __.MakeMethodInfo (declTy: Type) md = txILMethodDef declTy md
+        member __.MakeConstructorInfo (declTy: Type) md = txILConstructorDef declTy md
+        member __.MakePropertyInfo (declTy: Type) md = txILPropertyDef declTy md
+        member __.MakeEventInfo (declTy: Type) md = txILEventDef declTy md
+        member __.MakeFieldInfo (declTy: Type) md = txILFieldDef declTy md
+        member __.MakeNestedTypeInfo (declTy: Type) md =  asm.TxILTypeDef (Some declTy) md
 
     and TargetModule(location: string) =
         inherit Module()
@@ -8009,12 +7972,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.Reader with get() = reader  and set v = (if reader.IsSome then failwith "reader on TargetAssembly already set"); reader <- v
 
-        member x.BindType(nsp:string uoption, nm:string) =
-            match x.TryBindType(nsp, nm) with
-            | None -> failwithf "failed to bind type %s in assembly %s" nm asm.FullName
-            | Some res -> res
-
-        member x.TryBindType(nsp:string uoption, nm:string): Type option =
+        member __.TryBindType(nsp:string uoption, nm:string): Type option =
             match getReader().ILModuleDef.TypeDefs.TryFindByName(nsp, nm) with
             | Some td -> asm.TxILTypeDef None td |> Some
             | None ->
@@ -8033,6 +7991,11 @@ namespace ProviderImplementation.ProvidedTypes
                     printfn "unexpected non-forwarder during binding"
                     None
             | None -> None
+
+        member x.BindType(nsp:string uoption, nm:string) =
+            match x.TryBindType(nsp, nm) with
+            | None -> failwithf "failed to bind type %s in assembly %s" nm asm.FullName
+            | Some res -> res
 
         override x.ToString() = "tgt assembly " + x.FullName
 
@@ -8077,7 +8040,9 @@ namespace ProviderImplementation.ProvidedTypes
                 |> Option.toObj
         
         new () = 
-            let assemblyFileName = Path.ChangeExtension(Path.GetTempFileName(), "dll")
+            let tmpFile = Path.GetTempFileName()
+            let assemblyFileName = Path.ChangeExtension(tmpFile, "dll")
+            File.Delete(tmpFile)
             let simpleName = Path.GetFileNameWithoutExtension(assemblyFileName)
             ProvidedAssembly(AssemblyName(simpleName), assemblyFileName)
 
@@ -8160,23 +8125,9 @@ namespace ProviderImplementation.ProvidedTypes
     /// in the design-time assembly itself.   These are then systematically remapped (replaced/translated) to the
     /// corresponding reflection objects in the target assembly reference set.
     ///
-    /// The AssemblyReplacer acts as a way of creating provided objects where the replacement is automatically and
+    /// The ProvidedTypesContext acts as a way of creating provided objects where the replacement is automatically and
     /// systematically applied.
-    ///
-    /// When making a cross-targeting type provider, calls to
-    ///    ProvidedTypeDefinition
-    ///    ProvidedParameter,
-    ///    ProvidedProperty
-    ///    ProvidedConstructor,
-    ///    ProvidedMethod
-    /// should be replaced by
-    ///    bindingTarget.ProvidedTypeDefinition
-    ///    bindingTarget.ProvidedParameter,
-    ///    bindingTarget.ProvidedProperty
-    ///    bindingTarget.ProvidedConstructor,
-    ///    bindingTarget.ProvidedMethod
-    ///
-
+ 
 
     /// Represents the type binding context for the type provider based on the set of assemblies
     /// referenced by the compilation.
@@ -13471,7 +13422,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.EmitExpr (expectedState, expr) = emitExpr expectedState expr
 
     //-------------------------------------------------------------------------------------------------
-    // ProvidedTargetAssembly: the assembly compiler for generative type providers.
+    // AssemblyCompiler: the assembly compiler for generative type providers.
 
     /// Implements System.Reflection.Assembly backed by ILModuleReader over generated bytes 
     type AssemblyCompiler(targetAssembly: ProvidedAssembly, context: ProvidedTypesContext) =
@@ -13620,7 +13571,7 @@ namespace ProviderImplementation.ProvidedTypes
                 let ca = mkILCustomAttribMethRef (transCtorSpec attr.Constructor, constructorArgs, namedProps, namedFields)
                 f ca
 
-        member __.Compile() =
+        member __.Compile(isHostedExecution) =
             let providedTypeDefinitionsT = targetAssembly.GetTheTypes() |> Array.collect (fun (tds,nsps) -> Array.map (fun td -> (td,nsps)) tds)
             let ilg = context.ILGlobals
             let assemblyName = targetAssembly.GetName()
@@ -13890,10 +13841,15 @@ namespace ProviderImplementation.ProvidedTypes
 #else
             File.Delete assemblyFileName
 #endif
-            reader.Bytes
+            let bytes = reader.Bytes
 
-//#if !FX_NO_LOCAL_FILESYSTEM
+            // Use a real Reflection Load when running in F# Interactive
+            if isHostedExecution then 
+                let realTargetAssembly = Assembly.Load(bytes)
+                for (ptdT,_) in providedTypeDefinitionsT do
+                    ptdT.SetAssemblyInternal (K realTargetAssembly)
 
+            bytes
 
 
 #endif // NO_GENERATIVE
@@ -13925,20 +13881,40 @@ namespace ProviderImplementation.ProvidedTypes
 
         let ctxt = ProvidedTypesContext.Create (config, assemblyReplacementMap)
 
+
+#if !NO_GENERATIVE
+        let theTable = ConcurrentDictionary<string, byte[]>()
+
+        // When using hosted execution (i.e. in F# Interactive), ensure the generated assembly for a generated type is 
+        // actually fully compiled and loaded as a reflection-load assembly before handing the type back to the API.
+        let ensureCompiled (t: Type) =
+            match t with 
+            | :? ProvidedTypeDefinition as pt when pt.IsErased || pt.GetStaticParametersInternal().Length > 0 || not config.IsHostedExecution -> t
+            | _ -> 
+                (this :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly) |> ignore
+                //printfn "t.Assembly = %O" t.Assembly
+                //printfn "t.Assembly.Location = %O" t.Assembly.Location
+                //printfn "t.FullName = %O" t.FullName
+                //printfn "t.Assembly.GetTypes() = %A" (t.Assembly.GetTypes())
+                let tyName = t.FullName.Replace(",","\\,")
+                let resTy = t.Assembly.GetType(tyName)
+                if resTy = null then failwithf "couldn't find type '%s' in assembly '%O'" tyName t.Assembly
+                resTy
+
+#else
+        let ensureCompiled (t: Type) = t
+#endif
+
         let makeProvidedNamespace (namespaceName:string) (typesSrc:ProvidedTypeDefinition list) =
             let typesSrc = [| for ty in typesSrc -> ty :> Type |]
             let nsSrc = 
                 { new IProvidedNamespace with
                     member __.GetNestedNamespaces() = [| |]
                     member __.NamespaceName = namespaceName
-                    member __.GetTypes() = typesSrc 
-                    member __.ResolveTypeName typeName = typesSrc |> Array.tryFind (fun ty -> ty.Name = typeName) |> Option.toObj }
+                    member __.GetTypes() = typesSrc |> Array.map ensureCompiled
+                    member __.ResolveTypeName typeName = typesSrc |> Array.tryFind (fun ty -> ty.Name = typeName) |> Option.map ensureCompiled |> Option.toObj }
             let nsT = ctxt.ConvertSourceNamespaceToTarget nsSrc
             nsT
-
-#if !NO_GENERATIVE
-        let theTable = ConcurrentDictionary<string, byte[]>()
-#endif
 
         let namespacesT = ResizeArray<IProvidedNamespace>()
 
@@ -14072,14 +14048,16 @@ namespace ProviderImplementation.ProvidedTypes
             member __.ApplyStaticArguments(ty, typePathAfterArguments:string[], objs) =
                 let typePathAfterArguments = typePathAfterArguments.[typePathAfterArguments.Length-1]
                 match ty with
-                | :? ProvidedTypeDefinition as t -> (t.ApplyStaticArguments(typePathAfterArguments, objs) :> Type)
+                | :? ProvidedTypeDefinition as t -> 
+                    let ty = (t.ApplyStaticArguments(typePathAfterArguments, objs) :> Type)
+                    ensureCompiled ty
+
                 | _ -> failwithf "ApplyStaticArguments: static params for type %s are unexpected, it is not a provided type definition. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" ty.FullName
 
-#if NO_GENERATIVE
-            member __.GetGeneratedAssemblyContents(_assembly) =
-                failwith "no generative assemblies"
-#else
             member __.GetGeneratedAssemblyContents(assembly:Assembly) =
+#if NO_GENERATIVE
+                ignore assembly; failwith "no generative assemblies"
+#else
                 //printfn "looking up assembly '%s'" assembly.FullName
                 let key = assembly.GetName().ToString()
                 match theTable.TryGetValue key with
@@ -14087,7 +14065,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ ->
                     let bytes = 
                         match assembly with 
-                        | :? ProvidedAssembly as targetAssembly -> AssemblyCompiler(targetAssembly, ctxt).Compile()
+                        | :? ProvidedAssembly as targetAssembly -> AssemblyCompiler(targetAssembly, ctxt).Compile(config.IsHostedExecution)
                         | _ -> File.ReadAllBytes assembly.ManifestModule.FullyQualifiedName
                     theTable.[key] <- bytes
                     bytes
@@ -14096,7 +14074,11 @@ namespace ProviderImplementation.ProvidedTypes
         member __.RegisterGeneratedTargetAssembly (fileName:string) =
             let assemblyBytes = File.ReadAllBytes fileName
             //printfn "registering assembly in '%s'" fileName
-            let assembly = ctxt.ReadRelatedAssembly(fileName)
+            let assembly = 
+                if config.IsHostedExecution then 
+                    Assembly.Load(assemblyBytes) // we need a real on-disk assembly
+                else
+                    ctxt.ReadRelatedAssembly(fileName)
             ctxt.AddTargetAssembly(assembly.GetName(), assembly)
             //printfn "registered assembly in '%s', FullName='%s'" fileName assembly.FullName
             let key = assembly.GetName().ToString()

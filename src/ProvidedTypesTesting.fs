@@ -34,9 +34,11 @@ type internal TcImports(bas: TcImports option, dllInfos: DllInfo list) =
 type internal Testing() =
 
     /// Simulates a real instance of TypeProviderConfig
-    static member MakeSimulatedTypeProviderConfig (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list) =
+    static member MakeSimulatedTypeProviderConfig (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list, ?isHostedExecution, ?isInvalidationSupported) =
 
         let cfg = TypeProviderConfig(fun _ -> false)
+        cfg.IsHostedExecution <- defaultArg isHostedExecution false
+        cfg.IsInvalidationSupported <- defaultArg isInvalidationSupported true
         let (?<-) cfg prop value =
             let ty = cfg.GetType()
             match ty.GetProperty(prop,BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic) with
