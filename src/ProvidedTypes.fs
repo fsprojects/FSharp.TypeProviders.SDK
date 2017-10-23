@@ -1795,11 +1795,15 @@ namespace ProviderImplementation.ProvidedTypes
         // The binding attributes are always set to DeclaredOnly ||| Static ||| Instance ||| Public when GetMembers is called directly by the F# compiler
         // However, it's possible for the framework to generate other sets of flags in some corner cases (e.g. via use of `enum` with a provided type as the target)
         override __.GetMembers bindingFlags =
-            [| for x in this.GetMethods(bindingFlags) do yield (x :> MemberInfo)
-               for x in this.GetFields(bindingFlags) do yield (x :> MemberInfo)
-               for x in this.GetProperties(bindingFlags) do yield (x :> MemberInfo)
-               for x in this.GetEvents(bindingFlags) do yield (x :> MemberInfo)
-               for x in this.GetNestedTypes(bindingFlags) do yield (x :> MemberInfo) |]
+            [| for m in getMembers()  do
+                 match m with 
+                 | :? ConstructorInfo as c when memberBinds false bindingFlags c.IsStatic c.IsPublic -> yield (c :> MemberInfo)
+                 | :? MethodInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> yield (m :> _)
+                 | :? FieldInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> yield (m :> _)
+                 | :? PropertyInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> yield (m :> _)
+                 | :? EventInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> yield (m :> _)
+                 | :? Type as m when memberBinds true bindingFlags false m.IsPublic || m.IsNestedPublic -> yield (m :> _) 
+                 | _ -> () |]
 
         override this.GetMember(name,mt,_bindingFlags) =
             let mt = if mt.HasFlag(MemberTypes.NestedType) then mt ||| MemberTypes.TypeInfo else mt
@@ -6734,7 +6738,6 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
         let decodeILCustomAttribData ilg (ca: ILCustomAttribute) =
             let bytes = ca.Data
-            //printfn "decodeILCustomAttribData, data.Length = %d, data = %A, meth = %A, argtypes = %A " bytes.Length bytes ca.Method.EnclosingType ca.Method.FormalArgTypes
             let sigptr = 0
             let bb0,sigptr = sigptr_get_byte bytes sigptr
             let bb1,sigptr = sigptr_get_byte bytes sigptr
@@ -6805,10 +6808,11 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                     let n,sigptr = sigptr_get_i32 bytes sigptr
                     if n = 0xFFFFFFFF then (argty, null),sigptr else
                     let rec parseElems acc n sigptr =
-                        if n = 0 then List.rev acc else
+                        if n = 0 then List.rev acc, sigptr else
                         let v,sigptr = parseVal elemTy sigptr
                         parseElems (v ::acc) (n-1) sigptr
-                    let elems = parseElems [] n sigptr |> List.map snd |> List.toArray
+                    let elems, sigptr = parseElems [] n sigptr 
+                    let elems = elems |> List.map snd |> List.toArray
                     (argty, box elems), sigptr
                 | ILType.Value _ ->  (* assume it is an enumeration *)
                     let n,sigptr = sigptr_get_i32 bytes sigptr
@@ -6827,6 +6831,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             let nnamed,sigptr = sigptr_get_u16 bytes sigptr
             //printfn "nnamed = %d" nnamed
 
+            try
             let rec parseNamed acc n sigptr =
                 if n = 0 then List.rev acc else
                 let isPropByte,sigptr = sigptr_get_u8 bytes sigptr
@@ -6859,6 +6864,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             let named = parseNamed [] (int nnamed) sigptr
             fixedArgs, named
 
+            with err -> 
+              failwithf  "FAILED decodeILCustomAttribData, data.Length = %d, data = %A, meth = %A, argtypes = %A, fixedArgs=%A, nnamed = %A, sigptr before named = %A,  innerError = %A" bytes.Length bytes ca.Method.EnclosingType ca.Method.FormalArgTypes fixedArgs nnamed sigptr (err.ToString())
 
         type CacheValue = ILModuleReader
         let (|CacheValue|_|) (wr: WeakReference) = match wr.Target with null -> None | v -> Some (v :?> CacheValue)
@@ -7844,7 +7851,8 @@ namespace ProviderImplementation.ProvidedTypes
 
 
         override this.GetMembers(bindingFlags) =
-            [| for x in this.GetMethods(bindingFlags) do yield (x :> MemberInfo)
+            [| for x in this.GetConstructors(bindingFlags) do yield (x :> MemberInfo)
+               for x in this.GetMethods(bindingFlags) do yield (x :> MemberInfo)
                for x in this.GetFields(bindingFlags) do yield (x :> MemberInfo)
                for x in this.GetProperties(bindingFlags) do yield (x :> MemberInfo)
                for x in this.GetEvents(bindingFlags) do yield (x :> MemberInfo)
