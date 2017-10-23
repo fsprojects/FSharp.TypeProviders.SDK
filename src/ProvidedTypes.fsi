@@ -468,7 +468,7 @@ namespace ProviderImplementation.ProvidedTypes
         new: config: TypeProviderConfig * namespaceName:string * types: ProvidedTypeDefinition list * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
 
         /// Initializes a type provider
-        new: config: TypeProviderConfig -> TypeProviderForNamespaces
+        new: config: TypeProviderConfig * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
 
         /// Invoked by the type provider to add a namespace of provided types in the specification of the type provider.
         member AddNamespace: namespaceName:string * types: ProvidedTypeDefinition list -> unit

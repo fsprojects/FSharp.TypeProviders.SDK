@@ -76,6 +76,10 @@ type ErasingProviderWithStaticParams (config : TypeProviderConfig) as this =
         let myType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>)
         let myProp = ProvidedProperty("MyGetterProperty", typeof<string list>, isStatic = true, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
         myType.AddMember(myProp)
+        myType.AddMembersDelayed(fun () -> 
+             let myDelayedProp = ProvidedProperty("MyDelayedGetterProperty", typeof<string list>, isStatic = true, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
+             [ myDelayedProp ])
+
         myType
 
     do
@@ -134,12 +138,26 @@ let ``ErasingProvider generates for Portable Profile 7 F# 4.0 correctly``() : un
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
 
 [<Fact>]
+let ``ErasingProviderWithStaticParams generates for .NET 4.5 F# 4.0 correctly``() : unit = 
+  if (try File.Exists (Targets.FSharpCore40Ref()) with _ -> false) then
+    let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingProviderWithStaticParams(args)) [| box 3 |]
+    printfn "res = %s" res
+    Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
+    Assert.True(res.Contains "[FSharp.Core, Version=4.4.0.0")
+    Assert.True(res.Contains "MyGetterProperty")
+    Assert.True(res.Contains "MyDelayedGetterProperty")
+
+[<Fact>]
 let ``ErasingProviderWithStaticParams generates for Portable Profile 7 F# 4.0 correctly``() : unit = 
   if Targets.hasPortable7Assemblies() then 
     let res = testCrossTargeting (Targets.Portable7FSharp40Refs()) (fun args -> new ErasingProviderWithStaticParams(args)) [| box 3 |]
+    printfn "res = %s" res
     Assert.True(res.Contains "[FSharp.Core, Version=3.7.4.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
+    Assert.True(res.Contains "MyGetterProperty")
+    Assert.True(res.Contains "MyDelayedGetterProperty")
 
 [<Fact>]
 let ``ErasingConstructorProvider generates for .NET 4.5 F# 3.1 correctly``() : unit  = 
@@ -281,5 +299,4 @@ let ``Check can't create Expr Value nodes for non-primitive types``() : unit  =
            let targetType = mscorlib31.GetType(tname)
            Quotations.Expr.Value(sampleValue, targetType) |> ignore
         with _ -> () // ok
-          
           

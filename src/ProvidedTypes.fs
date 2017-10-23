@@ -1603,10 +1603,10 @@ namespace ProviderImplementation.ProvidedTypes
 
         do match initialData with 
            | None -> () 
-           | Some (getMembers, getInterfaceImpls, getMethodOverrides) ->
-               membersQueue.Add getMembers
-               interfaceImplsQueue.Add getInterfaceImpls
-               methodOverridesQueue.Add getMethodOverrides
+           | Some (getFreshMembers, getFreshInterfaceImpls, getFreshMethodOverrides) ->
+               membersQueue.Add getFreshMembers
+               interfaceImplsQueue.Add getFreshInterfaceImpls
+               methodOverridesQueue.Add getFreshMethodOverrides
 
 
         // members API
@@ -1615,11 +1615,11 @@ namespace ProviderImplementation.ProvidedTypes
                 let elems = membersQueue |> Seq.toArray // take a copy in case more elements get added
                 membersQueue.Clear()
                 for  f in elems do
-                    for i in f() do
-                        membersKnown.Add i
+                    for m in f() do
+                        membersKnown.Add m
                         
                         // Implicitly add the property and event methods (only for the source model where they are not explicitly declared)
-                        match i with
+                        match m with
                         | :? ProvidedProperty    as p ->
                             if not p.BelongsToTargetModel then 
                                 if p.CanRead then membersKnown.Add (p.GetGetMethod true)
@@ -1629,6 +1629,14 @@ namespace ProviderImplementation.ProvidedTypes
                                 membersKnown.Add (e.GetAddMethod true)
                                 membersKnown.Add (e.GetRemoveMethod true)
                         | _ -> ()
+                
+               // // re-add the getFreshMembers call from the initialData to make sure we fetch the latest translated members from the source model
+               // match initialData with 
+               // | None -> () 
+               // | Some (getFreshMembers, _getInterfaceImpls, _getMethodOverrides) ->
+               //     membersQueue.Add getFreshMembers
+                   //interfaceImplsQueue.Add getInterfaceImpls
+                   //methodOverridesQueue.Add getMethodOverrides
 
             membersKnown.ToArray()
 
@@ -7652,7 +7660,7 @@ namespace ProviderImplementation.ProvidedTypes
                 let (gps1:Type[]),(gps2:Type[]) = gps
                 if n < gps1.Length then gps1.[n]
                 elif n < gps1.Length + gps2.Length then gps2.[n - gps1.Length]
-                else failwithf "generic parameter index our of range: %d" n
+                else failwithf "generic parameter index out of range: %d" n
 
         /// Convert an ILGenericParameterDef read from a binary to a System.Type.
         and txILGenericParam gpsf pos (inp: ILGenericParameterDef) =
@@ -13891,15 +13899,29 @@ namespace ProviderImplementation.ProvidedTypes
             match t with 
             | :? ProvidedTypeDefinition as pt when pt.IsErased || pt.GetStaticParametersInternal().Length > 0 || not config.IsHostedExecution -> t
             | _ -> 
-                (this :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly) |> ignore
+                let origAssembly = t.Assembly
+
+                // We expect the results reported by t.Assembly to actually change after this call, because the act of compilation
+                // when isHostedExecution=true replaces the Assembly object reported.
+                (this :> ITypeProvider).GetGeneratedAssemblyContents(origAssembly) |> ignore
+
                 //printfn "t.Assembly = %O" t.Assembly
                 //printfn "t.Assembly.Location = %O" t.Assembly.Location
                 //printfn "t.FullName = %O" t.FullName
                 //printfn "t.Assembly.GetTypes() = %A" (t.Assembly.GetTypes())
                 let tyName = t.FullName.Replace(",","\\,")
-                let resTy = t.Assembly.GetType(tyName)
-                if resTy = null then failwithf "couldn't find type '%s' in assembly '%O'" tyName t.Assembly
-                resTy
+                let newAssembly = t.Assembly
+                let newAssemblyName = newAssembly.GetName().Name
+                let origAssemblyName = origAssembly.GetName().Name
+                // check the assembly was generated with the correct name
+                if newAssemblyName <> origAssemblyName  then 
+                    failwithf "expected identical assembly name keys '%s' and '%s'" origAssemblyName newAssemblyName
+
+                // check the type really exists
+                if t.Assembly.GetType(tyName) = null then 
+                    failwithf "couldn't find type '%s' in assembly '%O'" tyName t.Assembly
+
+                t
 
 #else
         let ensureCompiled (t: Type) = t
@@ -13933,10 +13955,12 @@ namespace ProviderImplementation.ProvidedTypes
 #endif
 
         new (config, namespaceName, types, ?assemblyReplacementMap) = 
-            let assemblyReplacementMap = defaultArg assemblyReplacementMap List.empty
+            let assemblyReplacementMap = defaultArg assemblyReplacementMap []
             new TypeProviderForNamespaces(config, [(namespaceName,types)], assemblyReplacementMap)
 
-        new (config) = new TypeProviderForNamespaces(config, [], [ ])
+        new (config, ?assemblyReplacementMap) = 
+            let assemblyReplacementMap = defaultArg assemblyReplacementMap []
+            new TypeProviderForNamespaces(config, [], assemblyReplacementMap)
 
         member __.TargetContext = ctxt
 
@@ -14059,7 +14083,7 @@ namespace ProviderImplementation.ProvidedTypes
                 ignore assembly; failwith "no generative assemblies"
 #else
                 //printfn "looking up assembly '%s'" assembly.FullName
-                let key = assembly.GetName().ToString()
+                let key = assembly.GetName().Name
                 match theTable.TryGetValue key with
                 | true,bytes -> bytes
                 | _ ->
@@ -14080,8 +14104,7 @@ namespace ProviderImplementation.ProvidedTypes
                 else
                     ctxt.ReadRelatedAssembly(fileName)
             ctxt.AddTargetAssembly(assembly.GetName(), assembly)
-            //printfn "registered assembly in '%s', FullName='%s'" fileName assembly.FullName
-            let key = assembly.GetName().ToString()
+            let key = assembly.GetName().Name
             theTable.[key] <- assemblyBytes
             assembly
 
