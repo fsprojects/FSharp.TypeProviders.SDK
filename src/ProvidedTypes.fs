@@ -4,6 +4,8 @@
 
 namespace ProviderImplementation.ProvidedTypes
 
+    #nowarn "1182"
+
     // This file contains a set of helper types and methods for providing types in an implementation
     // of ITypeProvider.
     //
@@ -2013,6 +2015,8 @@ namespace ProviderImplementation.ProvidedTypes
 // binary reader code.  Used by the type provider to read referenced asssemblies.
 
 namespace ProviderImplementation.ProvidedTypes.AssemblyReader
+
+    #nowarn "1182"
 
     open System
     open System.Collections.Generic
@@ -6886,6 +6890,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
 namespace ProviderImplementation.ProvidedTypes
 
+    #nowarn "1182"
+
     //
     // The on-disk assemblies are read by AssemblyReader.
     //
@@ -8079,6 +8085,8 @@ namespace ProviderImplementation.ProvidedTypes
 
 
     #nowarn "8796"
+    #nowarn "1182"
+
     open System
     open System.Diagnostics
     open System.IO
@@ -8718,6 +8726,8 @@ namespace ProviderImplementation.ProvidedTypes
 #if !NO_GENERATIVE
 
 namespace ProviderImplementation.ProvidedTypes
+
+    #nowarn "1182"
     module BinaryWriter =
 
         open System
@@ -12721,6 +12731,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 namespace ProviderImplementation.ProvidedTypes
 
+    #nowarn "1182"
     open System
     open System.Diagnostics
     open System.IO
@@ -13867,6 +13878,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 namespace ProviderImplementation.ProvidedTypes
 
+    #nowarn "1182"
     open System
     open System.Diagnostics
     open System.IO
