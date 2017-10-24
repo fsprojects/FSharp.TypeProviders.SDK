@@ -2,10 +2,18 @@
   <PropertyGroup>
     <TargetFrameworks>net45; netstandard2.0</TargetFrameworks>
     <OutputType>Library</OutputType>
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
     <Compile Include="ProvidedTypesTesting.fs" />
+    <Reference Include="FSharp.Core" Condition="'$(TargetFramework)' == 'net45'">
+      <HintPath>..\packages\fs31\FSharp.Core\lib\net40\FSharp.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="FSharp.Core" Condition="'$(TargetFramework)' == 'netstandard2.0'">
+      <HintPath>..\packages\FSharp.Core\lib\netstandard1.6\FSharp.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>
