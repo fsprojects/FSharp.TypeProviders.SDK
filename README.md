@@ -86,15 +86,33 @@ See [How to enable type providers with new-style .NET SDK project files, ``dotne
 
 ### Some Type Provider terminology
 
-* TPDTC - Type Provider Design Time Component.  The DLL that gets loaded into the host tool. May be the same physical file as the TPRTC.  This component should include the ProvidedTypes.fs/fsi files from the type provider SDK.
+* TPRTC - Type Provider Referenced Component, e.g. ``FSharp.Data.dll``. 
 
-* TPRTC - Type Provider Referenced Component. This is the component actually referenced by ``#r`` or ``-r:`` on the command line.  May be the same physical file as the TPDTC. Contains either a [``TypeProviderAssembly()``](https://msdn.microsoft.com/en-us/visualfsharpdocs/conceptual/compilerservices.typeproviderassemblyattribute-class-%5Bfsharp%5D) attribute indicating that  this component is also a TPDTC, or ``TypeProviderAssembly("MyDesignTime.dll")`` attribute indicating that the name of the design time component.
+  * This is the component referenced by ``#r`` or ``-r:`` on the command line or other confugration of a host tool
+  
+  * May be the same physical file as the TPDTC.
+  
+  * Contains either a [``TypeProviderAssembly()``](https://msdn.microsoft.com/en-us/visualfsharpdocs/conceptual/compilerservices.typeproviderassemblyattribute-class-%5Bfsharp%5D) attribute indicating that  this component is also a TPDTC, or ``TypeProviderAssembly("MyDesignTime.dll")`` attribute indicating that the name of the design time component.
+  
+  * A type provider package may have multiple such DLLs for different target platforms, e.g. 
+  
+        lib\net45\FSharp.Data.dll
+        lib\netstandard2.0\FSharp.Data.dll
+
+  * TPRTCs are normally .NET Framework 4.x, .NET Standard 2.0 or some portable profile component.  
+
+* TPDTC - Type Provider Design Time Component, e.g. ``FSharp.Data.DesignTime.dll``.  
+
+  * The DLL that gets loaded into host tools.
+  
+  * May be the same physical file as the TPRTC.
+  
+  * This component includes the ProvidedTypes.fs/fsi files from the type provider SDK.
+
+  * TPDTCs are currently .NET Framework 4.x.  They can also be .NET Standard 2.0 components, see below
 
 * Host tool - Either ``fsc.exe``, ``fsi.exe`` or some tool hosting ``FSharp.Compiler.Service.dll`` such as ``devenv.exe`` or ``FsAutoComplete.exe``
 
-TPDTCs are currently .NET Framework 4.x.  They can also be .NET Standard 2.0 components, see below
-
-TPRTCs are normally .NET Framework 4.x, .NET Standard 2.0 or some portable profile component.  
 
 ### How the TPDTC is found and loaded
 
