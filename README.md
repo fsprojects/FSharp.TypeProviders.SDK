@@ -1,7 +1,7 @@
 [![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK/badge/issue)](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK)
 [![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK/badge/pr)](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK)
 
-# F# Type Provider SDK [![NuGet Status](http://img.shields.io/nuget/v/FSharp.TypeProviders.SDK.svg?style=flat)](https://www.nuget.org/packages/FSharp.TypeProviders.SDK/)
+# The F# Type Provider SDK 
 
 The F# Type Provider SDK is two things: 
 
@@ -9,11 +9,7 @@ The F# Type Provider SDK is two things:
 
 2. Documentation and samples on type provider creation
 
-This package is actively seeking contributions.   We are aiming for documentation
-(the plan is a GitHub page setup similar to [FSharp.Data](http://fsharp.github.io/FSharp.Data)) with
-examples of all the most common features of Type Providers that people will want to use (basic erased type
-generation, parameterized providers, full generated types, seperating design and runtime how's and why's, etc). 
-It will also become the main place for improvements and additions to the ProvidedTypes code.
+This package is actively seeking contributions.
 
 ## Build status
 
@@ -104,7 +100,7 @@ TPRTCs are normally .NET Framework 4.x, .NET Standard 2.0 or some portable profi
 
 Currently, host tools look for TPDTC DLLs alongside the TPRTC DLL. For simple type providers, these DLLs are the same. When executing using .NET Framework, the host tool uses ``Assembly.LoadFrom`` to load this component.
 
-See [Type provider design-time DLLs should be chosen more appropriately](https://github.com/Microsoft/visualfsharp/issues/3736) for a proposal to change the rules to allow TPDTC components to be found more usefully, an in particular for different TPDTC components to be loaded depending on the execution environment of the host tooling.
+See [Type provider design-time DLLs should be chosen more appropriately](https://github.com/Microsoft/visualfsharp/issues/3736) for a proposal to change the rules to allow TPDTC components to be found more usefully, and in particular for different TPDTC components to be loaded depending on the execution environment of the host tooling.
 
 ### Making a .NET Standard 2.0 TPDTC
 
