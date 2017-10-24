@@ -68,7 +68,16 @@ namespace ProviderImplementation.ProvidedTypes
             | UNone -> nm
             | USome ns -> ns + "." + nm
 
+        let lengthsEqAndForall2 (arr1: 'T1[]) (arr2: 'T2[]) f =
+            (arr1.Length = arr2.Length) &&
+            (arr1,arr2) ||> Array.forall2 f
 
+        let rec eqTypes (ty1:Type) (ty2:Type) =
+            if ty1.IsGenericType then ty2.IsGenericType && lengthsEqAndForall2 (ty1.GetGenericArguments()) (ty2.GetGenericArguments()) eqTypes
+            elif ty1.IsArray then ty2.IsArray && ty1.GetArrayRank() = ty2.GetArrayRank() && eqTypes (ty1.GetElementType()) (ty2.GetElementType())
+            elif ty1.IsPointer then ty2.IsPointer && eqTypes (ty1.GetElementType()) (ty2.GetElementType())
+            elif ty1.IsByRef then ty2.IsByRef && eqTypes (ty1.GetElementType()) (ty2.GetElementType())
+            else ty1.Equals(box ty2)
 
         let bindAll = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance
         let bindSome isStatic = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| (if isStatic then BindingFlags.Static else BindingFlags.Instance)
@@ -76,6 +85,29 @@ namespace ProviderImplementation.ProvidedTypes
         let memberBinds isType (bindingFlags: BindingFlags) isStatic isPublic = 
             (isType || bindingFlags.HasFlag(if isStatic then BindingFlags.Static else BindingFlags.Instance)) &&
             ((bindingFlags.HasFlag(BindingFlags.Public) && isPublic) || (bindingFlags.HasFlag(BindingFlags.NonPublic) && not isPublic))
+
+        let rec instType inst (ty:Type) =
+            if isNull ty then null
+            elif ty.IsGenericType then
+                let typeArgs = Array.map (instType inst) (ty.GetGenericArguments())
+                ty.GetGenericTypeDefinition().MakeGenericType(typeArgs)
+            elif ty.HasElementType then
+                let ety = instType inst (ty.GetElementType())
+                if ty.IsArray then
+                    let rank = ty.GetArrayRank()
+                    if rank = 1 then ety.MakeArrayType()
+                    else ety.MakeArrayType(rank)
+                elif ty.IsPointer then ety.MakePointerType()
+                elif ty.IsByRef then ety.MakeByRefType()
+                else ty
+            elif ty.IsGenericParameter then
+                let pos = ty.GenericParameterPosition
+                let (inst1: Type[], inst2: Type[]) = inst
+                if pos < inst1.Length then inst1.[pos]
+                elif pos < inst1.Length + inst2.Length then inst2.[pos - inst1.Length]
+                else ty
+            else ty
+
 
         let mutable token = 0 
         let genToken() =  token <- token + 1; token
@@ -433,42 +465,9 @@ namespace ProviderImplementation.ProvidedTypes
         inherit TypeDelegator()
         let typeArgs = Array.ofList typeArgs
 
-        let rec isEquivalentTo (thisTy: Type) (otherTy: Type) =
-            match thisTy, otherTy with
-            | (:? ProvidedTypeSymbol as thisTy), (:? ProvidedTypeSymbol as thatTy) -> (thisTy.Kind,thisTy.Args) = (thatTy.Kind, thatTy.Args)
-            | (:? ProvidedTypeSymbol as thisTy), otherTy | otherTy, (:? ProvidedTypeSymbol as thisTy) ->
-                match thisTy.Kind, thisTy.Args with
-                | ProvidedTypeSymbolKind.SDArray, [| ty |] | ProvidedTypeSymbolKind.Array _, [| ty |] when otherTy.IsArray-> ty.Equals(otherTy.GetElementType())
-                | ProvidedTypeSymbolKind.ByRef, [| ty |] when otherTy.IsByRef -> ty.Equals(otherTy.GetElementType())
-                | ProvidedTypeSymbolKind.Pointer, [| ty |] when otherTy.IsPointer -> ty.Equals(otherTy.GetElementType())
-                | ProvidedTypeSymbolKind.Generic baseTy, typeArgs -> otherTy.IsGenericType && isEquivalentTo baseTy (otherTy.GetGenericTypeDefinition()) && Seq.forall2 isEquivalentTo typeArgs (otherTy.GetGenericArguments())
-                | _ -> false
-            | a, b -> a.Equals b
-
         do this.typeImpl <- this
 
         /// Substitute types for type variables.
-        static member InstType (parameters: Type[]) (ty:Type) =
-            if isNull ty then null
-            elif ty.IsGenericType then
-                let typeArgs = Array.map (ProvidedTypeSymbol.InstType parameters) (ty.GetGenericArguments())
-                ty.GetGenericTypeDefinition().MakeGenericType(typeArgs)
-            elif ty.HasElementType then
-                let ety = ProvidedTypeSymbol.InstType parameters (ty.GetElementType())
-                if ty.IsArray then
-                    let rank = ty.GetArrayRank()
-                    if rank = 1 then ety.MakeArrayType()
-                    else ety.MakeArrayType(rank)
-                elif ty.IsPointer then ety.MakePointerType()
-                elif ty.IsByRef then ety.MakeByRefType()
-                else ty
-            elif ty.IsGenericParameter then
-                if ty.GenericParameterPosition <= parameters.Length - 1 then
-                    parameters.[ty.GenericParameterPosition]
-                else
-                    ty
-            else ty
-
         override __.FullName =
             match kind,typeArgs with
             | ProvidedTypeSymbolKind.SDArray,[| arg |] -> arg.FullName + "[]"
@@ -490,13 +489,14 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedTypeSymbolKind.Generic gty -> gty.DeclaringType
             | ProvidedTypeSymbolKind.FSharpTypeAbbreviation _ -> null
 
+        // TODO: This implementation looks dubious
         override __.IsAssignableFrom(otherTy: Type) =
             match kind with
             | Generic gtd ->
                 if otherTy.IsGenericType then
                     let otherGtd = otherTy.GetGenericTypeDefinition()
                     let otherArgs = otherTy.GetGenericArguments()
-                    let yes = gtd.Equals(otherGtd) && Seq.forall2 isEquivalentTo typeArgs otherArgs
+                    let yes = gtd.Equals(otherGtd) && Seq.forall2 eqTypes typeArgs otherArgs
                     yes
                     else
                         base.IsAssignableFrom(otherTy)
@@ -520,7 +520,7 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedTypeSymbolKind.ByRef -> typeof<ValueType>
             | ProvidedTypeSymbolKind.Generic gty  ->
                 if isNull gty.BaseType then null else
-                ProvidedTypeSymbol.InstType typeArgs gty.BaseType
+                instType (typeArgs, [| |]) gty.BaseType
             | ProvidedTypeSymbolKind.FSharpTypeAbbreviation _ -> typeof<obj>
 
         override __.GetArrayRank() = (match kind with ProvidedTypeSymbolKind.Array n -> n | ProvidedTypeSymbolKind.SDArray -> 1 | _ -> failwithf "non-array type '%O'" this)
@@ -568,10 +568,12 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedTypeSymbolKind.FSharpTypeAbbreviation _,_ -> 3092
             | _ -> failwith "unreachable"
 
-        override __.Equals(other: obj) =
+        override this.Equals(other: obj) =
             match other with
-            | :? ProvidedTypeSymbol as otherTy -> (kind, typeArgs) = (otherTy.Kind, otherTy.Args)
+            | :? Type as other -> eqTypes this other
             | _ -> false
+
+        override this.Equals(other: Type) = eqTypes this other
 
         member __.Kind = kind
 
@@ -670,7 +672,7 @@ namespace ProviderImplementation.ProvidedTypes
         let convParam (p:ParameterInfo) =
             { new ParameterInfo() with
                   override __.Name = p.Name
-                  override __.ParameterType = ProvidedTypeSymbol.InstType parameters p.ParameterType
+                  override __.ParameterType = instType (parameters, [| |]) p.ParameterType
                   override __.Attributes = p.Attributes
                   override __.RawDefaultValue = p.RawDefaultValue
                   override __.GetCustomAttributesData() = p.GetCustomAttributesData()
@@ -684,7 +686,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetGenericMethodDefinition() = genericMethodDefinition
 
-        override __.DeclaringType = ProvidedTypeSymbol.InstType parameters genericMethodDefinition.DeclaringType
+        override __.DeclaringType = instType (parameters, [| |]) genericMethodDefinition.DeclaringType
         override __.ToString() = "Method " + genericMethodDefinition.Name
         override __.Name = genericMethodDefinition.Name
         override __.MetadataToken = genericMethodDefinition.MetadataToken
@@ -693,7 +695,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MemberType = genericMethodDefinition.MemberType
 
         override this.IsDefined(_attributeType, _inherit): bool = notRequired this "IsDefined" genericMethodDefinition.Name
-        override __.ReturnType = ProvidedTypeSymbol.InstType parameters genericMethodDefinition.ReturnType
+        override __.ReturnType = instType (parameters, [| |]) genericMethodDefinition.ReturnType
         override __.GetParameters() = genericMethodDefinition.GetParameters() |> Array.map convParam
         override __.ReturnParameter = genericMethodDefinition.ReturnParameter |> convParam
         override this.ReturnTypeCustomAttributes = notRequired this "ReturnTypeCustomAttributes" genericMethodDefinition.Name
@@ -1453,10 +1455,8 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.MemberType = if this.IsNested then MemberTypes.NestedType else MemberTypes.TypeInfo
         override x.GetHashCode() = x.Namespace.GetHashCode() ^^^ className.GetHashCode()
-        override __.Equals(that:obj) =
-            match that with
-            | :? ProvidedTypeDefinition as ti -> Object.ReferenceEquals(this,ti)
-            | _                 -> false
+        override this.Equals(that: obj) = Object.ReferenceEquals(this, that)
+        override this.Equals(that: Type) = Object.ReferenceEquals(this, that)
 
         override __.GetGenericArguments() = [||]
         override __.ToString() = this.Name
@@ -6561,31 +6561,6 @@ namespace ProviderImplementation.ProvidedTypes
 
             member __.ContainsKey inp = tab.ContainsKey inp
 
-        let lengthsEqAndForall2 (arr1: 'T1[]) (arr2: 'T2[]) f =
-            (arr1.Length = arr2.Length) &&
-            (arr1,arr2) ||> Array.forall2 f
-
-        // Instantiate a type's generic parameters
-        let rec instType inst (ty:Type) =
-            if ty.IsGenericType then
-                let args = Array.map (instType inst) (ty.GetGenericArguments())
-                ty.GetGenericTypeDefinition().MakeGenericType(args)
-            elif ty.HasElementType then
-                let ety = instType inst (ty.GetElementType())
-                if ty.IsArray then
-                    let rank = ty.GetArrayRank()
-                    if rank = 1 then ety.MakeArrayType()
-                    else ety.MakeArrayType(rank)
-                elif ty.IsPointer then ety.MakePointerType()
-                elif ty.IsByRef then ety.MakeByRefType()
-                else ty
-            elif ty.IsGenericParameter then
-                let pos = ty.GenericParameterPosition
-                let (inst1: Type[], inst2: Type[]) = inst
-                if pos < inst1.Length then inst1.[pos]
-                elif pos < inst1.Length + inst2.Length then inst2.[pos - inst1.Length]
-                else ty
-            else ty
 
         let instParameterInfo inst (inp: ParameterInfo) =
             { new ParameterInfo() with
@@ -6595,13 +6570,6 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.RawDefaultValue = inp.RawDefaultValue
                 override __.GetCustomAttributesData() = inp.GetCustomAttributesData()
                 override x.ToString() = inp.ToString() + "@inst" }
-
-        let rec eqType (ty1:Type) (ty2:Type) =
-            if ty1.IsGenericType then ty2.IsGenericType && lengthsEqAndForall2 (ty1.GetGenericArguments()) (ty2.GetGenericArguments()) eqType
-            elif ty1.IsArray then ty2.IsArray && ty1.GetArrayRank() = ty2.GetArrayRank() && eqType (ty1.GetElementType()) (ty2.GetElementType())
-            elif ty1.IsPointer then ty2.IsPointer && eqType (ty1.GetElementType()) (ty2.GetElementType())
-            elif ty1.IsByRef then ty2.IsByRef && eqType (ty1.GetElementType()) (ty2.GetElementType())
-            else ty1.Equals(box ty2)
 
         let hashILParameterTypes (ps: ILParameters) =
            // This hash code doesn't need to be very good as hashing by name is sufficient to give decent hash granularity
@@ -6668,7 +6636,7 @@ namespace ProviderImplementation.ProvidedTypes
                 ty1.IsByRef && eqTypeAndILTypeWithInst inst2 (ty1.GetElementType()) arg2
             | ILType.Var(arg2) ->
                 if int arg2 < inst2.Length then
-                     eqType ty1 inst2.[int arg2]
+                     eqTypes ty1 inst2.[int arg2]
                 else
                      ty1.IsGenericParameter && ty1.GenericParameterPosition = int arg2
 
@@ -6701,7 +6669,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetHashCode() = gmd.MetadataToken
         override this.Equals(that:obj) =
             match that with
-            | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqType dty that.DeclaringType && lengthsEqAndForall2 (gmd.GetGenericArguments()) (that.GetGenericArguments()) (=)
+            | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes dty that.DeclaringType && lengthsEqAndForall2 (gmd.GetGenericArguments()) (that.GetGenericArguments()) (=)
             | _ -> false
 
         
@@ -6736,7 +6704,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetHashCode() = inp.GetHashCode()
         override this.Equals(that:obj) =
             match that with
-            | :? ConstructorInfo as that -> this.MetadataToken = that.MetadataToken && eqType declTy that.DeclaringType
+            | :? ConstructorInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes declTy that.DeclaringType
             | _ -> false
 
         override this.IsDefined(_attributeType, _inherited) = notRequired this "IsDefined"  this.Name
@@ -6773,7 +6741,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetHashCode() = inp.GetHashCode()
         override this.Equals(that:obj) =
             match that with
-            | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType 
+            | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes this.DeclaringType that.DeclaringType 
             | _ -> false
 
         override this.MakeGenericMethod(args) = MethodSymbol2(this, args) :> MethodInfo
@@ -6817,7 +6785,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetHashCode() = inp.GetHashCode()
         override this.Equals(that:obj) =
             match that with
-            | :? PropertyInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType
+            | :? PropertyInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes this.DeclaringType that.DeclaringType
             | _ -> false
 
         override this.GetValue(_obj, _invokeAttr, _binder, _index, _culture) = notRequired this "GetValue" this.Name
@@ -6851,14 +6819,14 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetHashCode() = inp.GetHashCode()
         override this.Equals(that:obj) =
             match that with
-            | :? EventInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType
+            | :? EventInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes this.DeclaringType that.DeclaringType
             | _ -> false
 
-        override this.GetRaiseMethod(nonPublic) = notRequired this "GetRaiseMethod" this.Name
+        override this.GetRaiseMethod(_nonPublic) = notRequired this "GetRaiseMethod" this.Name
         override this.ReflectedType = notRequired this "ReflectedType" this.Name
-        override this.GetCustomAttributes(inherited) = notRequired this "GetCustomAttributes" this.Name
-        override this.GetCustomAttributes(attributeType, inherited) = notRequired this "GetCustomAttributes" this.Name
-        override this.IsDefined(attributeType, inherited) = notRequired this "IsDefined" this.Name
+        override this.GetCustomAttributes(_inherited) = notRequired this "GetCustomAttributes" this.Name
+        override this.GetCustomAttributes(_attributeType, _inherited) = notRequired this "GetCustomAttributes" this.Name
+        override this.IsDefined(_attributeType, _inherited) = notRequired this "IsDefined" this.Name
 
         override __.ToString() = sprintf "tgt event %s(...) in type %s" inp.Name declTy.FullName 
 
@@ -6882,7 +6850,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetHashCode() = inp.GetHashCode()
         override this.Equals(that:obj) =
             match that with
-            | :? FieldInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType
+            | :? FieldInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes this.DeclaringType that.DeclaringType
             | _ -> false
 
         override this.ReflectedType = notRequired this "ReflectedType" this.Name
@@ -6927,15 +6895,16 @@ namespace ProviderImplementation.ProvidedTypes
             elif this.IsGenericType then this.GetGenericTypeDefinition().DeclaringType
             else failwithf "unreachable, stack trace = %A" Environment.StackTrace
 
+        // TODO: This implementation looks dubious
         override this.IsAssignableFrom(otherTy: Type) =
             if this.IsGenericType && otherTy.IsGenericType then
                 let otherGtd = otherTy.GetGenericTypeDefinition()
                 let otherArgs = otherTy.GetGenericArguments()
-                this.GetGenericTypeDefinition().Equals(otherGtd) && Seq.forall2 eqType (this.GetGenericArguments()) otherArgs
+                this.GetGenericTypeDefinition().Equals(otherGtd) && Seq.forall2 eqTypes (this.GetGenericArguments()) otherArgs
             else
                 base.IsAssignableFrom(otherTy)
 
-        override this.IsSubclassOf(otherTy) =
+        override __.IsSubclassOf(otherTy) =
             base.IsSubclassOf(otherTy) // ||
             //(this.IsGenericType && this.GetGenericTypeDefinition().IsDelegate && otherTy.FullName = "System.Delegate")
 
@@ -6990,10 +6959,13 @@ namespace ProviderImplementation.ProvidedTypes
             elif this.IsPointer then 163 + hash (this.GetElementType())
             elif this.IsByRef then 283 + hash (this.GetElementType())
             else this.GetGenericTypeDefinition().MetadataToken
-        override __.Equals(other: obj) =
-            match other with
-            | :? TypeSymbol as otherTy -> (kind, typeArgs) = (otherTy.Kind, otherTy.Args)
+
+        override this.Equals(that: obj) =
+            match that  with
+            | :? Type as that -> eqTypes this that
             | _ -> false
+
+        override this.Equals(that: Type) = eqTypes this that
 
         member __.Kind = kind
         member __.Args = typeArgs
@@ -7216,9 +7188,10 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.MetadataToken = inp.Token
 
                 override __.GetHashCode() = inp.Token
+
                 override this.Equals(that:obj) =
                     match that with
-                    | :? ConstructorInfo as that -> this.MetadataToken = that.MetadataToken && eqType declTy that.DeclaringType
+                    | :? ConstructorInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes declTy that.DeclaringType
                     | _ -> false
 
                 override this.IsDefined(_attributeType, _inherited) = notRequired this "IsDefined"  this.Name
@@ -7251,9 +7224,10 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.IsGenericMethodDefinition = __.IsGenericMethod
 
                 override __.GetHashCode() = inp.Token
+
                 override this.Equals(that:obj) =
                     match that with
-                    | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType 
+                    | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes this.DeclaringType that.DeclaringType 
                     | _ -> false
 
                 override this.MakeGenericMethod(args) = MethodSymbol2(this, args) :> MethodInfo
@@ -7294,9 +7268,10 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.MetadataToken = inp.Token
 
                 override __.GetHashCode() = inp.Token
+
                 override this.Equals(that:obj) =
                     match that with
-                    | :? PropertyInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType
+                    | :? PropertyInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes this.DeclaringType that.DeclaringType
                     | _ -> false
 
                 override this.GetValue(_obj, _invokeAttr, _binder, _index, _culture) = notRequired this "GetValue" this.Name
@@ -7326,9 +7301,10 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.MetadataToken = inp.Token
 
                 override __.GetHashCode() = inp.Token
+
                 override this.Equals(that:obj) =
                     match that with
-                    | :? EventInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType
+                    | :? EventInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes this.DeclaringType that.DeclaringType
                     | _ -> false
 
                 override this.GetRaiseMethod(_nonPublic) = notRequired this "GetRaiseMethod" this.Name
@@ -7355,9 +7331,10 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.MetadataToken = inp.Token
 
                 override __.GetHashCode() = inp.Token
+
                 override this.Equals(that:obj) =
                     match that with
-                    | :? FieldInfo as that -> this.MetadataToken = that.MetadataToken && eqType this.DeclaringType that.DeclaringType
+                    | :? FieldInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes this.DeclaringType that.DeclaringType
                     | _ -> false
 
                 override this.ReflectedType = notRequired this "ReflectedType" this.Name
@@ -7488,12 +7465,12 @@ namespace ProviderImplementation.ProvidedTypes
 
                 override this.GetGenericArguments() = notRequired this "GetGenericArguments" this.Name
                 override this.GetGenericTypeDefinition() = notRequired this "GetGenericTypeDefinition" this.Name
-                override this.GetMember(name,mt,_bindingFlags) = notRequired this "txILGenericParam: GetMember" this.Name
+                override this.GetMember(_name, _mt, _bindingFlags) = notRequired this "txILGenericParam: GetMember" this.Name
                 override this.GUID = notRequired this "txILGenericParam: GUID" this.Name
-                override this.GetCustomAttributes(inherited) = notRequired this "txILGenericParam: GetCustomAttributes" this.Name
-                override this.GetCustomAttributes(attributeType, inherited) = notRequired this "txILGenericParam: GetCustomAttributes" this.Name
-                override this.IsDefined(attributeType, inherited) = notRequired this "txILGenericParam: IsDefined" this.Name
-                override this.GetInterface(name, ignoreCase) = notRequired this "txILGenericParam: GetInterface" this.Name
+                override this.GetCustomAttributes(_inherited) = notRequired this "txILGenericParam: GetCustomAttributes" this.Name
+                override this.GetCustomAttributes(_attributeType, _inherited) = notRequired this "txILGenericParam: GetCustomAttributes" this.Name
+                override this.IsDefined(_attributeType, _inherited) = notRequired this "txILGenericParam: IsDefined" this.Name
+                override this.GetInterface(_name, _ignoreCase) = notRequired this "txILGenericParam: GetInterface" this.Name
                 override this.Module = notRequired this "txILGenericParam: Module" this.Name: Module 
                 override this.GetElementType() = notRequired this "txILGenericParam: GetElementType" this.Name
                 override this.InvokeMember(name, invokeAttr, binder, target, args, modifiers, culture, namedParameters) = notRequired this "txILGenericParam: InvokeMember" this.Name
@@ -7630,9 +7607,10 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
 
         override this.Equals(that:obj) = System.Object.ReferenceEquals (this, that)
+        override this.Equals(that:Type) = System.Object.ReferenceEquals (this, that)
         override __.GetHashCode() =  inp.Token
 
-        override this.IsAssignableFrom(otherTy: Type) = base.IsAssignableFrom(otherTy) || this.Equals(otherTy)
+        override this.IsAssignableFrom(otherTy: Type) = base.IsAssignableFrom(otherTy) || this.Equals(otherTy) // TODO: This implementation looks dubious
         override __.IsSubclassOf(otherTy) = base.IsSubclassOf(otherTy) || inp.IsDelegate && otherTy.FullName = "System.Delegate"
 
         override this.AssemblyQualifiedName = "[" + this.Assembly.FullName + "]" + this.FullName
@@ -7683,6 +7661,7 @@ namespace ProviderImplementation.ProvidedTypes
                 // See convertConstExpr in the compiler, e.g. 
                 //     https://github.com/Microsoft/visualfsharp/blob/44fa027b308681a1b78a089e44fa1ab35ff77b41/src/fsharp/MethodCalls.fs#L842
                 // for the accepted types.
+                (*
                 match inp.Namespace, inp.Name with 
                 | USome "System", "Boolean" -> typeof<bool>
                 | USome "System", "String"->  typeof<string>
@@ -7701,7 +7680,8 @@ namespace ProviderImplementation.ProvidedTypes
                 | USome "System", "Double" ->  typeof<double>
                 | USome "System", "Single" ->  typeof<single>
                 | USome "System", "Char" ->  typeof<char>
-                | _ -> TargetTypeDefinition(ilGlobals, tryBindAssembly, asm, declTyOpt, inp) :> System.Type)
+                | _ -> *)
+                TargetTypeDefinition(ilGlobals, tryBindAssembly, asm, declTyOpt, inp) :> System.Type)
 
         let types = lazy [| for td in getReader().ILModuleDef.TypeDefs.Entries -> txILTypeDef None td  |]
 
@@ -8347,6 +8327,9 @@ namespace ProviderImplementation.ProvidedTypes
     /// Represents the type binding context for the type provider based on the set of assemblies
     /// referenced by the compilation.
     type ProvidedTypesContext(referencedAssemblyPaths: string list, assemblyReplacementMap: (string*string) list) as this =
+
+        // A duplicate 'mscorlib' appears in the paths reported by the F# compiler
+        let referencedAssemblyPaths = referencedAssemblyPaths |> Seq.distinctBy Path.GetFileNameWithoutExtension |> Seq.toList
 
         /// Find which assembly defines System.Object etc.
         let systemRuntimeScopeRef =

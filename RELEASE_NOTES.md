@@ -1,3 +1,7 @@
+#### 4.1.0 - October 24 2017
+* Many improvemnts to the implementation of type mapping
+* Remove Default on ProvidedMeaasureBuilder and make members static
+
 #### 4.0.0 - October 17 2017
 * Config parameter new passed to ``TypeProviderForNamespaces``, i.e. ``inherit TypeProviderForNamespaces(config)``
 * ProvidedTypesContext now internal to ``TypeProviderForNamespaces``.  You can access it using ``this.TargetContext`` in the ``TypeProviderForNamespaces`` object

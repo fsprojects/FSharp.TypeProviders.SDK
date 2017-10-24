@@ -226,7 +226,7 @@ let nonPrimitives =
       "System.DayOfWeek", typeof<DayOfWeek>, box DayOfWeek.Friday ]
 
 [<Fact>]
-let ``Check target primitive types are identical to design-time types``() : unit  = 
+let ``Check target primitive types are not identical to design-time types``() : unit  = 
     let refs = Targets.DotNet45FSharp31Refs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
@@ -234,7 +234,7 @@ let ``Check target primitive types are identical to design-time types``() : unit
     // primitive types with element types are ALWAYS equivalent the design-time types
     for tname, sourceType, _ in primitives do
         let targetType = mscorlib31.GetType(tname)
-        Assert.Equal(targetType, sourceType)
+        Assert.NotEqual(targetType, sourceType)
 
 [<Fact>]
 let ``Check target non-primitive types are different to design-time types``() : unit  = 
@@ -255,8 +255,10 @@ let ``Check type remapping functions work for primitives``() : unit  =
     let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
     for tname, sourceType, _ in primitives do
         let targetType = mscorlib31.GetType(tname)
-        Assert.Equal(targetType, tp.TargetContext.ConvertSourceTypeToTarget sourceType)
-        Assert.Equal(tp.TargetContext.ConvertTargetTypeToSource targetType, sourceType)
+        let sourceTypeT = tp.TargetContext.ConvertSourceTypeToTarget sourceType
+        let targetTypeS = tp.TargetContext.ConvertTargetTypeToSource targetType
+        Assert.Equal(targetType, sourceTypeT)
+        Assert.Equal(targetTypeS, sourceType)
 
 
 [<Fact>]
