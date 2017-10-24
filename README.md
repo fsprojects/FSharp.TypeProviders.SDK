@@ -67,12 +67,13 @@ type BasicProvider (config : TypeProviderConfig) as this =
 do ()
 ```
 
+## Technical Notes
 
-## Using Type Providers with .NET SDK 2.0 Projects and ``dotnet build``
+### Using Type Providers with .NET SDK 2.0 Projects and ``dotnet build``
 
 See [How to enable type providers with new-style .NET SDK project files, ``dotnet build``, .NET Standard and .NET Core programming](https://github.com/Microsoft/visualfsharp/issues/3303)
 
-## Some Type Provider terminology
+### Some Type Provider terminology
 
 * TPDTC - Type Provider Design Time Component.  The DLL that gets loaded into the host tool. May be the same physical file as the TPRTC.  This component should include the ProvidedTypes.fs/fsi files from the type provider SDK.
 
@@ -84,17 +85,17 @@ TPDTC are currently .NET Framework 4.x.  They can also be .NET Standard 2.0 comp
 
 TPRTC are normally .NET Framework 4.x, .NET Standard 2.0 or some portable profile component.  
 
-## How the TPDTC is found and loaded
+### How the TPDTC is found and loaded
 
-Currently, the compiler looks for TPDTC DLLs alongside the TPRTC DLL. (For simple type providers, these DLLs are the same)
+Currently, host tools look for TPDTC DLLs alongside the TPRTC DLL. For simple type providers, these DLLs are the same. When executing using .NET Framework, the host tool uses ``Assembly.LoadFrom`` to load this component.
 
-See [Type provider design-time DLLs should be chosen more appropriately](https://github.com/Microsoft/visualfsharp/issues/3736) for a proposal to change the rules to allow TPDTC components to be found more generously.
+See [Type provider design-time DLLs should be chosen more appropriately](https://github.com/Microsoft/visualfsharp/issues/3736) for a proposal to change the rules to allow TPDTC components to be found more usefully, an in particular for different TPDTC components to be loaded depending on the execution environment of the host tooling.
 
-## Making .NET Standard 2.0 TPDTC
+### Making .NET Standard 2.0 TPDTC
 
-It will be increasingly common to make type providers where the TPDTC is a .NET Standard 2.0 component (and also, in some cases, the TPRTC component, e.g. if these are just the same component).
+It will be increasingly common to make type providers where the TPDTC is a .NET Standard 2.0 component. In the very simplest case,  there will just be one  happy .NET Standard 2.0 component ``MyTypeProvider.dll`` acting as both the TPDTC and TPRTC.  Such a type provider will eventually be loadable into all F# tooling.
 
-For a TPDTC to be .NET Standard 2.0, it must be loadable into host tools using .NET Framework 4.6.1. Because .NET Framework 4.6.1 doesn't _fully_ support .NET Standard 2.0, this can only be done if the TPDTC ships alongside some facade DLLs.  Currently the following facade DLLs are needed alongside the TPDTC:
+However, today, for a TPDTC to be .NET Standard 2.0, it must be loadable into host tools using .NET Framework 4.6.1 or Mono 5.x, the most common platforms for execution of F# tooling. Because .NET Framework 4.6.1 doesn't _fully_ support .NET Standard 2.0, this can only be done if the TPDTC ships alongside some facade DLLs.  Currently the following facade DLLs are needed alongside the TPDTC:
 
 ```
 <!-- These files are the facades necessary to run .NET Standard 2.0 components on .NET Framweork 4.6.1 (.NET Framework 4.7 will -->
