@@ -67,6 +67,21 @@ type BasicProvider (config : TypeProviderConfig) as this =
 do ()
 ```
 
+## Some unit testing helpers
+
+The SDK includes a file
+
+* ProvidedTypesTesting.fs
+
+which is sometimes incorporated into a type provider to help enable unit testing. For examples of how this is used, see uses of the helpers in the FSharp.Data library such as  
+* [``Testing.GenerateProvidedTypeInstantiation``](https://github.com/fsharp/FSharp.Data/blob/f5df4554938138c60af2ec886d5a132883633351/src/TypeProviderInstantiation.fs#L127)
+* ``Targets.DotNet45FSharp40Refs()`` to get a suitable set of references for .NET 4.5, F# 4.0 target on a typical Mono/.NET Framework installation 
+* [``Testing.FormatProvidedType``](https://github.com/fsharp/FSharp.Data/blob/f5df4554938138c60af2ec886d5a132883633351/src/TypeProviderInstantiation.fs#L171) to get a textual representation of a provided type, used to "snapshot" the full description of expected type generation
+
+Sometimes unit test DLLs incorporate the entire type provider implementation, and sometimes they use InternalsVisibleTo.
+
+The unit testing helpers aren't really an official, documented part of the DK - caveat emptor.
+
 ## Technical Notes
 
 ### Using Type Providers with .NET SDK 2.0 Projects and ``dotnet build``
@@ -81,9 +96,9 @@ See [How to enable type providers with new-style .NET SDK project files, ``dotne
 
 * Host tool - Either ``fsc.exe``, ``fsi.exe`` or some tool hosting ``FSharp.Compiler.Service.dll`` such as ``devenv.exe`` or ``FsAutoComplete.exe``
 
-TPDTC are currently .NET Framework 4.x.  They can also be .NET Standard 2.0 components, see below
+TPDTCs are currently .NET Framework 4.x.  They can also be .NET Standard 2.0 components, see below
 
-TPRTC are normally .NET Framework 4.x, .NET Standard 2.0 or some portable profile component.  
+TPRTCs are normally .NET Framework 4.x, .NET Standard 2.0 or some portable profile component.  
 
 ### How the TPDTC is found and loaded
 
@@ -91,14 +106,14 @@ Currently, host tools look for TPDTC DLLs alongside the TPRTC DLL. For simple ty
 
 See [Type provider design-time DLLs should be chosen more appropriately](https://github.com/Microsoft/visualfsharp/issues/3736) for a proposal to change the rules to allow TPDTC components to be found more usefully, an in particular for different TPDTC components to be loaded depending on the execution environment of the host tooling.
 
-### Making .NET Standard 2.0 TPDTC
+### Making a .NET Standard 2.0 TPDTC
 
 It will be increasingly common to make type providers where the TPDTC is a .NET Standard 2.0 component. In the very simplest case,  there will just be one  happy .NET Standard 2.0 component ``MyTypeProvider.dll`` acting as both the TPDTC and TPRTC.  Such a type provider will eventually be loadable into all F# tooling.
 
 However, today, for a TPDTC to be .NET Standard 2.0, it must be loadable into host tools using .NET Framework 4.6.1 or Mono 5.x, the most common platforms for execution of F# tooling. Because .NET Framework 4.6.1 doesn't _fully_ support .NET Standard 2.0, this can only be done if the TPDTC ships alongside some facade DLLs.  Currently the following facade DLLs are needed alongside the TPDTC:
 
 ```
-<!-- These files are the facades necessary to run .NET Standard 2.0 components on .NET Framweork 4.6.1 (.NET Framework 4.7 will -->
+    <!-- These files are the facades necessary to run .NET Standard 2.0 components on .NET Framweork 4.6.1 (.NET Framework 4.7 will -->
     <!-- come with these facades included). Because the type provider is a .NET Standard 2.0 component, the deployment of the type -->
     <!--  provider must include these facade DLLs if it is to run hosted inside an F# compiler executing using  .NET Framework 4.6.1 or Mono 5.0. -->
     <!-- -->
@@ -116,18 +131,6 @@ However, today, for a TPDTC to be .NET Standard 2.0, it must be loadable into ho
 ```
 
 
-## Some unit testing helpers
-
-The SDK includes a file
-
-* ProvidedTypesTesting.fs
-
-which is sometimes incorporated into a type provider to help enable unit testing. For examples of how this is used, see uses of the helpers in the FSharp.Data library such as  
-* [``Testing.GenerateProvidedTypeInstantiation``](https://github.com/fsharp/FSharp.Data/blob/f5df4554938138c60af2ec886d5a132883633351/src/TypeProviderInstantiation.fs#L127)
-* ``Targets.DotNet45FSharp40Refs()`` to get a suitable set of references for .NET 4.5, F# 4.0 target on a typical Mono/.NET Framework installation 
-* [``Testing.FormatProvidedType``](https://github.com/fsharp/FSharp.Data/blob/f5df4554938138c60af2ec886d5a132883633351/src/TypeProviderInstantiation.fs#L171) to get a textual representation of a provided type, used to "snapshot" the full description of expected type generation
-
-Sometimes unit test DLLs incorporate the entire type provider implementation, and sometimes they use InternalsVisibleTo.
 
 ## Resources
 
