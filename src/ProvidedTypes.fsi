@@ -84,7 +84,7 @@ namespace ProviderImplementation.ProvidedTypes
         member IsTypeInitializer: bool with get,set
 
         /// This method is for internal use only in the type provider SDK
-        member internal GetInvokeCodeInternal: isGenerated: bool -> (Expr [] -> Expr)
+        member internal GetInvokeCode: Expr list -> Expr
 
 
 
@@ -123,7 +123,7 @@ namespace ProviderImplementation.ProvidedTypes
         member DefineStaticParameters: parameters: ProvidedStaticParameter list * instantiationFunction: (string -> obj[] -> ProvidedMethod) -> unit
 
         /// This method is for internal use only in the type provider SDK
-        member internal GetInvokeCodeInternal: isGenerated: bool -> (Expr [] -> Expr)
+        member internal GetInvokeCode: Expr list -> Expr
 
 
     /// Represents an erased provided property.
@@ -212,40 +212,12 @@ namespace ProviderImplementation.ProvidedTypes
         static member Literal : fieldName: string * fieldType: Type * literalValue:obj -> ProvidedField
 
 
-    /// Represents the type constructor in a provided symbol type.
-    [<NoComparison>]
-    type ProvidedSymbolKind =
-
-        /// Indicates that the type constructor is for a single-dimensional array
-        | SDArray
-
-        /// Indicates that the type constructor is for a multi-dimensional array
-        | Array of int
-
-        /// Indicates that the type constructor is for pointer types
-        | Pointer
-
-        /// Indicates that the type constructor is for byref types
-        | ByRef
-
-        /// Indicates that the type constructor is for named generic types
-        | Generic of Type
-
-        /// Indicates that the type constructor is for abbreviated types
-        | FSharpTypeAbbreviation of (Assembly * string * string[])
-
     /// Represents an array or other symbolic type involving a provided type as the argument.
     /// See the type provider spec for the methods that must be implemented.
     /// Note that the type provider specification does not require us to implement pointer-equality for provided types.
     [<Class>]
-    type ProvidedSymbolType =
+    type ProvidedTypeSymbol =
         inherit TypeDelegator
-
-        /// Returns the kind of this symbolic type
-        member Kind: ProvidedSymbolKind
-
-        /// Return the provided types used as arguments of this symbolic type
-        member Args: list<Type>
 
         /// For example, kg
         member IsFSharpTypeAbbreviation: bool
@@ -263,35 +235,35 @@ namespace ProviderImplementation.ProvidedTypes
         /// Like methodInfo.MakeGenericMethod, but will also work with unit-annotated types and provided types
         static member MakeGenericMethod: genericMethodDefinition: MethodInfo * genericArguments: Type list -> MethodInfo
 
+        /// Like FsharpType.MakeTupleType, but will also work with unit-annotated types and provided types
+        static member MakeTupleType: args: Type list -> Type
+
 
     /// Helps create erased provided unit-of-measure annotations.
     [<Class>]
     type ProvidedMeasureBuilder =
 
-        /// The ProvidedMeasureBuilder for building measures.
-        static member Default: ProvidedMeasureBuilder
-
         /// Gets the measure indicating the "1" unit of measure, that is the unitless measure.
-        member One: Type
+        static member One: Type
 
         /// Returns the measure indicating the product of two units of measure, e.g. kg * m
-        member Product: measure1: Type * measure2: Type  -> Type
+        static member Product: measure1: Type * measure2: Type  -> Type
 
         /// Returns the measure indicating the inverse of two units of measure, e.g. 1 / s
-        member Inverse: denominator: Type -> Type
+        static member Inverse: denominator: Type -> Type
 
         /// Returns the measure indicating the ratio of two units of measure, e.g. kg / m
-        member Ratio: numerator: Type * denominator: Type -> Type
+        static member Ratio: numerator: Type * denominator: Type -> Type
 
         /// Returns the measure indicating the square of a unit of measure, e.g. m * m
-        member Square: ``measure``: Type -> Type
+        static member Square: ``measure``: Type -> Type
 
         /// Returns the measure for an SI unit from the F# core library, where the string is in capitals and US spelling, e.g. Meter
-        member SI: unitName:string -> Type
+        static member SI: unitName:string -> Type
 
         /// Returns a type where the type has been annotated with the given types and/or units-of-measure.
         /// e.g. float<kg>, Vector<int, kg>
-        member AnnotateType: basic: Type * argument: Type list -> Type
+        static member AnnotateType: basic: Type * argument: Type list -> Type
 
 
     /// Represents a provided type definition.

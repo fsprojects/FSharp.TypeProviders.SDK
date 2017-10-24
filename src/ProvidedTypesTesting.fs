@@ -132,7 +132,7 @@ type internal Testing() =
 
         let rec toString useFullName (t: Type) =
 
-            let hasUnitOfMeasure = (match t with :? ProvidedSymbolType as p -> p.IsFSharpUnitAnnotated | _ -> false) 
+            let hasUnitOfMeasure = (match t with :? ProvidedTypeSymbol as p -> p.IsFSharpUnitAnnotated | _ -> false) 
 
             let innerToString (t: Type) =
                 match t with
@@ -473,18 +473,17 @@ type internal Testing() =
                 println()
 
             let getMethodBody (m: ProvidedMethod) =
-                seq { if not m.IsStatic then yield (ProvidedTypeDefinition.EraseType m.DeclaringType)
-                      for param in m.GetParameters() do yield (ProvidedTypeDefinition.EraseType param.ParameterType) }
-                |> Seq.map (fun typ -> Expr.Value(null, typ))
-                |> Array.ofSeq
-                |> m.GetInvokeCodeInternal (false)
+                let vs = 
+                    [ if not m.IsStatic then yield ("this", ProvidedTypeDefinition.EraseType m.DeclaringType)
+                      for p in m.GetParameters() do yield (p.Name, ProvidedTypeDefinition.EraseType p.ParameterType) ]
+                    |> List.map (Var.Global >> Expr.Var)
+                m.GetInvokeCode  vs
 
             let getConstructorBody (c: ProvidedConstructor) =
-                if c.IsImplicitConstructor then Expr.Value(()) else
-                seq { for param in c.GetParameters() do yield (ProvidedTypeDefinition.EraseType param.ParameterType) }
-                |> Seq.map (fun typ -> Expr.Value(null, typ))
-                |> Array.ofSeq
-                |> c.GetInvokeCodeInternal (false)
+                let vs = 
+                    [ for p in c.GetParameters() do yield (p.Name, ProvidedTypeDefinition.EraseType p.ParameterType) ]
+                    |> List.map (Var.Global >> Expr.Var)
+                c.GetInvokeCode vs
 
             let printExpr x =
                 if not ignoreOutput then
