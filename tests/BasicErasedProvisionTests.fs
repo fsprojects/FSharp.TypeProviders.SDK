@@ -235,6 +235,9 @@ let ``Check target primitive types are not identical to design-time types``() : 
     for tname, sourceType, _ in primitives do
         let targetType = mscorlib31.GetType(tname)
         Assert.NotEqual(targetType, sourceType)
+    // System.Void is given a special treatment
+    let targetType = mscorlib31.GetType("System.Void")
+    Assert.Equal(targetType, typeof<Void>)
 
 [<Fact>]
 let ``Check target non-primitive types are different to design-time types``() : unit  = 
