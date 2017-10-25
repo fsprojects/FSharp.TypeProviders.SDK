@@ -7661,11 +7661,11 @@ namespace ProviderImplementation.ProvidedTypes
                 // See convertConstExpr in the compiler, e.g. 
                 //     https://github.com/Microsoft/visualfsharp/blob/44fa027b308681a1b78a089e44fa1ab35ff77b41/src/fsharp/MethodCalls.fs#L842
                 // for the accepted types.
-                (*
                 match inp.Namespace, inp.Name with 
+                | USome "System", "Void"->  typeof<Void>
+                (*
                 | USome "System", "Boolean" -> typeof<bool>
                 | USome "System", "String"->  typeof<string>
-                | USome "System", "Void"->  typeof<Void>
                 | USome "System", "Object"->  typeof<obj>
                 | USome "System", "Int32" ->  typeof<int32>
                 | USome "System", "SByte" ->  typeof<sbyte>
@@ -7679,8 +7679,9 @@ namespace ProviderImplementation.ProvidedTypes
                 | USome "System", "UIntPtr" ->  typeof<UIntPtr>
                 | USome "System", "Double" ->  typeof<double>
                 | USome "System", "Single" ->  typeof<single>
-                | USome "System", "Char" ->  typeof<char>
-                | _ -> *)
+                | USome "System", "Char" ->  typeof<char> 
+                *)
+                | _ -> 
                 TargetTypeDefinition(ilGlobals, tryBindAssembly, asm, declTyOpt, inp) :> System.Type)
 
         let types = lazy [| for td in getReader().ILModuleDef.TypeDefs.Entries -> txILTypeDef None td  |]
@@ -9242,6 +9243,7 @@ namespace ProviderImplementation.ProvidedTypes
             member key.ReturnType = rty
             member key.ArgTypes = argtys
             member key.IsStatic = isStatic
+            override x.ToString() = sprintf "%A" (tidx, garity, nm, rty, argtys, isStatic)
             override x.GetHashCode() = hashCode
             override x.Equals(obj:obj) = 
                 match obj with 
@@ -9935,7 +9937,7 @@ namespace ProviderImplementation.ProvidedTypes
                       let (TdKey (tenc2, tnsp2, tname2)) = typeNameOfIdx mdkey2.TypeIdx
                       printfn "%s" ("A method in '"+(String.concat "." (tenc2@[tname2]))+"' had the right name but the wrong signature:")
                       printfn "%s" ("generic arity: "+string mdkey2.GenericArity) 
-                      printfn "mdkey2: %+A" mdkey2)
+                      printfn "mdkey2 = %s" (mdkey2.ToString()))
               raise MethodDefNotFound
 
 
