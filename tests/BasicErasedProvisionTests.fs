@@ -444,7 +444,7 @@ type public SampleTypeProvider(config : TypeProviderConfig) as this =
         let containersType = ProvidedTypeDefinition("Containers", Some typeof<obj>)
 
         containersType.AddMembersDelayed(fun _ -> 
-            ["A";"B";"C";"D" ] |> List.map (fun name -> 
+            ["A";"B";"C";"D";"E" ] |> List.map (fun name -> 
                 let oneDomainType = ProvidedTypeDefinition("DomainTypeFor"+name, Some typeof<obj>)
                 
                 // Note that this call expands the nested types under domainType "dynamically", i.e. potentially long after 
@@ -482,7 +482,8 @@ let ``check on-demand production of members``() =
         let containersType  = domainTy.GetNestedType("Containers")
         Assert.NotNull(containersType)
 
-        Assert.Null(domainTy.GetNestedType("DomainTypeForA")) // DomainTypeForA type not yet created
+        Assert.Equal(domainTy.GetMembers().Length, 1) // DomainTypeForA type not yet created
+        Assert.Null(domainTy.GetNestedType("DomainTypeForA")) // DomainTypeForA type not yet created.  
 
         let containersPropA  = containersType.GetProperty("A") // this call also creates DomainTypeForA
         Assert.NotNull(containersPropA)
@@ -491,16 +492,37 @@ let ``check on-demand production of members``() =
         // Fetching this type was failing becuase the call to expand domainType when getting property A for the first time was only applying to the source model,
         // not the translated target model
         let domainTyForA  = domainTy.GetNestedType("DomainTypeForA")
+
+        let bindAll = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static  ||| BindingFlags.Instance
         Assert.NotNull(domainTyForA)
         Assert.True(domainTyForA.Name = "DomainTypeForA")
+        Assert.Equal(1 + 5, domainTy.GetMembers(bindAll).Length) // one for Containers, 5 properties, 5 getters for properties, 5 nested types
+        Assert.Equal(0, domainTy.GetMethods(bindAll).Length) 
+        Assert.Equal(1 + 5, domainTy.GetNestedTypes(bindAll).Length) 
+        Assert.Equal(5, containersType.GetMethods(bindAll).Length) // 5 properties, 5 getters for properties
+        Assert.Equal(5, containersType.GetProperties(bindAll).Length) // 5 properties, 5 getters for properties
+        Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
+        Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
+        Assert.Equal(5 + 5, containersType.GetMembers(bindAll).Length) // 5 properties, 5 getters for properties
+        
 
         Assert.NotNull(domainTy.GetNestedType("DomainTypeForA")) // type is still there
         Assert.NotNull(domainTy.GetNestedType("DomainTypeForB")) // type is created because A, B, C, D, E all get created together
 
         let containersPropB  = containersType.GetProperty("B") // this should not re-create B!
         Assert.True(containersPropB.Name = "B")
-        
+
         let domainTyForB  = domainTy.GetNestedType("DomainTypeForB")
         Assert.NotNull(domainTyForB)
         Assert.True(domainTyForB.Name = "DomainTypeForB")
+
+        // check we didn't create twice
+        Assert.Equal(1 + 5, domainTy.GetMembers(bindAll).Length) // one for Containers, 5 properties, 5 getters for properties, 5 nested types
+        Assert.Equal(0, domainTy.GetMethods(bindAll).Length) 
+        Assert.Equal(1 + 5, domainTy.GetNestedTypes(bindAll).Length) 
+        Assert.Equal(5 + 5, containersType.GetMembers(bindAll).Length) // 5 properties, 5 getters for properties
+        Assert.Equal(5, containersType.GetMethods(bindAll).Length) // 5 properties, 5 getters for properties
+        Assert.Equal(5, containersType.GetProperties(bindAll).Length) // 5 properties, 5 getters for properties
+        Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
+        Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
     )
