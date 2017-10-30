@@ -1196,7 +1196,7 @@ namespace ProviderImplementation.ProvidedTypes
       | Type of ProvidedTypeDefinition
       | TypeToBeDecided
 
-    and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, baseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, initialData, customAttributesData, nonNullable, hideObjectMethods) as this =
+    and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, getBaseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, initialData, customAttributesData, nonNullable, hideObjectMethods) as this =
         inherit TypeDelegator()
 
         do match container, !ProvidedTypeDefinition.Logger with
@@ -1212,75 +1212,91 @@ namespace ProviderImplementation.ProvidedTypes
         // state
         let mutable attrs   = attrs
         let mutable enumUnderlyingType = lazy getEnumUnderlyingType()
-        let mutable baseType =  lazy baseType()
-        let mutable membersKnown = ResizeArray<MemberInfo>()
-        let mutable membersQueue = ResizeArray<(unit -> MemberInfo[])>()
+        let mutable baseType =  lazy getBaseType()
+        
+        /// Represents the evaluated members so far
+        let members = ResizeArray<MemberInfo>()
+
+        /// Represents delayed members, as yet uncomputed
+        let membersQueue = ResizeArray<(unit -> MemberInfo[])>()
+
+        let mutable staticParamsDefined = false
         let mutable staticParams = staticParams
         let mutable staticParamsApply = staticParamsApply
         let mutable container = container
-        let mutable interfaceImpls = ResizeArray<Type>()
-        let mutable interfaceImplsQueue = ResizeArray<unit -> Type[]>()
-        let mutable methodOverrides = ResizeArray<ProvidedMethod * MethodInfo>()
-        let mutable methodOverridesQueue = ResizeArray<unit -> (ProvidedMethod * MethodInfo)[]>()
+        let interfaceImpls = ResizeArray<Type>()
+        let interfacesQueue = ResizeArray<unit -> Type[]>()
+        let methodOverrides = ResizeArray<ProvidedMethod * MethodInfo>()
+        let methodOverridesQueue = ResizeArray<unit -> (ProvidedMethod * MethodInfo)[]>()
 
         do match initialData with 
            | None -> () 
-           | Some (getFreshMembers, getFreshInterfaceImpls, getFreshMethodOverrides) ->
+           | Some (getFreshMembers, getFreshInterfaces, getFreshMethodOverrides) ->
                membersQueue.Add getFreshMembers
-               interfaceImplsQueue.Add getFreshInterfaceImpls
+               interfacesQueue.Add getFreshInterfaces
                methodOverridesQueue.Add getFreshMethodOverrides
 
-
-        // members API
-        let getMembers() =
+        let evalMembers() =
             if membersQueue.Count > 0 then
                 let elems = membersQueue |> Seq.toArray // take a copy in case more elements get added
                 membersQueue.Clear()
                 for  f in elems do
                     for m in f() do
-                        membersKnown.Add m
+                        members.Add m
                         
                         // Implicitly add the property and event methods (only for the source model where they are not explicitly declared)
                         match m with
                         | :? ProvidedProperty    as p ->
                             if not p.BelongsToTargetModel then 
-                                if p.CanRead then membersKnown.Add (p.GetGetMethod true)
-                                if p.CanWrite then membersKnown.Add (p.GetSetMethod true)
+                                if p.CanRead then members.Add (p.GetGetMethod true)
+                                if p.CanWrite then members.Add (p.GetSetMethod true)
                         | :? ProvidedEvent       as e ->
                             if not e.BelongsToTargetModel then 
-                                membersKnown.Add (e.GetAddMethod true)
-                                membersKnown.Add (e.GetRemoveMethod true)
+                                members.Add (e.GetAddMethod true)
+                                members.Add (e.GetRemoveMethod true)
                         | _ -> ()
                 
-               // // re-add the getFreshMembers call from the initialData to make sure we fetch the latest translated members from the source model
-               // match initialData with 
-               // | None -> () 
-               // | Some (getFreshMembers, _getInterfaceImpls, _getMethodOverrides) ->
-               //     membersQueue.Add getFreshMembers
-                   //interfaceImplsQueue.Add getInterfaceImpls
-                   //methodOverridesQueue.Add getMethodOverrides
+               // re-add the getFreshMembers call from the initialData to make sure we fetch the latest translated members from the source model
+                match initialData with 
+                | None -> () 
+                | Some (getFreshMembers, _getInterfaceImpls, _getMethodOverrides) ->
+                    membersQueue.Add getFreshMembers
 
-            membersKnown.ToArray()
 
-                // members API
-        let getInterfaceImpls() =
-            if interfaceImplsQueue.Count > 0 then
-                let elems = interfaceImplsQueue |> Seq.toArray // take a copy in case more elements get added
-                interfaceImplsQueue.Clear()
+        let getMembers() =
+            evalMembers()
+            members.ToArray()
+
+        let evalInterfaces() =
+            if interfacesQueue.Count > 0 then
+                let elems = interfacesQueue |> Seq.toArray // take a copy in case more elements get added
+                interfacesQueue.Clear()
                 for  f in elems do
                     for i in f() do
                         interfaceImpls.Add i
+                match initialData with 
+                | None -> () 
+                | Some (_getFreshMembers, getInterfaces, _getMethodOverrides) ->
+                    interfacesQueue.Add getInterfaces
 
+        let getInterfaces() =
+            evalInterfaces()
             interfaceImpls.ToArray()
 
-        let getMethodOverrides () =
+        let evalMethodOverrides () =
             if methodOverridesQueue.Count > 0 then
                 let elems = methodOverridesQueue |> Seq.toArray // take a copy in case more elements get added
                 methodOverridesQueue.Clear()
                 for  f in elems do
                     for i in f() do
                         methodOverrides.Add i
+                match initialData with 
+                | None -> () 
+                | Some (_getFreshMembers, _getInterfaceImpls, getMethodOverrides) ->
+                    methodOverridesQueue.Add getMethodOverrides
 
+        let getMethodOverrides () =
+            evalMethodOverrides ()
             methodOverrides.ToArray()
 
         let customAttributesImpl = CustomAttributesImpl(customAttributesData)
@@ -1312,6 +1328,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetEnumUnderlyingType() =
             if this.IsEnum then
+                if enumUnderlyingType.IsValueCreated then failwithf "The enuderlying enum type has already been evaluated for this type. stacktrace = %A" Environment.StackTrace
                 match enumUnderlyingType.Force() with
                 | None -> typeof<int>
                 | Some ty -> ty
@@ -1341,8 +1358,6 @@ namespace ProviderImplementation.ProvidedTypes
             | TypeContainer.TypeToBeDecided -> failwithf "type '%s' was not added as a member to a declaring type" className
 
         override __.BaseType = match baseType.Value with Some ty -> ty | None -> null
-
-        member this.ErasedBaseType = ProvidedTypeDefinition.EraseType(this.BaseType)
 
         override __.GetConstructors bindingFlags =
             getMembers() 
@@ -1401,11 +1416,15 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" this.Name
 
-        override __.GetInterfaces() = getInterfaceImpls()  
+        override __.GetInterfaces() = getInterfaces()  
+
 
         override __.MakeArrayType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.SDArray, [this]) :> Type
+
         override __.MakeArrayType arg = ProvidedTypeSymbol(ProvidedTypeSymbolKind.Array arg, [this]) :> Type
+
         override __.MakePointerType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.Pointer, [this]) :> Type
+
         override __.MakeByRefType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.ByRef, [this]) :> Type
 
         // The binding attributes are always set to DeclaredOnly ||| Static ||| Instance ||| Public when GetMembers is called directly by the F# compiler
@@ -1447,6 +1466,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.IsCOMObjectImpl() = false
         override __.HasElementTypeImpl() = false
         override __.Name = className
+
         override __.DeclaringType = 
             match container with
             | TypeContainer.Namespace _ -> null
@@ -1454,11 +1474,13 @@ namespace ProviderImplementation.ProvidedTypes
             | TypeContainer.TypeToBeDecided -> failwithf "type '%s' was not added as a member to a declaring type" className
 
         override __.MemberType = if this.IsNested then MemberTypes.NestedType else MemberTypes.TypeInfo
+
         override x.GetHashCode() = x.Namespace.GetHashCode() ^^^ className.GetHashCode()
         override this.Equals(that: obj) = Object.ReferenceEquals(this, that)
         override this.Equals(that: Type) = Object.ReferenceEquals(this, that)
 
         override __.GetGenericArguments() = [||]
+
         override __.ToString() = this.Name
 
         override x.Module = x.Assembly.ManifestModule
@@ -1474,19 +1496,29 @@ namespace ProviderImplementation.ProvidedTypes
         // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
         override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
 
-
-
         // Get the model
         member __.BelongsToTargetModel = isTgt
         member __.AttributesRaw = attrs
-        member __.EnumUnderlyingTypeInternal() = enumUnderlyingType.Force()
+        member __.EnumUnderlyingTypeRaw() = enumUnderlyingType.Force()
         member __.Container = container
-        member __.BaseTypeInternal() = baseType.Force()
+        member __.BaseTypeRaw() = baseType.Force()
         member __.StaticParams = staticParams
         member __.StaticParamsApply = staticParamsApply
-        member __.GetMembersInternal() = getMembers()
-        member __.GetInterfaceImplsInternal() = getInterfaceImpls()
-        member __.GetMethodOverridesInternal() = getMethodOverrides()
+        
+        // Fetch the members declared since the indicated position in the members list.  This allows the target model to observe 
+        // incremental additions made to the source model
+        member __.GetMembersFromCursor(idx: int) = evalMembers(); members.GetRange(idx, members.Count - idx).ToArray(), members.Count
+
+        // Fetch the interfaces declared since the indicated position in the interfaces list
+        member __.GetInterfaceImplsFromCursor(idx: int) = evalInterfaces(); interfaceImpls.GetRange(idx, interfaceImpls.Count - idx).ToArray(), interfaceImpls.Count
+
+        // Fetch the method overrides declared since the indicated position in the list
+        member __.GetMethodOverridesFromCursor(idx: int) = evalMethodOverrides(); methodOverrides.GetRange(idx, methodOverrides.Count - idx).ToArray(), methodOverrides.Count
+
+        // Fetch the method overrides 
+        member __.GetMethodOverrides() = getMethodOverrides()
+
+        member this.ErasedBaseType : Type = ProvidedTypeDefinition.EraseType(this.BaseType)
 
         member __.AddXmlDocComputed xmlDocFunction = customAttributesImpl.AddXmlDocComputed xmlDocFunction
         member __.AddXmlDocDelayed xmlDocFunction = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
@@ -1498,17 +1530,23 @@ namespace ProviderImplementation.ProvidedTypes
         member __.AddCustomAttribute attribute = customAttributesImpl.AddCustomAttribute attribute
 
         member __.SetEnumUnderlyingType(ty) = enumUnderlyingType <- lazy Some ty
-        member __.SetBaseType t = baseType <- lazy Some t
-        member __.SetBaseTypeDelayed baseTypeFunction = baseType <- lazy (Some (baseTypeFunction()))
+        member __.SetBaseType t = 
+            if baseType.IsValueCreated then failwithf "The base type has already been evaluated for this type. Please call SetBaseType before any operations which traverse the type hierarchy. stacktrace = %A" Environment.StackTrace
+            baseType <- lazy Some t
+        member __.SetBaseTypeDelayed baseTypeFunction = 
+            if baseType.IsValueCreated then failwithf "The base type has already been evaluated for this type. Please call SetBaseType before any operations which traverse the type hierarchy. stacktrace = %A" Environment.StackTrace
+            baseType <- lazy (Some (baseTypeFunction()))
         member __.SetAttributes x = attrs <- x
 
-        member __.AddMembersDelayed(membersFunction: unit -> list<#MemberInfo>) =
-            membersQueue.Add (fun () -> membersFunction() |> List.toArray |> Array.map (fun x -> this.PatchDeclaringTypeOfMember x; x :> MemberInfo ))
-
-        member this.AddMembers(memberInfos:list<#MemberInfo>) = this.AddMembersDelayed (K memberInfos)
+        member this.AddMembers(memberInfos:list<#MemberInfo>) = 
+            memberInfos |> List.iter this.PatchDeclaringTypeOfMember
+            membersQueue.Add (fun () -> memberInfos |> List.toArray |> Array.map (fun x -> x :> MemberInfo ))
 
         member __.AddMember(memberInfo:MemberInfo) =
             this.AddMembers [memberInfo]
+
+        member __.AddMembersDelayed(membersFunction: unit -> list<#MemberInfo>) =
+            membersQueue.Add (fun () -> membersFunction() |> List.toArray |> Array.map (fun x -> this.PatchDeclaringTypeOfMember x; x :> MemberInfo ))
 
         member __.AddMemberDelayed(memberFunction: unit -> #MemberInfo) =
             this.AddMembersDelayed(fun () -> [memberFunction()])
@@ -1552,6 +1590,8 @@ namespace ProviderImplementation.ProvidedTypes
 
         /// Abstract a type to a parametric-type. Requires "formal parameters" and "instantiation function".
         member __.DefineStaticParameters(parameters: ProvidedStaticParameter list, instantiationFunction: (string -> obj[] -> ProvidedTypeDefinition)) =
+            if staticParamsDefined then failwithf "Static parameters have already been defined for this type. stacktrace = %A" Environment.StackTrace
+            staticParamsDefined <- true
             staticParams      <- parameters
             staticParamsApply <- Some instantiationFunction
 
@@ -1585,7 +1625,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.AddInterfaceImplementation interfaceType = interfaceImpls.Add interfaceType
 
-        member __.AddInterfaceImplementationsDelayed interfacesFunction = interfaceImplsQueue.Add (interfacesFunction >> Array.ofList)
+        member __.AddInterfaceImplementationsDelayed interfacesFunction = interfacesQueue.Add (interfacesFunction >> Array.ofList)
 
         member __.SetAssemblyInternal (assembly: unit -> Assembly)  = 
             match container with 
@@ -8716,17 +8756,17 @@ namespace ProviderImplementation.ProvidedTypes
             // type of the contents in a delayed way.
             let rec xT : ProvidedTypeDefinition = 
                 ProvidedTypeDefinition(true, container, x.Name, 
-                                        (x.BaseTypeInternal >> Option.map convTypeToTgt), 
+                                        (x.BaseTypeRaw >> Option.map convTypeToTgt), 
                                         x.AttributesRaw, 
-                                        (x.EnumUnderlyingTypeInternal >> Option.map convTypeToTgt), 
+                                        (x.EnumUnderlyingTypeRaw >> Option.map convTypeToTgt), 
                                         x.StaticParams |> List.map convStaticParameterDefToTgt, 
                                         x.StaticParamsApply |> Option.map (fun f s p ->  
                                             let t = f s p 
                                             let tT = convProvidedTypeDefToTgt t
                                             tT),
-                                        Some ((fun () -> x.GetMembersInternal() |> Array.map (convMemberDefToTgt xT)), 
-                                              (fun () -> x.GetInterfaceImplsInternal() |> Array.map convTypeToTgt), 
-                                              (fun () -> x.GetMethodOverridesInternal() |> Array.map (fun (a,b) -> (convMethodRefToTgt a :?> ProvidedMethod), convMethodRefToTgt b))), 
+                                        Some ((let mutable idx = 0 in fun () -> let vs, idx2 = x.GetMembersFromCursor(idx) in idx <- idx2; vs |> Array.map (convMemberDefToTgt xT)), 
+                                              (let mutable idx = 0 in fun () -> let vs, idx2 = x.GetInterfaceImplsFromCursor(idx) in idx <- idx2; vs |> Array.map convTypeToTgt), 
+                                              (let mutable idx = 0 in fun () -> let vs, idx2 = x.GetMethodOverridesFromCursor(idx) in idx <- idx2; vs |> Array.map (fun (a,b) -> (convMethodRefToTgt a :?> ProvidedMethod), convMethodRefToTgt b))), 
                                         (x.GetCustomAttributesData >> convCustomAttributesDataToTgt),
                                         x.HideObjectMethods, 
                                         x.NonNullable) 
@@ -14009,7 +14049,7 @@ namespace ProviderImplementation.ProvidedTypes
                         ilg.Emit I_ret
                       | _ -> ()
 
-                    for (bodyMethInfo,declMethInfo) in ptdT.GetMethodOverridesInternal() do
+                    for (bodyMethInfo,declMethInfo) in ptdT.GetMethodOverrides() do
                         let bodyMethBuilder = methMap.[bodyMethInfo]
                         tb.DefineMethodOverride
                             { Overrides = OverridesSpec(transMethRef declMethInfo, transType declMethInfo.DeclaringType)

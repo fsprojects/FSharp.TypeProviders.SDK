@@ -427,4 +427,80 @@ let ``test basic symbol type ops``() =
    t2T.GetConstructors() |> ignore
    t2T.GetMethod("get_Item1") |> ignore
 
+[<TypeProvider>]
+type public SampleTypeProvider(config : TypeProviderConfig) as this = 
+    inherit TypeProviderForNamespaces(config)
 
+    let namespaceName = "Sample"
+    let thisAssembly = Assembly.GetExecutingAssembly()
+    let sampleTpType = ProvidedTypeDefinition(thisAssembly, namespaceName, "SampleTypeProvider", baseType = Some typeof<obj>)
+            
+    let buildTypes (typeName : string) (args : obj []) = 
+        let typeProviderForAccount = ProvidedTypeDefinition(thisAssembly, namespaceName, typeName, baseType = Some typeof<obj>)
+        typeProviderForAccount.AddMember(ProvidedConstructor([], fun _ -> <@@ null @@>))
+        
+        let domainType = ProvidedTypeDefinition("Domain", Some typeof<obj>)
+
+        let containersType = ProvidedTypeDefinition("Containers", Some typeof<obj>)
+
+        containersType.AddMembersDelayed(fun _ -> 
+            ["A";"B";"C";"D" ] |> List.map (fun name -> 
+                let oneDomainType = ProvidedTypeDefinition("DomainTypeFor"+name, Some typeof<obj>)
+                
+                // Note that this call expands the nested types under domainType "dynamically", i.e. potentially long after 
+                // domainType has been added to its parent and returned to the compiler.  This is allowed and is
+                // an important technique for building up an incremental set of domain types on=demand - though it feels a little dubious.
+                domainType.AddMember oneDomainType
+                let containerName = name
+                ProvidedProperty(containerName, oneDomainType, getterCode = fun _ -> <@@ containerName @@>)))
+    
+        domainType.AddMember containersType
+
+        let blobStorageMember = ProvidedProperty("StaticProperty", containersType, isStatic = true, getterCode = (fun _ -> <@@ () @@>))
+
+        // Now create child members.
+        typeProviderForAccount.AddMember blobStorageMember
+        typeProviderForAccount.AddMember domainType
+
+        typeProviderForAccount
+    
+    let parameters = [ ProvidedStaticParameter("theParam", typeof<string>, String.Empty) ]
+    
+    do
+        sampleTpType.DefineStaticParameters(parameters, buildTypes)
+        this.AddNamespace(namespaceName, [ sampleTpType ])
+
+
+[<Fact>]
+let ``check on-demand production of members``() = 
+    let refs = Targets.DotNet45FSharp31Refs()
+    Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, SampleTypeProvider, [| box "Arg" |]  ) |> (fun t -> 
+        let domainTy = t.GetNestedType("Domain")
+
+        Assert.Null(domainTy.GetNestedType("DomainTypeForA")) // DomainTypeForA type not yet created
+
+        let containersType  = domainTy.GetNestedType("Containers")
+        Assert.NotNull(containersType)
+
+        Assert.Null(domainTy.GetNestedType("DomainTypeForA")) // DomainTypeForA type not yet created
+
+        let containersPropA  = containersType.GetProperty("A") // this call also creates DomainTypeForA
+        Assert.NotNull(containersPropA)
+        Assert.True(containersPropA.Name = "A")
+
+        // Fetching this type was failing becuase the call to expand domainType when getting property A for the first time was only applying to the source model,
+        // not the translated target model
+        let domainTyForA  = domainTy.GetNestedType("DomainTypeForA")
+        Assert.NotNull(domainTyForA)
+        Assert.True(domainTyForA.Name = "DomainTypeForA")
+
+        Assert.NotNull(domainTy.GetNestedType("DomainTypeForA")) // type is still there
+        Assert.NotNull(domainTy.GetNestedType("DomainTypeForB")) // type is created because A, B, C, D, E all get created together
+
+        let containersPropB  = containersType.GetProperty("B") // this should not re-create B!
+        Assert.True(containersPropB.Name = "B")
+        
+        let domainTyForB  = domainTy.GetNestedType("DomainTypeForB")
+        Assert.NotNull(domainTyForB)
+        Assert.True(domainTyForB.Name = "DomainTypeForB")
+    )
