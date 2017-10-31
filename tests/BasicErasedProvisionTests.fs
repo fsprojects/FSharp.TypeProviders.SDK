@@ -445,12 +445,20 @@ type public SampleTypeProvider(config : TypeProviderConfig) as this =
 
         containersType.AddMembersDelayed(fun _ -> 
             ["A";"B";"C";"D";"E" ] |> List.map (fun name -> 
-                let oneDomainType = ProvidedTypeDefinition("DomainTypeFor"+name, Some typeof<obj>)
-                
+                let oneDomainType = ProvidedTypeDefinition("DomainTypeFor"+name, Some typeof<obj>, nonNullable = true)
+
                 // Note that this call expands the nested types under domainType "dynamically", i.e. potentially long after 
                 // domainType has been added to its parent and returned to the compiler.  This is allowed and is
                 // an important technique for building up an incremental set of domain types on=demand - though it feels a little dubious.
                 domainType.AddMember oneDomainType
+
+                // Check the AllowNullLiteral attribute appears
+                Assert.True(oneDomainType.NonNullable)
+
+                Assert.True (oneDomainType.GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name))
+
+                Assert.Equal (1, oneDomainType.GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name) |> Seq.length)
+
                 let containerName = name
                 ProvidedProperty(containerName, oneDomainType, getterCode = fun _ -> <@@ containerName @@>)))
     
@@ -514,6 +522,12 @@ let ``check on-demand production of members``() =
 
         let domainTyForB  = domainTy.GetNestedType("DomainTypeForB")
         Assert.NotNull(domainTyForB)
+
+        //Assert.True((domainTyForB :?> ProvidedTypeDefinition).NonNullable)
+
+        Assert.True (domainTyForB.GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name))
+        Assert.Equal (1, domainTyForB.GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name) |> Seq.length)
+
         Assert.True(domainTyForB.Name = "DomainTypeForB")
 
         // check we didn't create twice
