@@ -497,6 +497,9 @@ let ``check on-demand production of members``() =
         Assert.NotNull(containersPropA)
         Assert.True(containersPropA.Name = "A")
 
+        // Check there is no AllowNullLiteralAttribute
+        Assert.True (domainTy.GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name) |> not)
+
         // Fetching this type was failing becuase the call to expand domainType when getting property A for the first time was only applying to the source model,
         // not the translated target model
         let domainTyForA  = domainTy.GetNestedType("DomainTypeForA")
