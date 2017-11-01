@@ -660,7 +660,7 @@ module internal Targets =
             // this takes into account both linux-on-windows (can't use __SOURCE_DIRECTORY__) and shadow copying (can't use .Location)
             let root = Path.GetDirectoryName(Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath)
             let rec loop dir = 
-                 printfn "looking for references in %s" dir
+                 //printfn "looking for references in %s" dir
                  if Directory.Exists(dir ++ "packages" ) then 
                      dir ++ "packages" 
                  else
