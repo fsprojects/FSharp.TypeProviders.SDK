@@ -82,7 +82,7 @@ Target "Build" (fun _ ->
 Target "RunTests" (fun _ ->
 #if MONO
   // We don't use dotnet test because of https://github.com/dotnet/sdk/issues/335
-    //exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" ("/p:Configuration=" + config + " tests/bin/" + config + "/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none")
+    exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" ("tests/bin/" + config + "/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none")
     ()
 #else
     exec "dotnet" ("test tests/FSharp.TypeProviders.SDK.Tests.fsproj -c " + config)
