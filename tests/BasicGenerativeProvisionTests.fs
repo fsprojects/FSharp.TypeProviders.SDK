@@ -182,6 +182,7 @@ type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypePro
         // Note: myType refers to another generated type as its base class.  
         let myType = ProvidedTypeDefinition(myAssem, ns, typeName, Some (myBaseType :> Type), isErased=false)
 
+
         // Note: this method refers to another generated type as its return type
         let myMeth1 = ProvidedMethod("MyInstanceMethodOnBaseType", [], myBaseType, isStatic = false, invokeCode = (fun _args -> Expr.NewObject(myCtorOnBaseType, [Expr.Value(1)])))
         // Note: this method refers to another generated type as its return type
@@ -197,7 +198,18 @@ type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypePro
                            ProvidedStaticParameter("Count2", typeof<int>, 3) ]
         myType.DefineStaticParameters(parameters, (fun typeName args -> createType(typeName, (args.[0] :?> int) + (args.[1] :?> int))))
 
-        this.AddNamespace(ns, [myType])
+        // Test a generative type with a base type from msvorlib
+        let myType2 = ProvidedTypeDefinition(asm, ns, "MyTypeWithBaseType", Some (typeof<System.Collections.ArrayList>), isErased=false)
+
+        // Test a generative type implementing an interface from msvorlib
+        let myType3 = ProvidedTypeDefinition(asm, ns, "MyTypeWithInterfaceType", Some (typeof<obj>), isErased=false)
+        myType3.AddInterfaceImplementation typeof<System.IDisposable>
+        let disposeMethImpl = ProvidedMethod("Dispose", [], typeof<Void>, isStatic = false, invokeCode = (fun _args -> Expr.Value((), typeof<Void>)))
+        myType3.AddMember disposeMethImpl
+        myType3.DefineMethodOverride(disposeMethImpl, typeof<IDisposable>.GetMethod("Dispose"))
+        
+
+        this.AddNamespace(ns, [myType; myType2; myType3])
 
 
 

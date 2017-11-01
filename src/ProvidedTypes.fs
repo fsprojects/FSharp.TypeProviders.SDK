@@ -1634,6 +1634,7 @@ namespace ProviderImplementation.ProvidedTypes
             | TypeContainer.TypeToBeDecided -> failwithf "type '%s' was not added as a member to a declaring type" className
 
         member __.DefineMethodOverride (methodInfoBody,methodInfoDeclaration) = methodOverrides.Add (methodInfoBody, methodInfoDeclaration)
+        member __.DefineMethodOverridesDelayed f = methodOverridesQueue.Add (f >> Array.ofList)
 
         // This method is used by Debug.fs and QuotationBuilder.fs.
         // Emulate the F# type provider type erasure mechanism to get the
@@ -13251,8 +13252,7 @@ namespace ProviderImplementation.ProvidedTypes
               Retargetable =  false
               ExportedTypes = ILExportedTypesAndForwarders (lazy [| |])
               EntrypointElsewhere=None }
-        let scoref = ILScopeRef.Local
-        let mb = ILModuleBuilder(scoref, "MainModule", Some manifest)
+        let mb = ILModuleBuilder(ILScopeRef.Local, "MainModule", Some manifest)
         member __.MainModule = mb
         member __.Save() = 
             let il = mb.Content
@@ -13736,10 +13736,11 @@ namespace ProviderImplementation.ProvidedTypes
             | dt -> ILTypeRefScope.Nested (transTypeRef dt)
 
         and transScopeRef (assem: Assembly): ILScopeRef = 
-            if assem = (targetAssembly :> Assembly) then ILScopeRef.Local
-            elif assem.GetName().Name = targetAssembly.GetName().Name then failwith "unexpected non-equivalent assemblies have the same name"
+            // Note: this simple equality check on assembly objects doesn't work on Mono, there must be some small difference in the 
+            // implementation of equality on System.Assembly objects
+            // if assem  = (targetAssembly :> Assembly) then ILScopeRef.Local
+            if assem.GetName().Name = targetAssembly.GetName().Name then ILScopeRef.Local
             else ILScopeRef.Assembly (ILAssemblyRef.FromAssemblyName (assem.GetName()))
-
 
         let transCtorRef (m:ConstructorInfo) = 
             let dty = m.DeclaringType

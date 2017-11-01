@@ -286,6 +286,9 @@ namespace ProviderImplementation.ProvidedTypes
         /// Specifies that the given method body implements the given method declaration.
         member DefineMethodOverride: methodInfoBody: ProvidedMethod * methodInfoDeclaration: MethodInfo -> unit
 
+        /// Specifies that the given method bodies implement the given method declarations
+        member DefineMethodOverridesDelayed: (unit -> (ProvidedMethod * MethodInfo) list) -> unit
+
         /// Add a 'Obsolete' attribute to this provided type definition
         member AddObsoleteAttribute: message: string * ?isError: bool -> unit
 

@@ -663,9 +663,9 @@ module internal Targets =
                  else
                      let parent = Path.GetDirectoryName(dir)
                      match parent with
-                     | null -> failwith ("couldn't find packages directory anywhere above  " + __SOURCE_DIRECTORY__)
+                     | null | "" -> failwith ("couldn't find packages directory anywhere above  " + __SOURCE_DIRECTORY__)
                      | _ ->  loop parent
-            loop __SOURCE_DIRECTORY__
+            loop Environment.CurrentDirectory
         let groupDirectory = 
             if Directory.Exists (packagesDirectory ++ paketGroup) then 
                  packagesDirectory ++ paketGroup
