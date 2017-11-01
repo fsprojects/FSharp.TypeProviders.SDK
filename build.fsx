@@ -82,8 +82,15 @@ Target "Build" (fun _ ->
 Target "RunTests" (fun _ ->
 #if MONO
   // We don't use dotnet test because of https://github.com/dotnet/sdk/issues/335
-    //exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" ("/p:Configuration=" + config + " tests/bin/" + config + "/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none")
-    ()
+  // FAKE probably helps us find this test file or arch?
+    let dir = "tests/bin/" + config + "/net461"
+    let file = 
+        System.IO.Directory.GetDirectories(dir)
+        |> Array.pick (fun subdir -> 
+            let file = subdir + "/FSharp.TypeProviders.SDK.Tests.dll"
+            if System.IO.File.Exists file then Some file else None)
+    exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" (file + " -parallel none")
+            
 #else
     exec "dotnet" ("test tests/FSharp.TypeProviders.SDK.Tests.fsproj -c " + config)
     // This also gives console output:
