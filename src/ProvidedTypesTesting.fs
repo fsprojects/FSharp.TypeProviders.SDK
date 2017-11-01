@@ -657,15 +657,19 @@ module internal Targets =
             | "portable259"   -> ["portable-net45+netcore45+wpa81+wp8"]
             | _ -> failwith "unimplemented portable profile"
         let packagesDirectory = 
+            // this takes into account both linux-on-windows (can't use __SOURCE_DIRECTORY__) and shadow copying (can't use .Location)
+            let root = Path.GetDirectoryName(Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath)
             let rec loop dir = 
+                 printfn "looking for references in %s" dir
                  if Directory.Exists(dir ++ "packages" ) then 
                      dir ++ "packages" 
                  else
                      let parent = Path.GetDirectoryName(dir)
                      match parent with
-                     | null | "" -> failwith ("couldn't find packages directory anywhere above  " + __SOURCE_DIRECTORY__)
+                     | null | "" -> failwith ("couldn't find packages directory anywhere above  " + root)
                      | _ ->  loop parent
-            loop Environment.CurrentDirectory
+                     
+            loop  root
         let groupDirectory = 
             if Directory.Exists (packagesDirectory ++ paketGroup) then 
                  packagesDirectory ++ paketGroup
