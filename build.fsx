@@ -71,7 +71,9 @@ Target "Restore" (fun _ ->
     exec "dotnet" "restore src/FSharp.TypeProviders.SDK.fsproj"
     exec "dotnet" "restore tests/FSharp.TypeProviders.SDK.Tests.fsproj"
     exec "dotnet" "restore examples/BasicProvider/BasicProvider.fsproj"
+    exec "dotnet" "restore examples/ComboProvider/ComboProvider.fsproj"
     exec "dotnet" "restore examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"
+    exec "dotnet" "restore examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"
 )
 Target "Build" (fun _ ->
     exec "dotnet" ("build -c "+config+" src/FSharp.TypeProviders.SDK.fsproj")
@@ -80,7 +82,9 @@ Target "Build" (fun _ ->
 
 Target "Examples" (fun _ ->
     exec "dotnet" ("build -c "+config+" examples/BasicProvider/BasicProvider.fsproj")
+    exec "dotnet" ("build -c "+config+" examples/ComboProvider/ComboProvider.fsproj")
     exec "dotnet" ("build -c "+config+" examples/BasicProvider.Tests/BasicProvider.Tests.fsproj")
+    exec "dotnet" ("build -c "+config+" examples/ComboProvider.Tests/ComboProvider.Tests.fsproj")
 )
 Target "RunTests" (fun _ ->
 #if MONO

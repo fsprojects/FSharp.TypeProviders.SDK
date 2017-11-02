@@ -1,0 +1,143 @@
+-o:obj\Debug\net461\ComboProvider.Tests.dll
+         -g
+         --debug:full
+         --noframework
+         --define:NO_GENERATIVE
+         --define:DEBUG
+         --define:NET461
+         --optimize-
+         -r:C:\GitHub\dsyme\FSharp.TypeProviders.SDK\examples\ComboProvider\bin\Debug\netstandard2.0\ComboProvider.dll
+         -r:C:\Users\dsyme\.nuget\packages\fsharp.core\4.2.3\lib\net45\FSharp.Core.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\Microsoft.Win32.Primitives.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\mscorlib.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\netfx.force.conflicts.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\netstandard.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.AppContext.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Collections.Concurrent.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Collections.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Collections.NonGeneric.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Collections.Specialized.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.ComponentModel.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.ComponentModel.EventBasedAsync.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.ComponentModel.Primitives.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.ComponentModel.TypeConverter.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Console.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\System.Core.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Data.Common.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\System.Data.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Diagnostics.Contracts.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Diagnostics.Debug.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Diagnostics.FileVersionInfo.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Diagnostics.Process.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Diagnostics.StackTrace.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Diagnostics.TextWriterTraceListener.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Diagnostics.Tools.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Diagnostics.TraceSource.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Diagnostics.Tracing.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\System.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\System.Drawing.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Drawing.Primitives.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Dynamic.Runtime.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Globalization.Calendars.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Globalization.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Globalization.Extensions.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.Compression.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\System.IO.Compression.FileSystem.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.Compression.ZipFile.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.FileSystem.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.FileSystem.DriveInfo.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.FileSystem.Primitives.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.FileSystem.Watcher.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.IsolatedStorage.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.MemoryMappedFiles.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.Pipes.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.IO.UnmanagedMemoryStream.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Linq.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Linq.Expressions.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Linq.Parallel.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Linq.Queryable.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.Http.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.NameResolution.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.NetworkInformation.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.Ping.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.Primitives.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.Requests.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.Security.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.Sockets.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.WebHeaderCollection.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.WebSockets.Client.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Net.WebSockets.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\System.Numerics.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.ObjectModel.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Reflection.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Reflection.Extensions.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Reflection.Primitives.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Resources.Reader.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Resources.ResourceManager.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Resources.Writer.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.CompilerServices.VisualC.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.Extensions.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.Handles.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.InteropServices.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.InteropServices.RuntimeInformation.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.Numerics.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\System.Runtime.Serialization.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.Serialization.Formatters.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.Serialization.Json.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.Serialization.Primitives.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Runtime.Serialization.Xml.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Security.Claims.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Security.Cryptography.Algorithms.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Security.Cryptography.Csp.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Security.Cryptography.Encoding.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Security.Cryptography.Primitives.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Security.Cryptography.X509Certificates.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Security.Principal.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Security.SecureString.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Text.Encoding.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Text.Encoding.Extensions.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Text.RegularExpressions.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Threading.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Threading.Overlapped.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Threading.Tasks.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Threading.Tasks.Parallel.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Threading.Thread.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Threading.ThreadPool.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Threading.Timer.dll
+         -r:C:\Users\dsyme\.nuget\packages\system.valuetuple\4.4.0\ref\net461\System.ValueTuple.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\System.Xml.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\System.Xml.Linq.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Xml.ReaderWriter.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Xml.XDocument.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Xml.XmlDocument.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Xml.XmlSerializer.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Xml.XPath.dll
+         -r:C:\Program Files\dotnet\sdk\2.0.0\Microsoft\Microsoft.NET.Build.Extensions\\net461\ref\System.Xml.XPath.XDocument.dll
+         -r:C:\Users\dsyme\.nuget\packages\xunit.abstractions\2.0.1\lib\net35\xunit.abstractions.dll
+         -r:C:\Users\dsyme\.nuget\packages\xunit.assert\2.2.0\lib\netstandard1.1\xunit.assert.dll
+         -r:C:\Users\dsyme\.nuget\packages\xunit.extensibility.core\2.2.0\lib\netstandard1.1\xunit.core.dll
+         -r:C:\Users\dsyme\.nuget\packages\xunit.extensibility.execution\2.2.0\lib\net452\xunit.execution.desktop.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\Facades\System.ComponentModel.Annotations.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\Facades\System.Reflection.Emit.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\Facades\System.Reflection.Emit.ILGeneration.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\Facades\System.Reflection.Emit.Lightweight.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\Facades\System.Runtime.InteropServices.WindowsRuntime.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\Facades\System.ServiceModel.Duplex.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\Facades\System.ServiceModel.Http.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\Facades\System.ServiceModel.NetTcp.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\Facades\System.ServiceModel.Primitives.dll
+         -r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.1\Facades\System.ServiceModel.Security.dll
+         --target:library
+         --warn:3
+         --warnaserror:76
+         --fullpaths
+         --flaterrors
+         --subsystemversion:6.00
+         --highentropyva+
+         --targetprofile:mscorlib
+         --simpleresolution
+         --nocopyfsharpcore
+         ComboProvider.Tests.fs
+         C:\Users\dsyme\AppData\Local\Temp\.NETFramework,Version=v4.6.1.AssemblyAttributes.fs

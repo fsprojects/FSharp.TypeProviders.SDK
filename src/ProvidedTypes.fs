@@ -8372,6 +8372,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         // A duplicate 'mscorlib' appears in the paths reported by the F# compiler
         let referencedAssemblyPaths = referencedAssemblyPaths |> Seq.distinctBy Path.GetFileNameWithoutExtension |> Seq.toList
+        do System.Diagnostics.Debugger.Break()
 
         /// Find which assembly defines System.Object etc.
         let systemRuntimeScopeRef =
@@ -8706,7 +8707,7 @@ namespace ProviderImplementation.ProvidedTypes
             | Value (obj,ty) ->
                 match obj with 
                 | :? Type as vty -> Expr.Value(convTypeToTgt vty, ty)
-                | vexpr -> quotation
+                | _ -> Expr.Value(obj, convTypeToTgt ty)
 
             // Traverse remaining constructs
             | ShapeVarUnchecked v ->
