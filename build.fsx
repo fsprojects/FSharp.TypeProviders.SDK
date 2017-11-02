@@ -70,7 +70,7 @@ Target "Clean" (fun _ ->
 Target "Restore" (fun _ ->
     exec "dotnet" "restore src/FSharp.TypeProviders.SDK.fsproj"
     exec "dotnet" "restore tests/FSharp.TypeProviders.SDK.Tests.fsproj"
-    exec "dotnet" "restore examples/BasicProvider.Tests/BasicProvider.fsproj"
+    exec "dotnet" "restore examples/BasicProvider/BasicProvider.fsproj"
     exec "dotnet" "restore examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"
 )
 Target "Build" (fun _ ->
