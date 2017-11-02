@@ -71,8 +71,8 @@ let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false
 
 [<Fact>]
 let ``Enums are generated correctly``() =
-  // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/123 
-  if not runningOnMono then 
+  // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/123 
+  // if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
         let enumContainer = container.GetNestedType "EnumContainer"
         Assert.NotNull enumContainer
