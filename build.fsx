@@ -81,10 +81,11 @@ Target "Build" (fun _ ->
 )
 
 Target "Examples" (fun _ ->
-    exec "dotnet" ("build -c "+config+" examples/BasicProvider/BasicProvider.fsproj")
-    exec "dotnet" ("build -c "+config+" examples/ComboProvider/ComboProvider.fsproj")
-    exec "dotnet" ("build -c "+config+" examples/BasicProvider.Tests/BasicProvider.Tests.fsproj")
-    exec "dotnet" ("build -c "+config+" examples/ComboProvider.Tests/ComboProvider.Tests.fsproj")
+    //exec "dotnet" ("build -c "+config+" examples/BasicProvider/BasicProvider.fsproj")
+    //exec "dotnet" ("build -c "+config+" examples/ComboProvider/ComboProvider.fsproj")
+    //exec "dotnet" ("build -c "+config+" examples/BasicProvider.Tests/BasicProvider.Tests.fsproj")
+    //exec "dotnet" ("build -c "+config+" examples/ComboProvider.Tests/ComboProvider.Tests.fsproj")
+    ()
 )
 Target "RunTests" (fun _ ->
 #if MONO
