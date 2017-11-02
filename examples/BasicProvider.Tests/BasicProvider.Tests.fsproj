@@ -8,6 +8,7 @@
      <FscToolExe>fsc.exe</FscToolExe>
 -->     
   </PropertyGroup>
+  <Import Project="..\..\fsc.props" />
   <ItemGroup>
     <Compile Include="BasicProvider.Tests.fs" />
     <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp2.0' " />
