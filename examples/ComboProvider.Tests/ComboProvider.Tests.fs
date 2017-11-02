@@ -1,8 +1,10 @@
 #if INTERACTIVE
-#r @"../test/ErasedWithConstructor.dll"
+#r @"../test/ComboProvider.dll"
 #endif
 
-open ErasedWithConstructor.Provided
+module ComboProvider.Tests
+
+open ComboProvider.Provided
 open Xunit
 
 [<Fact>]
