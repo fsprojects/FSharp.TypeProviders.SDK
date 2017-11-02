@@ -8372,7 +8372,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         // A duplicate 'mscorlib' appears in the paths reported by the F# compiler
         let referencedAssemblyPaths = referencedAssemblyPaths |> Seq.distinctBy Path.GetFileNameWithoutExtension |> Seq.toList
-        do System.Diagnostics.Debugger.Break()
+        //do System.Diagnostics.Debugger.Break()
 
         /// Find which assembly defines System.Object etc.
         let systemRuntimeScopeRef =
