@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+     <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
+     <IsPackable>false</IsPackable>
+     <DefineConstants>NO_GENERATIVE</DefineConstants>
+     <FscToolPath>C:\GitHub\dsyme\visualfsharp\debug\net40\bin</FscToolPath>
+     <FscToolExe>fsc.exe</FscToolExe>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="BasicProvider.Tests.fs" />
+    <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp2.0' " />
+    <None Include="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170517-02" />
+    <PackageReference Include="xunit" Version="2.2.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
+    <!-- When using the type provider, the reference is to the appropriate runtime DLL -->
+    <ProjectReference Include="..\BasicProvider\BasicProvider.fsproj" />
+    
+  </ItemGroup>
+</Project>

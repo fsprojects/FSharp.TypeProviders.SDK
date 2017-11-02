@@ -8438,7 +8438,7 @@ namespace ProviderImplementation.ProvidedTypes
         let getTargetAssemblies() =  flush(); targetAssemblies_.ToArray()
         let getTargetAssembliesTable() = flush(); targetAssembliesTable_
 
-        let tryBindAssemblySimple(simpleName:string): Choice<Assembly, exn> =
+        let tryBindTargetAssemblySimple(simpleName:string): Choice<Assembly, exn> =
             let table = getTargetAssembliesTable()
             if table.ContainsKey(simpleName) then table.[simpleName]
             else Choice2Of2 (Exception(sprintf "assembly %s not found" simpleName))
@@ -8456,8 +8456,6 @@ namespace ProviderImplementation.ProvidedTypes
             sourceAssembliesQueue.Clear()
             for q in qs do for asm in q() do sourceAssemblies.Add asm
             sourceAssemblies.ToArray()
-
-        //let replacer = AssemblyReplacer (sourceAssemblies, targetAssemblies, assemblyReplacementMap)
 
         /// When translating quotations, Expr.Var's are translated to new variable respecting reference equality.
         let varTableFwd = Dictionary<Var, Var>()
@@ -8749,7 +8747,17 @@ namespace ProviderImplementation.ProvidedTypes
                     TypeContainer.Namespace((fun () -> 
                         match assemf() with 
                         | :? ProvidedAssembly as assembly -> convProvidedAssembly assembly
-                        | a -> a), nm)
+                        | assembly -> 
+                            assemblyReplacementMap 
+                            |> Seq.tryPick (fun (originalName, newName) -> 
+                               if assembly.GetName().Name = originalName then
+                                   match this.TryBindSimpleAssemblyNameToTarget(newName) with 
+                                   | Choice1Of2 replacementAssembly -> Some replacementAssembly
+                                   | Choice2Of2 _ -> None
+                               else
+                                   None)
+                            |> function None -> assembly | Some replacementAssembly -> replacementAssembly
+                          ), nm)
                 | c -> c // nested types patched below
 
             // Create the type definition with contents mapped to the target
@@ -8880,11 +8888,11 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.ConvertSourceNamespaceToTarget ns = convNamespaceToTgt ns
         member __.ConvertSourceProvidedTypeDefinitionToTarget ptd = convProvidedTypeDefToTgt ptd
-        member __.TryBindILAssemblyRefToTgt(aref: ILAssemblyRef): Choice<Assembly, exn> = tryBindAssemblySimple(aref.Name)
+        member __.TryBindILAssemblyRefToTgt(aref: ILAssemblyRef): Choice<Assembly, exn> = tryBindTargetAssemblySimple(aref.Name)
 
-        member __.TryBindAssemblyNameToTarget(aref: AssemblyName): Choice<Assembly, exn> = tryBindAssemblySimple(aref.Name)
+        member __.TryBindAssemblyNameToTarget(aref: AssemblyName): Choice<Assembly, exn> = tryBindTargetAssemblySimple(aref.Name)
 
-        member __.TryBindSimpleAssemblyNameToTarget(assemblyName: string) = tryBindAssemblySimple(assemblyName) 
+        member __.TryBindSimpleAssemblyNameToTarget(assemblyName: string) = tryBindTargetAssemblySimple(assemblyName) 
 
         member __.ILGlobals = ilGlobals.Value
 

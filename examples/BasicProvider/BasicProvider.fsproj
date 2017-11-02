@@ -1,0 +1,27 @@
+﻿<Project>
+  <!-- See https://stackoverflow.com/questions/43921992/how-can-i-use-beforebuild-and-afterbuild-targets-with-visual-studio-2017 -->
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+     <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
+  </PropertyGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <ItemGroup>
+    <Compile Include="BasicProvider.Runtime.fs" />
+  </ItemGroup>
+  <!-- We build BOTH the design-time DLLs needed to support the use of the runtime DLL in different host tooling -->
+  <!-- In the future it will be possible to just build a single netstandard2.0 design-time DLL, but for fsharp41 host tooling  -->
+  <!-- that is not yet possible because of https://github.com/Microsoft/visualfsharp/issues/3309 -->
+  <Target Name="BeforeBuild">  
+     <MSBuild Projects="..\BasicProvider.DesignTime\BasicProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=netcoreapp2.0" />
+     <MSBuild Projects="..\BasicProvider.DesignTime\BasicProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=net461" />
+  </Target>  
+  <!-- We place BOTH the design-time DLsL in well-known locations with resepct to the runtime DLL -->
+  <!-- This enables any runtime DLL to be used with any host tooling running in either netcoreapp2.0+ or net461+ -->
+  <Target Name="AfterBuild">  
+        <Copy  SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net461\BasicProvider.DesignTime.dll"  DestinationFolder="$(OutputPath)\typeproviders\fsharp41\net461" />  
+        <Copy  SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netcoreapp2.0\BasicProvider.DesignTime.dll"  DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netcoreapp2.0" />  
+  </Target>  
+  
+  
+  
+</Project>
