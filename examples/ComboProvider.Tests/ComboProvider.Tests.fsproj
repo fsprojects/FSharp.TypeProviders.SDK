@@ -3,10 +3,17 @@
      <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
      <IsPackable>false</IsPackable>
      <DefineConstants>NO_GENERATIVE</DefineConstants>
-     <FscToolPath>C:\GitHub\dsyme\visualfsharp\debug\coreclr\bin</FscToolPath>
-     <FscToolExe>RunFsc.cmd</FscToolExe>
   </PropertyGroup>
-<!--  <Import Project="..\..\fsc.props" /> -->
+  <Import Project="..\..\fsc.props" />
+<!--
+Use this to manually select an updated F# compiler that supports F# Tooling RFC FST-1003 https://github.com/fsharp/fslang-design/blob/master/tooling/FST-1003-loading-type-provider-design-time-components.md
+  <PropertyGroup>
+     <FscToolPath>C:\GitHub\dsyme\visualfsharp\Tools\dotnet20\sdk\2.0.0-preview2-006502\FSharpTest</FscToolPath>
+     <FscToolExe>RunFsc.cmd</FscToolExe>
+     <FscToolPath>C:\GitHub\dsyme\visualfsharp\release\net40\bin</FscToolPath>
+     <FscToolExe>fsc.exe</FscToolExe>
+  </PropertyGroup>
+-->
   <ItemGroup>
     <Compile Include="ComboProvider.Tests.fs" />
     <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp2.0' " />
