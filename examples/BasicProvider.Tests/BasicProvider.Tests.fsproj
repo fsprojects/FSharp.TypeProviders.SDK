@@ -3,12 +3,14 @@
      <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
      <IsPackable>false</IsPackable>
      <DefineConstants>NO_GENERATIVE</DefineConstants>
-<!--
-     <FscToolPath>C:\GitHub\dsyme\visualfsharp\debug\net40\bin</FscToolPath>
-     <FscToolExe>fsc.exe</FscToolExe>
--->     
   </PropertyGroup>
   <Import Project="..\..\fsc.props" />
+<!--
+  <PropertyGroup>
+     <FscToolPath>C:\GitHub\dsyme\visualfsharp\release\net40\bin</FscToolPath>
+     <FscToolExe>fsc.exe</FscToolExe>
+  </PropertyGroup>
+-->
   <ItemGroup>
     <Compile Include="BasicProvider.Tests.fs" />
     <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp2.0' " />
