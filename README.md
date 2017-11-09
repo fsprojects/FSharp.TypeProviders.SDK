@@ -23,12 +23,7 @@ Building a type provider nearly always starts with adding these files to your pr
 * ProvidedTypes.fsi
 * ProvidedTypes.fs
 
-The [SDK NuGet package](https://www.nuget.org/packages/FSharp.TypeProviders.StarterPack) contains both these files as well as a set of debugging helpers, and when you install
-it, it should add them all to your F# project. It's probably best not to modify the files after adding them as
-upgrades to the package will ask to replace the previous versions - either submit changes back to this project
-or shadow the relevant functions in a seperate file.
-
-If using Paket, you can also add code files by direct GitHub references like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/paket.dependencies#L20-L22) and reference the files in a project file like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/src/FSharp.Data.Source.fsproj#L54-L59).
+If using Paket, you can add code files by direct GitHub references like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/paket.dependencies#L20-L22) and reference the files in a project file like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/src/FSharp.Data.Source.fsproj#L54-L59).
 
 
 Type providers may be used in projects that generate .NET Standard code or target other .NET Frameworks than that being used to execute the F# compiler. 
