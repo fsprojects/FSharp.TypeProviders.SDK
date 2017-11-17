@@ -854,6 +854,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.OptionalValue = optionalValue 
         member __.HasDefaultParameterValue = Option.isSome optionalValue
         member __.BelongsToTargetModel = isTgt
+        member __.AddCustomAttribute(attribute) = customAttributesImpl.AddCustomAttribute(attribute)
 
         override __.Name = parameterName
         override __.ParameterType = parameterType
