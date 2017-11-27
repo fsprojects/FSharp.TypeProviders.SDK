@@ -8951,7 +8951,8 @@ namespace ProviderImplementation.ProvidedTypes
                 let baseObj = tcImports.GetProperty("Base")
 
                 [ for dllInfo in dllInfos.GetElements() -> (dllInfo.GetProperty("FileName") :?> string)
-                  for dllInfo in baseObj.GetProperty("Value").GetField("dllInfos").GetElements() -> (dllInfo.GetProperty("FileName") :?> string) ]
+                  if not (isNull baseObj) then
+                    for dllInfo in baseObj.GetProperty("Value").GetField("dllInfos").GetElements() -> (dllInfo.GetProperty("FileName") :?> string) ]
               with e ->
                 failwithf "Invalid host of cross-targeting type provider. Exception: %A" e
 
