@@ -14,4 +14,8 @@ let ``Default constructor should create instance`` () =
 [<Fact>]
 let ``Constructor with parameter should create instance`` () =
     Assert.Equal("override", MyType("override").InnerState)
-    
+
+[<Fact>]
+let ``Method with ReflectedDefinition parameter should get its name`` () =
+    let myValue = 2
+    Assert.Equal("myValue", MyType.NameOf(myValue))
