@@ -543,3 +543,43 @@ let ``check on-demand production of members``() =
         Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
         Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
     )
+
+
+[<TypeProvider>]
+type ErasingProviderWithCustomAttributes (config : TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces (config)
+
+    let ns = "CustomAttributes.Provided"
+    let asm = Assembly.GetExecutingAssembly()
+
+    let createTypes () =
+        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+
+        let nameOf =
+            let param = ProvidedParameter("p", typeof<Microsoft.FSharp.Quotations.Expr<int>>)
+            param.AddCustomAttribute {
+                new CustomAttributeData() with
+                    member __.Constructor = typeof<ReflectedDefinitionAttribute>.GetConstructor([||])
+                    member __.ConstructorArguments = [||] :> _
+                    member __.NamedArguments = [||] :> _
+            }
+            ProvidedMethod("NameOf", [ param ], typeof<string>, isStatic = true, invokeCode = fun args ->
+                <@@
+                    match (%%args.[0]) : Microsoft.FSharp.Quotations.Expr<int> with
+                    | Microsoft.FSharp.Quotations.Patterns.ValueWithName (_, _, n) -> n
+                    | e -> failwithf "Invalid quotation argument (expected ValueWithName): %A" e
+                @@>)
+        myType.AddMember(nameOf)
+
+        [myType]
+
+    do
+        this.AddNamespace(ns, createTypes())
+
+[<Fact>]
+let ``check custom attributes``() = 
+    let refs = Targets.DotNet45FSharp31Refs()
+    Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, ErasingProviderWithCustomAttributes, [| |]  ) |> (fun t -> 
+        Assert.True(t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name))
+        Assert.Equal(1, t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name) |> Seq.length)
+    )

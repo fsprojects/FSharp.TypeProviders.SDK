@@ -35,6 +35,9 @@ namespace ProviderImplementation.ProvidedTypes
         /// Indicates if the parameter has a default value
         member HasDefaultParameterValue: bool
 
+        /// Add a custom attribute to the provided parameter.
+        member AddCustomAttribute: CustomAttributeData -> unit
+
     /// Represents a provided static parameter.
     [<Class>]
     type ProvidedStaticParameter =
