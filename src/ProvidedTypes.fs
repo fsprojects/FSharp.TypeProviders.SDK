@@ -7777,6 +7777,12 @@ namespace ProviderImplementation.ProvidedTypes
                     let ass2opt = tryBindAssembly(aref2)
                     match ass2opt with
                     | Choice1Of2 ass2 -> 
+                        if nsp.HasValue && nsp.Value="System" && nm = "Object" then 
+                            let rec fetchBase (t:Type) =
+                                if t.BaseType <> null then fetchBase t.BaseType
+                                else t
+                            asm.GetType() |> fetchBase |> Some
+                        else
                         match ass2.GetType(joinILTypeName nsp nm)  with 
                         | null -> None
                         | ty -> Some ty
