@@ -371,6 +371,34 @@ let ``test basic binding context portable259``() =
        printfn "-=======================" 
    | Choice2Of2 err -> raise err
 
+
+[<Fact>]
+let ``test trasitive closure of source assemblies net45``() =
+   let pf = Targets.DotNet45Ref "PresentationFramework.dll"
+   let pc = Targets.DotNet45Ref "PresentationCore.dll"
+   if File.Exists pf && File.Exists pc  then 
+       let refs = Targets.DotNet45FSharp40Refs() @ [ pf; pc ] 
+       let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+       use tp1 = new TypeProviderForNamespaces(config)
+       let ctxt1 = tp1.TargetContext
+
+       printfn "finding PresentationFramework in targets..."
+       Assert.True(ctxt1.GetTargetAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationFramework"))
+
+       printfn "finding PresentationCore in targets..."
+       Assert.True(ctxt1.GetTargetAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationCore"))
+
+       ctxt1.AddSourceAssembly(Assembly.LoadFrom(pf))
+
+       printfn "finding PresentationFramework in source assemblies..."
+       Assert.True(ctxt1.GetSourceAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationFramework"))
+
+       // Note we only have PresentationFramework in the source assemblies - that also implies PresentationCore because
+       // we use the transitive closure of assemblies.
+       printfn "finding PresentationCore in source assemblies..."
+       Assert.True(ctxt1.GetSourceAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationCore"))
+
+
 [<Fact>]
 let ``test basic symbol type ops``() =
    let refs = Targets.DotNet45FSharp40Refs()

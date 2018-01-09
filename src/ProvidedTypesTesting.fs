@@ -23,12 +23,12 @@ module Utils =
 
 /// Simulate a real host of TypeProviderConfig
 type internal DllInfo(path: string) =
-    member x.FileName = path
+    member __.FileName = path
 
 /// Simulate a real host of TypeProviderConfig
 type internal TcImports(bas: TcImports option, dllInfos: DllInfo list) =
-    member x.Base = bas
-    member x.DllInfos = dllInfos
+    member __.Base = bas
+    member __.DllInfos = dllInfos
 
 
 type internal Testing() =
@@ -684,7 +684,7 @@ module internal Targets =
              | Some res -> res
         
 
-    let private sysInstalledAssembliesPath profile =
+    let sysInstalledAssembliesPath profile =
         let portableRoot = if runningOnMono then monoRoot ++ "xbuild-frameworks" else referenceAssembliesPath ++ "Framework"
         match profile with
         | "net45"->
@@ -738,6 +738,7 @@ module internal Targets =
     let Portable7FSharp40Refs() = FSharpRefs "4.0" "portable7"
     let Portable78FSharp40Refs() = FSharpRefs "4.0" "portable78"
     let Portable259FSharp40Refs() = FSharpRefs "4.0" "portable259"
+    let DotNet45Ref r = sysInstalledAssembliesPath "net45" ++ r
 
     let FSharpCore41Ref() = FSharpCoreRef "4.1" "net45"
     let DotNet45FSharp41Refs() = FSharpRefs "4.1" "net45"

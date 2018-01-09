@@ -417,8 +417,11 @@ namespace ProviderImplementation.ProvidedTypes
         /// Get the resolved referenced assemblies determined by the type provider configuration
         member GetTargetAssemblies : unit -> Assembly[]
 
-        /// Get the set of design-time assemblies available to use as a basis for authoring provided types
+        /// Get the set of design-time assemblies available to use as a basis for authoring provided types.
         member GetSourceAssemblies : unit -> Assembly[]
+
+        /// Add an assembly to the set of design-time assemblies available to use as a basis for authoring provided types
+        member AddSourceAssembly : Assembly -> unit
 
         /// Try to get the version of FSharp.Core referenced. May raise an exception if FSharp.Core has not been correctly resolved
         member FSharpCoreAssemblyVersion: Version
@@ -441,15 +444,32 @@ namespace ProviderImplementation.ProvidedTypes
         /// Read the assembly related to this context
         member ReadRelatedAssembly: bytes: byte[] -> Assembly
 
-    /// A base type providing default implementations of type provider functionality when all provided
-    /// types are of type ProvidedTypeDefinition.
+    /// A base type providing default implementations of type provider functionality.
     type TypeProviderForNamespaces =
 
-        /// Initializes a type provider to provide the types in the given namespace.
-        new: config: TypeProviderConfig * namespaceName:string * types: ProvidedTypeDefinition list * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
+        /// <summary>Initializes a type provider to provide the types in the given namespace.</summary>
+        /// <param name="sourceAssemblies">
+        ///    Optionally specify the design-time assemblies available to use as a basis for authoring provided types.
+        ///    The transitive dependencies of these assemblies are also included. By default
+        ///    Assembly.GetCallingAssembly() and its transitive dependencies are used.
+        /// </param>
+        ///               
+        /// <param name="assemblyReplacementMap">
+        ///    Optionally specify a map of assembly names from source model to referenced assemblies.
+        /// </param>
+        new: config: TypeProviderConfig * namespaceName:string * types: ProvidedTypeDefinition list * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
 
-        /// Initializes a type provider
-        new: config: TypeProviderConfig * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
+        /// <summary>Initializes a type provider.</summary>
+        /// <param name="sourceAssemblies">
+        ///    Optionally specify the design-time assemblies available to use as a basis for authoring provided types.
+        ///    The transitive dependencies of these assemblies are also included. By default
+        ///    Assembly.GetCallingAssembly() and its transitive dependencies are used.
+        /// </param>
+        ///               
+        /// <param name="assemblyReplacementMap">
+        ///    Optionally specify a map of assembly names from source model to referenced assemblies.
+        /// </param>
+        new: config: TypeProviderConfig * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
 
         /// Invoked by the type provider to add a namespace of provided types in the specification of the type provider.
         member AddNamespace: namespaceName:string * types: ProvidedTypeDefinition list -> unit
