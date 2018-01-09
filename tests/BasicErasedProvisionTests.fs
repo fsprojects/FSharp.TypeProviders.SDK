@@ -371,7 +371,7 @@ let ``test basic binding context portable259``() =
        printfn "-=======================" 
    | Choice2Of2 err -> raise err
 
-
+#if !NETCOREAPP2_0
 [<Fact>]
 let ``test trasitive closure of source assemblies net45``() =
    let pf = Targets.DotNet45Ref "PresentationFramework.dll"
@@ -397,7 +397,7 @@ let ``test trasitive closure of source assemblies net45``() =
        // we use the transitive closure of assemblies.
        printfn "finding PresentationCore in source assemblies..."
        Assert.True(ctxt1.GetSourceAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationCore"))
-
+#endif
 
 [<Fact>]
 let ``test basic symbol type ops``() =
