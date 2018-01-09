@@ -388,7 +388,7 @@ let ``test trasitive closure of source assemblies net45``() =
        printfn "finding PresentationCore in targets..."
        Assert.True(ctxt1.GetTargetAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationCore"))
 
-       ctxt1.AddSourceAssembly(Assembly.LoadFrom(pf))
+       ctxt1.AddSourceAssembly(Assembly.Load(AssemblyName.GetAssemblyName(pf)))
 
        printfn "finding PresentationFramework in source assemblies..."
        Assert.True(ctxt1.GetSourceAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationFramework"))
