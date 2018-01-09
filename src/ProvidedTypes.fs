@@ -7808,7 +7808,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let theTypesArray = lazy (theTypes.ToArray() |> Array.collect (function (ptds, None) -> Array.map (fun ptd -> (ptd :> Type)) ptds | _ -> [| |]))
 
-        override x.GetReferencedAssemblies() = notRequired x "GetReferencedAssemblies" (assemblyName.ToString())
+        override __.GetReferencedAssemblies() = [| |] //notRequired x "GetReferencedAssemblies" (assemblyName.ToString())
 
         override __.GetName() = assemblyName
 
@@ -8365,7 +8365,7 @@ namespace ProviderImplementation.ProvidedTypes
 
     /// Represents the type binding context for the type provider based on the set of assemblies
     /// referenced by the compilation.
-    type ProvidedTypesContext(referencedAssemblyPaths: string list, assemblyReplacementMap: (string*string) list) as this =
+    type ProvidedTypesContext(referencedAssemblyPaths: string list, assemblyReplacementMap: (string*string) list, sourceAssemblies: Assembly list) as this =
 
         // A duplicate 'mscorlib' appears in the paths reported by the F# compiler
         let referencedAssemblyPaths = referencedAssemblyPaths |> Seq.distinctBy Path.GetFileNameWithoutExtension |> Seq.toList
@@ -8433,7 +8433,7 @@ namespace ProviderImplementation.ProvidedTypes
             let qs = targetAssembliesQueue.ToArray()
             targetAssembliesQueue.Clear()
             for q in qs do q() 
-        let getTargetAssemblies() =  flush(); targetAssemblies_.ToArray()
+        let getTargetAssemblies() =  flush(); targetAssemblies_
         let getTargetAssembliesTable() = flush(); targetAssembliesTable_
 
         let tryBindTargetAssemblySimple(simpleName:string): Choice<Assembly, exn> =
@@ -8441,19 +8441,33 @@ namespace ProviderImplementation.ProvidedTypes
             if table.ContainsKey(simpleName) then table.[simpleName]
             else Choice2Of2 (Exception(sprintf "assembly %s not found" simpleName))
 
-        let sourceAssemblies = ResizeArray<_>()
+        let sourceAssembliesTable_ =  ConcurrentDictionary<string,Assembly>()
+        let sourceAssemblies_ = ResizeArray<_>()
         let sourceAssembliesQueue = ResizeArray<_>()
-        do sourceAssembliesQueue.Add (fun () -> 
-              [| yield Assembly.GetExecutingAssembly()
-                 for asm in Assembly.GetExecutingAssembly().GetReferencedAssemblies() do
-                    let asm = try Assembly.Load(asm) with _ -> null
-                    if not (isNull asm) then
-                        yield asm |])
+
+        let enqueueReferencedAssemblies(asm: Assembly) = 
+            do sourceAssembliesQueue.Add (fun () -> 
+                [| for referencedAssemblyName  in asm.GetReferencedAssemblies() do
+                      let referencedAssembly = try Assembly.Load(referencedAssemblyName) with _ -> null
+                      if not (isNull referencedAssembly) then
+                          yield referencedAssembly |])
+
+        do sourceAssembliesQueue.Add (fun () -> List.toArray sourceAssemblies)
+
         let getSourceAssemblies() = 
-            let qs = sourceAssembliesQueue.ToArray()
-            sourceAssembliesQueue.Clear()
-            for q in qs do for asm in q() do sourceAssemblies.Add asm
-            sourceAssemblies.ToArray()
+            while sourceAssembliesQueue.Count > 0 do
+                let qs = sourceAssembliesQueue.ToArray()
+                sourceAssembliesQueue.Clear()
+                for q in qs do 
+                    for asm in q() do 
+                        let simpleName = asm.GetName().Name
+                        if not (sourceAssembliesTable_.ContainsKey(simpleName)) then 
+                            sourceAssembliesTable_.[simpleName] <- asm
+                            sourceAssemblies_.Add asm
+                            // Find the transitive closure of all referenced assemblies
+                            enqueueReferencedAssemblies asm
+
+            sourceAssemblies_
 
         /// When translating quotations, Expr.Var's are translated to new variable respecting reference equality.
         let varTableFwd = Dictionary<Var, Var>()
@@ -8514,15 +8528,17 @@ namespace ProviderImplementation.ProvidedTypes
                 let asms = (if toTgt then getTargetAssemblies() else getSourceAssemblies())
                 let fullName = fixName t.FullName
 
-                match asms |> Array.tryPick (tryGetTypeFromAssembly toTgt t.Assembly.FullName fullName) with
+                // TODO: this linear search through all available source/target assemblies feels as if it must be too slow in some cases.
+                // However, we store type translations in various tables (typeTableFwd and typeTableBwd) so perhaps it is not a problem
+                match asms |> Seq.tryPick (tryGetTypeFromAssembly toTgt t.Assembly.FullName fullName) with
                 | Some (newT, canSave) ->
                      if canSave then table.[t] <- newT
                      newT
                 | _ ->
                     let msg =
                         if toTgt then sprintf "The design-time type '%O' utilized by a type provider was not found in the target reference assembly set '%A'. You may be referencing a profile which contains fewer types than those needed by the type provider you are using." t (getTargetAssemblies())
-                        elif getSourceAssemblies().Length = 0 then sprintf "A failure occured while determining compilation references"
-                        else sprintf "The target type '%O' utilized by a type provider was not found in the design-time assembly set '%A'. Please report this problem to the project site for the type provider." t (getSourceAssemblies())
+                        elif getSourceAssemblies() |> Seq.length = 0 then sprintf "A failure occured while determining compilation references"
+                        else sprintf "The target type '%O' utilized by a type provider was not found in the design-time assembly set '%A'. Please report this problem to the project site for the type provider." t (getSourceAssemblies() |> Seq.toArray)
                     failwith msg
 
 
@@ -8896,9 +8912,9 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.ReferencedAssemblyPaths = referencedAssemblyPaths
 
-        member __.GetTargetAssemblies() =  getTargetAssemblies()
+        member __.GetTargetAssemblies() =  getTargetAssemblies().ToArray()
 
-        member __.GetSourceAssemblies() =  getSourceAssemblies()
+        member __.GetSourceAssemblies() =  getSourceAssemblies().ToArray()
 
         member __.FSharpCoreAssemblyVersion = fsharpCoreRefVersion.Force()
 
@@ -8921,7 +8937,7 @@ namespace ProviderImplementation.ProvidedTypes
                 targetAssembliesTable_.[asmName.Name] <- Choice1Of2 asm
                 targetAssemblies_.Add asm)
 
-        static member Create (config: TypeProviderConfig, assemblyReplacementMap) =
+        static member Create (config: TypeProviderConfig, assemblyReplacementMap, sourceAssemblies) =
 
             // Use the reflection hack to determine the set of referenced assemblies by reflecting over the SystemRuntimeContainsType
             // closure in the TypeProviderConfig object.
@@ -8954,7 +8970,7 @@ namespace ProviderImplementation.ProvidedTypes
                 failwithf "Invalid host of cross-targeting type provider. Exception: %A" e
 
 
-            ProvidedTypesContext(referencedAssemblyPaths, assemblyReplacementMap)
+            ProvidedTypesContext(referencedAssemblyPaths, assemblyReplacementMap, sourceAssemblies)
 
 
 
@@ -14128,9 +14144,9 @@ namespace ProviderImplementation.ProvidedTypes
     open ProviderImplementation.ProvidedTypes.AssemblyReader
     open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 
-    type TypeProviderForNamespaces(config: TypeProviderConfig, namespacesAndTypes: list<(string * list<ProvidedTypeDefinition>)>, assemblyReplacementMap: (string*string) list) as this =
+    type TypeProviderForNamespaces(config: TypeProviderConfig, namespacesAndTypes: list<(string * list<ProvidedTypeDefinition>)>, assemblyReplacementMap: (string*string) list, sourceAssemblies: Assembly list) as this =
 
-        let ctxt = ProvidedTypesContext.Create (config, assemblyReplacementMap)
+        let ctxt = ProvidedTypesContext.Create (config, assemblyReplacementMap, sourceAssemblies)
 
 
 #if !NO_GENERATIVE
@@ -14197,13 +14213,15 @@ namespace ProviderImplementation.ProvidedTypes
         do AppDomain.CurrentDomain.add_AssemblyResolve handler
 #endif
 
-        new (config, namespaceName, types, ?assemblyReplacementMap) = 
+        new (config, namespaceName, types, ?sourceAssemblies, ?assemblyReplacementMap) = 
+            let sourceAssemblies = defaultArg sourceAssemblies [ Assembly.GetCallingAssembly() ]
             let assemblyReplacementMap = defaultArg assemblyReplacementMap []
-            new TypeProviderForNamespaces(config, [(namespaceName,types)], assemblyReplacementMap)
+            new TypeProviderForNamespaces(config, [(namespaceName,types)], assemblyReplacementMap=assemblyReplacementMap, sourceAssemblies=sourceAssemblies)
 
-        new (config, ?assemblyReplacementMap) = 
+        new (config, ?sourceAssemblies, ?assemblyReplacementMap) = 
+            let sourceAssemblies = defaultArg sourceAssemblies [ Assembly.GetCallingAssembly() ]
             let assemblyReplacementMap = defaultArg assemblyReplacementMap []
-            new TypeProviderForNamespaces(config, [], assemblyReplacementMap)
+            new TypeProviderForNamespaces(config, [], assemblyReplacementMap=assemblyReplacementMap, sourceAssemblies=sourceAssemblies)
 
         member __.TargetContext = ctxt
 
