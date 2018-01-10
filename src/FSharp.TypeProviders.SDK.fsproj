@@ -9,9 +9,13 @@
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
     <Compile Include="ProvidedTypesTesting.fs" />
+
+    <!-- We only force the use of the F# 3.1 FSharp.Core to make sure this library continues to compile with F# 3.1. -->
+    <!-- Yes, people are still making type providers that need to load into F# 3.1 tooling (VS2013). -->
     <Reference Include="FSharp.Core" Condition="'$(TargetFramework)' == 'net45'">
       <HintPath>..\packages\fs31\FSharp.Core\lib\net40\FSharp.Core.dll</HintPath>
     </Reference>
+    <!-- We need this because of DisableImplicitFSharpCoreReference above -->
     <Reference Include="FSharp.Core" Condition="'$(TargetFramework)' == 'netstandard2.0'">
       <HintPath>..\packages\FSharp.Core\lib\netstandard1.6\FSharp.Core.dll</HintPath>
     </Reference>
