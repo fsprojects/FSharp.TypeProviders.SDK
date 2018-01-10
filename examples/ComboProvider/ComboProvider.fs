@@ -26,7 +26,7 @@ type ComboProvider (config : TypeProviderConfig) as this =
     do assert (typeof<SomeRuntimeHelper>.Assembly.GetName().Name = asm.GetName().Name)  
 
     let createTypes () =
-        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<SomeRuntimeHelper2>)
+        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
 
         let ctor = ProvidedConstructor([], invokeCode = fun args -> <@@ "My internal state" :> obj @@>)
         myType.AddMember(ctor)
