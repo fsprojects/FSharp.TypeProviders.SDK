@@ -1,15 +1,16 @@
 RESTRICTION: >= net45
 NUGET
   remote: https://api.nuget.org/v3/index.json
-    FAKE (4.63.2)
+    FAKE (4.64.3)
     FSharp.Core (4.2.3)
-    Microsoft.NETCore.Platforms (2.0) - restriction: >= net461
+    Microsoft.NETCore.App (2.0.5)
+    Microsoft.NETCore.Platforms (2.0.1) - restriction: >= net461
     NETStandard.Library (2.0.1) - restriction: >= net461
       Microsoft.NETCore.Platforms (>= 1.1)
     NetStandard.Library.NetFramework (2.0.0-preview2-25405-01)
       Microsoft.NETCore.Platforms (>= 2.0.0-preview2-25405-01) - restriction: >= net461
       NETStandard.Library (>= 2.0.0-preview2-25401-01) - restriction: >= net461
-    Nuget.CommandLine (4.3)
+    Nuget.CommandLine (4.4.1)
     xunit.runner.console (2.3.1)
 
 GROUP fs31
