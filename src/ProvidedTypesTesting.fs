@@ -720,11 +720,12 @@ module internal Targets =
               yield fsharpInstalledAssembliesPath fsharp "portable47"
           | "net45" ->
               yield sysInstalledAssembliesPath profile ++ "mscorlib.dll"
+              yield sysInstalledAssembliesPath profile ++ "System.Numerics.dll" 
               yield sysInstalledAssembliesPath profile ++ "System.Xml.dll" 
               yield sysInstalledAssembliesPath profile ++ "System.Core.dll"
               yield sysInstalledAssembliesPath profile ++ "System.Xml.Linq.dll"
               yield sysInstalledAssembliesPath profile ++ "System.dll" 
-          | _ -> failwith (sprintf "unimplemented  profile, fsharpVersion = %s, profile = %s" fsharp profile)
+          | _ -> failwith (sprintf "unimplemented profile, fsharpVersion = %s, profile = %s" fsharp profile)
           yield FSharpCoreRef fsharp profile
         ]
     let DotNet45FSharp31Refs() = FSharpRefs "3.1" "net45"

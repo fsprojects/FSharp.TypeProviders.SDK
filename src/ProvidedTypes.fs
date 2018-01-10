@@ -1060,7 +1060,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
         override this.IsDefined(_attributeType, _inherit) = notRequired this "IsDefined" propertyName
 
-    and  ProvidedEvent(isTgt: bool, eventName:string, attrs: EventAttributes, eventHandlerType:Type, isStatic: bool, adder: (unit -> MethodInfo), remover: (unit -> MethodInfo), customAttributesData) =
+    and ProvidedEvent(isTgt: bool, eventName:string, attrs: EventAttributes, eventHandlerType:Type, isStatic: bool, adder: (unit -> MethodInfo), remover: (unit -> MethodInfo), customAttributesData) =
         inherit EventInfo()
 
         let mutable declaringType : ProvidedTypeDefinition option = None  
@@ -8536,9 +8536,9 @@ namespace ProviderImplementation.ProvidedTypes
                      newT
                 | _ ->
                     let msg =
-                        if toTgt then sprintf "The design-time type '%O' utilized by a type provider was not found in the target reference assembly set '%A'. You may be referencing a profile which contains fewer types than those needed by the type provider you are using." t (getTargetAssemblies())
+                        if toTgt then sprintf "The design-time type '%O' utilized by a type provider was not found in the target reference assembly set '%A'. You may be referencing a profile which contains fewer types than those needed by the type provider you are using." t (getTargetAssemblies() |> Seq.toList)
                         elif getSourceAssemblies() |> Seq.length = 0 then sprintf "A failure occured while determining compilation references"
-                        else sprintf "The target type '%O' utilized by a type provider was not found in the design-time assembly set '%A'. Please report this problem to the project site for the type provider." t (getSourceAssemblies() |> Seq.toArray)
+                        else sprintf "The target type '%O' utilized by a type provider was not found in the design-time assembly set '%A'. Please report this problem to the project site for the type provider." t (getSourceAssemblies() |> Seq.toList)
                     failwith msg
 
 
@@ -8815,7 +8815,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         and convStaticParameterDefToTgt (x: ProvidedStaticParameter) = 
             Debug.Assert (not x.BelongsToTargetModel, "unexpected target ProvidedStaticParameter")
-            ProvidedStaticParameter(x.Name, x.ParameterType,  ?parameterDefaultValue=x.ParameterDefaultValue) 
+            ProvidedStaticParameter(x.Name, convTypeToTgt x.ParameterType,  ?parameterDefaultValue=x.ParameterDefaultValue) 
             
         and convMemberDefToTgt declTyT (x: MemberInfo) = 
             let xT : MemberInfo = 
