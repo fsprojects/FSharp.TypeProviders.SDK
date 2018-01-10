@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation, Tomas Petricek, Gustavo Guerra, and other contributors
 // 
-// Licensed under the Apache License, Version 2.0, see LICENSE.md in this project
+// Licensed under the MIT License see LICENSE.md in this project
 
 namespace ProviderImplementation.ProvidedTypes
 
