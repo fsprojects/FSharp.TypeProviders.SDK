@@ -8968,12 +8968,31 @@ namespace ProviderImplementation.ProvidedTypes
                     failwith "Invalid host of cross-targeting type provider: a field called dllInfos must exist in the tcImports object. Please check that the type provider being hosted by the F# compiler tools or a simulation of them."
                 if not (tcImports.HasProperty("Base")) then
                     failwith "Invalid host of cross-targeting type provider: a field called Base must exist in the tcImports object. Please check that the type provider being hosted by the F# compiler tools or a simulation of them."
+
                 let dllInfos = tcImports.GetField("dllInfos")
+                if isNull dllInfos then
+                    let ty = dllInfos.GetType()
+                    let fld = ty.GetField("dllInfos", bindAll)
+                    failwithf """Invalid host of cross-targeting type provider: unexpected 'null' value in dllInfos field of TcImports, ty = %A, fld = %A""" ty fld
+
                 let baseObj = tcImports.GetProperty("Base")
 
                 [ for dllInfo in dllInfos.GetElements() -> (dllInfo.GetProperty("FileName") :?> string)
                   if not (isNull baseObj) then
-                    for dllInfo in baseObj.GetProperty("Value").GetField("dllInfos").GetElements() -> (dllInfo.GetProperty("FileName") :?> string) ]
+                    let baseObjValue = baseObj.GetProperty("Value")
+                    if isNull baseObjValue then
+                        let ty = baseObjValue.GetType()
+                        let prop = ty.GetProperty("Value", bindAll)
+                        failwithf """Invalid host of cross-targeting type provider: unexpected 'null' value in Value property of baseObj, ty = %A, prop = %A""" ty prop
+
+                    let baseDllInfos = baseObjValue.GetField("dllInfos")
+
+                    if isNull baseDllInfos then
+                        let ty = baseDllInfos.GetType()
+                        let fld = ty.GetField("dllInfos", bindAll)
+                        failwithf """Invalid host of cross-targeting type provider: unexpected 'null' value in dllInfos field of baseDllInfos, ty = %A, fld = %A""" ty fld
+
+                    for baseDllInfo in baseDllInfos.GetElements() -> (baseDllInfo.GetProperty("FileName") :?> string) ]
               with e ->
                 failwithf "Invalid host of cross-targeting type provider. Exception: %A" e
 
