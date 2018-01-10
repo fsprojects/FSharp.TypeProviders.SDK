@@ -11,10 +11,13 @@ open System.Reflection
 type SomeRuntimeHelper() = 
     static member Help() = "help"
 
+[<AllowNullLiteral>]
+type SomeRuntimeHelper2() = 
+    static member Help() = "help"
 
 [<TypeProvider>]
 type ComboProvider (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces (config, [("ComboProvider.DesignTime", "ComboProvider")])
+    inherit TypeProviderForNamespaces (config, assemblyReplacementMap=[("ComboProvider.DesignTime", "ComboProvider")])
 
     let ns = "ComboProvider.Provided"
     let asm = Assembly.GetExecutingAssembly()
@@ -23,7 +26,7 @@ type ComboProvider (config : TypeProviderConfig) as this =
     do assert (typeof<SomeRuntimeHelper>.Assembly.GetName().Name = asm.GetName().Name)  
 
     let createTypes () =
-        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<SomeRuntimeHelper2>)
 
         let ctor = ProvidedConstructor([], invokeCode = fun args -> <@@ "My internal state" :> obj @@>)
         myType.AddMember(ctor)
@@ -34,8 +37,11 @@ type ComboProvider (config : TypeProviderConfig) as this =
         let innerState = ProvidedProperty("InnerState", typeof<string>, getterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string @@>)
         myType.AddMember(innerState)
 
-        let meth = ProvidedMethod("StaticMethod", [], typeof<SomeRuntimeHelper>, isStatic=true, invokeCode = (fun args -> Expr.Value(null, typeof<SomeRuntimeHelper>)))
+        let meth = ProvidedMethod("StaticMethod", [], typeof<SomeRuntimeHelper>, isStatic=true, invokeCode = (fun args -> <@@ SomeRuntimeHelper() @@>))
         myType.AddMember(meth)
+
+        let meth2 = ProvidedMethod("StaticMethod2", [], typeof<SomeRuntimeHelper2>, isStatic=true, invokeCode = (fun args -> Expr.Value(null, typeof<SomeRuntimeHelper2>)))
+        myType.AddMember(meth2)
 
         [myType]
 
