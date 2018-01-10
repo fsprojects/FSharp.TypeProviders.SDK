@@ -72,12 +72,47 @@ namespace ProviderImplementation.ProvidedTypes
             (arr1.Length = arr2.Length) &&
             (arr1,arr2) ||> Array.forall2 f
 
-        let rec eqTypes (ty1:Type) (ty2:Type) =
-            if ty1.IsGenericType then ty2.IsGenericType && lengthsEqAndForall2 (ty1.GetGenericArguments()) (ty2.GetGenericArguments()) eqTypes
+        /// General implementation of .Equals(Type) logic for System.Type over symbol types. You can use this with other types too.
+        let rec eqTypes (ty1: Type) (ty2: Type) =
+            if Object.ReferenceEquals(ty1,ty2) then true
+            elif ty1.IsGenericTypeDefinition then ty2.IsGenericTypeDefinition && ty1.Equals(ty2)
+            elif ty1.IsGenericType then ty2.IsGenericType && not ty2.IsGenericTypeDefinition && eqTypes (ty1.GetGenericTypeDefinition()) (ty2.GetGenericTypeDefinition()) && lengthsEqAndForall2 (ty1.GetGenericArguments()) (ty2.GetGenericArguments()) eqTypes
             elif ty1.IsArray then ty2.IsArray && ty1.GetArrayRank() = ty2.GetArrayRank() && eqTypes (ty1.GetElementType()) (ty2.GetElementType())
             elif ty1.IsPointer then ty2.IsPointer && eqTypes (ty1.GetElementType()) (ty2.GetElementType())
             elif ty1.IsByRef then ty2.IsByRef && eqTypes (ty1.GetElementType()) (ty2.GetElementType())
             else ty1.Equals(box ty2)
+
+        /// General implementation of .Equals(obj) logic for System.Type over symbol types. You can use this with other types too.
+        let eqTypeObj (this: Type) (other: obj) =
+            match other with
+            | :? Type as otherTy -> eqTypes this otherTy
+            | _ -> false
+
+        /// General implementation of .IsAssignableFrom logic for System.Type, regardless of specific implementation
+        let isAssignableFrom (ty: Type) (otherTy: Type) =
+            eqTypes ty otherTy || (match otherTy.BaseType with null -> false | bt -> ty.IsAssignableFrom(bt))
+
+        /// General implementation of .IsSubclassOf logic for System.Type, regardless of specific implementation, with 
+        /// an added hack to make the types usable with the FSharp.Core quotations implementation
+        let isSubclassOf (this: Type) (otherTy: Type) =
+            (this.IsClass && otherTy.IsClass && this.IsAssignableFrom(otherTy) && not (eqTypes this otherTy))
+            // The FSharp.Core implementation of FSharp.Quotations uses
+            //      let isDelegateType (typ:Type) = 
+            //          if typ.IsSubclassOf(typeof<Delegate>) then ...
+            // This means even target type definitions must process the case where ``otherTy`` is typeof<Delegate> rather than
+            // the System.Delegate type for the target assemblies.
+            || (match this.BaseType with 
+                | null -> false 
+                | bt -> bt.FullName = "System.MulticastDelegate" && (let fn = otherTy.FullName in fn = "System.Delegate" || fn = "System.MulticastDelegate" ))
+
+
+        /// General implementation of .GetAttributeFlags logic for System.Type over symbol types 
+        let getAttributeFlagsImpl (ty: Type) = 
+            if ty.IsGenericType then ty.GetGenericTypeDefinition().Attributes
+            elif ty.IsArray then typeof<int[]>.Attributes
+            elif ty.IsPointer then typeof<int>.MakePointerType().Attributes
+            elif ty.IsByRef then typeof<int>.MakeByRefType().Attributes
+            else Unchecked.defaultof<TypeAttributes>
 
         let bindAll = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance
         let bindSome isStatic = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| (if isStatic then BindingFlags.Static else BindingFlags.Instance)
@@ -489,19 +524,6 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedTypeSymbolKind.Generic gty -> gty.DeclaringType
             | ProvidedTypeSymbolKind.FSharpTypeAbbreviation _ -> null
 
-        // TODO: This implementation looks dubious
-        override __.IsAssignableFrom(otherTy: Type) =
-            match kind with
-            | Generic gtd ->
-                if otherTy.IsGenericType then
-                    let otherGtd = otherTy.GetGenericTypeDefinition()
-                    let otherArgs = otherTy.GetGenericArguments()
-                    let yes = gtd.Equals(otherGtd) && Seq.forall2 eqTypes typeArgs otherArgs
-                    yes
-                    else
-                        base.IsAssignableFrom(otherTy)
-            | _ -> base.IsAssignableFrom(otherTy)
-
         override __.Name = 
             match kind,typeArgs with
             | ProvidedTypeSymbolKind.SDArray,[| arg |] -> arg.Name + "[]"
@@ -568,12 +590,13 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedTypeSymbolKind.FSharpTypeAbbreviation _,_ -> 3092
             | _ -> failwith "unreachable"
 
-        override this.Equals(other: obj) =
-            match other with
-            | :? Type as other -> eqTypes this other
-            | _ -> false
+        override this.Equals(other: obj) = eqTypeObj this other
 
-        override this.Equals(other: Type) = eqTypes this other
+        override this.Equals(otherTy: Type) = eqTypes this otherTy
+
+        override this.IsAssignableFrom(otherTy: Type) = isAssignableFrom this otherTy
+
+        override this.IsSubclassOf(otherTy: Type) = isSubclassOf this otherTy
 
         member __.Kind = kind
 
@@ -620,7 +643,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.GetInterfaces() = notRequired this "GetInterfaces" this.FullName
 
-        override this.GetAttributeFlagsImpl() = notRequired this "GetAttributeFlagsImpl" this.FullName
+        override this.GetAttributeFlagsImpl() = getAttributeFlagsImpl this
 
         override this.UnderlyingSystemType =
             match kind with
@@ -1476,6 +1499,10 @@ namespace ProviderImplementation.ProvidedTypes
         override x.GetHashCode() = x.Namespace.GetHashCode() ^^^ className.GetHashCode()
         override this.Equals(that: obj) = Object.ReferenceEquals(this, that)
         override this.Equals(that: Type) = Object.ReferenceEquals(this, that)
+
+        override this.IsAssignableFrom(otherTy: Type) = isAssignableFrom this otherTy
+
+        override this.IsSubclassOf(otherTy: Type) = isSubclassOf this otherTy
 
         override __.GetGenericArguments() = [||]
 
@@ -6933,19 +6960,6 @@ namespace ProviderImplementation.ProvidedTypes
             elif this.IsGenericType then this.GetGenericTypeDefinition().DeclaringType
             else failwithf "unreachable, stack trace = %A" Environment.StackTrace
 
-        // TODO: This implementation looks dubious
-        override this.IsAssignableFrom(otherTy: Type) =
-            if this.IsGenericType && otherTy.IsGenericType then
-                let otherGtd = otherTy.GetGenericTypeDefinition()
-                let otherArgs = otherTy.GetGenericArguments()
-                this.GetGenericTypeDefinition().Equals(otherGtd) && Seq.forall2 eqTypes (this.GetGenericArguments()) otherArgs
-            else
-                base.IsAssignableFrom(otherTy)
-
-        override __.IsSubclassOf(otherTy) =
-            base.IsSubclassOf(otherTy) // ||
-            //(this.IsGenericType && this.GetGenericTypeDefinition().IsDelegate && otherTy.FullName = "System.Delegate")
-
         override this.Name =
             if this.IsArray then this.GetElementType().Name + "[]"
             elif this.IsPointer  then this.GetElementType().Name + "*"
@@ -6998,12 +7012,13 @@ namespace ProviderImplementation.ProvidedTypes
             elif this.IsByRef then 283 + hash (this.GetElementType())
             else this.GetGenericTypeDefinition().MetadataToken
 
-        override this.Equals(that: obj) =
-            match that  with
-            | :? Type as that -> eqTypes this that
-            | _ -> false
+        override this.Equals(other: obj) = eqTypeObj this other
 
-        override this.Equals(that: Type) = eqTypes this that
+        override this.Equals(otherTy: Type) = eqTypes this otherTy
+
+        override this.IsAssignableFrom(otherTy: Type) = isAssignableFrom this otherTy
+
+        override this.IsSubclassOf(otherTy: Type) = isSubclassOf this otherTy
 
         member __.Kind = kind
         member __.Args = typeArgs
@@ -7149,14 +7164,15 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.AssemblyQualifiedName = "[" + this.Assembly.FullName + "]" + this.FullName
 
-        override this.GetMembers _bindingFlags = notRequired this "GetMembers" this.Name
-        override this.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" this.Name
-        override this.GetInterfaces() = notRequired this "GetInterfaces" this.Name
-        override this.GetAttributeFlagsImpl() = notRequired this "GetAttributeFlagsImpl" this.Name
+        override this.GetAttributeFlagsImpl() = getAttributeFlagsImpl this
 
         override this.UnderlyingSystemType = (this :> Type)
 
         override __.GetCustomAttributesData() =  ([| |] :> IList<_>)
+
+        override this.GetMembers _bindingFlags = notRequired this "GetMembers" this.Name
+        override this.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" this.Name
+        override this.GetInterfaces() = notRequired this "GetInterfaces" this.Name
         override __.GetCustomAttributes(_inherit) = emptyAttributes
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
         override __.IsDefined(_attributeType, _inherit) = false
@@ -7170,7 +7186,6 @@ namespace ProviderImplementation.ProvidedTypes
         override this.MakePointerType() = TypeSymbol(TypeSymbolKind.Pointer, [| this |]) :> Type
         override this.MakeByRefType() = TypeSymbol(TypeSymbolKind.ByRef, [| this |]) :> Type
 
-        
         override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
         override this.ToString() = this.FullName
 
@@ -7659,8 +7674,9 @@ namespace ProviderImplementation.ProvidedTypes
         override this.Equals(that:Type) = System.Object.ReferenceEquals (this, that)
         override __.GetHashCode() =  inp.Token
 
-        override this.IsAssignableFrom(otherTy: Type) = base.IsAssignableFrom(otherTy) || this.Equals(otherTy) // TODO: This implementation looks dubious
-        override __.IsSubclassOf(otherTy) = base.IsSubclassOf(otherTy) || inp.IsDelegate && otherTy.FullName = "System.Delegate"
+        override this.IsAssignableFrom(otherTy: Type) = isAssignableFrom this otherTy
+
+        override this.IsSubclassOf(otherTy: Type) = isSubclassOf this otherTy
 
         override this.AssemblyQualifiedName = "[" + this.Assembly.FullName + "]" + this.FullName
 
