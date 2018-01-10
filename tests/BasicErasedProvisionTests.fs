@@ -168,8 +168,36 @@ let ``ErasingConstructorProvider generates for .NET 4.5 F# 3.1 correctly``() : u
     Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
 
 [<Fact>]
+let ``ErasingConstructorProvider generates for .NET 4.5 F# 4.1 correctly``() : unit  = 
+    printfn "--------- Generating code for 4.5 F# 4.1 ------"
+    let res = testCrossTargeting (Targets.DotNet45FSharp41Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
+    Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
+    Assert.True(res.Contains "[FSharp.Core, Version=4.4.1.0")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
+
+[<Fact>]
+let ``ErasingConstructorProvider generates for .NET Standard 2.0 F# 4.1 correctly``() : unit  = 
+    printfn "--------- Generating code for .NET Standard 2.0 F# 4.1 ------"
+    let res = testCrossTargeting (Targets.DotNetStandard20FSharp41Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
+    Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
+    Assert.True(res.Contains "[FSharp.Core, Version=4.4.1.0")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
+
+[<Fact>]
+let ``ErasingConstructorProvider generates for .NET CoreApp 2.0 F# 4.1 correctly``() : unit  = 
+    printfn "--------- Generating code for .NET CoreApp 2.0 F# 4.1 ------"
+    let res = testCrossTargeting (Targets.DotNetCoreApp20FSharp41Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
+    Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
+    Assert.True(res.Contains "[FSharp.Core, Version=4.4.1.0")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
+
+[<Fact>]
 let ``ErasingConstructorProvider generates for .NET 4.5 F# 4.0 correctly``() : unit  = 
-  if Targets.supportsFSharp40 then
+  if Targets.supportsFSharp40() then
+    printfn "--------- Generating code for 4.5 F# 4.0 ------"
     let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")

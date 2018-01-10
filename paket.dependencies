@@ -6,6 +6,7 @@ nuget FAKE
 nuget xunit.runner.console
 nuget FSharp.Core ~> 4.2.3
 nuget NetStandard.Library.NetFramework
+nuget Microsoft.NETCore.App
 
 group fs31
     source https://api.nuget.org/v3/index.json

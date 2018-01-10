@@ -18,9 +18,6 @@ open Xunit
 
 #nowarn "760" // IDisposable needs new
 
-
-#if !NO_GENERATIVE
-
 [<TypeProvider>]
 type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces (config)
@@ -122,21 +119,20 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 
 
 let testCases() = 
-    [("3.259.3.1", (fun _ ->  Targets.hasPortable259Assemblies()), Targets.Portable259FSharp31Refs)
-     ("3.259.4.0", (fun _ ->  Targets.hasPortable259Assemblies() && Targets.supportsFSharp40), Targets.Portable259FSharp40Refs)
-     ("4.3.1.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp31Refs)
-     ("4.4.0.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp40Refs) ]
+    [("F# 3.1 Portable 259", "3.259.3.1", (fun _ ->  Targets.hasPortable259Assemblies()), Targets.Portable259FSharp31Refs)
+     ("F# 4.0 Portable 259", "3.259.4.0", (fun _ ->  Targets.hasPortable259Assemblies() && Targets.supportsFSharp40()), Targets.Portable259FSharp40Refs)
+     ("F# 3.1 .NET 4.5", "4.3.1.0", (fun _ ->  Targets.supportsFSharp31()), Targets.DotNet45FSharp31Refs)
+     ("F# 4.0 .NET 4.5", "4.4.0.0", (fun _ ->  Targets.supportsFSharp40()), Targets.DotNet45FSharp40Refs)
+     ("F# 4.1 .NET 4.5", "4.4.1.0", (fun _ ->  true), Targets.DotNet45FSharp41Refs)
+     ("F# 4.1 .NET Standard 2.0", "4.4.1.0", (fun _ ->  true), Targets.DotNetStandard20FSharp41Refs)
+     ("F# 4.1 .NET CoreApp 2.0", "4.4.1.0", (fun _ ->  true), Targets.DotNetCoreApp20FSharp41Refs) ]
 
 let hostedTestCases() = 
-#if !NETSTANDARD && !NETCOREAPP2_0
-    [("4.4.0.0", (fun _ ->  Targets.supportsFSharp40), Targets.DotNet45FSharp40Refs) ]
-#else
-    []    
-#endif
+    [("4.4.0.0", (fun _ ->  Targets.supportsFSharp40()), Targets.DotNet45FSharp40Refs) ]
 
 [<Fact>]
 let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : unit  = 
-    for (desc, supports, refs) in testCases() do
+    for (text, desc, supports, refs) in testCases() do
         if supports() then 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
@@ -160,14 +156,14 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             // re-read the assembly with the more complete reader to allow us to look at generated references
             let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
             let res = [| for r in assem.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
-            printfn "----- %s ------- " desc 
-            printfn "compilation references for FSharp.Core target %s = %A" desc runtimeAssemblyRefs
-            printfn "assembly references for FSharp.Core target %s = %s" desc res
-            for (desc2, _, _) in testCases() do 
+            printfn "----- %s ------- " text 
+            printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
+            printfn "assembly references for FSharp.Core target %s = %s" text res
+            for (text2, desc2, _, _) in testCases() do 
                 let contains = res.Contains("FSharp.Core, Version="+desc2)
                 if contains = (desc = desc2) then ()
-                elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+"in output")
-                else failwith ("failed to find reference to FSharp.Core, Version="+desc2+"in output" )
+                elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+" in output for "+ text)
+                else failwith ("failed to find reference to FSharp.Core, Version="+desc2+" in output for "+ text )
 
 [<TypeProvider>]
 type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypeProviderConfig) as this =
@@ -215,7 +211,7 @@ type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypePro
 
 [<Fact>]
 let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for correctly``() : unit  = 
-    for (desc, supports, refs) in testCases() do
+    for (text, desc, supports, refs) in testCases() do
         if supports() then 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
@@ -239,14 +235,14 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for co
             // re-read the assembly with the more complete reader to allow us to look at generated references
             let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
             let res = [| for r in assem.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
-            printfn "----- %s ------- " desc 
-            printfn "compilation references for FSharp.Core target %s = %A" desc runtimeAssemblyRefs
-            printfn "assembly references for FSharp.Core target %s = %s" desc res
-            for (desc2, _, _) in testCases() do 
+            printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes %s ------- " text 
+            printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
+            printfn "assembly references for FSharp.Core target %s = %s" text res
+            for (text2, desc2, _, _) in testCases() do 
                 let contains = res.Contains("FSharp.Core, Version="+desc2)
                 if contains = (desc = desc2) then ()
-                elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+"in output")
-                else failwith ("failed to find reference to FSharp.Core, Version="+desc2+"in output" )
+                elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+" in output for "+text)
+                else failwith ("failed to find reference to FSharp.Core, Version="+desc2+" in output for " + text)
 
 #if !NETSTANDARD && !NETCOREAPP2_0
 [<Fact>]
@@ -289,4 +285,3 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for ho
 
     // TESTING TODO: Register binary
     // TESTING TODO: field defs
-#endif
