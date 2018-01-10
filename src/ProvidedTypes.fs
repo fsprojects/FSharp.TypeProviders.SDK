@@ -1327,14 +1327,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.UnderlyingSystemType = typeof<Type>
 
-        override __.GetEnumUnderlyingType() =
-            if this.IsEnum then
-                if enumUnderlyingType.IsValueCreated then failwithf "The enuderlying enum type has already been evaluated for this type. stacktrace = %A" Environment.StackTrace
-                match enumUnderlyingType.Force() with
-                | None -> typeof<int>
-                | Some ty -> ty
-            else failwithf "not enum type"
-
         // Implement overloads
         override __.Assembly = 
             match container with
@@ -1448,17 +1440,22 @@ namespace ProviderImplementation.ProvidedTypes
         // Attributes, etc..
         override __.GetAttributeFlagsImpl() = adjustTypeAttributes this.IsNested attrs 
 
-        // .NET uses "IsSubclassOf(typeof(ValueType))" which only works for reflection context
         override this.IsValueTypeImpl() = 
             match this.BaseType with 
             | null -> false 
             | bt -> bt.FullName = "System.Enum" || bt.FullName = "System.ValueType" || bt.IsValueType 
 
-        // .NET uses "IsSubclassOf(typeof(Enum))" which only works for reflection context
         override __.IsEnum = 
             match this.BaseType with 
             | null -> false
             | bt -> bt.FullName = "System.Enum" || bt.IsEnum
+
+        override __.GetEnumUnderlyingType() =
+            if this.IsEnum then
+                match enumUnderlyingType.Force() with
+                | None -> typeof<int>
+                | Some ty -> ty
+            else failwithf "not enum type"
 
         override __.IsArrayImpl() = false
         override __.IsByRefImpl() = false
@@ -7635,6 +7632,17 @@ namespace ProviderImplementation.ProvidedTypes
             if isNested then adjustTypeAttributes isNested attr else attr
 
         override __.IsValueTypeImpl() = inp.IsStructOrEnum
+
+        override __.IsEnum = 
+            match this.BaseType with 
+            | null -> false
+            | bt -> bt.FullName = "System.Enum" || bt.IsEnum
+
+        override __.GetEnumUnderlyingType() =
+            if this.IsEnum then
+                txILType ([| |], [| |]) ilGlobals.typ_Int32 // TODO: in theory the assumption of "Int32" is not accurate for all enums, howver in practice .NET only uses enums with backing field Int32
+            else failwithf "not enum type"
+
         override __.IsArrayImpl() = false
         override __.IsByRefImpl() = false
         override __.IsPointerImpl() = false
