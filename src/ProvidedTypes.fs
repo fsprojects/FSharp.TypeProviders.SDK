@@ -1060,7 +1060,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
         override this.IsDefined(_attributeType, _inherit) = notRequired this "IsDefined" propertyName
 
-    and  ProvidedEvent(isTgt: bool, eventName:string, attrs: EventAttributes, eventHandlerType:Type, isStatic: bool, adder: (unit -> MethodInfo), remover: (unit -> MethodInfo), customAttributesData) =
+    and ProvidedEvent(isTgt: bool, eventName:string, attrs: EventAttributes, eventHandlerType:Type, isStatic: bool, adder: (unit -> MethodInfo), remover: (unit -> MethodInfo), customAttributesData) =
         inherit EventInfo()
 
         let mutable declaringType : ProvidedTypeDefinition option = None  
@@ -8815,7 +8815,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         and convStaticParameterDefToTgt (x: ProvidedStaticParameter) = 
             Debug.Assert (not x.BelongsToTargetModel, "unexpected target ProvidedStaticParameter")
-            ProvidedStaticParameter(x.Name, x.ParameterType,  ?parameterDefaultValue=x.ParameterDefaultValue) 
+            ProvidedStaticParameter(x.Name, convTypeToTgt x.ParameterType,  ?parameterDefaultValue=x.ParameterDefaultValue) 
             
         and convMemberDefToTgt declTyT (x: MemberInfo) = 
             let xT : MemberInfo = 

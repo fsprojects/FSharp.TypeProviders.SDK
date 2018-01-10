@@ -72,7 +72,7 @@ type ErasingProviderWithStaticParams (config : TypeProviderConfig) as this =
     let ns = "StaticProperty.Provided"
     let asm = Assembly.GetExecutingAssembly()
 
-    let createType (typeName, _n:int) =
+    let createType (typeName, _n:int, _dayOfWeekInt: int) =
         let myType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>)
         let myProp = ProvidedProperty("MyGetterProperty", typeof<string list>, isStatic = true, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
         myType.AddMember(myProp)
@@ -84,8 +84,8 @@ type ErasingProviderWithStaticParams (config : TypeProviderConfig) as this =
 
     do
         let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let parameters = [ ProvidedStaticParameter("Count", typeof<int>) ]
-        myType.DefineStaticParameters(parameters, (fun typeName args -> createType(typeName, args.[0] :?> int)))
+        let parameters = [ ProvidedStaticParameter("Count", typeof<int>); ProvidedStaticParameter("Day", typeof<System.DayOfWeek>) ]
+        myType.DefineStaticParameters(parameters, (fun typeName args -> createType(typeName, (args.[0] :?> int), (args.[1] :?> int))))
 
         this.AddNamespace(ns, [myType])
 
@@ -140,7 +140,7 @@ let ``ErasingProvider generates for Portable Profile 7 F# 4.0 correctly``() : un
 [<Fact>]
 let ``ErasingProviderWithStaticParams generates for .NET 4.5 F# 4.0 correctly``() : unit = 
   if (try File.Exists (Targets.FSharpCore40Ref()) with _ -> false) then
-    let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingProviderWithStaticParams(args)) [| box 3 |]
+    let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingProviderWithStaticParams(args)) [| box 3; box 4 |]
     printfn "res = %s" res
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
@@ -151,7 +151,7 @@ let ``ErasingProviderWithStaticParams generates for .NET 4.5 F# 4.0 correctly``(
 [<Fact>]
 let ``ErasingProviderWithStaticParams generates for Portable Profile 7 F# 4.0 correctly``() : unit = 
   if Targets.hasPortable7Assemblies() then 
-    let res = testCrossTargeting (Targets.Portable7FSharp40Refs()) (fun args -> new ErasingProviderWithStaticParams(args)) [| box 3 |]
+    let res = testCrossTargeting (Targets.Portable7FSharp40Refs()) (fun args -> new ErasingProviderWithStaticParams(args)) [| box 3; box 4 |]
     printfn "res = %s" res
     Assert.True(res.Contains "[FSharp.Core, Version=3.7.4.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
