@@ -298,6 +298,18 @@ let ``Check target enum types gives right values``() : unit  =
     printfn "Done Enums"
 
 [<Fact>]
+let ``Check target delegate types gives right values``() : unit  = 
+    let refs = Targets.DotNet45FSharp31Refs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    for delegateType in [ typeof<Func<int,int>>; typeof<System.Converter<int,int>>; typeof<System.Action> ] do
+        let delegateTypeT = tp.TargetContext.ConvertSourceTypeToTarget delegateType
+        printfn "Delegates #1, delegateType = %A" delegateType
+        Assert.True(delegateType.IsSubclassOf(typeof<System.Delegate>))
+        printfn "Delegates #2, delegateType = %A" delegateType
+        Assert.True(delegateTypeT.IsSubclassOf(typeof<System.Delegate>))
+
+[<Fact>]
 let ``Check type remapping functions work for primitives``() : unit  = 
     let refs = Targets.DotNet45FSharp31Refs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
