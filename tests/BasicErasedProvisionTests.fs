@@ -140,7 +140,7 @@ let ``ErasingProvider generates for Portable Profile 7 F# 4.0 correctly``() : un
 
 [<Fact>]
 let ``ErasingProviderWithStaticParams generates for .NET 4.5 F# 4.0 correctly``() : unit = 
-  if (try File.Exists (Targets.FSharpCore40Ref()) with _ -> false) then
+  if Targets.supportsFSharp40() then 
     let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingProviderWithStaticParams(args)) [| box 3; box 4 |]
     printfn "res = %s" res
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
@@ -278,6 +278,24 @@ let ``Check target non-primitive types are different to design-time types``() : 
     for tname, sourceType, _ in nonPrimitives do
         let targetType = mscorlib31.GetType(tname)
         Assert.NotEqual(targetType, sourceType)
+
+
+[<Fact>]
+let ``Check target enum types gives right values``() : unit  = 
+    let refs = Targets.DotNet45FSharp31Refs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    let dayOfWeekType = typeof<System.DayOfWeek>
+    let dayOfWeekTypeT = tp.TargetContext.ConvertSourceTypeToTarget dayOfWeekType
+    printfn "Enums #1"
+    Assert.True(dayOfWeekType.IsEnum)
+    printfn "Enums #2"
+    Assert.Equal(dayOfWeekType.GetEnumUnderlyingType().FullName, "System.Int32")
+    printfn "Enums #3"
+    Assert.True(dayOfWeekTypeT.IsEnum)
+    printfn "Enums #4"
+    Assert.Equal(dayOfWeekTypeT.GetEnumUnderlyingType().FullName, "System.Int32")
+    printfn "Done Enums"
 
 [<Fact>]
 let ``Check type remapping functions work for primitives``() : unit  = 
