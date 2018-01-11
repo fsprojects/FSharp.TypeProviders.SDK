@@ -29,6 +29,7 @@ type ErasingProvider (config : TypeProviderConfig, hasBigInt: bool) as this =
         let myStaticGetterProp = ProvidedProperty("MyStaticGetterProperty", typeof<string list>, isStatic = true, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
         let myStaticGetterProp2 = ProvidedProperty("MyStaticGetterProperty2", (if hasBigInt then typeof<bigint> else typeof<int>), isStatic = true, getterCode = (fun _args -> if hasBigInt then <@@ 34L @@> else <@@ 34 @@>))
         let myStaticSetterProp = ProvidedProperty("MyStaticSetterProperty", typeof<string list>, isStatic = true, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>), setterCode = (fun _args -> <@@ () @@>))
+        let myStaticGetterProp2 = ProvidedProperty("MyStaticGetterProperty2", typeof<bigint>, isStatic = true, getterCode = (fun _args -> <@@ 34L @@>))
         let myStaticMethod = ProvidedMethod("MyStaticMethod", [ ProvidedParameter("paramName",typeof<string list>) ], typeof<string list>, isStatic = true, invokeCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
         let myGetterProp = ProvidedProperty("MyGetterProperty", typeof<string list>, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>))
         let mySetterProp = ProvidedProperty("MySetterProperty", typeof<string list>, getterCode = (fun _args -> <@@ Set.ofList [ "Hello world" ] @@>), setterCode = (fun _args -> <@@ () @@>))
