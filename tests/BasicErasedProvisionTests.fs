@@ -204,6 +204,22 @@ let ``ErasingConstructorProvider generates for .NET 4.5 F# 4.0 correctly``() : u
     Assert.True(res.Contains "[FSharp.Core, Version=4.4.0.0")
 
 
+[<Fact>]
+let ``ErasingConstructorProvider generates expected code for .NET 4.5 F# 4.0``() : unit  = 
+  if Targets.supportsFSharp40() then
+    printfn "--------- Generating code for 4.5 F# 4.0 ------"
+    let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
+    //File.WriteAllText(@"c:\misc\out.1", res)
+    Assert.True(res.Replace("\r\n","\n") =
+        """class MyType : obj
+    new : () -> MyType
+    (FSharpList<_>.Cons("My internal state", FSharpList<_>.get_Empty()) :> obj)
+
+    new : InnerState:[FSharp.Core, Version=4.4.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a]Microsoft.FSharp.Collections.FSharpList<string> -> MyType
+    (InnerState :> obj)
+
+    member InnerState: [FSharp.Core, Version=4.4.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a]Microsoft.FSharp.Collections.FSharpList<string> with get
+    LanguagePrimitives+IntrinsicFunctions.UnboxGeneric(this)""".Replace("\r\n","\n"))
 
 [<Fact>]
 let ``ErasingConstructorProvider generates for Portable Profile 259 F# 3.1 correctly``() : unit = 
