@@ -139,7 +139,9 @@ However, today, for a TPDTC to be .NET Standard 2.0, it must be loadable into ho
     </None>
 ```
 
+### Packaging your Type Provider
 
+It is important that the design-time assemblies you use (if any) are not loaded at runtime. To ensure this does not happen, when you distribute a Nuget package for your Type Provider you _must_ provide an explicit list of project references for consumers to include. If you do not, every assembly you publish in the package will be included, which can lead to design-type only references being loaded at runtime.  To reference only a subset of assemblies, see the [Nuget documetation](https://docs.microsoft.com/en-us/nuget/reference/nuspec#explicit-assembly-references) or the [Paket documentation](https://fsprojects.github.io/Paket/template-files.html#References).
 
 ## Resources
 
