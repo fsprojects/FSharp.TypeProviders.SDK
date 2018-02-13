@@ -99,13 +99,17 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
         let adderCode (args: Expr list) = <@@ ignore (%%(args.[1]): System.EventHandler) @@>
         let removerCode (args: Expr list) = <@@ ignore (%%(args.[1]) : System.EventHandler) @@>
         let setterCode (args: Expr list) = <@@ ignore (%%(args.[1]) : string list) @@>
+        let ctorCode (_args: Expr list) = <@@ ignore 1 @@>
+        let ctorCode2 (args: Expr list) = <@@ ignore (%%(args.[0]) : string list)  @@>
 
         let myProp = ProvidedProperty("MyStaticProperty", typeof<string list>, isStatic = true, getterCode = testCode)
         let myProp2 = ProvidedProperty("MyInstaceProperty", typeof<string list>, isStatic = false, getterCode = testCode, setterCode = setterCode)
         let myMeth1 = ProvidedMethod("MyStaticMethod", [], typeof<string list>, isStatic = true, invokeCode = testCode)
         let myMeth2 = ProvidedMethod("MyInstanceMethod", [], typeof<string list>, isStatic = false, invokeCode = testCode)
         let myEvent1 = ProvidedEvent("MyEvent", typeof<System.EventHandler>, isStatic = false, adderCode = adderCode, removerCode = removerCode)
-        myType.AddMembers [ (myProp :> MemberInfo); (myProp2 :> MemberInfo); (myMeth1 :> MemberInfo); (myMeth2 :> MemberInfo); (myEvent1 :> MemberInfo)]
+        let myCtor1 = ProvidedConstructor([], invokeCode = ctorCode)
+        let myCtor2 = ProvidedConstructor([ProvidedParameter("arg", typeof<string list>)], invokeCode = ctorCode)
+        myType.AddMembers [ (myProp :> MemberInfo); (myProp2 :> MemberInfo); (myMeth1 :> MemberInfo); (myMeth2 :> MemberInfo); (myEvent1 :> MemberInfo); (myCtor1 :> MemberInfo);  (myCtor2 :> MemberInfo)]
         myAssem.AddTypes [myType]
         myType
 
