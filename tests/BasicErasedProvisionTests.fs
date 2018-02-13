@@ -199,7 +199,6 @@ let ``ErasingConstructorProvider generates for .NET 4.5 F# 4.0 correctly``() : u
   if Targets.supportsFSharp40() then
     printfn "--------- Generating code for 4.5 F# 4.0 ------"
     let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
-    File.WriteAllText(@"c:\misc\out.1", res)
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
     Assert.True(res.Contains "[FSharp.Core, Version=4.4.0.0")
@@ -210,6 +209,7 @@ let ``ErasingConstructorProvider generates expected code for .NET 4.5 F# 4.0``()
   if Targets.supportsFSharp40() then
     printfn "--------- Generating code for 4.5 F# 4.0 ------"
     let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
+    //File.WriteAllText(@"c:\misc\out.1", res)
     Assert.True(res.Replace("\r\n","\n") =
         """class MyType : obj
     new : () -> MyType
