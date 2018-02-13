@@ -8759,7 +8759,10 @@ namespace ProviderImplementation.ProvidedTypes
             (fun argsT -> 
                 let args = List.map convVarExprToSrc argsT
                 let paramNames = 
-                    [| if not isStatic && not isCtor then yield "this"
+                    // https://github.com/fsprojects/SwaggerProvider/blob/cfb7a665fada77fd0200591f62faba0ba44e172c/src/SwaggerProvider.DesignTime/SwaggerProviderConfig.fs#L79
+                    // "Erased constructors should not pass the instance as the first argument when calling invokeCode!"
+                    // "Generated constructors should always pass the instance as the first argument when calling invokeCode!"
+                    [| if not isStatic && (not isCtor || isGenerated) then yield "this"
                        for p in parameters do yield p.Name |]
                 let code2 = QuotationSimplifier(isGenerated).TranslateQuotationToCode codeFun paramNames (Array.ofList args)
                 let codeT = convExprToTgt code2
