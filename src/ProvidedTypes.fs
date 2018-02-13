@@ -8357,11 +8357,12 @@ namespace ProviderImplementation.ProvidedTypes
         member __.TranslateQuotationToCode qexprf (paramNames: string[]) (argExprs: Expr[]) =
             // Use the real variable names instead of indices, to improve output of Debug.fs
             // Add let bindings for arguments to ensure that arguments will be evaluated
-            let vars = argExprs |> Array.mapi (fun i e -> Var(paramNames.[i], e.Type))
+            let varDecisions = argExprs |> Array.mapi (fun i e -> match e with Var v when v.Name = paramNames.[i] -> false, v | _ -> true, Var(paramNames.[i], e.Type))
+            let vars = varDecisions |> Array.map snd
             let expr = qexprf ([for v in vars -> Expr.Var v])
 
-            let pairs = Array.zip argExprs vars
-            let expr = Array.foldBack (fun (arg, var) e -> Expr.LetUnchecked(var, arg, e)) pairs expr
+            let pairs = Array.zip argExprs varDecisions
+            let expr = Array.foldBack (fun (arg, (replace, var)) e -> if replace then Expr.LetUnchecked(var, arg, e) else e) pairs expr
 #if !NO_GENERATIVE
             let expr =
                 if isGenerated then
@@ -8754,10 +8755,12 @@ namespace ProviderImplementation.ProvidedTypes
             | ShapeCombinationUnchecked (o, exprs) ->
                 RebuildShapeCombinationUnchecked (o, List.map convExprToTgt exprs)
 
-        and convCodeToTgt (codeFun: Expr list -> Expr, isStatic, parameters: ProvidedParameter[], isGenerated) = 
+        and convCodeToTgt (codeFun: Expr list -> Expr, isStatic, isCtor, parameters: ProvidedParameter[], isGenerated) = 
             (fun argsT -> 
                 let args = List.map convVarExprToSrc argsT
-                let paramNames = parameters |> Array.map (fun p -> p.Name) |> Array.append (if isStatic then [| |] else [| "this" |])
+                let paramNames = 
+                    [| if not isStatic && not isCtor then yield "this"
+                       for p in parameters do yield p.Name |]
                 let code2 = QuotationSimplifier(isGenerated).TranslateQuotationToCode codeFun paramNames (Array.ofList args)
                 let codeT = convExprToTgt code2
                 codeT)
@@ -8871,7 +8874,7 @@ namespace ProviderImplementation.ProvidedTypes
                     Debug.Assert (not x.BelongsToTargetModel, "unexpected target ProvidedConstructor")
                     ProvidedConstructor(true, x.Attributes, 
                                         x.Parameters |> Array.map convParameterDefToTgt, 
-                                        convCodeToTgt (x.GetInvokeCode, x.IsStatic, x.Parameters, not x.IsErased), 
+                                        convCodeToTgt (x.GetInvokeCode, x.IsStatic, true, x.Parameters, not x.IsErased), 
                                         (match x.BaseCall with None -> None | Some f -> Some (convBaseCallToTgt(f,  not x.IsErased))),
                                         x.IsImplicitConstructor, 
                                         (x.GetCustomAttributesData >> convCustomAttributesDataToTgt)) :> _
@@ -8880,7 +8883,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ProvidedMethod(true, x.Name, x.Attributes, 
                                     x.Parameters |> Array.map convParameterDefToTgt, 
                                     x.ReturnType |> convTypeToTgt, 
-                                    convCodeToTgt (x.GetInvokeCode, x.IsStatic, x.Parameters, not x.IsErased), 
+                                    convCodeToTgt (x.GetInvokeCode, x.IsStatic, false, x.Parameters, not x.IsErased), 
                                     x.StaticParams |> List.map convStaticParameterDefToTgt, 
                                     x.StaticParamsApply |> Option.map (fun f s p -> f s p |> convProvidedMethodDefToTgt declTyT), 
                                     (x.GetCustomAttributesData >> convCustomAttributesDataToTgt)) :> _
