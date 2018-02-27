@@ -7190,6 +7190,81 @@ namespace ProviderImplementation.ProvidedTypes
         override this.ToString() = this.FullName
 
 
+        /// Convert an ILGenericParameterDef read from a binary to a System.Type.
+    and TargetGenericParam (asm, gpsf, pos, inp: ILGenericParameterDef, txILType, txCustomAttributesData) as this =
+        inherit TypeDelegator() 
+        do this.typeImpl <- this
+        override __.Name = inp.Name
+        override __.Assembly = (asm :> Assembly)
+        override __.FullName = inp.Name
+        override __.IsGenericParameter = true
+        override __.GenericParameterPosition = pos
+        override __.GetGenericParameterConstraints() = inp.Constraints |> Array.map (txILType (gpsf()))
+
+        override __.MemberType = enum 0
+        override __.MetadataToken = inp.Token
+
+        override __.Namespace = null //notRequired this "Namespace"
+        override this.DeclaringType = notRequired this "DeclaringType" this.Name
+        override __.BaseType = null //notRequired this "BaseType" this.Name
+        override this.GetInterfaces() = notRequired this "GetInterfaces" this.Name
+
+        override this.GetConstructors(_bindingFlags) = notRequired this "GetConstructors" this.Name
+        override this.GetMethods(_bindingFlags) = notRequired this "GetMethods" this.Name
+        override this.GetFields(_bindingFlags) = notRequired this "GetFields" this.Name
+        override this.GetProperties(_bindingFlags) = notRequired this "GetProperties" this.Name
+        override this.GetEvents(_bindingFlags) = notRequired this "GetEvents" this.Name
+        override this.GetNestedTypes(_bindingFlags) = notRequired this "GetNestedTypes" this.Name
+
+        override this.GetConstructorImpl(_bindingFlags, _binder, _callConvention, _types, _modifiers) = notRequired this "GetConstructorImpl" this.Name
+        override this.GetMethodImpl(_name, _bindingFlags, _binder, _callConvention, _types, _modifiers) = notRequired this "GetMethodImpl" this.Name
+        override this.GetField(_name, _bindingFlags) = notRequired this "GetField" this.Name
+        override this.GetPropertyImpl(_name, _bindingFlags, _binder, _returnType, _types, _modifiers) = notRequired this "GetPropertyImpl" this.Name
+        override this.GetNestedType(_name, _bindingFlags) = notRequired this "GetNestedType" this.Name
+        override this.GetEvent(_name, _bindingFlags) = notRequired this "GetEvent" this.Name
+        override this.GetMembers(_bindingFlags) = notRequired this "GetMembers" this.Name
+        override this.MakeGenericType(_args) = notRequired this "MakeGenericType" this.Name
+
+        override this.MakeArrayType() = TypeSymbol(TypeSymbolKind.SDArray, [| this |]) :> Type
+        override this.MakeArrayType arg = TypeSymbol(TypeSymbolKind.Array arg, [| this |]) :> Type
+        override this.MakePointerType() = TypeSymbol(TypeSymbolKind.Pointer, [| this |]) :> Type
+        override this.MakeByRefType() = TypeSymbol(TypeSymbolKind.ByRef, [| this |]) :> Type
+
+        override __.GetAttributeFlagsImpl() = TypeAttributes.Public ||| TypeAttributes.Class ||| TypeAttributes.Sealed
+
+        override __.IsArrayImpl() = false
+        override __.IsByRefImpl() = false
+        override __.IsPointerImpl() = false
+        override __.IsPrimitiveImpl() = false
+        override __.IsCOMObjectImpl() = false
+        override __.IsGenericType = false
+        override __.IsGenericTypeDefinition = false
+
+        override __.HasElementTypeImpl() = false
+
+        override this.UnderlyingSystemType = (this :> Type)
+        override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
+
+        override this.Equals(that:obj) = System.Object.ReferenceEquals (this, that)
+        override this.GetHashCode() = hash inp.Name
+
+        override __.ToString() = sprintf "tgt generic param %s" inp.Name
+
+        override this.AssemblyQualifiedName = "[" + this.Assembly.FullName + "]" + this.FullName
+
+        override this.GetGenericArguments() = notRequired this "GetGenericArguments" this.Name
+        override this.GetGenericTypeDefinition() = notRequired this "GetGenericTypeDefinition" this.Name
+        override this.GetMember(_name, _mt, _bindingFlags) = notRequired this "txILGenericParam: GetMember" this.Name
+        override this.GUID = notRequired this "txILGenericParam: GUID" this.Name
+        override this.GetCustomAttributes(_inherited) = notRequired this "txILGenericParam: GetCustomAttributes" this.Name
+        override this.GetCustomAttributes(_attributeType, _inherited) = notRequired this "txILGenericParam: GetCustomAttributes" this.Name
+        override this.IsDefined(_attributeType, _inherited) = notRequired this "txILGenericParam: IsDefined" this.Name
+        override this.GetInterface(_name, _ignoreCase) = notRequired this "txILGenericParam: GetInterface" this.Name
+        override this.Module = notRequired this "txILGenericParam: Module" this.Name: Module 
+        override this.GetElementType() = notRequired this "txILGenericParam: GetElementType" this.Name
+        override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "txILGenericParam: InvokeMember" this.Name
+        override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
+
     /// Clones namespaces, type providers, types and members provided by tp, renaming namespace nsp1 into namespace nsp2.
 
     /// Makes a type definition read from a binary available as a System.Type. Not all methods are implemented.
@@ -7457,78 +7532,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         /// Convert an ILGenericParameterDef read from a binary to a System.Type.
         and txILGenericParam gpsf pos (inp: ILGenericParameterDef) =
-            { new Type() with
-                override __.Name = inp.Name
-                override __.Assembly = (asm :> Assembly)
-                override __.FullName = inp.Name
-                override __.IsGenericParameter = true
-                override __.GenericParameterPosition = pos
-                override __.GetGenericParameterConstraints() = inp.Constraints |> Array.map (txILType (gpsf()))
-
-                override __.MemberType = enum 0
-                override __.MetadataToken = inp.Token
-
-                override __.Namespace = null //notRequired this "Namespace"
-                override this.DeclaringType = notRequired this "DeclaringType" this.Name
-                override __.BaseType = null //notRequired this "BaseType" this.Name
-                override this.GetInterfaces() = notRequired this "GetInterfaces" this.Name
-
-                override this.GetConstructors(_bindingFlags) = notRequired this "GetConstructors" this.Name
-                override this.GetMethods(_bindingFlags) = notRequired this "GetMethods" this.Name
-                override this.GetFields(_bindingFlags) = notRequired this "GetFields" this.Name
-                override this.GetProperties(_bindingFlags) = notRequired this "GetProperties" this.Name
-                override this.GetEvents(_bindingFlags) = notRequired this "GetEvents" this.Name
-                override this.GetNestedTypes(_bindingFlags) = notRequired this "GetNestedTypes" this.Name
-
-                override this.GetConstructorImpl(_bindingFlags, _binder, _callConvention, _types, _modifiers) = notRequired this "txILGenericParam: GetConstructorImpl" this.Name
-                override this.GetMethodImpl(_name, _bindingFlags, _binder, _callConvention, _types, _modifiers) = notRequired this "txILGenericParam: GetMethodImpl" this.Name
-                override this.GetField(_name, _bindingFlags) = notRequired this "GetField" this.Name
-                override this.GetPropertyImpl(_name, _bindingFlags, _binder, _returnType, _types, _modifiers) = notRequired this "GetPropertyImpl" this.Name
-                override this.GetNestedType(_name, _bindingFlags) = notRequired this "GetNestedType" this.Name
-                override this.GetEvent(_name, _bindingFlags) = notRequired this "GetEvent" this.Name
-
-                override this.GetMembers(_bindingFlags) = notRequired this "GetMembers" this.Name
-
-                override this.MakeGenericType(_args) = notRequired this "MakeGenericType" this.Name
-                override this.MakeArrayType() = TypeSymbol(TypeSymbolKind.SDArray, [| this |]) :> Type
-                override this.MakeArrayType arg = TypeSymbol(TypeSymbolKind.Array arg, [| this |]) :> Type
-                override this.MakePointerType() = TypeSymbol(TypeSymbolKind.Pointer, [| this |]) :> Type
-                override this.MakeByRefType() = TypeSymbol(TypeSymbolKind.ByRef, [| this |]) :> Type
-
-                override __.GetAttributeFlagsImpl() = TypeAttributes.Public ||| TypeAttributes.Class ||| TypeAttributes.Sealed
-
-                override __.IsArrayImpl() = false
-                override __.IsByRefImpl() = false
-                override __.IsPointerImpl() = false
-                override __.IsPrimitiveImpl() = false
-                override __.IsCOMObjectImpl() = false
-                override __.IsGenericType = false
-                override __.IsGenericTypeDefinition = false
-
-                override __.HasElementTypeImpl() = false
-
-                override this.UnderlyingSystemType = this
-                override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
-
-                override this.Equals(that:obj) = System.Object.ReferenceEquals (this, that)
-
-                override __.ToString() = sprintf "tgt generic param %s" inp.Name
-
-                override this.AssemblyQualifiedName = "[" + this.Assembly.FullName + "]" + this.FullName
-
-                override this.GetGenericArguments() = notRequired this "GetGenericArguments" this.Name
-                override this.GetGenericTypeDefinition() = notRequired this "GetGenericTypeDefinition" this.Name
-                override this.GetMember(_name, _mt, _bindingFlags) = notRequired this "txILGenericParam: GetMember" this.Name
-                override this.GUID = notRequired this "txILGenericParam: GUID" this.Name
-                override this.GetCustomAttributes(_inherited) = notRequired this "txILGenericParam: GetCustomAttributes" this.Name
-                override this.GetCustomAttributes(_attributeType, _inherited) = notRequired this "txILGenericParam: GetCustomAttributes" this.Name
-                override this.IsDefined(_attributeType, _inherited) = notRequired this "txILGenericParam: IsDefined" this.Name
-                override this.GetInterface(_name, _ignoreCase) = notRequired this "txILGenericParam: GetInterface" this.Name
-                override this.Module = notRequired this "txILGenericParam: Module" this.Name: Module 
-                override this.GetElementType() = notRequired this "txILGenericParam: GetElementType" this.Name
-                override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "txILGenericParam: InvokeMember" this.Name
-
-            }
+            TargetGenericParam (asm, gpsf, pos, inp, txILType, txCustomAttributesData) :> Type
 
         let rec gps = inp.GenericParams |> Array.mapi (fun i gp -> txILGenericParam (fun () -> gps, [| |]) i gp)
 
