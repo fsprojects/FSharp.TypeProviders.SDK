@@ -104,6 +104,8 @@ Here is a guide to the steps to perform:
 
 1. Use .NET SDK 2.1.100-preview-007363 or above.  Forget .NET SDK 2.1.4 and before.
 
+1. If using Visual Studio, then use Visual Studio 2017 15.6 and above.  Your type provider will still be usable with previous versionss, we'll get to that, but for now assume 15.6
+
 2. First switch to use .NET SDK project files, compiling them with `msbuild` 
 
 3. Update to the latest ProvidedTypes.fs/fsi from this project
