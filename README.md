@@ -109,19 +109,28 @@ Here is a guide to the steps to perform:
 2. First switch to use .NET SDK project files, compiling them with `msbuild` 
 
 3. Update to the latest ProvidedTypes.fs/fsi from this project
+
    * If making a generative type provider, check your `isErased` flags and use of `ProvidedAssembly` fragments, see [this example](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L68)
+   
    * If your TPDTC contains a copy of your TPRTC implementation then use [`assemblyReplacementMap`](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L12)
 
 4. Work out how much your TPRTC (runtime component) depends on .NET Framework by string to target `netstandard2.0`.  You may need to use different package references to try this.
-  * If your TPRTC **fundamentally** depends on .NET Framework, then you will not be able to use your type provider within projects targeting .NET Core or .NET Standard. Keep targeting your TPRTC at .NET Framework.
-  * If your TPRTC **partially** depends on .NET Framework, then multi-target the TPRTC to `net45;netstandard2.0` and use `#if NETSTANDARD2_0`
-  * If your TPRTC **doesn't** depend on .NET Framework, then target the TPRTC to `netstandard2.0`
 
-5. Work out how much of a dependency your TPDTC has:
-  * If the compile-time computations performed by your TPDTC **fundamentally** depend on .NET Framework, then your type provider will not be usable with the .NET SDK toolchain without using [the workaround](https://github.com/Microsoft/visualfsharp/issues/3303))
-  * If the TPDTC **partially** depends on .NET Framework, then multi-target the TPDTC to `net45;netstandard2.0` and use `#if NETSTANDARD2_0`
-  * If the TPDTC **doesn't** depend on .NET Framework, then target the TPDTC to `netstandard2.0`
-  Beware that your TPDTC might have a **false** dependency induced by including a copy of the TPRTC source code into the TPDTC (which is generally a good technique). It is likely such a dependency can be removed by selectively stubbing out runtime code using a `IS_DESIGNTIME` define
+   * If your TPRTC **fundamentally** depends on .NET Framework, then you will not be able to use your type provider within projects targeting .NET Core or .NET Standard. Keep targeting your TPRTC at .NET Framework.
+   
+   * If your TPRTC **partially** depends on .NET Framework, then multi-target the TPRTC to `net45;netstandard2.0` and use `#if NETSTANDARD2_0`
+   
+   * If your TPRTC **doesn't** depend on .NET Framework, then target the TPRTC to `netstandard2.0`
+
+5. Work out how much of a dependency your TPDTC has on .NET Framework:
+
+   * If the compile-time computations performed by your TPDTC **fundamentally** depend on .NET Framework, then your type provider will not be usable with the .NET SDK toolchain without using [the workaround](https://github.com/Microsoft/visualfsharp/issues/3303))
+   
+   * If the TPDTC **partially** depends on .NET Framework, then multi-target the TPDTC to `net45;netstandard2.0` and use `#if NETSTANDARD2_0`
+   
+   * If the TPDTC **doesn't** depend on .NET Framework, then target the TPDTC to `netstandard2.0`
+   
+   Beware that your TPDTC might have a **false** dependency induced by including a copy of the TPRTC source code into the TPDTC (which is generally a good technique). It is likely such a dependency can be removed by selectively stubbing out runtime code using a `IS_DESIGNTIME` define.  The TPDTC only needs access to an "API" that has the same logical shape as the TPRTC in order to generate code and types.  That "API" is then translated to match the targret references assemblies in an actual compilation.
 
 7. Modify your project to copy the design-time DLLs into the right place, e.g. see [this example](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider/BasicProvider.fsproj#L16)
 
