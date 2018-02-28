@@ -94,14 +94,15 @@ Correctly updated type providers can be used with either the `dotnet` toolchain 
 ### Updating a Type Provider to be suitable for use with the .NET SDK
 
 This short guide assumes 
-1. you have a type provider with separate TPDTC and TPRTC components.
-2. some of your code might have dependencies on .NET Framework functionality
-3. you want your type provider to be usable with either the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain.
+1. You have a type provider with separate TPDTC and TPRTC components (see below if you don't know what those are)
+2. Some of your code might have dependencies on .NET Framework functionality
+3. You want your type provider to be usable with both the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain.
+4. You want your type provider to be usable for all of .NET Standard, .NET Core and .NET Framework programming (if possible)
 
 
 Here is a guide to the steps to perform:
 
-1. Use .NET SDK 2.1.100-preview-007363 or above
+1. Use .NET SDK 2.1.100-preview-007363 or above.  Forget .NET SDK 2.1.4 and before.
 
 2. First switch to use .NET SDK project files, compiling them with `msbuild` 
 
