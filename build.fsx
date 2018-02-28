@@ -136,9 +136,7 @@ Target "NuGet" (fun _ ->
     DotNetCli.Pack  (fun p -> { p with Configuration = config; Project = "src/FSharp.TypeProviders.SDK.fsproj"; ToolPath =  getSdkPath() })
 )
 
-"Clean"
-    ==> "NuGet"
-
+"Clean" ==> "NuGet"
 "Build" ==> "Examples" ==> "NuGet"
 "Build" ==> "RunTests" ==> "NuGet"
 

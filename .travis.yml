@@ -3,7 +3,6 @@ dist: trusty
 
 mono:
   - weekly
-  - nightly
   - latest
   - 5.8.0
 
