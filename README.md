@@ -73,11 +73,93 @@ Sometimes unit test DLLs incorporate the entire type provider implementation, an
 
 The unit testing helpers aren't really an official, documented part of the DK - caveat emptor.
 
+
+## Examples
+
+See examples the [`examples`](examples) directory.
+
+* ComboProvider: the TPDTC and TPRTC are combined together in one assembly which is a single `netstandard2.0` component 
+* BasicProvider: the TPDTC and TPRTC are each available as both `netstandard2.0` and `.NET 4.x` components
+
 ## Technical Notes
 
-### Using Type Providers with .NET SDK 2.0 Projects and ``dotnet build``
+### Using Type Providers with ``dotnet build``
 
-See [How to enable type providers with new-style .NET SDK project files, ``dotnet build``, .NET Standard and .NET Core programming](https://github.com/Microsoft/visualfsharp/issues/3303)
+Correctly updated type providers can be used with either the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain. 
+
+For .NET SDK 2.1.4 and before, see [How to enable type providers with new-style .NET SDK project files, ``dotnet build``, .NET Standard and .NET Core programming](https://github.com/Microsoft/visualfsharp/issues/3303)
+
+For .NET SDK 2.1.100 and above, you can either use type providers specifically updated to work with the .NET SDK, or use the same [workaround]((https://github.com/Microsoft/visualfsharp/issues/3303).
+
+### Updating a Type Provider to be suitable for use with the .NET SDK
+
+This short guide assumes 
+1. you have a type provider with separate TPDTC and TPRTC components.
+2. some of your code might have dependencies on .NET Framework functionality
+3. you want your type provider to be usable with either the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain.
+
+
+Here is a rough guide to the steps to perform:
+
+1. Assume .NET SDK 2.1.100-preview-007363 and above
+
+2. Switch to use .NET SDK project files
+
+3. Update to the latest ProvidedTypes.fs/fsi from this project
+   * If making a generative type provider, check your `isErased` flags and use of `ProvidedAssembly` fragments, see [this example](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L68)
+   * If your TPDTC contains a copy of your TPRTC implementation then use [`assemblyReplacementMap`](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L12)
+
+4. Work out how much your TPRTC (runtime component) depends on .NET Framework by string to target `netstandard2.0`.  You may need to use different package references to try this.
+  * If your TPRTC **fundamentally** depends on .NET Framework, then you will not be able to use your type provider within projects targeting .NET Core or .NET Standard. Keep targeting your TPRTC at .NET Framework.
+  * If your TPRTC **partially** depends on .NET Framework, then multi-target the TPRTC to `net45;netstandard2.0` and use `#if NETSTANDARD2_0`
+  * If your TPRTC **doesn't** depend on .NET Framework, then target the TPRTC to `netstandard2.0`
+
+5. Work out how much of a dependency your TPDTC has:
+  * If the compile-time computations performed by your TPDTC **fundamentally** depend on .NET Framework, then your type provider will not be usable with the .NET SDK toolchain without using [the workaround](https://github.com/Microsoft/visualfsharp/issues/3303))
+  * If the TPDTC **partially** depends on .NET Framework, then multi-target the TPDTC to `net45;netstandard2.0` and use `#if NETSTANDARD2_0`
+  * If the TPDTC **doesn't** depend on .NET Framework, then target the TPDTC to `netstandard2.0`
+  Beware that your TPDTC might have a **false** dependency induced by including a copy of the TPRTC source code into the TPDTC (which is generally a good technique). It is likely such a dependency can be removed by selectively stubbing out runtime code using a `IS_DESIGNTIME` define
+
+7. Modify your project to copy the design-time DLLs into the right place, e.g. see [this example](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider/BasicProvider.fsproj#L16)
+
+8. Have your test projects multi-target to `netcoreapp2.0; net471`
+
+9. Include [netfx.props](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider/BasicProvider.fsproj#L4) in any of your projects targeting .NET 4.x so they will compile with `dotnet` on Linux/OSX when Mono is installed
+
+10. Modify your nuget package layout as described below.
+
+
+### Nuget package layouts you should use
+
+The typical nuget package layout for a provider that has **combined** design-time and runtime components is:
+
+    lib/netstandard2.0
+        MyProvider.dll // TPRTC and TPDTC
+        netstandard.dll // Extra facade, see below
+        System.Runtime.dll // Extra facade, see below
+        System.Reflection.dll // Extra facade, see below
+
+The typical nuget package layout for a provider that has separate design-time and runtime components is:
+
+    lib/net45/
+        MyProvider.dll // TPRTC
+        MyProvider.DesignTime.dll // .NET 4.x TPDTC alongside TPRTC for legacy loading
+    
+    lib/typeproviders/fsharp41/
+        net45/
+            MyProvider.DesignTime.dll // .NET 4.x TPDTC
+    
+        netstandard2.0/
+            MyProvider.DesignTime.dll // .NET Standard 2.0 TPDTC
+            netstandard.dll // Extra facade, see below
+            System.Runtime.dll // Extra facade, see below
+            System.Reflection.dll // Extra facade, see below
+
+It is important that the design-time assemblies you use (if any) are not loaded at runtime. To ensure this does not happen, when you distribute a Nuget package for your Type Provider you _must_ provide an explicit list of project references for consumers to include. If you do not, every assembly you publish in the package will be included, which can lead to design-type only references being loaded at runtime.  To reference only a subset of assemblies, see the [Nuget documetation](https://docs.microsoft.com/en-us/nuget/reference/nuspec#explicit-assembly-references) or the [Paket documentation](https://fsprojects.github.io/Paket/template-files.html#References).
+
+That is, an explicit `.nuspec` file will be needed with an explicit `<references>` node (so that only the TPRTC gets added as a reference), see [this example](https://github.com/baronfel/FSharp.Data/blob/e0f133e6e79b4a41365776da51332227dccff9ab/nuget/FSharp.Data.nuspec).
+
+
 
 ### Some Type Provider terminology
 
@@ -138,10 +220,6 @@ However, today, for a TPDTC to be .NET Standard 2.0, it must be loadable into ho
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
 ```
-
-### Packaging your Type Provider
-
-It is important that the design-time assemblies you use (if any) are not loaded at runtime. To ensure this does not happen, when you distribute a Nuget package for your Type Provider you _must_ provide an explicit list of project references for consumers to include. If you do not, every assembly you publish in the package will be included, which can lead to design-type only references being loaded at runtime.  To reference only a subset of assemblies, see the [Nuget documetation](https://docs.microsoft.com/en-us/nuget/reference/nuspec#explicit-assembly-references) or the [Paket documentation](https://fsprojects.github.io/Paket/template-files.html#References).
 
 ### Explicit construction of code: MakeGenericType, MakeGenericMethod and UncheckedQuotations
 
