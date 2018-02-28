@@ -1,15 +1,6 @@
 language: csharp
 dist: trusty
 
-mono:
-  - 5.8.0
-  - latest
-  - weeky
-
-os:
-  - linux
-  - osx
-
 # have to add dotnet to each mono build config because Travis doesn't have an 'include both runtimes' option
 matrix:
   include:
