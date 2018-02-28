@@ -87,9 +87,9 @@ See examples the [`examples`](examples) directory.
 
 Correctly updated type providers can be used with either the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain. 
 
-For .NET SDK 2.1.4 and before, see [How to enable type providers with new-style .NET SDK project files, ``dotnet build``, .NET Standard and .NET Core programming](https://github.com/Microsoft/visualfsharp/issues/3303)
+* For .NET SDK 2.1.4 and before, see [How to enable type providers with new-style .NET SDK project files, ``dotnet build``, .NET Standard and .NET Core programming](https://github.com/Microsoft/visualfsharp/issues/3303)
 
-For .NET SDK 2.1.100 and above, you can either use type providers specifically updated to work with the .NET SDK, or use the same [workaround]((https://github.com/Microsoft/visualfsharp/issues/3303).
+* For .NET SDK 2.1.100 and above, you can either use type providers specifically updated to work with the .NET SDK, or use the same [workaround](https://github.com/Microsoft/visualfsharp/issues/3303).
 
 ### Updating a Type Provider to be suitable for use with the .NET SDK
 
@@ -99,11 +99,11 @@ This short guide assumes
 3. you want your type provider to be usable with either the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain.
 
 
-Here is a rough guide to the steps to perform:
+Here is a guide to the steps to perform:
 
-1. Assume .NET SDK 2.1.100-preview-007363 and above
+1. Use .NET SDK 2.1.100-preview-007363 or above
 
-2. Switch to use .NET SDK project files
+2. First switch to use .NET SDK project files, compiling them with `msbuild` 
 
 3. Update to the latest ProvidedTypes.fs/fsi from this project
    * If making a generative type provider, check your `isErased` flags and use of `ProvidedAssembly` fragments, see [this example](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L68)
@@ -124,7 +124,9 @@ Here is a rough guide to the steps to perform:
 
 8. Have your test projects multi-target to `netcoreapp2.0; net471`
 
-9. Include [netfx.props](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider/BasicProvider.fsproj#L4) in any of your projects targeting .NET 4.x so they will compile with `dotnet` on Linux/OSX when Mono is installed
+9. Use  `dotnet build` to build instead of `msbuild`
+
+   * If any of your projects targeting .NET 4.x so they will compile with `dotnet` on Linux/OSX when Mono is installed, then include [netfx.props](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider/BasicProvider.fsproj#L4) in the project and project file
 
 10. Modify your nuget package layout as described below.
 
