@@ -6,8 +6,6 @@ mono:
   - latest
   - weeky
 
-dotnet: 2.1.100-preview-007363
-
 os:
   - linux
   - osx
