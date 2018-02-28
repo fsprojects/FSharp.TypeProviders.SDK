@@ -592,25 +592,37 @@ module internal Targets =
     let private (++) a b = System.IO.Path.Combine(a,b)
 
     let runningOnMono = Type.GetType("Mono.Runtime") |> isNull |> not
+
     let runningOnMac =
         (Environment.OSVersion.Platform = PlatformID.MacOSX)
         || (Environment.OSVersion.Platform = PlatformID.Unix) && Directory.Exists("/Applications") && Directory.Exists("/System") && Directory.Exists("/Users") && Directory.Exists("/Volumes")
+
     let runningOnLinux =
         (Environment.OSVersion.Platform = PlatformID.Unix) && not runningOnMac
 
-    // Assumes OSX
-    let monoRoot =
-        Path.GetFullPath(Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(),".."))
-        //match System.Environment.OSVersion.Platform with
-        //| System.PlatformID.MacOSX -> "/Library/Frameworks/Mono.framework/Versions/Current/lib/mono"
-        //| System.PlatformID.MacOSX -> "/Library/Frameworks/Mono.framework/Versions/Current/lib/mono"
-        //| _ ->
+    let runningOnWindows = 
+        match System.Environment.OSVersion.Platform with
+        | System.PlatformID.Win32NT -> true
+        | _ -> false
 
-    let referenceAssembliesPath() =
-            (if runningOnMono then monoRoot else Environment.GetFolderPath Environment.SpecialFolder.ProgramFilesX86)
-            ++ "Reference Assemblies"
-            ++ "Microsoft"
+    /// When compiling .NET 4.5 code on Linux, use the Mono reference assemblies, even when running with the .NET Core toolchain
+    let monoRoot() =
+        let tryDir dir = if (try Directory.Exists dir with _ -> false) then Some dir else None
+        match tryDir "/Library/Frameworks/Mono.framework/Versions/Current/lib/mono" with 
+        | Some d -> d
+        | None -> 
+        match tryDir "/usr/lib/mono" with 
+        | Some d -> d
+        | None -> 
+        match tryDir "/usr/local/lib/mono" with 
+        | Some d -> d
+        | None -> "/usr/lib/mono"
 
+    let installedReferenceAssembliesRootOnWindows() = Environment.GetFolderPath Environment.SpecialFolder.ProgramFilesX86 ++ "Reference Assemblies" ++ "Microsoft"
+    let fsharpInstalledAssembliesRoot() = if runningOnWindows then installedReferenceAssembliesRootOnWindows() ++ "FSharp" else monoRoot() ++ "fsharp" ++ "api" 
+    let installedPortableAssembliesRoot() = (if runningOnWindows then installedReferenceAssembliesRootOnWindows() ++ "Framework" else monoRoot() ++ "xbuild-frameworks") ++ ".NETPortable"  
+    let installedNet45AssembliesRoot() = if runningOnWindows then installedReferenceAssembliesRootOnWindows() ++ "Framework" ++ ".NETFramework" ++ "v4.5" else monoRoot() ++ "4.5-api"
+    
     let packagesDirectory() = 
         // this takes into account both linux-on-windows (can't use __SOURCE_DIRECTORY__) and shadow copying (can't use .Location)
         let root = Path.GetDirectoryName(Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath)
@@ -633,29 +645,24 @@ module internal Targets =
         else 
             None
 
+
     let private fsharpCoreFromInstalledAssemblies fsharp profile =
          match fsharp, profile with
-         | "3.1", "net45" -> 
-                Some (if runningOnMono then monoRoot ++ "gac" ++ "FSharp.Core" ++ "4.3.1.0__b03f5f7f11d50a3a" ++ "FSharp.Core.dll" 
-                      else referenceAssembliesPath() ++ "FSharp" ++ ".NETFramework" ++ "v4.0" ++ "4.3.1.0" ++ "FSharp.Core.dll")
-         | "4.0", "net45" -> 
-                Some (if runningOnMono then monoRoot ++ "gac" ++ "FSharp.Core" ++ "4.4.0.0__b03f5f7f11d50a3a" ++ "FSharp.Core.dll"
-                      else referenceAssembliesPath() ++ "FSharp" ++ ".NETFramework" ++ "v4.0" ++ "4.4.0.0" ++ "FSharp.Core.dll")
-         | "4.1", "net45" -> 
-                Some (if runningOnMono then monoRoot ++ "gac" ++ "FSharp.Core" ++ "4.4.1.0__b03f5f7f11d50a3a" ++ "FSharp.Core.dll"
-                      else referenceAssembliesPath() ++ "FSharp" ++ ".NETFramework" ++ "v4.0" ++ "4.4.0.1" ++ "FSharp.Core.dll")
-         | "3.1", "portable47" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETPortable" ++ "2.3.5.1" ++ "FSharp.Core.dll" |> Some
-         | "3.1", "portable7" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETCore" ++ "3.3.1.0" ++ "FSharp.Core.dll" |> Some
-         | "3.1", "portable78" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETCore" ++ "3.78.3.1" ++ "FSharp.Core.dll" |> Some
-         | "3.1", "portable259" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETCore" ++ "3.259.3.1" ++ "FSharp.Core.dll" |> Some
-         | "4.0", "portable47" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETPortable" ++ "3.47.4.0" ++ "FSharp.Core.dll" |> Some
-         | "4.0", "portable7" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETCore" ++ "3.7.4.0" ++ "FSharp.Core.dll" |> Some
-         | "4.0", "portable78" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETCore" ++ "3.78.4.0" ++ "FSharp.Core.dll" |> Some
-         | "4.0", "portable259" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETCore" ++ "3.259.4.0" ++ "FSharp.Core.dll" |> Some
-         | "4.1", "portable47" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETPortable" ++ "3.47.4.1" ++ "FSharp.Core.dll" |> Some
-         | "4.1", "portable7" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETCore" ++ "3.7.4.1" ++ "FSharp.Core.dll" |> Some
-         | "4.1", "portable78" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETCore" ++ "3.78.4.1" ++ "FSharp.Core.dll" |> Some
-         | "4.1", "portable259" -> referenceAssembliesPath() ++ "FSharp" ++ ".NETCore" ++ "3.259.4.1" ++ "FSharp.Core.dll" |> Some
+         | "3.1", "net45" -> fsharpInstalledAssembliesRoot() ++  ".NETFramework" ++ "v4.0" ++ "4.3.1.0" ++ "FSharp.Core.dll" |> Some
+         | "4.0", "net45" -> fsharpInstalledAssembliesRoot() ++  ".NETFramework" ++ "v4.0" ++ "4.4.0.0" ++ "FSharp.Core.dll" |> Some
+         | "4.1", "net45" -> fsharpInstalledAssembliesRoot() ++  ".NETFramework" ++ "v4.0" ++ "4.4.1.0" ++ "FSharp.Core.dll" |> Some
+         | "3.1", "portable47" -> fsharpInstalledAssembliesRoot() ++ ".NETPortable" ++ "2.3.5.1" ++ "FSharp.Core.dll" |> Some
+         | "3.1", "portable7" -> fsharpInstalledAssembliesRoot() ++ ".NETCore" ++ "3.3.1.0" ++ "FSharp.Core.dll" |> Some
+         | "3.1", "portable78" -> fsharpInstalledAssembliesRoot() ++ ".NETCore" ++ "3.78.3.1" ++ "FSharp.Core.dll" |> Some
+         | "3.1", "portable259" -> fsharpInstalledAssembliesRoot() ++ ".NETCore" ++ "3.259.3.1" ++ "FSharp.Core.dll" |> Some
+         | "4.0", "portable47" -> fsharpInstalledAssembliesRoot() ++ ".NETPortable" ++ "3.47.4.0" ++ "FSharp.Core.dll" |> Some
+         | "4.0", "portable7" -> fsharpInstalledAssembliesRoot() ++ ".NETCore" ++ "3.7.4.0" ++ "FSharp.Core.dll" |> Some
+         | "4.0", "portable78" -> fsharpInstalledAssembliesRoot() ++ ".NETCore" ++ "3.78.4.0" ++ "FSharp.Core.dll" |> Some
+         | "4.0", "portable259" -> fsharpInstalledAssembliesRoot() ++ ".NETCore" ++ "3.259.4.0" ++ "FSharp.Core.dll" |> Some
+         | "4.1", "portable47" -> fsharpInstalledAssembliesRoot() ++ ".NETPortable" ++ "3.47.4.1" ++ "FSharp.Core.dll" |> Some
+         | "4.1", "portable7" -> fsharpInstalledAssembliesRoot() ++ ".NETCore" ++ "3.7.4.1" ++ "FSharp.Core.dll" |> Some
+         | "4.1", "portable78" -> fsharpInstalledAssembliesRoot() ++ ".NETCore" ++ "3.78.4.1" ++ "FSharp.Core.dll" |> Some
+         | "4.1", "portable259" -> fsharpInstalledAssembliesRoot() ++ ".NETCore" ++ "3.259.4.1" ++ "FSharp.Core.dll" |> Some
          | "4.1", "netstandard1.6" -> None
          | "4.1", "netstandard2.0" -> None
          | "4.1", "netcoreapp2.0" -> None
@@ -703,22 +710,19 @@ module internal Targets =
              | Some res -> res
         
 
-    let sysInstalledAssembliesPath profile =
-        let portableRoot = if runningOnMono then monoRoot ++ "xbuild-frameworks" else referenceAssembliesPath() ++ "Framework"
+    let sysAssembliesPath profile =
         match profile with
-        | "net45"->
-            if runningOnMono then monoRoot ++ "4.5"
-            else referenceAssembliesPath() ++ "Framework" ++ ".NETFramework" ++ "v4.5"
+        | "net45"-> installedNet45AssembliesRoot()
         | "netstandard2.0"->
             let packageDir = paketPackageFromMainPaketGroup "NETStandard.Library" 
             packageDir ++ "build" ++ "netstandard2.0" ++ "ref"
         | "netcoreapp2.0"->
             let packageDir = paketPackageFromMainPaketGroup "Microsoft.NETCore.App" 
             packageDir ++ "ref" ++ "netcoreapp2.0"
-        | "portable47" -> portableRoot ++ ".NETPortable" ++ "v4.0" ++ "Profile" ++ "Profile47"
-        | "portable7" -> portableRoot ++ ".NETPortable" ++ "v4.5" ++ "Profile" ++ "Profile7"
-        | "portable78" -> portableRoot ++ ".NETPortable" ++ "v4.5" ++ "Profile" ++ "Profile78"
-        | "portable259" -> portableRoot ++ ".NETPortable" ++ "v4.5" ++ "Profile" ++ "Profile259"
+        | "portable47" -> installedPortableAssembliesRoot() ++ "v4.0" ++ "Profile" ++ "Profile47"
+        | "portable7" -> installedPortableAssembliesRoot() ++ "v4.5" ++ "Profile" ++ "Profile7"
+        | "portable78" -> installedPortableAssembliesRoot() ++ "v4.5" ++ "Profile" ++ "Profile78"
+        | "portable259" -> installedPortableAssembliesRoot() ++ "v4.5" ++ "Profile" ++ "Profile259"
         | _ -> failwith (sprintf "unimplemented profile '%s'" profile)
 
     let FSharpCoreRef fsharp profile = 
@@ -737,7 +741,7 @@ module internal Targets =
     let FSharpRefs fsharp profile =
         [ match profile with
           | "portable7" | "portable78" | "portable259" ->
-              let sysPath = sysInstalledAssembliesPath profile
+              let sysPath = sysAssembliesPath profile
               for asm in [ "System.Runtime"; "mscorlib"; "System.Collections"; "System.Core"; "System"; "System.Globalization"; "System.IO"; "System.Linq"; "System.Linq.Expressions";
                            "System.Linq.Queryable"; "System.Net"; "System.Net.NetworkInformation"; "System.Net.Primitives"; "System.Net.Requests"; "System.ObjectModel"; "System.Reflection";
                            "System.Reflection.Extensions"; "System.Reflection.Primitives"; "System.Resources.ResourceManager"; "System.Runtime.Extensions";
@@ -745,13 +749,13 @@ module internal Targets =
                            "System.Runtime.Serialization.Json"; "System.Runtime.Serialization.Primitives"; "System.Windows" ] do
                   yield sysPath ++ asm + ".dll"
           | "portable47" -> 
-              let sysPath = sysInstalledAssembliesPath profile
+              let sysPath = sysAssembliesPath profile
               yield sysPath ++ "mscorlib.dll"
               yield sysPath ++ "System.Xml.Linq.dll"
           | "net45" ->
               // See typical command line in https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/190#issuecomment-356564344
               // This is just a subset
-              let sysPath = sysInstalledAssembliesPath profile
+              let sysPath = sysAssembliesPath profile
               yield sysPath ++ "mscorlib.dll"
               yield sysPath ++ "System.Numerics.dll" 
               yield sysPath ++ "System.Xml.dll" 
@@ -760,7 +764,7 @@ module internal Targets =
               yield sysPath ++ "System.dll" 
           | "netstandard2.0" ->
              // See typical command line in https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/190#issuecomment-356564344
-             let sysPath = sysInstalledAssembliesPath profile
+             let sysPath = sysAssembliesPath profile
              yield sysPath ++ "Microsoft.Win32.Primitives.dll"
              yield sysPath ++ "mscorlib.dll"
              yield sysPath ++ "netstandard.dll"
@@ -876,7 +880,7 @@ module internal Targets =
              yield sysPath ++ "System.Xml.XPath.XDocument.dll"
           | "netcoreapp2.0" ->
              // See typical command line in https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/190#issuecomment-356564344
-             let sysPath = sysInstalledAssembliesPath profile
+             let sysPath = sysAssembliesPath profile
              yield sysPath ++ "Microsoft.CSharp.dll"
              yield sysPath ++ "Microsoft.VisualBasic.dll"
              yield sysPath ++ "Microsoft.Win32.Primitives.dll"
@@ -1037,7 +1041,7 @@ module internal Targets =
     let Portable7FSharp40Refs() = FSharpRefs "4.0" "portable7"
     let Portable78FSharp40Refs() = FSharpRefs "4.0" "portable78"
     let Portable259FSharp40Refs() = FSharpRefs "4.0" "portable259"
-    let DotNet45Ref r = sysInstalledAssembliesPath "net45" ++ r
+    let DotNet45Ref r = sysAssembliesPath "net45" ++ r
 
     let FSharpCore41Ref() = FSharpCoreRef "4.1" "net45"
     let DotNet45FSharp41Refs() = FSharpRefs "4.1" "net45"
@@ -1051,7 +1055,7 @@ module internal Targets =
     let supportsFSharp31() = (try File.Exists (FSharpCore31Ref()) with _ -> false)
     let supportsFSharp40() = (try File.Exists (FSharpCore40Ref()) with _ -> false)
     let supportsFSharp41() = (try File.Exists (FSharpCore41Ref()) with _ -> false)
-    let hasPortable47Assemblies() = Directory.Exists (sysInstalledAssembliesPath "portable47")
-    let hasPortable7Assemblies() = Directory.Exists (sysInstalledAssembliesPath "portable7")
-    let hasPortable78Assemblies() = Directory.Exists (sysInstalledAssembliesPath "portable78")
-    let hasPortable259Assemblies() = Directory.Exists (sysInstalledAssembliesPath "portable259")
+    let hasPortable47Assemblies() = Directory.Exists (sysAssembliesPath "portable47")
+    let hasPortable7Assemblies() = Directory.Exists (sysAssembliesPath "portable7")
+    let hasPortable78Assemblies() = Directory.Exists (sysAssembliesPath "portable78")
+    let hasPortable259Assemblies() = Directory.Exists (sysAssembliesPath "portable259")
