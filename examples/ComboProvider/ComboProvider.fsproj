@@ -1,16 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk" >
+  <Import Project="..\..\netfx.props" />
   <PropertyGroup>
      <TargetFrameworks>netstandard2.0</TargetFrameworks>
-<!--     <DebugType>full</DebugType> -->
+     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\src\ProvidedTypes.fsi">
-      <Link>ProvidedTypes.fsi</Link>
-    </Compile>
-    <Compile Include="..\..\src\ProvidedTypes.fs">
-      <Link>ProvidedTypes.fs</Link>
-    </Compile>
+    <Compile Include="..\..\src\ProvidedTypes.fsi" />
+    <Compile Include="..\..\src\ProvidedTypes.fs" />
     <Compile Include="ComboProvider.fs" />
+
     <!-- These files are the facades necessary to run .NET Standard 2.0 components on .NET Framweork 4.6.1 (.NET Framework 4.7 will -->
     <!-- come with these facades included). Because the type provider is a .NET Standard 2.0 component, the deployment of the type -->
     <!--  provider must include these facade DLLs if it is to run hosted inside an F# compiler executing using  .NET Framework 4.6.1 or Mono 5.0. -->

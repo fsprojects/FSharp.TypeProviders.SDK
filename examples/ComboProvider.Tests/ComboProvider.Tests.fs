@@ -4,7 +4,7 @@
 
 module ComboProvider.Tests
 
-open ComboProvider.Provided
+open ComboProvider
 open Xunit
 
 [<Fact>]
@@ -25,4 +25,23 @@ let ``StaticMethod2 returns a null`` () =
 
 let ``MyType supports null`` () =
     Assert.True(MyType("test it") <> null)
+                
+
+type Generative2 = ComboProvider.GenerativeProvider<2>
+type Generative4 = ComboProvider.GenerativeProvider<4>
+
+[<Fact>]
+let ``Can access properties of generative provider 2`` () =
+    let obj = Generative2()
+    Assert.Equal(obj.Property1, 1)
+    Assert.Equal(obj.Property2, 2)
+
+[<Fact>]
+let ``Can access properties of generative provider 4`` () =
+    let obj = Generative4()
+    Assert.Equal(obj.Property1, 1)
+    Assert.Equal(obj.Property2, 2)
+    Assert.Equal(obj.Property3, 3)
+    Assert.Equal(obj.Property4, 4)
+
                 
