@@ -1,30 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\netfx.props" />
   <PropertyGroup>
      <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
      <IsPackable>false</IsPackable>
      <DefineConstants>NO_GENERATIVE</DefineConstants>
   </PropertyGroup>
-  <Import Project="..\..\fsc.props" />
-<!--
-Use this to manually select an updated F# compiler that supports F# Tooling RFC FST-1003 https://github.com/fsharp/fslang-design/blob/master/tooling/FST-1003-loading-type-provider-design-time-components.md
-  <PropertyGroup>
-     <FscToolPath>C:\GitHub\dsyme\visualfsharp\Tools\dotnet20\sdk\2.0.0-preview2-006502\FSharpTest</FscToolPath>
-     <FscToolExe>RunFsc.cmd</FscToolExe>
-     <FscToolPath>C:\GitHub\dsyme\visualfsharp\release\net40\bin</FscToolPath>
-     <FscToolExe>fsc.exe</FscToolExe>
-  </PropertyGroup>
--->
   <ItemGroup>
     <Compile Include="BasicProvider.Tests.fs" />
     <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp2.0' " />
+
     <None Include="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170517-02" />
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
+
     <!-- When using the type provider, the reference is to the appropriate runtime DLL -->
     <ProjectReference Include="..\BasicProvider\BasicProvider.fsproj" />
-    
+
   </ItemGroup>
 </Project>

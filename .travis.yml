@@ -1,26 +1,28 @@
 language: csharp
 dist: trusty
 
-mono:
-  - weekly
-  - nightly
-  - beta
-  - latest
-  - 5.4.0
-
-
-# 5.2.0 doesn't work because we like to use installed F# compiler which can produce netstandard 2.0 code
-#  - 5.2.0
-
-dotnet: 2.0.0
-
-os:
-  - linux
-
-# Travis OSX is in trouble installing dotnet 2.0.0 at all
-#  - osx
-
+matrix:
+  include:
+    - mono: 5.8.0
+      env: USE_DOTNET_CLI=1
+      os: linux
+    - mono: latest
+      env: USE_DOTNET_CLI=1
+      os: osx
+    - mono: 5.8.0
+      env: USE_MSBUILD=1
+      os: linux
+    - mono: latest
+      env: USE_MSBUILD=1
+      os: osx
+    - mono: latest
+      env: USE_MSBUILD=1
+      os: linux
+    - mono: weekly
+      env: USE_MSBUILD=1
+      os: linux
+      
 sudo: true  # use the new container-based Travis infrastructure
 
 script:
-  - ./build.sh RunTests
+  - ./build.sh NuGet
