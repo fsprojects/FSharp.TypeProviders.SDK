@@ -477,7 +477,9 @@ type internal Testing() =
                     [ if not m.IsStatic then yield ("this", ProvidedTypeDefinition.EraseType m.DeclaringType)
                       for p in m.GetParameters() do yield (p.Name, ProvidedTypeDefinition.EraseType p.ParameterType) ]
                     |> List.map (Var.Global >> Expr.Var)
-                m.GetInvokeCode  vs
+                match m.GetInvokeCode with
+                | Some invokeCode -> invokeCode vs
+                | None -> <@@ () @@>
 
             let getConstructorBody (c: ProvidedConstructor) =
                 let vs = 

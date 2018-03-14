@@ -943,7 +943,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
-    and ProvidedMethod(isTgt: bool, methodName: string, attrs: MethodAttributes, parameters: ProvidedParameter[], returnType: Type, invokeCode: (Expr list -> Expr), staticParams, staticParamsApply, customAttributesData) =
+    and ProvidedMethod(isTgt: bool, methodName: string, attrs: MethodAttributes, parameters: ProvidedParameter[], returnType: Type, invokeCode: (Expr list -> Expr) option, staticParams, staticParamsApply, customAttributesData) =
         inherit MethodInfo()
         let parameterInfos = parameters |> Array.map (fun p -> p :> ParameterInfo)
 
@@ -954,7 +954,7 @@ namespace ProviderImplementation.ProvidedTypes
         let customAttributesImpl = CustomAttributesImpl(customAttributesData)
 
         /// The public constructor for the design-time/source model
-        new (methodName, parameters, returnType, invokeCode, ?isStatic) =
+        new (methodName, parameters, returnType, ?invokeCode, ?isStatic) =
             let isStatic = defaultArg isStatic false
             let attrs = if isStatic then MethodAttributes.Public ||| MethodAttributes.Static else MethodAttributes.Public
             ProvidedMethod(false, methodName, attrs, Array.ofList parameters, returnType, invokeCode, [], None, K [| |])
@@ -990,7 +990,7 @@ namespace ProviderImplementation.ProvidedTypes
                 this
 
         member __.Parameters = parameters
-        member __.GetInvokeCode args = invokeCode args
+        member __.GetInvokeCode = invokeCode
         member __.StaticParams = staticParams
         member __.StaticParamsApply = staticParamsApply
         member __.BelongsToTargetModel = isTgt
@@ -1040,8 +1040,8 @@ namespace ProviderImplementation.ProvidedTypes
             let isStatic = defaultArg isStatic false
             let indexParameters = defaultArg indexParameters []
             let pattrs = (if isStatic then MethodAttributes.Static else enum<MethodAttributes>(0)) ||| MethodAttributes.Public ||| MethodAttributes.SpecialName
-            let getter = getterCode |> Option.map (fun code -> ProvidedMethod(false, "get_" + propertyName, pattrs, Array.ofList indexParameters, propertyType, code, [], None, K [| |]) :> MethodInfo)
-            let setter = setterCode |> Option.map (fun code -> ProvidedMethod(false, "set_" + propertyName, pattrs, [| yield! indexParameters; yield ProvidedParameter(false, "value",propertyType,isOut=Some false,optionalValue=None) |], typeof<Void>,code, [], None, K [| |]) :> MethodInfo)
+            let getter = getterCode |> Option.map (fun _ -> ProvidedMethod(false, "get_" + propertyName, pattrs, Array.ofList indexParameters, propertyType, getterCode, [], None, K [| |]) :> MethodInfo)
+            let setter = setterCode |> Option.map (fun _ -> ProvidedMethod(false, "set_" + propertyName, pattrs, [| yield! indexParameters; yield ProvidedParameter(false, "value",propertyType,isOut=Some false,optionalValue=None) |], typeof<Void>, setterCode, [], None, K [| |]) :> MethodInfo)
             ProvidedProperty(false, propertyName, PropertyAttributes.None, propertyType, isStatic, Option.map K getter, Option.map K setter, Array.ofList indexParameters, K [| |])
 
         member __.AddXmlDocComputed xmlDocFunction = customAttributesImpl.AddXmlDocComputed xmlDocFunction
@@ -1093,8 +1093,8 @@ namespace ProviderImplementation.ProvidedTypes
         new (eventName, eventHandlerType, adderCode, removerCode, ?isStatic) = 
             let isStatic = defaultArg isStatic false
             let pattrs = (if isStatic then MethodAttributes.Static else enum<MethodAttributes>(0)) ||| MethodAttributes.Public ||| MethodAttributes.SpecialName
-            let adder = ProvidedMethod(false, "add_" + eventName, pattrs, [| ProvidedParameter(false, "handler", eventHandlerType, isOut=Some false, optionalValue=None) |], typeof<Void>, adderCode, [], None, K [| |])  :> MethodInfo
-            let remover = ProvidedMethod(false, "remove_" + eventName, pattrs, [| ProvidedParameter(false, "handler", eventHandlerType, isOut=Some false, optionalValue=None) |], typeof<Void>, removerCode, [], None, K [| |])  :> MethodInfo
+            let adder = ProvidedMethod(false, "add_" + eventName, pattrs, [| ProvidedParameter(false, "handler", eventHandlerType, isOut=Some false, optionalValue=None) |], typeof<Void>, Some adderCode, [], None, K [| |])  :> MethodInfo
+            let remover = ProvidedMethod(false, "remove_" + eventName, pattrs, [| ProvidedParameter(false, "handler", eventHandlerType, isOut=Some false, optionalValue=None) |], typeof<Void>, Some removerCode, [], None, K [| |])  :> MethodInfo
             ProvidedEvent(false, eventName, EventAttributes.None, eventHandlerType, isStatic, K adder, K remover, K [| |])
 
         member __.AddXmlDocComputed xmlDocFunction = customAttributesImpl.AddXmlDocComputed xmlDocFunction
@@ -8890,7 +8890,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ProvidedMethod(true, x.Name, x.Attributes, 
                                     x.Parameters |> Array.map convParameterDefToTgt, 
                                     x.ReturnType |> convTypeToTgt, 
-                                    convCodeToTgt (x.GetInvokeCode, x.IsStatic, false, x.Parameters, not x.IsErased), 
+                                    x.GetInvokeCode |> Option.map (fun invokeCode -> convCodeToTgt (invokeCode, x.IsStatic, false, x.Parameters, not x.IsErased)), 
                                     x.StaticParams |> List.map convStaticParameterDefToTgt, 
                                     x.StaticParamsApply |> Option.map (fun f s p -> f s p |> convProvidedMethodDefToTgt declTyT), 
                                     (x.GetCustomAttributesData >> convCustomAttributesDataToTgt)) :> _
@@ -14126,13 +14126,16 @@ namespace ProviderImplementation.ProvidedTypes
                         let parameters =
                             [ for v in parameterVars -> Expr.Var v ]
 
-                        let expr = pminfo.GetInvokeCode parameters
+                        match pminfo.GetInvokeCode with
+                        | Some invokeCode ->
+                            let expr = invokeCode parameters
 
-                        let methLocals = Dictionary<Var,ILLocalBuilder>()
+                            let methLocals = Dictionary<Var,ILLocalBuilder>()
 
-                        let expectedState = if (transType minfo.ReturnType = ILType.Void) then ExpectedStackState.Empty else ExpectedStackState.Value
-                        let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, methLocals, parameterVars)
-                        codeGen.EmitExpr (expectedState, expr)
+                            let expectedState = if (transType minfo.ReturnType = ILType.Void) then ExpectedStackState.Empty else ExpectedStackState.Value
+                            let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, methLocals, parameterVars)
+                            codeGen.EmitExpr (expectedState, expr)
+                        | None -> ()
                         ilg.Emit I_ret
                       | _ -> ()
 
@@ -14365,8 +14368,11 @@ namespace ProviderImplementation.ProvidedTypes
 
                 match methodBaseT with
                 | :? ProvidedMethod as mT when (match methodBaseT.DeclaringType with :? ProvidedTypeDefinition as pt -> pt.IsErased | _ -> true) ->
-                    let exprT = mT.GetInvokeCode(Array.toList parametersT)
-                    check exprT
+                    match mT.GetInvokeCode with
+                    | Some invokeCode ->
+                        let exprT = invokeCode(Array.toList parametersT)
+                        check exprT
+                    | None -> <@@ () @@>
 
                 | :? ProvidedConstructor as mT when (match methodBaseT.DeclaringType with :? ProvidedTypeDefinition as pt -> pt.IsErased | _ -> true) ->
                     let exprT = mT.GetInvokeCode(Array.toList parametersT)
