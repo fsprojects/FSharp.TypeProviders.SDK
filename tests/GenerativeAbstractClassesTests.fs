@@ -29,7 +29,7 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
 
     let createAbstractClass name (members: (string * (string * Type) list * Type * bool) list) =
         let t = ProvidedTypeDefinition(name, Some typeof<obj>, hideObjectMethods = true, isErased = false)
-        t.SetAttributes(TypeAttributes.Public ||| TypeAttributes.Abstract)
+        t.SetAttributes(TypeAttributes.Public ||| TypeAttributes.AutoClass ||| TypeAttributes.AnsiClass ||| TypeAttributes.Abstract ||| TypeAttributes.BeforeFieldInit)
         
         members
         |> List.map (fun (name, parameters, retType, isVirtual) ->
@@ -41,11 +41,11 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
                 let m = ProvidedMethod(name, ps, retType, invokeCode = fun args ->
                     <@ raise (NotImplementedException(name + " is not implemented")) @>.Raw
                     )
-                m.SetMethodAttrs (MethodAttributes.Public ||| MethodAttributes.Virtual)
+                m.SetMethodAttrs (MethodAttributes.Public ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual)
                 m
             else
                 let m = ProvidedMethod(name, ps, retType, invokeCode = fun args -> <@@ () @@>)
-                m.SetMethodAttrs (MethodAttributes.Public ||| MethodAttributes.Abstract)
+                m.SetMethodAttrs (MethodAttributes.Public ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual)
                 m
             )
         |> t.AddMembers

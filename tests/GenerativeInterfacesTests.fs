@@ -29,8 +29,8 @@ type GenerativeInterfacesProvider (config: TypeProviderConfig) as this =
 
     let createInterface name (members: (string * (string * Type) list * Type) list) =
         let t = ProvidedTypeDefinition(name, Some typeof<obj>, hideObjectMethods = true, isErased = false)
-        t.SetAttributes(TypeAttributes.Public ||| TypeAttributes.Interface ||| TypeAttributes.Abstract)
-        
+        t.SetAttributes(TypeAttributes.Interface ||| TypeAttributes.Public ||| TypeAttributes.AutoClass ||| TypeAttributes.AnsiClass ||| TypeAttributes.Abstract)
+
         members
         |> List.map (fun (name, parameters, retType) ->
             let ps =
@@ -38,7 +38,7 @@ type GenerativeInterfacesProvider (config: TypeProviderConfig) as this =
                 |> List.map (fun (name, ty) ->
                     ProvidedParameter(name, ty))
             let m = ProvidedMethod(name, ps, retType, invokeCode = fun args -> <@@ () @@>)
-            m.SetMethodAttrs (MethodAttributes.Public ||| MethodAttributes.Abstract)
+            m.SetMethodAttrs (MethodAttributes.Public ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual)
             m)
         |> t.AddMembers
         
