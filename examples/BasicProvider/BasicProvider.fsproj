@@ -4,7 +4,10 @@
   <Import Project="..\..\netfx.props" />
 
   <PropertyGroup>
-     <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+     <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
+     <!-- Use an explicit nuspec to allow us to specify "references", the metadata properties at https://docs.microsoft.com/en-us/dotnet/core/tools/csproj#nuget-metadata-properties don't allow this --> 
+     <NuspecFile>BasicProvider.nuspec</NuspecFile>
+     <DocumentationFile>$(OutputFolder)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
@@ -13,16 +16,21 @@
     <Compile Include="BasicProvider.Runtime.fs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Be explicit about the version of FSharp.Core since we mention it in the manual nuget package spec -->
+    <PackageReference Include="FSharp.Core" Version="4.3.4" />
+  </ItemGroup>
+
   <Target Name="AfterBuild">  
     <!-- Note: BasicProvider.DesignTime.fsproj must have been built before this project -->
 
-    <!-- We place BOTH the net461 and netstandard2.0 design-time DLLs in well-known locations with resepct to the runtime DLL -->
-    <!-- This enables any runtime DLL to be used with any host tooling running in either netcoreapp2.0+ or net461+ -->
-    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net461\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\net461" />  
+    <!-- We place BOTH the net45 and netstandard2.0 design-time DLLs in well-known locations with resepct to the runtime DLL -->
+    <!-- This enables any runtime DLL to be used with any host tooling running in either netcoreapp2.0+ or net45+ -->
+    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net45\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\net45" />  
     <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />  
 
-    <!-- We also place the net461 design-time DLLs alongside the runtime DLL for loading by legacy F# toolchains -->
-    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net461\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)" Condition="'$(TargetFramework)' == 'net461'" />  
+    <!-- We also place the net45 design-time DLLs alongside the runtime DLL for loading by legacy F# toolchains -->
+    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net45\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)" Condition="'$(TargetFramework)' == 'net45'" />  
   </Target>  
   
 </Project>

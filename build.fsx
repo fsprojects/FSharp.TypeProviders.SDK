@@ -132,12 +132,14 @@ Target "RunTests" (fun _ ->
 #endif
 )
 
-Target "NuGet" (fun _ ->
+Target "Pack" (fun _ ->
     DotNetCli.Pack  (fun p -> { p with Configuration = config; Project = "src/FSharp.TypeProviders.SDK.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/BasicProvider/BasicProvider.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/ComboProvider/ComboProvider.fsproj"; ToolPath =  getSdkPath() })
 )
 
-"Clean" ==> "NuGet"
-"Build" ==> "Examples" ==> "NuGet"
-"Build" ==> "RunTests" ==> "NuGet"
+"Clean" ==> "Pack"
+"Build" ==> "Examples" ==> "Pack"
+"Build" ==> "RunTests" ==> "Pack"
 
 RunTargetOrDefault "RunTests"
