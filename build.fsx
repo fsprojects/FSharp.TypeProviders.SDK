@@ -101,9 +101,7 @@ Target "Examples" (fun _ ->
   else
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.DesignTime/BasicProvider.DesignTime.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider/BasicProvider.fsproj"; ToolPath =  getSdkPath() })
-    DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider/ComboProvider.fsproj"; ToolPath =  getSdkPath() })
-    DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
 )
 Target "RunTests" (fun _ ->
 #if MONO
@@ -125,6 +123,8 @@ Target "RunTests" (fun _ ->
     // msbuild tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=Debug && mono packages/xunit.runner.console/tools/net452/xunit.console.exe tests/bin/Debug/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none
 #else
     DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
 
     // This can also be used to give console output:
     // dotnet build tests\FSharp.TypeProviders.SDK.Tests.fsproj -c Debug -f net461 && packages\xunit.runner.console\tools\net452\xunit.console.exe tests\bin\Debug\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
