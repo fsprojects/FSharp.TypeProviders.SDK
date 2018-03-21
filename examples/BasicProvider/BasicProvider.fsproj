@@ -7,7 +7,7 @@
      <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
      <!-- Use an explicit nuspec to allow us to specify "references", the metadata properties at https://docs.microsoft.com/en-us/dotnet/core/tools/csproj#nuget-metadata-properties don't allow this --> 
      <NuspecFile>BasicProvider.nuspec</NuspecFile>
-     <DocumentationFile>$(OutputFolder)\$(AssemblyName).xml</DocumentationFile>
+     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
