@@ -1,18 +1,14 @@
-﻿<Project>
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <!-- See https://stackoverflow.com/questions/43921992/how-can-i-use-beforebuild-and-afterbuild-targets-with-visual-studio-2017 -->
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <Import Project="..\..\netfx.props" />
-
   <PropertyGroup>
      <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
   </PropertyGroup>
-
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-
   <ItemGroup>
     <Compile Include="BasicProvider.Runtime.fs" />
   </ItemGroup>
-
   <Target Name="AfterBuild">  
     <!-- Note: BasicProvider.DesignTime.fsproj must have been built before this project -->
 
@@ -24,5 +20,4 @@
     <!-- We also place the net461 design-time DLLs alongside the runtime DLL for loading by legacy F# toolchains -->
     <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net461\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)" Condition="'$(TargetFramework)' == 'net461'" />  
   </Target>  
-  
 </Project>
