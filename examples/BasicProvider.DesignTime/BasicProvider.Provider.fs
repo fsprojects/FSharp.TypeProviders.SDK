@@ -74,7 +74,7 @@ type BasicGenerativeProvider (config : TypeProviderConfig) as this =
         myType.AddMember(ctor2)
 
         for i in 1 .. count do 
-            let prop = ProvidedProperty("Property" + string i, typeof<int>, getterCode = fun args -> <@@ count @@>)
+            let prop = ProvidedProperty("Property" + string i, typeof<int>, getterCode = fun args -> <@@ i @@>)
             myType.AddMember(prop)
 
         let meth = ProvidedMethod("StaticMethod", [], typeof<BasicProvider.Helpers.SomeRuntimeHelper>, isStatic=true, invokeCode = (fun args -> Expr.Value(null, typeof<BasicProvider.Helpers.SomeRuntimeHelper>)))
