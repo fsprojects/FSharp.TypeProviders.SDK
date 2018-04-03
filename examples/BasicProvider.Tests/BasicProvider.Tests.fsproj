@@ -5,6 +5,9 @@
      <IsPackable>false</IsPackable>
      <DefineConstants>NO_GENERATIVE</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OtherFlags> --simpleresolution --nocopyfsharpcore --simpleresolution --nocopyfsharpcore</OtherFlags>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="BasicProvider.Tests.fs" />
     <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp2.0' " />
