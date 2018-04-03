@@ -23,7 +23,7 @@
     <!-- We also place the net461 design-time DLLs alongside the runtime DLL for loading by legacy F# toolchains -->
     <!-- for a definition of legacy, see: https://github.com/fsharp/fslang-design/blob/master/tooling/FST-1003-loading-type-provider-design-time-components.md -->
     <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net461\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)" Condition="'$(TargetFramework)' == 'net461'" />  
-    <!-- until the F# Tooling RFC above is implemented, the copy comand below is required for IDE based toolchains, when targetting standard. Warning --  this will overwrite the 4 legacy step above. Uncomment if you need it --> 
+    <!-- until the F# Tooling RFC above is implemented, the copy comand below is required for IDE based toolchains, when targetting standard. Warning: this will overwrite the net4 legacy step above, when built last in a build sequence. Uncomment if you need it --> 
     <!-- <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)" Condition="'$(TargetFramework)' == 'netstandard2.0'" /> -->
   </Target>  
 </Project>
