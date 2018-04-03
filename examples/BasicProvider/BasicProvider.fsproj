@@ -17,7 +17,7 @@
 
     <!-- We place BOTH the net461 and netstandard2.0 design-time DLLs in well-known locations with resepct to the runtime DLL -->
     <!-- This enables any runtime DLL to be used with any host tooling running in either netcoreapp2.0+ or net461+ -->
-    <!-- <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net461\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41" /> -->
+    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net461\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41" /> 
     <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41" /> 
     
     <!-- <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)" /> --> 
