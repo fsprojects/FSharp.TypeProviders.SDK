@@ -33,7 +33,7 @@ let release =
     |> ReleaseNotesHelper.parseReleaseNotes
 
 let useMsBuildToolchain = environVar "USE_MSBUILD" <> null
-let dotnetSdkVersion = "2.1.100-preview-007363"
+let dotnetSdkVersion = "2.1.201"
 let sdkPath = lazy DotNetCli.InstallDotNetSDK dotnetSdkVersion
 let getSdkPath() = sdkPath.Value
 
@@ -101,9 +101,7 @@ Target "Examples" (fun _ ->
   else
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.DesignTime/BasicProvider.DesignTime.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider/BasicProvider.fsproj"; ToolPath =  getSdkPath() })
-    DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider/ComboProvider.fsproj"; ToolPath =  getSdkPath() })
-    DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
 )
 Target "RunTests" (fun _ ->
 #if MONO
@@ -114,7 +112,7 @@ Target "RunTests" (fun _ ->
   // This is a bit of a hack to find the output test DLL and run xunit using Mono directly
     let dir = "tests/bin/" + config + "/net461"
     let file = 
-        System.IO.Directory.GetDirectories(dir)
+        (Array.append [| dir |] [| System.IO.Directory.GetDirectories(dir) |])
         |> Array.pick (fun subdir -> 
             let file = subdir + "/FSharp.TypeProviders.SDK.Tests.dll"
             if System.IO.File.Exists file then Some file else None)
@@ -125,6 +123,8 @@ Target "RunTests" (fun _ ->
     // msbuild tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=Debug && mono packages/xunit.runner.console/tools/net452/xunit.console.exe tests/bin/Debug/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none
 #else
     DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
 
     // This can also be used to give console output:
     // dotnet build tests\FSharp.TypeProviders.SDK.Tests.fsproj -c Debug -f net461 && packages\xunit.runner.console\tools\net452\xunit.console.exe tests\bin\Debug\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
@@ -132,12 +132,14 @@ Target "RunTests" (fun _ ->
 #endif
 )
 
-Target "NuGet" (fun _ ->
+Target "Pack" (fun _ ->
     DotNetCli.Pack  (fun p -> { p with Configuration = config; Project = "src/FSharp.TypeProviders.SDK.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/BasicProvider/BasicProvider.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/ComboProvider/ComboProvider.fsproj"; ToolPath =  getSdkPath() })
 )
 
-"Clean" ==> "NuGet"
-"Build" ==> "Examples" ==> "NuGet"
-"Build" ==> "RunTests" ==> "NuGet"
+"Clean" ==> "Pack"
+"Build" ==> "Examples" ==> "Pack"
+"Build" ==> "RunTests" ==> "Pack"
 
 RunTargetOrDefault "RunTests"

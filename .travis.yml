@@ -25,4 +25,4 @@ matrix:
 sudo: true  # use the new container-based Travis infrastructure
 
 script:
-  - ./build.sh NuGet
+  - ./build.sh Pack
