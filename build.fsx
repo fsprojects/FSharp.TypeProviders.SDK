@@ -33,7 +33,7 @@ let release =
     |> ReleaseNotesHelper.parseReleaseNotes
 
 let useMsBuildToolchain = environVar "USE_MSBUILD" <> null
-let dotnetSdkVersion = "2.1.100"
+let dotnetSdkVersion = "2.1.201"
 let sdkPath = lazy DotNetCli.InstallDotNetSDK dotnetSdkVersion
 let getSdkPath() = sdkPath.Value
 
@@ -112,7 +112,7 @@ Target "RunTests" (fun _ ->
   // This is a bit of a hack to find the output test DLL and run xunit using Mono directly
     let dir = "tests/bin/" + config + "/net461"
     let file = 
-        System.IO.Directory.GetDirectories(dir)
+        (Array.append [| dir |] [| System.IO.Directory.GetDirectories(dir) |])
         |> Array.pick (fun subdir -> 
             let file = subdir + "/FSharp.TypeProviders.SDK.Tests.dll"
             if System.IO.File.Exists file then Some file else None)
