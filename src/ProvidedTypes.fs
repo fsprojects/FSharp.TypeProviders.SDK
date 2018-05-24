@@ -115,11 +115,13 @@ namespace ProviderImplementation.ProvidedTypes
             else Unchecked.defaultof<TypeAttributes>
 
         let bindAll = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance
+        let bindCommon = BindingFlags.DeclaredOnly ||| BindingFlags.Static ||| BindingFlags.Instance ||| BindingFlags.Public
         let bindSome isStatic = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| (if isStatic then BindingFlags.Static else BindingFlags.Instance)
+        let inline hasFlag e flag = (e &&& flag) <> enum 0
 
         let memberBinds isType (bindingFlags: BindingFlags) isStatic isPublic = 
-            (isType || bindingFlags.HasFlag(if isStatic then BindingFlags.Static else BindingFlags.Instance)) &&
-            ((bindingFlags.HasFlag(BindingFlags.Public) && isPublic) || (bindingFlags.HasFlag(BindingFlags.NonPublic) && not isPublic))
+            (isType || hasFlag bindingFlags (if isStatic then BindingFlags.Static else BindingFlags.Instance)) &&
+            ((hasFlag bindingFlags BindingFlags.Public && isPublic) || (hasFlag bindingFlags BindingFlags.NonPublic && not isPublic))
 
         let rec instType inst (ty:Type) =
             if isNull ty then null
@@ -246,22 +248,22 @@ namespace ProviderImplementation.ProvidedTypes
                    m 
 
         let canBindConstructor (bindingFlags: BindingFlags) (c: ConstructorInfo) =
-             bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
+             hasFlag bindingFlags BindingFlags.Public && c.IsPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsPublic
 
         let canBindMethod (bindingFlags: BindingFlags) (c: MethodInfo) =
-             bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
+             hasFlag bindingFlags BindingFlags.Public && c.IsPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsPublic
 
         let canBindProperty (bindingFlags: BindingFlags) (c: PropertyInfo) =
-             bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
+             hasFlag bindingFlags BindingFlags.Public && c.IsPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsPublic
 
         let canBindField (bindingFlags: BindingFlags) (c: FieldInfo) =
-             bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
+             hasFlag bindingFlags BindingFlags.Public && c.IsPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsPublic
 
         let canBindEvent (bindingFlags: BindingFlags) (c: EventInfo) =
-             bindingFlags.HasFlag(BindingFlags.Public) && c.IsPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsPublic
+             hasFlag bindingFlags BindingFlags.Public && c.IsPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsPublic
 
         let canBindNestedType (bindingFlags: BindingFlags) (c: Type) =
-             bindingFlags.HasFlag(BindingFlags.Public) && c.IsNestedPublic || bindingFlags.HasFlag(BindingFlags.NonPublic) && not c.IsNestedPublic
+             hasFlag bindingFlags BindingFlags.Public && c.IsNestedPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsNestedPublic
 
     //--------------------------------------------------------------------------------
     // UncheckedQuotations
@@ -788,7 +790,7 @@ namespace ProviderImplementation.ProvidedTypes
                     member __.ConstructorArguments = upcast [| |]
                     member __.NamedArguments = upcast [| |] }
 
-        type CustomAttributesImpl(customAttributesData) =
+        type CustomAttributesImpl(isTgt, customAttributesData) =
             let customAttributes = ResizeArray<CustomAttributeData>()
             let mutable hideObjectMethods = false
             let mutable nonNullable = false
@@ -807,14 +809,16 @@ namespace ProviderImplementation.ProvidedTypes
             // Custom atttributes that we only compute once
             let customAttributesOnce =
                 lazy
-                   [| if hideObjectMethods then yield mkEditorHideMethodsCustomAttributeData()
-                      if nonNullable then yield mkAllowNullLiteralCustomAttributeData false
-                      match xmlDocDelayed with None -> () | Some _ -> customAttributes.Add(mkXmlDocCustomAttributeDataLazy xmlDocDelayedText)
-                      match obsoleteMessage with None -> () | Some s -> customAttributes.Add(mkObsoleteAttributeCustomAttributeData s)
-                      if hasParamArray then yield mkParamArrayCustomAttributeData()
-                      if hasReflectedDefinition then yield mkReflectedDefinitionCustomAttributeData()
-                      yield! customAttributesData()
-                      yield! customAttributes |]
+                   [| if not isTgt then
+                          if hideObjectMethods then yield mkEditorHideMethodsCustomAttributeData()
+                          if nonNullable then yield mkAllowNullLiteralCustomAttributeData false
+                          match xmlDocDelayed with None -> () | Some _ -> customAttributes.Add(mkXmlDocCustomAttributeDataLazy xmlDocDelayedText)
+                          match xmlDocAlwaysRecomputed with None -> () | Some f -> yield mkXmlDocCustomAttributeData (f())
+                          match obsoleteMessage with None -> () | Some s -> customAttributes.Add(mkObsoleteAttributeCustomAttributeData s)
+                          if hasParamArray then yield mkParamArrayCustomAttributeData()
+                          if hasReflectedDefinition then yield mkReflectedDefinitionCustomAttributeData()
+                          yield! customAttributes 
+                      yield! customAttributesData()|]
 
             member __.AddDefinitionLocation(line:int,column:int,filePath:string) = customAttributes.Add(mkDefinitionLocationAttributeCustomAttributeData(line, column, filePath))
             member __.AddObsolete(message: string, isError) = obsoleteMessage <- Some (message,isError)
@@ -827,16 +831,27 @@ namespace ProviderImplementation.ProvidedTypes
             member __.NonNullable with get () = nonNullable and set v = nonNullable <- v
             member __.AddCustomAttribute(attribute) = customAttributes.Add(attribute)
             member __.GetCustomAttributesData() =
-                [| yield! customAttributesOnce.Force()
-                   // Recomputed XML doc is evaluated on every call to GetCustomAttributesData()
-                   match xmlDocAlwaysRecomputed with None -> () | Some f -> yield mkXmlDocCustomAttributeData (f())  |]
-                :> IList<_>
+                let attrs = customAttributesOnce.Force()
+                let attrsWithDocHack = 
+                    match xmlDocAlwaysRecomputed with 
+                    | None -> 
+                         attrs
+                    | Some f -> 
+                        // Recomputed XML doc is evaluated on every call to GetCustomAttributesData() when in the IDE
+                        [| for ca in attrs ->
+                               if ca.Constructor.DeclaringType.Name = typeof<TypeProviderXmlDocAttribute>.Name then 
+                                    { new CustomAttributeData() with
+                                        member __.Constructor =  ca.Constructor
+                                        member __.ConstructorArguments = upcast [| CustomAttributeTypedArgument(typeof<string>, f())  |]
+                                        member __.NamedArguments = upcast [| |] }
+                               else ca |]
+                attrsWithDocHack :> IList<_>
 
 
     type ProvidedStaticParameter(isTgt: bool, parameterName:string, parameterType:Type, parameterDefaultValue:obj option, customAttributesData) =
         inherit ParameterInfo()
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         new (parameterName:string, parameterType:Type, ?parameterDefaultValue:obj) = 
             ProvidedStaticParameter(false, parameterName, parameterType, parameterDefaultValue, (K [| |]))
@@ -861,7 +876,7 @@ namespace ProviderImplementation.ProvidedTypes
     
         inherit ParameterInfo()
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         new (parameterName:string, parameterType:Type, ?isOut:bool, ?optionalValue:obj) = 
             ProvidedParameter(false, parameterName, parameterType, isOut, optionalValue)
@@ -893,15 +908,15 @@ namespace ProviderImplementation.ProvidedTypes
         let mutable declaringType : ProvidedTypeDefinition option = None  
         let mutable isImplicitCtor = isImplicitCtor
         let mutable attrs = attrs
-        let isStatic() = attrs.HasFlag(MethodAttributes.Static)
+        let isStatic() = hasFlag attrs MethodAttributes.Static
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         new (parameters, invokeCode) =
             ProvidedConstructor(false, MethodAttributes.Public ||| MethodAttributes.RTSpecialName, Array.ofList parameters, invokeCode, None, false, K [| |])
 
         member __.IsTypeInitializer
-            with get() = isStatic() && attrs.HasFlag(MethodAttributes.Private)
+            with get() = isStatic() && hasFlag attrs MethodAttributes.Private
             and set(v) =
                 let typeInitializerAttributes = MethodAttributes.Static ||| MethodAttributes.Private
                 attrs <- if v then attrs ||| typeInitializerAttributes else attrs &&& ~~~typeInitializerAttributes
@@ -951,7 +966,7 @@ namespace ProviderImplementation.ProvidedTypes
         let mutable attrs = attrs
         let mutable staticParams = staticParams
         let mutable staticParamsApply = staticParamsApply
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         /// The public constructor for the design-time/source model
         new (methodName, parameters, returnType, ?invokeCode, ?isStatic) =
@@ -1033,7 +1048,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mutable declaringType : ProvidedTypeDefinition option = None  
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         /// The public constructor for the design-time/source model
         new (propertyName, propertyType, ?getterCode, ?setterCode, ?isStatic, ?indexParameters) =
@@ -1088,7 +1103,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mutable declaringType : ProvidedTypeDefinition option = None  
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         new (eventName, eventHandlerType, adderCode, removerCode, ?isStatic) = 
             let isStatic = defaultArg isStatic false
@@ -1133,7 +1148,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mutable declaringType : ProvidedTypeDefinition option = None  
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
         let mutable attrs = attrs
 
         new (fieldName:string, fieldType:Type) = ProvidedField(false, fieldName, FieldAttributes.Private, fieldType, null, (K [| |]))
@@ -1291,6 +1306,20 @@ namespace ProviderImplementation.ProvidedTypes
             evalMembers()
             members.ToArray()
 
+        (*
+        // Save common lookups for provided types with lots of members
+        let mutable bindings :  Dictionary<(string * BindingFlags * string option), obj> = null
+        let saveCommonBind key f : 'T = 
+            if bindings = null then 
+                bindings <- Dictionary<_,_>(HashIdentity.Structural)
+            if membersQueue.Count = 0 && bindings.ContainsKey(key)  then 
+                bindings.[key] :?> 'T
+            else
+                let res = f ()
+                bindings.[key] <- box res
+                res
+                *)
+
         let evalInterfaces() =
             if interfacesQueue.Count > 0 then
                 let elems = interfacesQueue |> Seq.toArray // take a copy in case more elements get added
@@ -1323,7 +1352,7 @@ namespace ProviderImplementation.ProvidedTypes
             evalMethodOverrides ()
             methodOverrides.ToArray()
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         do if nonNullable then customAttributesImpl.NonNullable <- true
         do if hideObjectMethods then customAttributesImpl.HideObjectMethods <- true
@@ -1376,33 +1405,39 @@ namespace ProviderImplementation.ProvidedTypes
         override __.BaseType = match baseType.Value with Some ty -> ty | None -> null
 
         override __.GetConstructors bindingFlags =
-            getMembers() 
-            |> Array.choose (function :? ConstructorInfo as c when memberBinds false bindingFlags c.IsStatic c.IsPublic -> Some c | _ -> None)
+            (//saveCommonBind ("ctor", bindingFlags, None) (fun () -> 
+                getMembers() 
+                |> Array.choose (function :? ConstructorInfo as c when memberBinds false bindingFlags c.IsStatic c.IsPublic -> Some c | _ -> None))
 
         override this.GetMethods bindingFlags =
-            getMembers() 
-            |> Array.choose (function :? MethodInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
-            |> (if bindingFlags.HasFlag(BindingFlags.DeclaredOnly) || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetMethods(bindingFlags))))
+            (//saveCommonBind ("methods", bindingFlags, None) (fun () -> 
+                getMembers() 
+                |> Array.choose (function :? MethodInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
+                |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetMethods(bindingFlags)))))
 
         override this.GetFields bindingFlags =
-            getMembers() 
-            |> Array.choose (function :? FieldInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
-            |> (if bindingFlags.HasFlag(BindingFlags.DeclaredOnly) || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetFields(bindingFlags))))
+            (//saveCommonBind ("fields", bindingFlags, None) (fun () -> 
+                getMembers() 
+                |> Array.choose (function :? FieldInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
+                |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetFields(bindingFlags)))))
 
         override this.GetProperties bindingFlags =
-            getMembers() 
-            |> Array.choose (function :? PropertyInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
-            |> (if bindingFlags.HasFlag(BindingFlags.DeclaredOnly) || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetProperties(bindingFlags))))
+            (//saveCommonBind ("props", bindingFlags, None) (fun () -> 
+                getMembers() 
+                |> Array.choose (function :? PropertyInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
+                |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetProperties(bindingFlags)))))
 
         override this.GetEvents bindingFlags =
-            getMembers() 
-            |> Array.choose (function :? EventInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
-            |> (if bindingFlags.HasFlag(BindingFlags.DeclaredOnly) || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetEvents(bindingFlags))))
+            (//saveCommonBind ("events", bindingFlags, None) (fun () -> 
+                getMembers() 
+                |> Array.choose (function :? EventInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
+                |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetEvents(bindingFlags)))))
 
         override __.GetNestedTypes bindingFlags =
-            getMembers() 
-            |> Array.choose (function :? Type as m when memberBinds true bindingFlags false m.IsPublic || m.IsNestedPublic -> Some m | _ -> None)
-            |> (if bindingFlags.HasFlag(BindingFlags.DeclaredOnly) || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetNestedTypes(bindingFlags))))
+            (//saveCommonBind ("nested", bindingFlags, None) (fun () -> 
+                getMembers() 
+                |> Array.choose (function :? Type as m when memberBinds true bindingFlags false m.IsPublic || m.IsNestedPublic -> Some m | _ -> None)
+                |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetNestedTypes(bindingFlags)))))
 
         override this.GetConstructorImpl(bindingFlags, _binder, _callConventions, _types, _modifiers) = 
             let xs = this.GetConstructors bindingFlags |> Array.filter (fun m -> m.Name = ".ctor")
@@ -1410,25 +1445,38 @@ namespace ProviderImplementation.ProvidedTypes
             if xs.Length > 0 then xs.[0] else null
 
         override __.GetMethodImpl(name, bindingFlags, _binderBinder, _callConvention, _types, _modifiers): MethodInfo =
-            let xs = this.GetMethods bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 1 then failwithf "GetMethodImpl. not support overloads, name = '%s', methods - '%A', callstack = '%A'" name xs Environment.StackTrace
-            if xs.Length > 0 then xs.[0] else null
+            (//saveCommonBind ("methimpl", bindingFlags, Some name) (fun () -> 
+                // This is performance critical for large spaces of provided methods and properties
+                // Save a table of the methods grouped by name
+                //let methodsGrouped = 
+                //    saveCommonBind ("methodgroups", bindingFlags, None) (fun () -> 
+                //        let methods = this.GetMethods bindingFlags
+                //        methods |> Seq.groupBy (fun m -> m.Name) |> Seq.map (fun (k,v) -> k, Seq.toArray v) |> dict)
+                //
+                //let xs = if methodsGrouped.ContainsKey name then methodsGrouped.[name] else [| |]
+                let xs = this.GetMethods bindingFlags |> Array.filter (fun m -> m.Name = name)
+                if xs.Length > 1 then failwithf "GetMethodImpl. not support overloads, name = '%s', methods - '%A', callstack = '%A'" name xs Environment.StackTrace
+                if xs.Length > 0 then xs.[0] else null)
 
         override this.GetField(name, bindingFlags) =
-            let xs = this.GetFields bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 0 then xs.[0] else null
+            (//saveCommonBind ("field1", bindingFlags, Some name) (fun () -> 
+                let xs = this.GetFields bindingFlags |> Array.filter (fun m -> m.Name = name)
+                if xs.Length > 0 then xs.[0] else null)
 
         override __.GetPropertyImpl(name, bindingFlags, _binder, _returnType, _types, _modifiers) =
-            let xs = this.GetProperties bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 0 then xs.[0] else null
+            (//saveCommonBind ("prop1", bindingFlags, Some name) (fun () -> 
+                let xs = this.GetProperties bindingFlags |> Array.filter (fun m -> m.Name = name)
+                if xs.Length > 0 then xs.[0] else null)
 
         override __.GetEvent(name, bindingFlags) =
-            let xs = this.GetEvents bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 0 then xs.[0] else null
+            (//saveCommonBind ("event1", bindingFlags, Some name) (fun () -> 
+                let xs = this.GetEvents bindingFlags |> Array.filter (fun m -> m.Name = name)
+                if xs.Length > 0 then xs.[0] else null)
 
         override __.GetNestedType(name, bindingFlags) =
-            let xs = this.GetNestedTypes bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 0 then xs.[0] else null
+            (//saveCommonBind ("nested1", bindingFlags, Some name) (fun () -> 
+                let xs = this.GetNestedTypes bindingFlags |> Array.filter (fun m -> m.Name = name)
+                if xs.Length > 0 then xs.[0] else null)
 
         override __.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" this.Name
 
@@ -1457,7 +1505,7 @@ namespace ProviderImplementation.ProvidedTypes
                  | _ -> () |]
 
         override this.GetMember(name,mt,_bindingFlags) =
-            let mt = if mt.HasFlag(MemberTypes.NestedType) then mt ||| MemberTypes.TypeInfo else mt
+            let mt = if hasFlag mt MemberTypes.NestedType then mt ||| MemberTypes.TypeInfo else mt
             this.GetMembers() |> Array.filter (fun m -> 0 <> int(m.MemberType &&& mt) && m.Name = name)
 
         // Attributes, etc..
@@ -8642,16 +8690,21 @@ namespace ProviderImplementation.ProvidedTypes
                 Debug.Assert((match mT with :? ProvidedMethod as x -> x.BelongsToTargetModel | _ -> true), "expected a target ProvidedMethod")
                 mT
 
-        and convConstructorRefToTgt (cons: ConstructorInfo) =
+        and tryConvConstructorRefToTgt (cons: ConstructorInfo) =
             Debug.Assert((match cons with :? ProvidedConstructor as x -> not x.BelongsToTargetModel | _ -> true), "unexpected target ProvidedConstructor")
             let declTyT = convTypeToTgt cons.DeclaringType
             let parameterTypesT = cons.GetParameters() |> Array.map (fun p -> convTypeToTgt p.ParameterType)
             let consT = declTyT.GetConstructor(parameterTypesT)
             match consT with
-            | null -> failwithf "Constructor '%O' not found in type '%O'. This constructor may be missing in the types available in the target assemblies." cons declTyT
+            | null -> Choice1Of2 (sprintf "Constructor '%O' not found in type '%O'. This constructor may be missing in the types available in the target assemblies." cons declTyT)
             | _ -> 
                 Debug.Assert((match consT with :? ProvidedConstructor as x -> x.BelongsToTargetModel | _ -> true), "expected a target ProvidedConstructor")
-                consT
+                Choice2Of2 consT
+
+        and convConstructorRefToTgt (cons: ConstructorInfo) =
+            match tryConvConstructorRefToTgt cons with 
+            | Choice1Of2 err -> failwith err
+            | Choice2Of2 res -> res
 
         and convVarToSrc (v: Var) =
             match varTableBwd.TryGetValue v with
@@ -8782,8 +8835,37 @@ namespace ProviderImplementation.ProvidedTypes
                 let codeT = List.map convExprToTgt argExprs2
                 ctorT, codeT)
 
-        and convCustomAttributesDataToTgt (d: IList<CustomAttributeData>) = Seq.toArray d // TODO: Consider converting these
+        and convMemberRefToTgt (x: MemberInfo) =
+            match x with 
+            | :? PropertyInfo as p -> convPropertyRefToTgt p :> MemberInfo
+            | :? FieldInfo as p -> convFieldRefToTgt p :> MemberInfo
+            | :? MethodInfo as p -> convMethodRefToTgt p :> MemberInfo
+            | :? ConstructorInfo as p -> convConstructorRefToTgt p :> MemberInfo
+            | :? Type as p -> convTypeToTgt p :> MemberInfo
+            | _ -> failwith "unknown member info"
 
+        and convCustomAttributesTypedArg (x: CustomAttributeTypedArgument) =
+            CustomAttributeTypedArgument(convTypeToTgt x.ArgumentType, x.Value)
+
+        and convCustomAttributesNamedArg (x: CustomAttributeNamedArgument) =
+            CustomAttributeNamedArgument(convMemberRefToTgt x.MemberInfo, convCustomAttributesTypedArg x.TypedValue)
+
+        and tryConvCustomAttributeDataToTgt (x: CustomAttributeData) = 
+             // Allow a fail on AllowNullLiteralAttribute. Some downlevel FSharp.Core don't have this. 
+             // In this case just skip the attribute which means null is allowed when targeting downlevel FSharp.Core.
+             match tryConvConstructorRefToTgt x.Constructor  with 
+             | Choice1Of2 _ when x.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name -> None
+             | Choice1Of2 msg -> failwith msg
+             | Choice2Of2 res -> 
+                 Some
+                     { new CustomAttributeData () with
+                        member __.Constructor =  res
+                        member __.ConstructorArguments = [| for arg in x.ConstructorArguments -> convCustomAttributesTypedArg arg |] :> IList<_>
+                        member __.NamedArguments = [| for arg in x.NamedArguments -> convCustomAttributesNamedArg arg |] :> IList<_> }
+
+        and convCustomAttributesDataToTgt (cattrs: IList<CustomAttributeData>) = 
+            cattrs |> Array.ofSeq |> Array.choose tryConvCustomAttributeDataToTgt 
+ 
         and convProvidedTypeDefToTgt (x: ProvidedTypeDefinition) =
           if x.BelongsToTargetModel then failwithf "unexpected target type definition '%O'" x
           match typeTableFwd.TryGetValue(x) with
@@ -8824,9 +8906,9 @@ namespace ProviderImplementation.ProvidedTypes
                                         Some ((let mutable idx = 0 in fun () -> let vs, idx2 = x.GetMembersFromCursor(idx) in idx <- idx2; vs |> Array.map (convMemberDefToTgt xT)), 
                                               (let mutable idx = 0 in fun () -> let vs, idx2 = x.GetInterfaceImplsFromCursor(idx) in idx <- idx2; vs |> Array.map convTypeToTgt), 
                                               (let mutable idx = 0 in fun () -> let vs, idx2 = x.GetMethodOverridesFromCursor(idx) in idx <- idx2; vs |> Array.map (fun (a,b) -> (convMethodRefToTgt a :?> ProvidedMethod), convMethodRefToTgt b))), 
-                                        (x.GetCustomAttributesData >> convCustomAttributesDataToTgt),
-                                        x.HideObjectMethods, 
-                                        x.NonNullable) 
+                                        (x.GetCustomAttributesData >> convCustomAttributesDataToTgt), 
+                                        x.NonNullable,
+                                        x.HideObjectMethods) 
 
             Debug.Assert(not (typeTableFwd.ContainsKey(x)))
             typeTableFwd.[x] <- xT
