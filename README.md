@@ -23,7 +23,7 @@ Building a type provider nearly always starts with adding these files to your pr
 * ProvidedTypes.fsi
 * ProvidedTypes.fs
 
-If using Paket, you can add code files by direct GitHub references like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/paket.dependencies#L20-L22) and reference the files in a project file like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/src/FSharp.Data.Source.fsproj#L54-L59).
+If using Paket, you can add code files by direct GitHub references like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/paket.dependencies#L20-L22) and reference the files in a project file like [this](https://github.com/dsyme/FSharp.Data/blob/b5df1ca30f5bb7749c4fd340b61f1b7fc43fb547/src/FSharp.Data.DesignTime.fsproj#L55).
 
 
 Type providers may be used in projects that generate .NET Standard code or target other .NET Frameworks than that being used to execute the F# compiler. 
