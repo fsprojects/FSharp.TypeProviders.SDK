@@ -788,7 +788,7 @@ namespace ProviderImplementation.ProvidedTypes
                     member __.ConstructorArguments = upcast [| |]
                     member __.NamedArguments = upcast [| |] }
 
-        type CustomAttributesImpl(customAttributesData) =
+        type CustomAttributesImpl(isTgt, customAttributesData) =
             let customAttributes = ResizeArray<CustomAttributeData>()
             let mutable hideObjectMethods = false
             let mutable nonNullable = false
@@ -807,14 +807,16 @@ namespace ProviderImplementation.ProvidedTypes
             // Custom atttributes that we only compute once
             let customAttributesOnce =
                 lazy
-                   [| if hideObjectMethods then yield mkEditorHideMethodsCustomAttributeData()
-                      if nonNullable then yield mkAllowNullLiteralCustomAttributeData false
-                      match xmlDocDelayed with None -> () | Some _ -> customAttributes.Add(mkXmlDocCustomAttributeDataLazy xmlDocDelayedText)
-                      match obsoleteMessage with None -> () | Some s -> customAttributes.Add(mkObsoleteAttributeCustomAttributeData s)
-                      if hasParamArray then yield mkParamArrayCustomAttributeData()
-                      if hasReflectedDefinition then yield mkReflectedDefinitionCustomAttributeData()
-                      yield! customAttributesData()
-                      yield! customAttributes |]
+                   [| if not isTgt then
+                          if hideObjectMethods then yield mkEditorHideMethodsCustomAttributeData()
+                          if nonNullable then yield mkAllowNullLiteralCustomAttributeData false
+                          match xmlDocDelayed with None -> () | Some _ -> customAttributes.Add(mkXmlDocCustomAttributeDataLazy xmlDocDelayedText)
+                          match xmlDocAlwaysRecomputed with None -> () | Some f -> yield mkXmlDocCustomAttributeData (f())
+                          match obsoleteMessage with None -> () | Some s -> customAttributes.Add(mkObsoleteAttributeCustomAttributeData s)
+                          if hasParamArray then yield mkParamArrayCustomAttributeData()
+                          if hasReflectedDefinition then yield mkReflectedDefinitionCustomAttributeData()
+                          yield! customAttributes 
+                      yield! customAttributesData()|]
 
             member __.AddDefinitionLocation(line:int,column:int,filePath:string) = customAttributes.Add(mkDefinitionLocationAttributeCustomAttributeData(line, column, filePath))
             member __.AddObsolete(message: string, isError) = obsoleteMessage <- Some (message,isError)
@@ -827,16 +829,27 @@ namespace ProviderImplementation.ProvidedTypes
             member __.NonNullable with get () = nonNullable and set v = nonNullable <- v
             member __.AddCustomAttribute(attribute) = customAttributes.Add(attribute)
             member __.GetCustomAttributesData() =
-                [| yield! customAttributesOnce.Force()
-                   // Recomputed XML doc is evaluated on every call to GetCustomAttributesData()
-                   match xmlDocAlwaysRecomputed with None -> () | Some f -> yield mkXmlDocCustomAttributeData (f())  |]
-                :> IList<_>
+                let attrs = customAttributesOnce.Force()
+                let attrsWithDocHack = 
+                    match xmlDocAlwaysRecomputed with 
+                    | None -> 
+                         attrs
+                    | Some f -> 
+                        // Recomputed XML doc is evaluated on every call to GetCustomAttributesData() when in the IDE
+                        [| for ca in attrs ->
+                               if ca.Constructor.DeclaringType.Name = typeof<TypeProviderXmlDocAttribute>.Name then 
+                                    { new CustomAttributeData() with
+                                        member __.Constructor =  ca.Constructor
+                                        member __.ConstructorArguments = upcast [| CustomAttributeTypedArgument(typeof<string>, f())  |]
+                                        member __.NamedArguments = upcast [| |] }
+                               else ca |]
+                attrsWithDocHack :> IList<_>
 
 
     type ProvidedStaticParameter(isTgt: bool, parameterName:string, parameterType:Type, parameterDefaultValue:obj option, customAttributesData) =
         inherit ParameterInfo()
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         new (parameterName:string, parameterType:Type, ?parameterDefaultValue:obj) = 
             ProvidedStaticParameter(false, parameterName, parameterType, parameterDefaultValue, (K [| |]))
@@ -861,7 +874,7 @@ namespace ProviderImplementation.ProvidedTypes
     
         inherit ParameterInfo()
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         new (parameterName:string, parameterType:Type, ?isOut:bool, ?optionalValue:obj) = 
             ProvidedParameter(false, parameterName, parameterType, isOut, optionalValue)
@@ -895,7 +908,7 @@ namespace ProviderImplementation.ProvidedTypes
         let mutable attrs = attrs
         let isStatic() = attrs.HasFlag(MethodAttributes.Static)
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         new (parameters, invokeCode) =
             ProvidedConstructor(false, MethodAttributes.Public ||| MethodAttributes.RTSpecialName, Array.ofList parameters, invokeCode, None, false, K [| |])
@@ -951,7 +964,7 @@ namespace ProviderImplementation.ProvidedTypes
         let mutable attrs = attrs
         let mutable staticParams = staticParams
         let mutable staticParamsApply = staticParamsApply
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         /// The public constructor for the design-time/source model
         new (methodName, parameters, returnType, invokeCode, ?isStatic) =
@@ -1033,7 +1046,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mutable declaringType : ProvidedTypeDefinition option = None  
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         /// The public constructor for the design-time/source model
         new (propertyName, propertyType, ?getterCode, ?setterCode, ?isStatic, ?indexParameters) =
@@ -1088,7 +1101,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mutable declaringType : ProvidedTypeDefinition option = None  
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         new (eventName, eventHandlerType, adderCode, removerCode, ?isStatic) = 
             let isStatic = defaultArg isStatic false
@@ -1133,7 +1146,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mutable declaringType : ProvidedTypeDefinition option = None  
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
         let mutable attrs = attrs
 
         new (fieldName:string, fieldType:Type) = ProvidedField(false, fieldName, FieldAttributes.Private, fieldType, null, (K [| |]))
@@ -1323,7 +1336,7 @@ namespace ProviderImplementation.ProvidedTypes
             evalMethodOverrides ()
             methodOverrides.ToArray()
 
-        let customAttributesImpl = CustomAttributesImpl(customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         do if nonNullable then customAttributesImpl.NonNullable <- true
         do if hideObjectMethods then customAttributesImpl.HideObjectMethods <- true
@@ -8782,8 +8795,31 @@ namespace ProviderImplementation.ProvidedTypes
                 let codeT = List.map convExprToTgt argExprs2
                 ctorT, codeT)
 
-        and convCustomAttributesDataToTgt (d: IList<CustomAttributeData>) = Seq.toArray d // TODO: Consider converting these
+        and convMemberRefToTgt (x: MemberInfo) =
+            match x with 
+            | :? PropertyInfo as p -> convPropertyRefToTgt p :> MemberInfo
+            | :? FieldInfo as p -> convFieldRefToTgt p :> MemberInfo
+            | :? MethodInfo as p -> convMethodRefToTgt p :> MemberInfo
+            | :? ConstructorInfo as p -> convConstructorRefToTgt p :> MemberInfo
+            | :? Type as p -> convTypeToTgt p :> MemberInfo
+            | _ -> failwith "unknown member info"
 
+        and convCustomAttributesTypedArg (x: CustomAttributeTypedArgument) =
+            CustomAttributeTypedArgument(convTypeToTgt x.ArgumentType, x.Value)
+
+        and convCustomAttributesNamedArg (x: CustomAttributeNamedArgument) =
+            CustomAttributeNamedArgument(convMemberRefToTgt x.MemberInfo, convCustomAttributesTypedArg x.TypedValue)
+
+        and convCustomAttributeDataToTgt (x: CustomAttributeData) = 
+             { new CustomAttributeData () with
+                member __.Constructor =  convConstructorRefToTgt x.Constructor 
+                member __.ConstructorArguments = [| for arg in x.ConstructorArguments -> convCustomAttributesTypedArg arg |] :> IList<_>
+                member __.NamedArguments = [| for arg in x.NamedArguments -> convCustomAttributesNamedArg arg |] :> IList<_>
+             }
+
+        and convCustomAttributesDataToTgt (cattrs: IList<CustomAttributeData>) = 
+            cattrs |> Array.ofSeq |> Array.map convCustomAttributeDataToTgt 
+ 
         and convProvidedTypeDefToTgt (x: ProvidedTypeDefinition) =
           if x.BelongsToTargetModel then failwithf "unexpected target type definition '%O'" x
           match typeTableFwd.TryGetValue(x) with
@@ -8824,9 +8860,9 @@ namespace ProviderImplementation.ProvidedTypes
                                         Some ((let mutable idx = 0 in fun () -> let vs, idx2 = x.GetMembersFromCursor(idx) in idx <- idx2; vs |> Array.map (convMemberDefToTgt xT)), 
                                               (let mutable idx = 0 in fun () -> let vs, idx2 = x.GetInterfaceImplsFromCursor(idx) in idx <- idx2; vs |> Array.map convTypeToTgt), 
                                               (let mutable idx = 0 in fun () -> let vs, idx2 = x.GetMethodOverridesFromCursor(idx) in idx <- idx2; vs |> Array.map (fun (a,b) -> (convMethodRefToTgt a :?> ProvidedMethod), convMethodRefToTgt b))), 
-                                        (x.GetCustomAttributesData >> convCustomAttributesDataToTgt),
-                                        x.HideObjectMethods, 
-                                        x.NonNullable) 
+                                        (x.GetCustomAttributesData >> convCustomAttributesDataToTgt), 
+                                        x.NonNullable,
+                                        x.HideObjectMethods) 
 
             Debug.Assert(not (typeTableFwd.ContainsKey(x)))
             typeTableFwd.[x] <- xT
