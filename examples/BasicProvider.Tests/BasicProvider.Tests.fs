@@ -1,11 +1,11 @@
 #if INTERACTIVE
-#r @"../test/BasicProvider.dll"
+#r @"../BasicProvider/bin/Debug/netstandard2.0/BasicProvider.dll"
 #endif
 
 module BasicProvider.Tests
 
-open BasicProvider.Provided
 open Xunit
+open BasicProvider.Provided
 
 [<Fact>]
 let ``Default constructor should create instance`` () =

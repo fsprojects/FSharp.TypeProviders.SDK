@@ -1,28 +1,29 @@
-﻿<Project>
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <!-- See https://stackoverflow.com/questions/43921992/how-can-i-use-beforebuild-and-afterbuild-targets-with-visual-studio-2017 -->
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <Import Project="..\..\netfx.props" />
-
   <PropertyGroup>
      <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
   </PropertyGroup>
-
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OtherFlags>--simpleresolution --nocopyfsharpcore --simpleresolution --nocopyfsharpcore --simpleresolution --nocopyfsharpcore --simpleresolution --nocopyfsharpcore</OtherFlags>
+  </PropertyGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-
   <ItemGroup>
     <Compile Include="BasicProvider.Runtime.fs" />
   </ItemGroup>
-
   <Target Name="AfterBuild">  
     <!-- Note: BasicProvider.DesignTime.fsproj must have been built before this project -->
 
     <!-- We place BOTH the net461 and netstandard2.0 design-time DLLs in well-known locations with resepct to the runtime DLL -->
     <!-- This enables any runtime DLL to be used with any host tooling running in either netcoreapp2.0+ or net461+ -->
-    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net461\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\net461" />  
-    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />  
+    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net461\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\net461" Condition="'$(TargetFramework)' == 'net461'" />
+    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" Condition="'$(TargetFramework)' == 'netstandard2.0'" />  
 
     <!-- We also place the net461 design-time DLLs alongside the runtime DLL for loading by legacy F# toolchains -->
+    <!-- for a definition of legacy, see: https://github.com/fsharp/fslang-design/blob/master/tooling/FST-1003-loading-type-provider-design-time-components.md -->
     <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\net461\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)" Condition="'$(TargetFramework)' == 'net461'" />  
+    <!-- until the F# Tooling RFC above is implemented, the copy comand below is required for IDE based toolchains, when targetting standard. Warning: this will overwrite the net4 legacy step above, when built last in a build sequence. Uncomment if you need it --> 
+    <!-- <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)" Condition="'$(TargetFramework)' == 'netstandard2.0'" /> -->
   </Target>  
-  
 </Project>
