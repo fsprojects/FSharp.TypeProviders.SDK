@@ -31,7 +31,7 @@ type internal TcImports(bas: TcImports option, dllInfos: DllInfo list) =
     member __.DllInfos = dllInfos
 
 
-type internal Testing() =
+type Testing() =
 
     /// Simulates a real instance of TypeProviderConfig
     static member MakeSimulatedTypeProviderConfig (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list, ?isHostedExecution, ?isInvalidationSupported) =
