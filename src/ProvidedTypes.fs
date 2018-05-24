@@ -8655,16 +8655,21 @@ namespace ProviderImplementation.ProvidedTypes
                 Debug.Assert((match mT with :? ProvidedMethod as x -> x.BelongsToTargetModel | _ -> true), "expected a target ProvidedMethod")
                 mT
 
-        and convConstructorRefToTgt (cons: ConstructorInfo) =
+        and tryConvConstructorRefToTgt (cons: ConstructorInfo) =
             Debug.Assert((match cons with :? ProvidedConstructor as x -> not x.BelongsToTargetModel | _ -> true), "unexpected target ProvidedConstructor")
             let declTyT = convTypeToTgt cons.DeclaringType
             let parameterTypesT = cons.GetParameters() |> Array.map (fun p -> convTypeToTgt p.ParameterType)
             let consT = declTyT.GetConstructor(parameterTypesT)
             match consT with
-            | null -> failwithf "Constructor '%O' not found in type '%O'. This constructor may be missing in the types available in the target assemblies." cons declTyT
+            | null -> Choice1Of2 (sprintf "Constructor '%O' not found in type '%O'. This constructor may be missing in the types available in the target assemblies." cons declTyT)
             | _ -> 
                 Debug.Assert((match consT with :? ProvidedConstructor as x -> x.BelongsToTargetModel | _ -> true), "expected a target ProvidedConstructor")
-                consT
+                Choice2Of2 consT
+
+        and convConstructorRefToTgt (cons: ConstructorInfo) =
+            match tryConvConstructorRefToTgt cons with 
+            | Choice1Of2 err -> failwith err
+            | Choice2Of2 res -> res
 
         and convVarToSrc (v: Var) =
             match varTableBwd.TryGetValue v with
@@ -8810,15 +8815,21 @@ namespace ProviderImplementation.ProvidedTypes
         and convCustomAttributesNamedArg (x: CustomAttributeNamedArgument) =
             CustomAttributeNamedArgument(convMemberRefToTgt x.MemberInfo, convCustomAttributesTypedArg x.TypedValue)
 
-        and convCustomAttributeDataToTgt (x: CustomAttributeData) = 
-             { new CustomAttributeData () with
-                member __.Constructor =  convConstructorRefToTgt x.Constructor 
-                member __.ConstructorArguments = [| for arg in x.ConstructorArguments -> convCustomAttributesTypedArg arg |] :> IList<_>
-                member __.NamedArguments = [| for arg in x.NamedArguments -> convCustomAttributesNamedArg arg |] :> IList<_>
-             }
+        and tryConvCustomAttributeDataToTgt (x: CustomAttributeData) = 
+             // Allow a fail on AllowNullLiteralAttribute. Some downlevel FSharp.Core don't have this. 
+             // In this case just skip the attribute which means null is allowed when targeting downlevel FSharp.Core.
+             match tryConvConstructorRefToTgt x.Constructor  with 
+             | Choice1Of2 _ when x.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name -> None
+             | Choice1Of2 msg -> failwith msg
+             | Choice2Of2 res -> 
+                 Some
+                     { new CustomAttributeData () with
+                        member __.Constructor =  res
+                        member __.ConstructorArguments = [| for arg in x.ConstructorArguments -> convCustomAttributesTypedArg arg |] :> IList<_>
+                        member __.NamedArguments = [| for arg in x.NamedArguments -> convCustomAttributesNamedArg arg |] :> IList<_> }
 
         and convCustomAttributesDataToTgt (cattrs: IList<CustomAttributeData>) = 
-            cattrs |> Array.ofSeq |> Array.map convCustomAttributeDataToTgt 
+            cattrs |> Array.ofSeq |> Array.choose tryConvCustomAttributeDataToTgt 
  
         and convProvidedTypeDefToTgt (x: ProvidedTypeDefinition) =
           if x.BelongsToTargetModel then failwithf "unexpected target type definition '%O'" x

@@ -549,7 +549,7 @@ type public SampleTypeProvider(config : TypeProviderConfig) as this =
 
         containersType.AddMembersDelayed(fun _ -> 
             ["A";"B";"C";"D";"E" ] |> List.map (fun name -> 
-                let oneDomainType = ProvidedTypeDefinition("DomainTypeFor"+name, Some typeof<obj> (* , nonNullable = true *) )
+                let oneDomainType = ProvidedTypeDefinition("DomainTypeFor"+name, Some typeof<obj>, nonNullable = true )
 
                 // Note that this call expands the nested types under domainType "dynamically", i.e. potentially long after 
                 // domainType has been added to its parent and returned to the compiler.  This is allowed and is
@@ -585,7 +585,7 @@ type public SampleTypeProvider(config : TypeProviderConfig) as this =
 
 [<Fact>]
 let ``check on-demand production of members``() = 
-    let refs = Targets.DotNet45FSharp31Refs()
+    let refs = Targets.DotNet45FSharp41Refs()
     let tp,t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, SampleTypeProvider, [| box "Arg" |]  )
 
     let domainTy = t.GetNestedType("Domain")
