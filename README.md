@@ -114,7 +114,7 @@ Here is a guide to the steps to perform:
    
    * If your TPDTC contains a copy of your TPRTC implementation then use [`assemblyReplacementMap`](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L12)
 
-4. Work out how much your TPRTC (runtime component) depends on .NET Framework by string to target `netstandard2.0`.  You may need to use different package references to try this.
+4. Work out how much your TPRTC (runtime component) depends on .NET Framework by trying to target `netstandard2.0`.  You may need to use different package references to try this.
 
    * If your TPRTC **fundamentally** depends on .NET Framework, then you will not be able to use your type provider within projects targeting .NET Core or .NET Standard. Keep targeting your TPRTC at .NET Framework.
    
