@@ -1235,7 +1235,10 @@ namespace ProviderImplementation.ProvidedTypes
       | Type of ProvidedTypeDefinition
       | TypeToBeDecided
 
-    and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, getBaseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, initialData, customAttributesData, nonNullable, hideObjectMethods) as this =
+    /// backingDataSource is a set of functions to fetch backing data for the ProvidedTypeDefinition,
+    /// and allows us to reuse this type for both target and source models, even when the
+    /// source model is being incrementally updates by further .AddMember calls
+    and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, getBaseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, backingDataSource, customAttributesData, nonNullable, hideObjectMethods) as this =
         inherit TypeDelegator()
 
         do match container, !ProvidedTypeDefinition.Logger with
@@ -1268,15 +1271,29 @@ namespace ProviderImplementation.ProvidedTypes
         let methodOverrides = ResizeArray<ProvidedMethod * MethodInfo>()
         let methodOverridesQueue = ResizeArray<unit -> (ProvidedMethod * MethodInfo)[]>()
 
-        do match initialData with 
+        do match backingDataSource with 
            | None -> () 
-           | Some (getFreshMembers, getFreshInterfaces, getFreshMethodOverrides) ->
+           | Some (_, getFreshMembers, getFreshInterfaces, getFreshMethodOverrides) ->
                membersQueue.Add getFreshMembers
                interfacesQueue.Add getFreshInterfaces
                methodOverridesQueue.Add getFreshMethodOverrides
 
+        let checkFreshMembers() =
+            match backingDataSource with 
+            | None -> false
+            | Some (checkFreshMembers, _getFreshMembers, _getFreshInterfaces, _getFreshMethodOverrides) -> checkFreshMembers()
+
+        let moreMembers() =
+            membersQueue.Count > 0 || checkFreshMembers() 
+
         let evalMembers() =
-            if membersQueue.Count > 0 then
+            if moreMembers() then
+               // re-add the getFreshMembers call from the backingDataSource to make sure we fetch the latest translated members from the source model
+                match backingDataSource with 
+                | None -> () 
+                | Some (_, getFreshMembers, _getFreshInterfaces, _getFreshMethodOverrides) ->
+                    membersQueue.Add getFreshMembers
+
                 let elems = membersQueue |> Seq.toArray // take a copy in case more elements get added
                 membersQueue.Clear()
                 for  f in elems do
@@ -1295,30 +1312,25 @@ namespace ProviderImplementation.ProvidedTypes
                                 members.Add (e.GetRemoveMethod true)
                         | _ -> ()
                 
-               // re-add the getFreshMembers call from the initialData to make sure we fetch the latest translated members from the source model
-                match initialData with 
-                | None -> () 
-                | Some (getFreshMembers, _getInterfaceImpls, _getMethodOverrides) ->
-                    membersQueue.Add getFreshMembers
-
-
         let getMembers() =
             evalMembers()
             members.ToArray()
 
-        (*
-        // Save common lookups for provided types with lots of members
-        let mutable bindings :  Dictionary<(string * BindingFlags * string option), obj> = null
-        let saveCommonBind key f : 'T = 
+        // Save some common lookups for provided types with lots of members
+        let mutable bindings :  Dictionary<int32, obj> = null
+
+        let save (key: BindingFlags) f : 'T = 
+            let key = int key
+
             if bindings = null then 
                 bindings <- Dictionary<_,_>(HashIdentity.Structural)
-            if membersQueue.Count = 0 && bindings.ContainsKey(key)  then 
+
+            if not (moreMembers()) && bindings.ContainsKey(key)  then 
                 bindings.[key] :?> 'T
             else
-                let res = f ()
+                let res = f () // this will refresh the members
                 bindings.[key] <- box res
                 res
-                *)
 
         let evalInterfaces() =
             if interfacesQueue.Count > 0 then
@@ -1327,9 +1339,9 @@ namespace ProviderImplementation.ProvidedTypes
                 for  f in elems do
                     for i in f() do
                         interfaceImpls.Add i
-                match initialData with 
+                match backingDataSource with 
                 | None -> () 
-                | Some (_getFreshMembers, getInterfaces, _getMethodOverrides) ->
+                | Some (_, _getFreshMembers, getInterfaces, _getFreshMethodOverrides) ->
                     interfacesQueue.Add getInterfaces
 
         let getInterfaces() =
@@ -1343,12 +1355,12 @@ namespace ProviderImplementation.ProvidedTypes
                 for  f in elems do
                     for i in f() do
                         methodOverrides.Add i
-                match initialData with 
+                match backingDataSource with 
                 | None -> () 
-                | Some (_getFreshMembers, _getInterfaceImpls, getMethodOverrides) ->
-                    methodOverridesQueue.Add getMethodOverrides
+                | Some (_, _getFreshMembers, _getFreshInterfaces, getFreshMethodOverrides) ->
+                    methodOverridesQueue.Add getFreshMethodOverrides
 
-        let getMethodOverrides () =
+        let getFreshMethodOverrides () =
             evalMethodOverrides ()
             methodOverrides.ToArray()
 
@@ -1405,36 +1417,36 @@ namespace ProviderImplementation.ProvidedTypes
         override __.BaseType = match baseType.Value with Some ty -> ty | None -> null
 
         override __.GetConstructors bindingFlags =
-            (//saveCommonBind ("ctor", bindingFlags, None) (fun () -> 
+            (//save ("ctor", bindingFlags, None) (fun () -> 
                 getMembers() 
                 |> Array.choose (function :? ConstructorInfo as c when memberBinds false bindingFlags c.IsStatic c.IsPublic -> Some c | _ -> None))
 
         override this.GetMethods bindingFlags =
-            (//saveCommonBind ("methods", bindingFlags, None) (fun () -> 
+            (//save ("methods", bindingFlags, None) (fun () -> 
                 getMembers() 
                 |> Array.choose (function :? MethodInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
                 |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetMethods(bindingFlags)))))
 
         override this.GetFields bindingFlags =
-            (//saveCommonBind ("fields", bindingFlags, None) (fun () -> 
+            (//save ("fields", bindingFlags, None) (fun () -> 
                 getMembers() 
                 |> Array.choose (function :? FieldInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
                 |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetFields(bindingFlags)))))
 
         override this.GetProperties bindingFlags =
-            (//saveCommonBind ("props", bindingFlags, None) (fun () -> 
+            (//save ("props", bindingFlags, None) (fun () -> 
                 getMembers() 
                 |> Array.choose (function :? PropertyInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
                 |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetProperties(bindingFlags)))))
 
         override this.GetEvents bindingFlags =
-            (//saveCommonBind ("events", bindingFlags, None) (fun () -> 
+            (//save ("events", bindingFlags, None) (fun () -> 
                 getMembers() 
                 |> Array.choose (function :? EventInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> Some m | _ -> None)
                 |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetEvents(bindingFlags)))))
 
         override __.GetNestedTypes bindingFlags =
-            (//saveCommonBind ("nested", bindingFlags, None) (fun () -> 
+            (//save ("nested", bindingFlags, None) (fun () -> 
                 getMembers() 
                 |> Array.choose (function :? Type as m when memberBinds true bindingFlags false m.IsPublic || m.IsNestedPublic -> Some m | _ -> None)
                 |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetNestedTypes(bindingFlags)))))
@@ -1445,36 +1457,41 @@ namespace ProviderImplementation.ProvidedTypes
             if xs.Length > 0 then xs.[0] else null
 
         override __.GetMethodImpl(name, bindingFlags, _binderBinder, _callConvention, _types, _modifiers): MethodInfo =
-            (//saveCommonBind ("methimpl", bindingFlags, Some name) (fun () -> 
+            (//save ("methimpl", bindingFlags, Some name) (fun () -> 
                 // This is performance critical for large spaces of provided methods and properties
                 // Save a table of the methods grouped by name
-                //let methodsGrouped = 
-                //    saveCommonBind ("methodgroups", bindingFlags, None) (fun () -> 
-                //        let methods = this.GetMethods bindingFlags
-                //        methods |> Seq.groupBy (fun m -> m.Name) |> Seq.map (fun (k,v) -> k, Seq.toArray v) |> dict)
-                //
-                //let xs = if methodsGrouped.ContainsKey name then methodsGrouped.[name] else [| |]
-                let xs = this.GetMethods bindingFlags |> Array.filter (fun m -> m.Name = name)
+                let table = 
+                    save (bindingFlags ||| BindingFlags.InvokeMethod) (fun () -> 
+                        let methods = this.GetMethods bindingFlags
+                        methods |> Seq.groupBy (fun m -> m.Name) |> Seq.map (fun (k,v) -> k, Seq.toArray v) |> dict)
+                
+                let xs = if table.ContainsKey name then table.[name] else [| |]
+                //let xs = this.GetMethods bindingFlags |> Array.filter (fun m -> m.Name = name)
                 if xs.Length > 1 then failwithf "GetMethodImpl. not support overloads, name = '%s', methods - '%A', callstack = '%A'" name xs Environment.StackTrace
                 if xs.Length > 0 then xs.[0] else null)
 
         override this.GetField(name, bindingFlags) =
-            (//saveCommonBind ("field1", bindingFlags, Some name) (fun () -> 
+            (//save ("field1", bindingFlags, Some name) (fun () -> 
                 let xs = this.GetFields bindingFlags |> Array.filter (fun m -> m.Name = name)
                 if xs.Length > 0 then xs.[0] else null)
 
         override __.GetPropertyImpl(name, bindingFlags, _binder, _returnType, _types, _modifiers) =
-            (//saveCommonBind ("prop1", bindingFlags, Some name) (fun () -> 
-                let xs = this.GetProperties bindingFlags |> Array.filter (fun m -> m.Name = name)
+            (//save ("prop1", bindingFlags, Some name) (fun () -> 
+                let table = 
+                    save (bindingFlags ||| BindingFlags.GetProperty) (fun () -> 
+                        let methods = this.GetProperties bindingFlags
+                        methods |> Seq.groupBy (fun m -> m.Name) |> Seq.map (fun (k,v) -> k, Seq.toArray v) |> dict)
+                let xs = if table.ContainsKey name then table.[name] else [| |]
+                //let xs = this.GetProperties bindingFlags |> Array.filter (fun m -> m.Name = name)
                 if xs.Length > 0 then xs.[0] else null)
 
         override __.GetEvent(name, bindingFlags) =
-            (//saveCommonBind ("event1", bindingFlags, Some name) (fun () -> 
+            (//save ("event1", bindingFlags, Some name) (fun () -> 
                 let xs = this.GetEvents bindingFlags |> Array.filter (fun m -> m.Name = name)
                 if xs.Length > 0 then xs.[0] else null)
 
         override __.GetNestedType(name, bindingFlags) =
-            (//saveCommonBind ("nested1", bindingFlags, Some name) (fun () -> 
+            (//save ("nested1", bindingFlags, Some name) (fun () -> 
                 let xs = this.GetNestedTypes bindingFlags |> Array.filter (fun m -> m.Name = name)
                 if xs.Length > 0 then xs.[0] else null)
 
@@ -1578,6 +1595,10 @@ namespace ProviderImplementation.ProvidedTypes
         member __.StaticParams = staticParams
         member __.StaticParamsApply = staticParamsApply
         
+        // Count the members declared since the indicated position in the members list.  This allows the target model to observe 
+        // incremental additions made to the source model
+        member __.CountMembersFromCursor(idx: int) = evalMembers(); members.Count - idx
+
         // Fetch the members declared since the indicated position in the members list.  This allows the target model to observe 
         // incremental additions made to the source model
         member __.GetMembersFromCursor(idx: int) = evalMembers(); members.GetRange(idx, members.Count - idx).ToArray(), members.Count
@@ -1589,7 +1610,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.GetMethodOverridesFromCursor(idx: int) = evalMethodOverrides(); methodOverrides.GetRange(idx, methodOverrides.Count - idx).ToArray(), methodOverrides.Count
 
         // Fetch the method overrides 
-        member __.GetMethodOverrides() = getMethodOverrides()
+        member __.GetMethodOverrides() = getFreshMethodOverrides()
 
         member this.ErasedBaseType : Type = ProvidedTypeDefinition.EraseType(this.BaseType)
 
@@ -8894,6 +8915,29 @@ namespace ProviderImplementation.ProvidedTypes
             // Use a 'let rec' to allow access to the target as the declaring
             // type of the contents in a delayed way.
             let rec xT : ProvidedTypeDefinition = 
+                let mutable methodsIdx = 0 
+                let checkFreshMethods() = 
+                    x.CountMembersFromCursor(methodsIdx) > 0
+                    
+                let getFreshMethods() = 
+                    let vs, idx2 = x.GetMembersFromCursor(methodsIdx) 
+                    methodsIdx <- idx2
+                    vs |> Array.map (convMemberDefToTgt xT)
+
+                let mutable interfacesIdx = 0 
+                let getFreshInterfaces() = 
+                    let vs, idx2 = x.GetInterfaceImplsFromCursor(interfacesIdx) 
+                    interfacesIdx <- idx2
+                    vs |> Array.map convTypeToTgt
+
+                let mutable overridesIdx = 0 
+                let getFreshMethodOverrides() = 
+                    let vs, idx2 = x.GetMethodOverridesFromCursor(overridesIdx) 
+                    overridesIdx <- idx2
+                    vs |> Array.map (fun (a,b) -> (convMethodRefToTgt a :?> ProvidedMethod), convMethodRefToTgt b)
+
+                let backingDataSource = Some (checkFreshMethods, getFreshMethods, getFreshInterfaces, getFreshMethodOverrides)
+
                 ProvidedTypeDefinition(true, container, x.Name, 
                                         (x.BaseTypeRaw >> Option.map convTypeToTgt), 
                                         x.AttributesRaw, 
@@ -8903,9 +8947,7 @@ namespace ProviderImplementation.ProvidedTypes
                                             let t = f s p 
                                             let tT = convProvidedTypeDefToTgt t
                                             tT),
-                                        Some ((let mutable idx = 0 in fun () -> let vs, idx2 = x.GetMembersFromCursor(idx) in idx <- idx2; vs |> Array.map (convMemberDefToTgt xT)), 
-                                              (let mutable idx = 0 in fun () -> let vs, idx2 = x.GetInterfaceImplsFromCursor(idx) in idx <- idx2; vs |> Array.map convTypeToTgt), 
-                                              (let mutable idx = 0 in fun () -> let vs, idx2 = x.GetMethodOverridesFromCursor(idx) in idx <- idx2; vs |> Array.map (fun (a,b) -> (convMethodRefToTgt a :?> ProvidedMethod), convMethodRefToTgt b))), 
+                                        backingDataSource,
                                         (x.GetCustomAttributesData >> convCustomAttributesDataToTgt), 
                                         x.NonNullable,
                                         x.HideObjectMethods) 
