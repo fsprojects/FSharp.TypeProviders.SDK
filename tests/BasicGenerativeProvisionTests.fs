@@ -26,7 +26,8 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
     let asm = Assembly.GetExecutingAssembly()
     let createType (typeName, _) =
         let myAssem = ProvidedAssembly()
-        let myType = ProvidedTypeDefinition(myAssem, ns, typeName, Some typeof<obj>, isErased=false)
+        let myType = ProvidedTypeDefinition(myAssem, ns, typeName, Some typeof<obj>, isErased=false, hideObjectMethods=true)
+        myType.AddXmlDoc("Here is some doc")
         let embedString = "test"
         // Special TPSDK support for embedding Decimal values
         let embedM = 5M
@@ -131,6 +132,15 @@ let testCases() =
      ("F# 4.1 .NET Standard 2.0", "4.4.1.0", (fun _ ->  true), Targets.DotNetStandard20FSharp41Refs)
      ("F# 4.1 .NET CoreApp 2.0", "4.4.1.0", (fun _ ->  true), Targets.DotNetCoreApp20FSharp41Refs) ]
 
+let possibleVersions = 
+    [ "3.259.3.1"
+      "3.259.4.0"
+      "4.3.1.0"
+      "4.4.0.0"
+      "4.4.1.0"
+      "4.4.3.0"
+      (typeof<list<int>>.Assembly.GetName().Version.ToString()) ]
+
 let hostedTestCases() = 
     [("4.4.0.0", (fun _ ->  Targets.supportsFSharp40()), Targets.DotNet45FSharp40Refs) ]
 
@@ -163,7 +173,7 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             printfn "----- %s ------- " text 
             printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" text res
-            for (text2, desc2, _, _) in testCases() do 
+            for (desc2) in possibleVersions do 
                 let contains = res.Contains("FSharp.Core, Version="+desc2)
                 if contains = (desc = desc2) then ()
                 elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+" in output for "+ text)
@@ -181,8 +191,6 @@ type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypePro
         let myCtorOnBaseType = ProvidedConstructor([ProvidedParameter("implicitCtorFieldName",typeof<int>)], invokeCode = (fun _args -> <@@ () @@>), IsImplicitConstructor=true)
         // Note: myType refers to another generated type as its base class.  
         let myType = ProvidedTypeDefinition(myAssem, ns, typeName, Some (myBaseType :> Type), isErased=false)
-
-
         // Note: this method refers to another generated type as its return type
         let myMeth1 = ProvidedMethod("MyInstanceMethodOnBaseType", [], myBaseType, isStatic = false, invokeCode = (fun _args -> Expr.NewObject(myCtorOnBaseType, [Expr.Value(1)])))
         // Note: this method refers to another generated type as its return type
@@ -242,7 +250,7 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for co
             printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes %s ------- " text 
             printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" text res
-            for (text2, desc2, _, _) in testCases() do 
+            for desc2 in possibleVersions do 
                 let contains = res.Contains("FSharp.Core, Version="+desc2)
                 if contains = (desc = desc2) then ()
                 elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+" in output for "+text)

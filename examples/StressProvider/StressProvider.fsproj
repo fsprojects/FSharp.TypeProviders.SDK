@@ -6,12 +6,12 @@
      <GenerateDocumentationFile>true</GenerateDocumentationFile>
      <Version>0.1</Version>
      <!-- Use an explicit nuspec to allow us to specify "references", the metadata properties at https://docs.microsoft.com/en-us/dotnet/core/tools/csproj#nuget-metadata-properties don't allow this --> 
-     <NuspecFile>ComboProvider.nuspec</NuspecFile>
+     <NuspecFile>StressProvider.nuspec</NuspecFile>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\src\ProvidedTypes.fsi" />
     <Compile Include="..\..\src\ProvidedTypes.fs" />
-    <Compile Include="ComboProvider.fs" />
+    <Compile Include="StressProvider.fs" />
 
     <!-- These files are the facades necessary to run .NET Standard 2.0 components on .NET Framework 4.6.1 (.NET Framework 4.7 will -->
     <!-- come with these facades included). Because the type provider is a .NET Standard 2.0 component, the deployment of the type -->

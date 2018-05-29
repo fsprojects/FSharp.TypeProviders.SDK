@@ -50,10 +50,12 @@ type ErasingConstructorProvider (config : TypeProviderConfig) as this =
     let asm = Assembly.GetExecutingAssembly()
 
     let createTypes () =
-        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>, hideObjectMethods=true)
 
         let ctor = ProvidedConstructor([], invokeCode = fun _args -> <@@ ["My internal state"] :> obj @@>)
         myType.AddMember(ctor)
+
+        myType.AddXmlDoc("Here is some doc")
 
         let ctor2 = ProvidedConstructor([ProvidedParameter("InnerState", typeof<string list>)], invokeCode = fun args -> <@@ (%%(args.[0]):string list) :> obj @@>)
         myType.AddMember(ctor2)
@@ -91,10 +93,9 @@ type ErasingProviderWithStaticParams (config : TypeProviderConfig) as this =
         this.AddNamespace(ns, [myType])
 
 let testCrossTargeting (refs: string list) provider args = 
-    Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, provider, args ) 
-    |> (fun t -> Testing.FormatProvidedType(t,useQualifiedNames=true))
-    |> fun s -> s.Trim()
-    |> fun s -> s.Replace("\r\n","\n")
+    let tp, t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, provider, args ) 
+    let fmt = Testing.FormatProvidedType(tp, t, useQualifiedNames=true)
+    fmt.Trim().Replace("\r\n","\n")
 
 [<Fact>]
 let ``ErasingProvider generates for .NET 4.5 F# 3.1 correctly``() : unit  = 
@@ -548,7 +549,7 @@ type public SampleTypeProvider(config : TypeProviderConfig) as this =
 
         containersType.AddMembersDelayed(fun _ -> 
             ["A";"B";"C";"D";"E" ] |> List.map (fun name -> 
-                let oneDomainType = ProvidedTypeDefinition("DomainTypeFor"+name, Some typeof<obj>, nonNullable = true)
+                let oneDomainType = ProvidedTypeDefinition("DomainTypeFor"+name, Some typeof<obj>, nonNullable = true )
 
                 // Note that this call expands the nested types under domainType "dynamically", i.e. potentially long after 
                 // domainType has been added to its parent and returned to the compiler.  This is allowed and is
@@ -584,68 +585,68 @@ type public SampleTypeProvider(config : TypeProviderConfig) as this =
 
 [<Fact>]
 let ``check on-demand production of members``() = 
-    let refs = Targets.DotNet45FSharp31Refs()
-    Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, SampleTypeProvider, [| box "Arg" |]  ) |> (fun t -> 
-        let domainTy = t.GetNestedType("Domain")
+    let refs = Targets.DotNet45FSharp41Refs()
+    let tp,t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, SampleTypeProvider, [| box "Arg" |]  )
 
-        Assert.Null(domainTy.GetNestedType("DomainTypeForA")) // DomainTypeForA type not yet created
+    let domainTy = t.GetNestedType("Domain")
 
-        let containersType  = domainTy.GetNestedType("Containers")
-        Assert.NotNull(containersType)
+    Assert.Null(domainTy.GetNestedType("DomainTypeForA")) // DomainTypeForA type not yet created
 
-        Assert.Equal(domainTy.GetMembers().Length, 1) // DomainTypeForA type not yet created
-        Assert.Null(domainTy.GetNestedType("DomainTypeForA")) // DomainTypeForA type not yet created.  
+    let containersType  = domainTy.GetNestedType("Containers")
+    Assert.NotNull(containersType)
 
-        let containersPropA  = containersType.GetProperty("A") // this call also creates DomainTypeForA
-        Assert.NotNull(containersPropA)
-        Assert.True(containersPropA.Name = "A")
+    Assert.Equal(domainTy.GetMembers().Length, 1) // DomainTypeForA type not yet created
+    Assert.Null(domainTy.GetNestedType("DomainTypeForA")) // DomainTypeForA type not yet created.  
 
-        // Check there is no AllowNullLiteralAttribute
-        Assert.True (domainTy.GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name) |> not)
+    let containersPropA  = containersType.GetProperty("A") // this call also creates DomainTypeForA
+    Assert.NotNull(containersPropA)
+    Assert.True(containersPropA.Name = "A")
 
-        // Fetching this type was failing becuase the call to expand domainType when getting property A for the first time was only applying to the source model,
-        // not the translated target model
-        let domainTyForA  = domainTy.GetNestedType("DomainTypeForA")
+    // Check there is no AllowNullLiteralAttribute
+    Assert.True (domainTy.GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name) |> not)
 
-        let bindAll = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static  ||| BindingFlags.Instance
-        Assert.NotNull(domainTyForA)
-        Assert.True(domainTyForA.Name = "DomainTypeForA")
-        Assert.Equal(1 + 5, domainTy.GetMembers(bindAll).Length) // one for Containers, 5 properties, 5 getters for properties, 5 nested types
-        Assert.Equal(0, domainTy.GetMethods(bindAll).Length) 
-        Assert.Equal(1 + 5, domainTy.GetNestedTypes(bindAll).Length) 
-        Assert.Equal(5, containersType.GetMethods(bindAll).Length) // 5 properties, 5 getters for properties
-        Assert.Equal(5, containersType.GetProperties(bindAll).Length) // 5 properties, 5 getters for properties
-        Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
-        Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
-        Assert.Equal(5 + 5, containersType.GetMembers(bindAll).Length) // 5 properties, 5 getters for properties
-        
+    // Fetching this type was failing becuase the call to expand domainType when getting property A for the first time was only applying to the source model,
+    // not the translated target model
+    let domainTyForA  = domainTy.GetNestedType("DomainTypeForA")
 
-        Assert.NotNull(domainTy.GetNestedType("DomainTypeForA")) // type is still there
-        Assert.NotNull(domainTy.GetNestedType("DomainTypeForB")) // type is created because A, B, C, D, E all get created together
+    let bindAll = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static  ||| BindingFlags.Instance
+    Assert.NotNull(domainTyForA)
+    Assert.True(domainTyForA.Name = "DomainTypeForA")
+    Assert.Equal(1 + 5, domainTy.GetMembers(bindAll).Length) // one for Containers, 5 properties, 5 getters for properties, 5 nested types
+    Assert.Equal(0, domainTy.GetMethods(bindAll).Length) 
+    Assert.Equal(1 + 5, domainTy.GetNestedTypes(bindAll).Length) 
+    Assert.Equal(5, containersType.GetMethods(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(5, containersType.GetProperties(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(5 + 5, containersType.GetMembers(bindAll).Length) // 5 properties, 5 getters for properties
+    
 
-        let containersPropB  = containersType.GetProperty("B") // this should not re-create B!
-        Assert.True(containersPropB.Name = "B")
+    Assert.NotNull(domainTy.GetNestedType("DomainTypeForA")) // type is still there
+    Assert.NotNull(domainTy.GetNestedType("DomainTypeForB")) // type is created because A, B, C, D, E all get created together
 
-        let domainTyForB  = domainTy.GetNestedType("DomainTypeForB")
-        Assert.NotNull(domainTyForB)
+    let containersPropB  = containersType.GetProperty("B") // this should not re-create B!
+    Assert.True(containersPropB.Name = "B")
 
-        //Assert.True((domainTyForB :?> ProvidedTypeDefinition).NonNullable)
+    let domainTyForB  = domainTy.GetNestedType("DomainTypeForB")
+    Assert.NotNull(domainTyForB)
 
-        Assert.True (domainTyForB.GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name))
-        Assert.Equal (1, domainTyForB.GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name) |> Seq.length)
+    //Assert.True((domainTyForB :?> ProvidedTypeDefinition).NonNullable)
 
-        Assert.True(domainTyForB.Name = "DomainTypeForB")
+    Assert.True (domainTyForB.GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name))
+    Assert.Equal (1, domainTyForB.GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name) |> Seq.length)
 
-        // check we didn't create twice
-        Assert.Equal(1 + 5, domainTy.GetMembers(bindAll).Length) // one for Containers, 5 properties, 5 getters for properties, 5 nested types
-        Assert.Equal(0, domainTy.GetMethods(bindAll).Length) 
-        Assert.Equal(1 + 5, domainTy.GetNestedTypes(bindAll).Length) 
-        Assert.Equal(5 + 5, containersType.GetMembers(bindAll).Length) // 5 properties, 5 getters for properties
-        Assert.Equal(5, containersType.GetMethods(bindAll).Length) // 5 properties, 5 getters for properties
-        Assert.Equal(5, containersType.GetProperties(bindAll).Length) // 5 properties, 5 getters for properties
-        Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
-        Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
-    )
+    Assert.True(domainTyForB.Name = "DomainTypeForB")
+
+    // check we didn't create twice
+    Assert.Equal(1 + 5, domainTy.GetMembers(bindAll).Length) // one for Containers, 5 properties, 5 getters for properties, 5 nested types
+    Assert.Equal(0, domainTy.GetMethods(bindAll).Length) 
+    Assert.Equal(1 + 5, domainTy.GetNestedTypes(bindAll).Length) 
+    Assert.Equal(5 + 5, containersType.GetMembers(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(5, containersType.GetMethods(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(5, containersType.GetProperties(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
 
 
 [<TypeProvider>]
@@ -682,7 +683,6 @@ type ErasingProviderWithCustomAttributes (config : TypeProviderConfig) as this =
 [<Fact>]
 let ``check custom attributes``() = 
     let refs = Targets.DotNet45FSharp31Refs()
-    Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, ErasingProviderWithCustomAttributes, [| |]  ) |> (fun t -> 
-        Assert.True(t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name))
-        Assert.Equal(1, t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name) |> Seq.length)
-    )
+    let tp, t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, ErasingProviderWithCustomAttributes, [| |]  )
+    Assert.True(t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name))
+    Assert.Equal(1, t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name) |> Seq.length)

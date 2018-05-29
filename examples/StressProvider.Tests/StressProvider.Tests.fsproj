@@ -6,22 +6,16 @@
      <DefineConstants>NO_GENERATIVE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\src\ProvidedTypesTesting.fs">
-      <Link>ProvidedTypesTesting.fs</Link>
-    </Compile>
-    <Compile Include="BasicProvider.Tests.fs" />
+    <Compile Include="File1.fs" />
+    <Compile Include="StressProvider.Tests.fs" />
     <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp2.0' " />
-
     <None Include="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170517-02" />
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
-
-    <!-- When using the type provider, the reference is to the appropriate runtime DLL -->
-    <ProjectReference Include="..\BasicProvider\BasicProvider.fsproj" />
-
+    <ProjectReference Include="..\StressProvider\StressProvider.fsproj" />
+    
   </ItemGroup>
 </Project>

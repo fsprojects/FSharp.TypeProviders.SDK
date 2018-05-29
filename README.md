@@ -23,7 +23,7 @@ Building a type provider nearly always starts with adding these files to your pr
 * ProvidedTypes.fsi
 * ProvidedTypes.fs
 
-If using Paket, you can add code files by direct GitHub references like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/paket.dependencies#L20-L22) and reference the files in a project file like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/src/FSharp.Data.Source.fsproj#L54-L59).
+If using Paket, you can add code files by direct GitHub references like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/paket.dependencies#L20-L22) and reference the files in a project file like [this](https://github.com/dsyme/FSharp.Data/blob/b5df1ca30f5bb7749c4fd340b61f1b7fc43fb547/src/FSharp.Data.DesignTime.fsproj#L55).
 
 
 Type providers may be used in projects that generate .NET Standard code or target other .NET Frameworks than that being used to execute the F# compiler. 
@@ -114,7 +114,7 @@ Here is a guide to the steps to perform:
    
    * If your TPDTC contains a copy of your TPRTC implementation then use [`assemblyReplacementMap`](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L12)
 
-4. Work out how much your TPRTC (runtime component) depends on .NET Framework by string to target `netstandard2.0`.  You may need to use different package references to try this.
+4. Work out how much your TPRTC (runtime component) depends on .NET Framework by trying to target `netstandard2.0`.  You may need to use different package references to try this.
 
    * If your TPRTC **fundamentally** depends on .NET Framework, then you will not be able to use your type provider within projects targeting .NET Core or .NET Standard. Keep targeting your TPRTC at .NET Framework.
    
@@ -218,19 +218,16 @@ It will be increasingly common to make type providers where the TPDTC is a .NET 
 However, today, for a TPDTC to be .NET Standard 2.0, it must be loadable into host tools using .NET Framework 4.6.1 or Mono 5.x, the most common platforms for execution of F# tooling. Because .NET Framework 4.6.1 doesn't _fully_ support .NET Standard 2.0, this can only be done if the TPDTC ships alongside some facade DLLs.  Currently the following facade DLLs are needed alongside the TPDTC:
 
 ```
-    <!-- These files are the facades necessary to run .NET Standard 2.0 components on .NET Framweork 4.6.1 (.NET Framework 4.7 will -->
+    <!-- These files are the facades necessary to run .NET Standard 2.0 components on .NET Framework 4.6.1 (.NET Framework 4.7 will -->
     <!-- come with these facades included). Because the type provider is a .NET Standard 2.0 component, the deployment of the type -->
     <!--  provider must include these facade DLLs if it is to run hosted inside an F# compiler executing using  .NET Framework 4.6.1 or Mono 5.0. -->
-    <!-- -->
-    <!-- We are not yet sure if the presence of these files will prevent an otherwise .NET Standard 2.0 type provider running inside a -->
-    <!-- F# compiler executing using .NET CoreApp 2.0, as until recently F# compilers running using .NET CoreApp 2.0 do not load type providers correctly. -->
-    <None Include="..\..\packages\NETStandard.Library.NETFramework\build\net461\lib\netstandard.dll">
+    <None Include="..\..\packages\NetStandard.Library.NetFramework\build\net461\lib\netstandard.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\packages\NETStandard.Library.NETFramework\build\net461\lib\System.Reflection.dll">
+    <None Include="..\..\packages\NetStandard.Library.NetFramework\build\net461\lib\System.Reflection.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\packages\NETStandard.Library.NETFramework\build\net461\lib\System.Runtime.dll">
+    <None Include="..\..\packages\NetStandard.Library.NetFramework\build\net461\lib\System.Runtime.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
 ```
