@@ -7246,7 +7246,11 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
         override __.IsDefined(_attributeType, _inherit) = false
 
-        override this.MemberType = notRequired this "MemberType" this.Name
+        override this.MemberType =
+            match kind with
+            | TypeSymbolKind.OtherGeneric gtd -> gtd.MemberType
+            | _ -> notRequired this "MemberType" this.FullName
+            
         override this.GetMember(_name,_mt,_bindingFlags) = notRequired this "GetMember" this.Name
         override this.GUID = notRequired this "GUID" this.Name
         override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" this.Name
