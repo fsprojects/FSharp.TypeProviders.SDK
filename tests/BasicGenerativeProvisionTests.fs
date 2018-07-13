@@ -159,22 +159,16 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             let typeName = providedType.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
 
             let t = (tp :> ITypeProvider).ApplyStaticArguments(providedType, [| typeName |], staticArgs)
-            
-            //check that attributes read using the typed overload to GetCustomAttributes<t> can be read from the provided method
-            let firstMethod = t.GetMembers() |> Array.find (fun m -> m :? ProvidedMethod )
-            let attrib = firstMethod.GetCustomAttributes<CompiledNameAttribute>()
-            
+
             match t.Assembly with 
             | :? ProvidedAssembly -> ()
             | _ -> failwithf "expected a ProvidedAssembly"  
 
             let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
-            
             Assert.NotEqual(assemContents.Length, 0)
             
             // re-read the assembly with the more complete reader to allow us to look at generated references
             let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
-
             let res = [| for r in assem.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
             printfn "----- %s ------- " text 
             printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
