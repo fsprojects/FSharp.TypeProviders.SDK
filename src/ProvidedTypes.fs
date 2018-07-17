@@ -6815,8 +6815,10 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetMethodImplementationFlags() = notRequired this "GetMethodImplementationFlags" this.Name
         override this.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired this "Invoke" this.Name
         override this.ReflectedType = notRequired this "ReflectedType" this.Name
-        override __.GetCustomAttributes(_inherited) = emptyAttributes
-        override __.GetCustomAttributes(_attributeType, _inherited) = emptyAttributes
+        override __.GetCustomAttributes(inherited) =
+            gmd.GetCustomAttributes(inherited)
+        override __.GetCustomAttributes(attributeType, inherited) =
+            gmd.GetCustomAttributes(attributeType, inherited)
 
         override __.ToString() = gmd.ToString() + "@inst"
 
@@ -7246,7 +7248,11 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetCustomAttributes(_attributeType, _inherit) = emptyAttributes
         override __.IsDefined(_attributeType, _inherit) = false
 
-        override this.MemberType = notRequired this "MemberType" this.Name
+        override this.MemberType =
+            match kind with
+            | TypeSymbolKind.OtherGeneric gtd -> gtd.MemberType
+            | _ -> notRequired this "MemberType" this.FullName
+            
         override this.GetMember(_name,_mt,_bindingFlags) = notRequired this "GetMember" this.Name
         override this.GUID = notRequired this "GUID" this.Name
         override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" this.Name
