@@ -96,7 +96,7 @@ namespace ProviderImplementation.ProvidedTypes
         inherit MethodInfo
 
         /// When making a cross-targeting type provider, use this method instead of the ProvidedMethod constructor from ProvidedTypes
-        new: methodName: string * parameters: ProvidedParameter list * returnType: Type * invokeCode: (Expr list -> Expr) * ?isStatic: bool -> ProvidedMethod
+        new: methodName: string * parameters: ProvidedParameter list * returnType: Type * ?invokeCode: (Expr list -> Expr) * ?isStatic: bool -> ProvidedMethod
 
         /// Add XML documentation information to this provided method
         member AddObsoleteAttribute: message: string * ?isError: bool -> unit
@@ -126,7 +126,7 @@ namespace ProviderImplementation.ProvidedTypes
         member DefineStaticParameters: parameters: ProvidedStaticParameter list * instantiationFunction: (string -> obj[] -> ProvidedMethod) -> unit
 
         /// This method is for internal use only in the type provider SDK
-        member internal GetInvokeCode: Expr list -> Expr
+        member internal GetInvokeCode: (Expr list -> Expr) option
 
 
     /// Represents an erased provided property.
