@@ -229,7 +229,7 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for co
             let runtimeAssemblyRefs = refs()
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
-            let tp = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
+            let tp = GenerativeProviderWithRecursiveReferencesToGeneratedTypes cfg :> TypeProviderForNamespaces
             let providedNamespace = tp.Namespaces.[0] 
             let providedTypes  = providedNamespace.GetTypes()
             let providedType = providedTypes.[0] 
@@ -265,7 +265,7 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for ho
             let runtimeAssemblyRefs = refs()
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs, isHostedExecution=true) 
-            let tp = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
+            let tp = GenerativeProviderWithRecursiveReferencesToGeneratedTypes cfg :> TypeProviderForNamespaces
             let providedNamespace = tp.Namespaces.[0] 
             let providedTypes  = providedNamespace.GetTypes()
             let providedType = providedTypes.[0] 
