@@ -155,7 +155,7 @@ namespace ProviderImplementation.ProvidedTypes
             static let empty = ([| |] : 'T []) |> box |> unbox<obj[]>
             static member Empty() = empty
             static member CreateEmpty (typ : Type) =
-                let gtype = typedefof<Attributes<_>>.MakeGenericType([|typ|])
+                let gtype = typedefof<Attributes<_>>.MakeGenericType([| typ |])
                 let gmethod = gtype.GetMethod("Empty", BindingFlags.Static ||| BindingFlags.NonPublic )
                 gmethod.Invoke(null, [||]) :?> obj array
 
