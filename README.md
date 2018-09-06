@@ -81,6 +81,37 @@ See examples the [`examples`](examples) directory.
 * ComboProvider: the TPDTC and TPRTC are combined together in one assembly which is a single `netstandard2.0` component 
 * BasicProvider: the TPDTC and TPRTC are each available as both `netstandard2.0` and `.NET 4.x` components
 
+
+## Type Provider Naming Conventions
+
+A type provider is simultaneously a tool and a library.  The existing guidance is as follows, from https://fsharp.github.io/2014/09/19/fsharp-libraries.html.
+
+> Likewise, a type provider for a data source or schema format XYZ should normally be placed in “FSharp.Data”, e.g. “FSharp.Data.XYZ”.
+
+Good type provider naming examples:
+
+* `FSharp.Text.RegexProvider`
+
+* `FSharp.Azure.StorageTypeProvider`
+
+Existing type providers that don't quite follow the guidelines but which are ok:
+
+* `FSharp.Data`
+
+Here are some examples of existing type providers that aren't too bad (they are clear) but could be renamed to follow the guidelines:
+
+* `ExcelProvider` (better would be `FSharp.Interop.ExcelProvider`)
+
+* `RProvider` (better would be `FSharp.Interop.RProvider`)
+
+* `ApiaryProvider` (better would be `FSharp.Data.ApiaryProvider`)
+
+* `SQLProvider`  (better would be `FSharp.Data.SQLProvider`)
+
+* `DynamicsNAVProvider`  (better would be `FSharp.Interop.DynamicsNAVProvider`)
+
+* `DynamicsCRMProvider`  (better would be `FSharp.Interop.DynamicsCRMProvider`)
+
 ## Technical Notes
 
 ### Using Type Providers with ``dotnet build``
