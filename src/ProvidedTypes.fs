@@ -154,6 +154,8 @@ namespace ProviderImplementation.ProvidedTypes
         type Attributes<'T when 'T :> Attribute>() = 
             static let empty = ([| |] : 'T []) |> box |> unbox<obj[]>
             static member Empty() = empty
+ 
+        type Attributes = 
             static member CreateEmpty (typ : Type) =
                 let gtype = typedefof<Attributes<_>>.MakeGenericType([| typ |])
                 let gmethod = gtype.GetMethod("Empty", BindingFlags.Static ||| BindingFlags.NonPublic )
