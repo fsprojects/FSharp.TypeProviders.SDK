@@ -709,6 +709,7 @@ module internal Targets =
            | "3.1" -> "fs31"
            | "4.0" -> "fs40"
            | "4.1" -> "fs41"
+           | "4.5" -> "fs45"
            | _ -> failwith ("unimplemented F# version" + fsharp)
         let compatProfiles =
             match profile with

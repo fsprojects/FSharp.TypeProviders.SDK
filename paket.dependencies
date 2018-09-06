@@ -16,3 +16,10 @@ group fs40
     source https://api.nuget.org/v3/index.json
     nuget FSharp.Core ~> 4.0.0
 
+group fs41
+    source https://api.nuget.org/v3/index.json
+    nuget FSharp.Core ~> 4.1.18
+
+group fs45
+    source https://api.nuget.org/v3/index.json
+    nuget FSharp.Core ~> 4.5.2
