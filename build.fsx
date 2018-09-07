@@ -79,11 +79,14 @@ Target "Build" (fun _ ->
   if useMsBuildToolchain then
     DotNetCli.Restore  (fun p -> { p with Project = "src/FSharp.TypeProviders.SDK.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Restore  (fun p -> { p with Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Restore  (fun p -> { p with Project = "tests/Features/FSharp.TypeProviders.SDK.Tests.Features.fsproj"; ToolPath =  getSdkPath() })
     MSBuildRelease null "Build" ["src/FSharp.TypeProviders.SDK.fsproj"] |> Log "Build-Output: "
     MSBuildRelease null "Build" ["tests/FSharp.TypeProviders.SDK.Tests.fsproj"] |> Log "Build-Output: "
+    MSBuildRelease null "Build" ["tests/Features/FSharp.TypeProviders.SDK.Tests.Features.fsproj"] |> Log "Build-Output: "
   else
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "src/FSharp.TypeProviders.SDK.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "tests/Features/FSharp.TypeProviders.SDK.Tests.Features.fsproj"; ToolPath =  getSdkPath() })
 )
 
 Target "Examples" (fun _ ->
@@ -123,6 +126,7 @@ Target "RunTests" (fun _ ->
     // msbuild tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=Debug && mono packages/xunit.runner.console/tools/net452/xunit.console.exe tests/bin/Debug/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none
 #else
     DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "tests/Features/FSharp.TypeProviders.SDK.Tests.Features.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
 
