@@ -6906,8 +6906,8 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetMethodImplementationFlags() = notRequired this "GetMethodImplementationFlags" this.Name
         override this.Invoke(_obj, _invokeAttr, _binder, _parameters, _culture) = notRequired this "Invoke" this.Name
         override this.ReflectedType = notRequired this "ReflectedType" this.Name
-        override this.GetCustomAttributes(_inherited) = notRequired this "GetCustomAttributes" this.Name
-        override this.GetCustomAttributes(_attributeType, _inherited) = notRequired this "GetCustomAttributes" this.Name
+        override this.GetCustomAttributes(inherited) = inp.GetCustomAttributes(inherited)
+        override this.GetCustomAttributes(attributeType, inherited) = inp.GetCustomAttributes(attributeType, inherited)
 
         override __.ToString() = sprintf "tgt method %s(...) in type %s" inp.Name declTy.FullName  
 
