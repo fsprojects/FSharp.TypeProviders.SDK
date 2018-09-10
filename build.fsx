@@ -122,9 +122,12 @@ Target "RunTests" (fun _ ->
     // This can also be used on Mono to give console output:
     // msbuild tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=Debug && mono packages/xunit.runner.console/tools/net452/xunit.console.exe tests/bin/Debug/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none
 #else
-    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath() })
-    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
-    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="net461" })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="net461" })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="net461" })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="netcoreapp2.0" })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="netcoreapp2.0" })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="netcoreapp2.0" })
 
     // This can also be used to give console output:
     // dotnet build tests\FSharp.TypeProviders.SDK.Tests.fsproj -c Debug -f net461 && packages\xunit.runner.console\tools\net452\xunit.console.exe tests\bin\Debug\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
@@ -140,6 +143,6 @@ Target "Pack" (fun _ ->
 
 "Clean" ==> "Pack"
 "Build" ==> "Examples" ==> "Pack"
-"Build" ==> "RunTests" ==> "Pack"
+"Build" ==> "Examples" ==> "RunTests" ==> "Pack"
 
 RunTargetOrDefault "RunTests"
