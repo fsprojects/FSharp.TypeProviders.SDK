@@ -529,7 +529,7 @@ namespace ProviderImplementation.ProvidedTypes
         static member PropertyGetUnchecked: pinfo:PropertyInfo * args:Expr list -> Expr
         static member PropertyGetUnchecked: obj:Expr * pinfo:PropertyInfo * ?args:Expr list -> Expr
         static member PropertySetUnchecked: pinfo:PropertyInfo * value:Expr * ?args:Expr list -> Expr
-        static member PropertySetUnchecked: obj:Expr * pinfo:PropertyInfo * value:Expr * args:Expr list -> Expr
+        static member PropertySetUnchecked: obj:Expr * pinfo:PropertyInfo * value:Expr * ?args:Expr list -> Expr
         static member FieldGetUnchecked: pinfo:FieldInfo -> Expr
         static member FieldGetUnchecked: obj:Expr * pinfo:FieldInfo -> Expr
         static member FieldSetUnchecked: pinfo:FieldInfo * value:Expr -> Expr

@@ -355,6 +355,8 @@ namespace ProviderImplementation.ProvidedTypes
         assert (whileLoopOp |> isNull |> not)
         let ifThenElseOp = qTy.GetMethod("get_IfThenElseOp", bindAll)
         assert (ifThenElseOp |> isNull |> not)
+        let newUnionCaseOp = qTy.GetMethod("NewNewUnionCaseOp", bindAll)
+        assert (newUnionCaseOp |> isNull |> not)
 
         type Microsoft.FSharp.Quotations.Expr with
 
@@ -397,7 +399,8 @@ namespace ProviderImplementation.ProvidedTypes
                 let op = staticPropSetOp.Invoke(null, [| box pinfo |])
                 mkFEN.Invoke(null, [| box op; box (args@[value]) |]) :?> Expr
 
-            static member PropertySetUnchecked (obj: Expr, pinfo: PropertyInfo, value: Expr, args: Expr list) =
+            static member PropertySetUnchecked (obj: Expr, pinfo: PropertyInfo, value: Expr, ?args: Expr list) =
+                let args = defaultArg args []
                 let op = instancePropSetOp.Invoke(null, [| box pinfo |])
                 mkFEN.Invoke(null, [| box op; box (obj::(args@[value])) |]) :?> Expr
 
@@ -438,6 +441,10 @@ namespace ProviderImplementation.ProvidedTypes
             static member IfThenElseUnchecked (e:Expr, t:Expr, f:Expr) = 
                 let op = ifThenElseOp.Invoke(null, [| |])
                 mkFE3.Invoke(null, [| box op; box e; box t; box f |] ):?> Expr
+
+            static member NewUnionCaseUnchecked (uci:Reflection.UnionCaseInfo, args:Expr list) = 
+                let op = newUnionCaseOp.Invoke(null, [| box uci |])
+                mkFEN.Invoke(null, [| box op; box args |]) :?> Expr
                 
         type Shape = Shape of (Expr list -> Expr)
 
