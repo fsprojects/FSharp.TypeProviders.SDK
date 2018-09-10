@@ -1075,9 +1075,13 @@ module internal Targets =
     let Portable7FSharp41Refs() = FSharpRefs "4.1" "portable7"
     let Portable78FSharp41Refs() = FSharpRefs "4.1" "portable78"
     let Portable259FSharp41Refs() = FSharpRefs "4.1" "portable259"
-
     let DotNetStandard20FSharp41Refs() = FSharpRefs "4.1" "netstandard2.0"
     let DotNetCoreApp20FSharp41Refs() = FSharpRefs "4.1" "netcoreapp2.0"
+    
+    let FSharpCore45Ref() = FSharpCoreRef "4.5" "net45"
+    let DotNet45FSharp45Refs() = FSharpRefs "4.5" "net45"
+    let DotNetStandard20FSharp45Refs() = FSharpRefs "4.5" "netstandard2.0"
+    let DotNetCoreApp20FSharp45Refs() = FSharpRefs "4.5" "netcoreapp2.0"
     
     let supportsFSharp31() = (try File.Exists (FSharpCore31Ref()) with _ -> false)
     let supportsFSharp40() = (try File.Exists (FSharpCore40Ref()) with _ -> false)

@@ -1262,10 +1262,10 @@ namespace ProviderImplementation.ProvidedTypes
            | TypeContainer.Namespace _, Some logger when not isTgt -> logger (sprintf "Creating ProvidedTypeDefinition %s [%d]" className (System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode this))
            | _ -> ()
 
-        static let defaultAttributes isErased = 
+        static let defaultAttributes (isErased, isSealed, isInterface) = 
             TypeAttributes.Public ||| 
-            TypeAttributes.Class ||| 
-            TypeAttributes.Sealed ||| 
+            (if isInterface then TypeAttributes.Interface else TypeAttributes.Class) |||
+            (if isSealed then TypeAttributes.Sealed else enum 0) |||
             enum (if isErased then int32 TypeProviderTypeAttributes.IsErased else 0)
 
         // state
@@ -1389,19 +1389,23 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
-        new (assembly:Assembly, namespaceName, className, baseType, ?hideObjectMethods, ?nonNullable, ?isErased) = 
+        new (assembly:Assembly, namespaceName, className, baseType, ?hideObjectMethods, ?nonNullable, ?isErased, ?isSealed, ?isInterface) = 
             let isErased = defaultArg isErased true
+            let isSealed = defaultArg isSealed true
+            let isInterface = defaultArg isInterface false
             let nonNullable = defaultArg nonNullable false
             let hideObjectMethods = defaultArg hideObjectMethods false
-            let attrs = defaultAttributes isErased
+            let attrs = defaultAttributes (isErased, isSealed, isInterface)
             //if not isErased && assembly.GetType().Name <> "ProvidedAssembly" then failwithf "a non-erased (i.e. generative) ProvidedTypeDefinition '%s.%s' was placed in an assembly '%s' that is not a ProvidedAssembly" namespaceName className (assembly.GetName().Name)
             ProvidedTypeDefinition(false, TypeContainer.Namespace (K assembly,namespaceName), className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
 
-        new (className:string, baseType, ?hideObjectMethods, ?nonNullable, ?isErased) = 
+        new (className:string, baseType, ?hideObjectMethods, ?nonNullable, ?isErased, ?isSealed, ?isInterface) = 
             let isErased = defaultArg isErased true
+            let isSealed = defaultArg isSealed true
+            let isInterface = defaultArg isInterface false
             let nonNullable = defaultArg nonNullable false
             let hideObjectMethods = defaultArg hideObjectMethods false
-            let attrs = defaultAttributes isErased
+            let attrs = defaultAttributes (isErased, isSealed, isInterface)
             ProvidedTypeDefinition(false, TypeContainer.TypeToBeDecided, className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
 
         // state ops
