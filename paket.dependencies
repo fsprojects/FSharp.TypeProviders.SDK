@@ -1,12 +1,12 @@
 framework: >=net45
 source https://api.nuget.org/v3/index.json
 
-nuget Nuget.CommandLine
-nuget FAKE
-nuget xunit.runner.console
+nuget Nuget.CommandLine 4.6.2
+nuget FAKE 4.64.13
+nuget xunit.runner.console 2.3.1
 nuget FSharp.Core ~> 4.2.3
 nuget NetStandard.Library.NetFramework
-nuget Microsoft.NETCore.App
+nuget Microsoft.NETCore.App 2.0.7
 
 group fs31
     source https://api.nuget.org/v3/index.json

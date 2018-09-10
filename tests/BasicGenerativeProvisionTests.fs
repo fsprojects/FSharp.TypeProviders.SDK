@@ -204,11 +204,11 @@ let ``GenerativePropertyProviderWithStaticParams attributes are read correctly``
 type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces (config)
 
-    let ns = "StaticProperty.Provided"
+    let ns = "RecursiveReferencesToGeneratedTypes.Provided"
     let asm = Assembly.GetExecutingAssembly()
     let createType (typeName, _) =
         let myAssem = ProvidedAssembly()
-        let myBaseType = ProvidedTypeDefinition(myAssem, ns, typeName+"BaseType", Some typeof<obj>, isErased=false)
+        let myBaseType = ProvidedTypeDefinition(myAssem, ns, typeName+"BaseType", Some typeof<obj>, isErased=false, isSealed=false)
         let myCtorOnBaseType = ProvidedConstructor([ProvidedParameter("implicitCtorFieldName",typeof<int>)], invokeCode = (fun _args -> <@@ () @@>), IsImplicitConstructor=true)
         // Note: myType refers to another generated type as its base class.  
         let myType = ProvidedTypeDefinition(myAssem, ns, typeName, Some (myBaseType :> Type), isErased=false)
@@ -216,41 +216,46 @@ type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypePro
         let myMeth1 = ProvidedMethod("MyInstanceMethodOnBaseType", [], myBaseType, isStatic = false, invokeCode = (fun _args -> Expr.NewObject(myCtorOnBaseType, [Expr.Value(1)])))
         // Note: this method refers to another generated type as its return type
         let myMeth2 = ProvidedMethod("MyInstanceMethod", [], myBaseType, isStatic = false, invokeCode = (fun _args -> Expr.NewObject(myCtorOnBaseType, [Expr.Value(1)])))
-        myBaseType.AddMembers [ (myCtorOnBaseType :> MemberInfo); (myMeth1 :> MemberInfo) ]
+        // Note: this method refers to another generated type as its return type
+        let myProp1 = ProvidedProperty("MyProp", typeof<int list>, isStatic = false, getterCode = (fun _args -> <@@ [1] @@>))
+        myBaseType.AddMembers [ (myCtorOnBaseType :> MemberInfo); (myMeth1 :> MemberInfo) ; (myProp1 :> MemberInfo) ]
         myType.AddMembers [ (myMeth2 :> MemberInfo) ]
-        myAssem.AddTypes [myBaseType; myType]
-        myType
 
-    do
-        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let parameters = [ ProvidedStaticParameter("Count", typeof<int>) 
-                           ProvidedStaticParameter("Count2", typeof<int>, 3) ]
-        myType.DefineStaticParameters(parameters, (fun typeName args -> createType(typeName, (args.[0] :?> int) + (args.[1] :?> int))))
-
-        // Test a generative type with a base type from msvorlib
-        let myType2 = ProvidedTypeDefinition(asm, ns, "MyTypeWithBaseType", Some (typeof<System.Collections.ArrayList>), isErased=false)
+        // Test a generative type with a base type from mscorlib
+        let myType2 = ProvidedTypeDefinition(asm, ns, typeName+"MyTypeWithBaseType", Some (typeof<System.Collections.BitArray>), isErased=false)
 
         // Test a generative type implementing an interface from msvorlib
-        let myType3 = ProvidedTypeDefinition(asm, ns, "MyTypeWithInterfaceType", Some (typeof<obj>), isErased=false)
+        let myType3 = ProvidedTypeDefinition(asm, ns, typeName+"MyTypeWithInterfaceType", Some (typeof<obj>), isErased=false)
         myType3.AddInterfaceImplementation typeof<System.IDisposable>
         let disposeMethImpl = ProvidedMethod("Dispose", [], typeof<Void>, isStatic = false, invokeCode = (fun _args -> Expr.Value((), typeof<Void>)))
         myType3.AddMember disposeMethImpl
         myType3.DefineMethodOverride(disposeMethImpl, typeof<IDisposable>.GetMethod("Dispose"))
         
+        myAssem.AddTypes [myBaseType; myType; myType2; myType3]
+        myType
 
-        this.AddNamespace(ns, [myType; myType2; myType3])
+    do
+        let myStaticParameterizedType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+        let parameters = [ ProvidedStaticParameter("Count", typeof<int>) 
+                           ProvidedStaticParameter("Count2", typeof<int>, 3) ]
+        myStaticParameterizedType.DefineStaticParameters(parameters, (fun typeName args -> createType(typeName, (args.[0] :?> int) + (args.[1] :?> int))))
+
+        this.AddNamespace(ns, [myStaticParameterizedType])
 
 
 
 [<Fact>]
-let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for correctly``() : unit  = 
+let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correctly``() : unit  = 
     for (text, desc, supports, refs) in testCases() do
         if supports() then 
+            printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correctly: %s ------- " text 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
+            printfn "----- refs = %A ------- " runtimeAssemblyRefs
+
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
-            let tp = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
+            let tp = GenerativeProviderWithRecursiveReferencesToGeneratedTypes cfg :> TypeProviderForNamespaces
             let providedNamespace = tp.Namespaces.[0] 
             let providedTypes  = providedNamespace.GetTypes()
             let providedType = providedTypes.[0] 
@@ -268,7 +273,6 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for co
             // re-read the assembly with the more complete reader to allow us to look at generated references
             let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
             let res = [| for r in assem.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
-            printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes %s ------- " text 
             printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" text res
             for desc2 in possibleVersions do 
@@ -282,11 +286,13 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for co
 let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for hosted execution correctly``() : unit  = 
     for (desc, supports, refs) in hostedTestCases() do
         if supports() then 
+            printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes hosted execution: %s ------- " desc 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
+            printfn "----- refs = %A ------- " runtimeAssemblyRefs
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs, isHostedExecution=true) 
-            let tp = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
+            let tp = GenerativeProviderWithRecursiveReferencesToGeneratedTypes cfg :> TypeProviderForNamespaces
             let providedNamespace = tp.Namespaces.[0] 
             let providedTypes  = providedNamespace.GetTypes()
             let providedType = providedTypes.[0] 
