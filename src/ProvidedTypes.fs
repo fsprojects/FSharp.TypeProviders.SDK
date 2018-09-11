@@ -695,6 +695,14 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.MakeArrayType arg = ProvidedTypeSymbol(ProvidedTypeSymbolKind.Array arg, [this]) :> Type
 
+#if NETCOREAPP
+        // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
+        override __.IsSZArray = 
+            match kind with
+            | ProvidedTypeSymbolKind.SDArray -> true
+            | _ -> false
+#endif
+
         override __.MetadataToken = 
             match kind with
             | ProvidedTypeSymbolKind.SDArray -> typeof<Array>.MetadataToken
@@ -1585,6 +1593,11 @@ namespace ProviderImplementation.ProvidedTypes
             | TypeContainer.TypeToBeDecided -> failwithf "type '%s' was not added as a member to a declaring type" className
 
         override __.MemberType = if this.IsNested then MemberTypes.NestedType else MemberTypes.TypeInfo
+
+#if NETCOREAPP
+        // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
+        override __.IsSZArray = false
+#endif
 
         override x.GetHashCode() = x.Namespace.GetHashCode() ^^^ className.GetHashCode()
         override this.Equals(that: obj) = Object.ReferenceEquals(this, that)
@@ -7278,6 +7291,13 @@ namespace ProviderImplementation.ProvidedTypes
             | TypeSymbolKind.OtherGeneric gtd -> gtd.MemberType
             | _ -> notRequired this "MemberType" this.FullName
             
+#if NETCOREAPP
+        // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
+        override __.IsSZArray =
+            match kind with
+            | TypeSymbolKind.SDArray _ -> true
+            | _ -> false
+#endif
         override this.GetMember(_name,_mt,_bindingFlags) = notRequired this "GetMember" this.Name
         override this.GUID = notRequired this "GUID" this.Name
         override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" this.Name
@@ -7808,6 +7828,10 @@ namespace ProviderImplementation.ProvidedTypes
         member __.MakeFieldInfo (declTy: Type) md = txILFieldDef declTy md
         member __.MakeNestedTypeInfo (declTy: Type) md =  asm.TxILTypeDef (Some declTy) md
         override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
+#if NETCOREAPP
+        // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
+        override __.IsSZArray = false
+#endif
 
     and TargetModule(location: string) =
         inherit Module()

@@ -36,6 +36,14 @@ type ErasingProvider (config : TypeProviderConfig, hasBigInt: bool) as this =
         myType.AddMembers [myStaticGetterProp; myStaticGetterProp2; myStaticSetterProp; myGetterProp; mySetterProp]
         myType.AddMembers [myStaticMethod; myMethod ]
 
+        // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
+#if NETCOREAPP
+        let genTy = typedefof<list<_>>
+        // The next line loops on netcoreapp2.0 when the ProvidedTypes.fs is compiled as netstandard2.0 (without NETCOREAPP defined)
+        let instTy = genTy.MakeGenericType(myType)
+        let fails = instTy.FullName
+#endif
+
         [myType]
 
     do
