@@ -91,17 +91,22 @@ Target "Examples" (fun _ ->
     DotNetCli.Restore  (fun p -> { p with Project = "examples/BasicProvider.DesignTime/BasicProvider.DesignTime.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Restore  (fun p -> { p with Project = "examples/BasicProvider/BasicProvider.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Restore  (fun p -> { p with Project = "examples/ComboProvider/ComboProvider.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Restore  (fun p -> { p with Project = "examples/StressProvider/StressProvider.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Restore  (fun p -> { p with Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Restore  (fun p -> { p with Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Restore  (fun p -> { p with Project = "examples/StressProvider.Tests/StressProvider.Tests.fsproj"; ToolPath =  getSdkPath() })
     MSBuildRelease null "Build" ["examples/BasicProvider.DesignTime/BasicProvider.DesignTime.fsproj"] |> Log "Build-Output: "
     MSBuildRelease null "Build" ["examples/BasicProvider/BasicProvider.fsproj"] |> Log "Build-Output: "
     MSBuildRelease null "Build" ["examples/ComboProvider/ComboProvider.fsproj"] |> Log "Build-Output: "
+    MSBuildRelease null "Build" ["examples/StressProvider/StressProvider.fsproj"] |> Log "Build-Output: "
     MSBuildRelease null "Build" ["examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"] |> Log "Build-Output: "
     MSBuildRelease null "Build" ["examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"] |> Log "Build-Output: "
+    MSBuildRelease null "Build" ["examples/StressProvider.Tests/StressProvider.Tests.fsproj"] |> Log "Build-Output: "
   else
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.DesignTime/BasicProvider.DesignTime.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider/BasicProvider.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider/ComboProvider.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Build  (fun p -> { p with Configuration = config; Project = "examples/StressProvider/StressProvider.fsproj"; ToolPath =  getSdkPath() })
 )
 Target "RunTests" (fun _ ->
 #if MONO
@@ -125,9 +130,10 @@ Target "RunTests" (fun _ ->
     DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="net461" })
     DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="net461" })
     DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="net461" })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/StressProvider.Tests/StressProvider.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="net461" })
     DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="netcoreapp2.0" })
     DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="netcoreapp2.0" })
-    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="netcoreapp2.0" })
+    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "examples/StressProvider.Tests/StressProvider.Tests.fsproj"; ToolPath =  getSdkPath(); Framework="netcoreapp2.0" })
 
     // This can also be used to give console output:
     // dotnet build tests\FSharp.TypeProviders.SDK.Tests.fsproj -c Debug -f net461 && packages\xunit.runner.console\tools\net452\xunit.console.exe tests\bin\Debug\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
@@ -139,6 +145,7 @@ Target "Pack" (fun _ ->
     DotNetCli.Pack  (fun p -> { p with Configuration = config; Project = "src/FSharp.TypeProviders.SDK.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/BasicProvider/BasicProvider.fsproj"; ToolPath =  getSdkPath() })
     DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/ComboProvider/ComboProvider.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/StressProvider/StressProvider.fsproj"; ToolPath =  getSdkPath() })
 )
 
 "Clean" ==> "Pack"
