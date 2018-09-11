@@ -180,7 +180,7 @@ let ``ErasingConstructorProvider generates for .NET 4.5 F# 3.1 correctly``() : u
 let ``ErasingConstructorProvider generates for .NET 4.5 F# 4.1 correctly``() : unit  = 
     printfn "--------- Generating code for 4.5 F# 4.1 ------"
     let refs = Targets.DotNet45FSharp41Refs()
-    printfn "refs = %A" refs
+    //printfn "refs = %A" refs
     let res = testCrossTargeting refs (fun args -> new ErasingConstructorProvider(args)) [| |]
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
     Assert.True(res.Contains "[FSharp.Core, Version=4.4.1.0")
@@ -200,7 +200,7 @@ let ``ErasingConstructorProvider generates for .NET Standard 2.0 F# 4.1 correctl
 let ``ErasingConstructorProvider generates for .NET CoreApp 2.0 F# 4.1 correctly``() : unit  = 
     printfn "--------- Generating code for .NET CoreApp 2.0 F# 4.1 ------"
     let refs = Targets.DotNetCoreApp20FSharp41Refs()
-    printfn "refs = %A" refs
+    //printfn "refs = %A" refs
     let res = testCrossTargeting refs (fun args -> new ErasingConstructorProvider(args)) [| |]
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
     Assert.True(res.Contains "[FSharp.Core, Version=4.4.1.0")
@@ -450,7 +450,7 @@ let ``test basic binding context portable259``() =
    | Choice1Of2 asm -> 
        printfn "-=======================" 
        printfn "asm.Location = '%s'" asm.Location
-       printfn "refs = %A" refs
+       //printfn "refs = %A" refs
        let ty = asm.GetType("System.DateTimeOffset")
        printfn "ty = %A" ty
        printfn "ty.Assembly = %A" ty.Assembly

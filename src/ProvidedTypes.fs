@@ -8835,6 +8835,8 @@ namespace ProviderImplementation.ProvidedTypes
                 Expr.NewObjectUnchecked (convConstructorRefToTgt c, exprsR)
             | Coerce (expr, t) ->
                 Expr.Coerce (convExprToTgt expr, convTypeToTgt t)
+            | TypeTest (expr, t) ->
+                Expr.TypeTest (convExprToTgt expr, convTypeToTgt t)
             | NewArray (t, exprs) ->
                 Expr.NewArrayUnchecked (convTypeToTgt t, List.map convExprToTgt exprs)
             | NewTuple (exprs) ->
