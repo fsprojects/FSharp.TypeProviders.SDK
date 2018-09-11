@@ -157,7 +157,7 @@ Here is a guide to the steps to perform:
 
    * If the compile-time computations performed by your TPDTC **fundamentally** depend on .NET Framework, then your type provider will not be usable with the .NET SDK toolchain without using [the workaround](https://github.com/Microsoft/visualfsharp/issues/3303))
    
-   * If the TPDTC **partially** depends on .NET Framework, then multi-target the TPDTC to `net45;netstandard2.0` and use `#if NETSTANDARD2_0`
+   * If the TPDTC **partially** depends on .NET Framework, then multi-target the TPDTC to `net45;netcoreapp2.0` and use `#if NETCOREAPP2_0`
    
    * If the TPDTC **doesn't** depend on .NET Framework, then target the TPDTC to `netstandard2.0`
    
@@ -188,17 +188,14 @@ The typical nuget package layout for a provider that has separate design-time an
 
     lib/net45/
         MyProvider.dll // TPRTC
-        MyProvider.DesignTime.dll // .NET 4.x TPDTC alongside TPRTC for legacy loading
+        MyProvider.DesignTime.dll // .NET 4.x TPDTC alongside TPRTC (only needed for legacy loading: VS2015, Mono 5.12, VS2017 before 15.6)
     
     lib/typeproviders/fsharp41/
         net45/
             MyProvider.DesignTime.dll // .NET 4.x TPDTC
     
-        netstandard2.0/
-            MyProvider.DesignTime.dll // .NET Standard 2.0 TPDTC
-            netstandard.dll // Extra facade, see below
-            System.Runtime.dll // Extra facade, see below
-            System.Reflection.dll // Extra facade, see below
+        netcoreapp2.0/
+            MyProvider.DesignTime.dll // .NET Core App 2.0 TPDTC
 
 It is important that the design-time assemblies you use (if any) are not loaded at runtime. To ensure this does not happen, when you distribute a Nuget package for your Type Provider you _must_ provide an explicit list of project references for consumers to include. If you do not, every assembly you publish in the package will be included, which can lead to design-type only references being loaded at runtime.  To reference only a subset of assemblies, see the [Nuget documetation](https://docs.microsoft.com/en-us/nuget/reference/nuspec#explicit-assembly-references) or the [Paket documentation](https://fsprojects.github.io/Paket/template-files.html#References).
 

@@ -15,6 +15,9 @@ type SomeRuntimeHelper() =
 type SomeRuntimeHelper2() = 
     static member Help() = "help"
 
+type Server (name : string) =
+    member x.Name with get() : string = name
+
 [<TypeProvider>]
 type ComboErasingProvider (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces (config)
@@ -38,7 +41,22 @@ type ComboErasingProvider (config : TypeProviderConfig) as this =
         provided
     )
 
-    do this.AddNamespace(ns, [provider; tags])
+    // An example provider with one _optional_ static parameter
+    let provider2 = ProvidedTypeDefinition(asm, ns, "Provider2", Some typeof<obj>, hideObjectMethods = true)
+    do provider2.DefineStaticParameters([ProvidedStaticParameter("Host", typeof<string>, "default")], fun name args ->
+        let provided = 
+            let srv = args.[0] :?> string
+            let prop = ProvidedProperty("Server", typeof<Server>, (fun _ -> <@@ Server(srv) @@>), isStatic = true)
+            let provided = ProvidedTypeDefinition(asm, ns, name, Some typeof<obj>, hideObjectMethods = true)
+            provided.AddMember prop
+            addStaticProperty tags "Tags" <@@ obj() @@> provided |> ignore
+            provided
+
+        provided
+    )
+
+    do this.AddNamespace(ns, [provider; provider2; tags])
+
 
 [<assembly:CompilerServices.TypeProviderAssembly()>]
 do ()
