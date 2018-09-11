@@ -6,7 +6,6 @@ module StressProvider.Tests
 
 open Xunit
 
-
 [<Fact>]
 let ``StressProvider basic tests 1``() =
 
@@ -14,9 +13,15 @@ let ``StressProvider basic tests 1``() =
     let x2a = File1.providedTags2a.Tag1
     let x2empty = File1.providedTags2empty.Tag1
 
+    ()
+
+[<Fact>]
+let ``StressProvider basic tests 2``() =
+
     let v1 = File1.Generated1("innerstate").PropertyWithTryCatch3
     let v2 = File1.Generated1("innerstate").PropertyWithTryFinally1
     ()
+
 
 [<Fact>]
 let ``StressProvider erased try/finally``() =
@@ -35,4 +40,3 @@ let ``StressProvider generative try/finally``() =
     let v1 = File1.Generated3.Test(disp)
     Assert.Equal("[+] Yup, it worked totally.", v1)
     Assert.Equal(disposed, true)
-

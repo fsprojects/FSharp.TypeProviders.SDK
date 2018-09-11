@@ -66,26 +66,30 @@ type StressErasingProvider (config : TypeProviderConfig) as this =
                 use __ = (%%arg : IDisposable)
                 let mutable res = ""
 
-                try
-                    failwith "This will throw anyway, don't mind it."
-
-                    res <- "[-] Should not get here."
-                finally
-                    res <- "[+] Caught try-finally, nice."
-
+                try 
                     try
-                        failwith "It failed again."
+                        System.Console.WriteLine() // test calling a method with void return type
+                        failwith "This will throw anyway, don't mind it."
 
                         res <- "[-] Should not get here."
-                    with
-                    | _ ->
-                        res <- "[+] Caught try-with, nice."
-
-                    try
-                        res <- "[?] Gonna go to finally without throwing..."
                     finally
-                        res <- "[+] Yup, it worked totally."
-                res
+                        res <- "[+] Caught try-finally, nice."
+
+                        try
+                            failwith "It failed again."
+
+                            res <- "[-] Should not get here."
+                        with
+                        | _ ->
+                            res <- "[+] Caught try-with, nice."
+
+                        try
+                            res <- "[?] Gonna go to finally without throwing..."
+                        finally
+                            res <- "[+] Yup, it worked totally."
+                    res
+                with _ -> 
+                    res
             @@>
         , isStatic = true)
 
@@ -144,26 +148,30 @@ type StressGenerativeProvider (config : TypeProviderConfig) as this =
                 use __ = (%%arg : IDisposable)
                 let mutable res = ""
 
-                try
-                    failwith "This will throw anyway, don't mind it."
-
-                    res <- "[-] Should not get here."
-                finally
-                    res <- "[+] Caught try-finally, nice."
-
+                try 
                     try
-                        failwith "It failed again."
+                        System.Console.WriteLine() // test calling a method with void return type
+                        failwith "This will throw anyway, don't mind it."
 
                         res <- "[-] Should not get here."
-                    with
-                    | _ ->
-                        res <- "[+] Caught try-with, nice."
-
-                    try
-                        res <- "[?] Gonna go to finally without throwing..."
                     finally
-                        res <- "[+] Yup, it worked totally."
-                res
+                        res <- "[+] Caught try-finally, nice."
+
+                        try
+                            failwith "It failed again."
+
+                            res <- "[-] Should not get here."
+                        with
+                        | _ ->
+                            res <- "[+] Caught try-with, nice."
+
+                        try
+                            res <- "[?] Gonna go to finally without throwing..."
+                        finally
+                            res <- "[+] Yup, it worked totally."
+                    res
+                with _ -> 
+                    res
             @@>
         , isStatic = true)
 
