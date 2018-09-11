@@ -188,7 +188,7 @@ The typical nuget package layout for a provider that has separate design-time an
 
     lib/net45/
         MyProvider.dll // TPRTC
-        MyProvider.DesignTime.dll // .NET 4.x TPDTC alongside TPRTC for legacy loading
+        MyProvider.DesignTime.dll // .NET 4.x TPDTC alongside TPRTC (only needed for legacy loading: VS2015, Mono 5.12, VS2017 before 15.6)
     
     lib/typeproviders/fsharp41/
         net45/
