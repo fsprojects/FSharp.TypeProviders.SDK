@@ -8890,6 +8890,9 @@ namespace ProviderImplementation.ProvidedTypes
 
         and convCodeToTgt (codeFun: Expr list -> Expr, isStatic, isCtor, parameters: ProvidedParameter[], isGenerated) = 
             (fun argsT -> 
+                // argsT: the target arg expressions coming from host tooling.  Includes "this" for instance methods and generative constructors.
+                // parameters: the (source) parameters specific by the TPDTC. Does not include "this"
+                // paramNames: equal in length to argsT. The preferred named for the parameters. Seems to include "this" for instance methods and generative constructors.
                 let args = List.map convVarExprToSrc argsT
                 let paramNames = 
                     // https://github.com/fsprojects/SwaggerProvider/blob/cfb7a665fada77fd0200591f62faba0ba44e172c/src/SwaggerProvider.DesignTime/SwaggerProviderConfig.fs#L79
@@ -11794,7 +11797,7 @@ namespace ProviderImplementation.ProvidedTypes
               td.GenericParams |> Array.iteri (fun n gp -> GenGenericParamPass3 cenv env n (TypeOrMethodDefTag.TypeDef, tidx) gp)  
               td.NestedTypes.Entries |> GenTypeDefsPass3 (addILTypeName enc td) cenv
            with e ->
-              failwith  ("Error in pass3 for type "+td.Name+", error: "+e.Message)
+              failwith  ("Error in pass3 for type "+td.Name+", error: "+e.ToString())
               reraise()
               raise e
 
@@ -13249,21 +13252,35 @@ namespace ProviderImplementation.ProvidedTypes
 
     type ILLocalBuilder(i: int) =
         member __.LocalIndex = i
+    
+    [<RequireQualifiedAccess>]
+    type ILExceptionClauseBuilder =
+        | Finally of ILCodeLabel
+        | Fault of ILCodeLabel
+        | FilterCatch of ILCodeLabel * (ILCodeLabel * ILCodeLabel)
+        | TypeCatch of ILCodeLabel * ILType
+
+    type ILExceptionBlockBuilder(i: ILCodeLabel) =
+        member __.StartIndex = i
+        member val EndIndex : int = 0 with get, set
+        member val Clause : ILExceptionClauseBuilder option = None with get, set
 
     type ILGenerator(methodName) =
         let mutable locals =  ResizeArray<ILLocal>()
         let mutable instrs =  ResizeArray<ILInstr>()
+        let mutable exceptions = ResizeArray<ILExceptionSpec>()
         let mutable labelCount =  0
         let mutable labels =  Dictionary<ILCodeLabel,int>()
+        let mutable exceptionBlocks = Stack<ILExceptionBlockBuilder>()
 
         member __.Content = 
             { IsZeroInit = true
               MaxStack = instrs.Count
               Locals = locals.ToArray()
               Code = 
-                { Labels=labels
-                  Instrs=instrs.ToArray()
-                  Exceptions = [| |] // TODO
+                { Labels = labels
+                  Instrs = instrs.ToArray()
+                  Exceptions = exceptions.ToArray()
                   Locals = [| |] (* TODO ILLocalDebugInfo *) }
              }
 
@@ -13272,9 +13289,50 @@ namespace ProviderImplementation.ProvidedTypes
             let local = { Type = ty; IsPinned = false; DebugInfo = None }
             locals.Add(local)
             ILLocalBuilder(idx)
+        
+        member ilg.BeginExceptionBlock() =
+            exceptionBlocks.Push(ILExceptionBlockBuilder(ilg.DefineLabelHere()))
+        
+        member ilg.EndGuardedBlock() =
+            exceptionBlocks.Peek().EndIndex <- ilg.DefineLabelHere()
+        
+        member ilg.BeginCatchBlock(typ: ILType) =
+            exceptionBlocks.Peek().Clause <- Some <|
+                ILExceptionClauseBuilder.TypeCatch(ilg.DefineLabelHere(), typ)
+    
+        member ilg.BeginCatchFilterBlock(range: ILCodeLabel * ILCodeLabel) =
+            exceptionBlocks.Peek().Clause <- Some <|
+                ILExceptionClauseBuilder.FilterCatch(ilg.DefineLabelHere(), range)
+        
+        member ilg.BeginFinallyBlock() =
+            exceptionBlocks.Peek().Clause <- Some <|
+                ILExceptionClauseBuilder.Finally (ilg.DefineLabelHere())
+    
+        member ilg.BeginFaultBlock() =
+            exceptionBlocks.Peek().Clause <- Some <|
+                ILExceptionClauseBuilder.Fault (ilg.DefineLabelHere())
+        
+        member ilg.EndExceptionBlock() =
+            let exnBlock = exceptionBlocks.Pop()
+            let endIndex = ilg.DefineLabelHere()
+            let clause = 
+                match exnBlock.Clause.Value with
+                | ILExceptionClauseBuilder.Finally(start) ->
+                   ILExceptionClause.Finally (start, endIndex)
+                | ILExceptionClauseBuilder.Fault(start) ->
+                    ILExceptionClause.Fault (start, endIndex)
+                | ILExceptionClauseBuilder.FilterCatch(start, range) ->
+                   ILExceptionClause.FilterCatch (range, (start, endIndex))
+                | ILExceptionClauseBuilder.TypeCatch(start, typ) ->
+                   ILExceptionClause.TypeCatch(typ, (start, endIndex))
+        
+            exceptions.Add { Range  = (exnBlock.StartIndex, exnBlock.EndIndex)
+                           ; Clause = clause
+                           }
 
         member __.DefineLabel() = labelCount <- labelCount + 1; labelCount
         member __.MarkLabel(label) = labels.[label] <- instrs.Count
+        member this.DefineLabelHere() = let label = this.DefineLabel() in this.MarkLabel(label); label
         member __.Emit(opcode) = instrs.Add(opcode)
         override __.ToString() = "generator for " + methodName
 
@@ -13870,6 +13928,11 @@ namespace ProviderImplementation.ProvidedTypes
                 ilg.Emit(I_stloc lb.LocalIndex)
                 emitExpr expectedState b
 
+            | TypeTest(e, tgtTy) ->
+                let tgtTyT = transType tgtTy
+                emitExpr ExpectedStackState.Value e
+                ilg.Emit(I_isinst tgtTyT)
+
             | Sequential(e1, e2) ->
                 emitExpr ExpectedStackState.Empty e1
                 emitExpr expectedState e2
@@ -13891,7 +13954,6 @@ namespace ProviderImplementation.ProvidedTypes
                 ilg.Emit(I_nop)
                 ilg.MarkLabel(endLabel)
 
-#if EMIT_TRY_WITH
             | TryWith(body, _filterVar, _filterBody, catchVar, catchBody) ->
 
                 let stres, ldres =
@@ -13903,12 +13965,13 @@ namespace ProviderImplementation.ProvidedTypes
                         stres, ldres
 
                 let exceptionVar = ilg.DeclareLocal(transType catchVar.Type)
-                locals.Add(catchVar, exceptionVar)
+                localsMap.Add(catchVar, exceptionVar)
 
-                let _exnBlock = ilg.BeginExceptionBlock()
+                ilg.BeginExceptionBlock()
 
                 emitExpr expectedState body
                 stres()
+                ilg.EndGuardedBlock()
 
                 ilg.BeginCatchBlock(transType  catchVar.Type)
                 ilg.Emit(I_stloc exceptionVar.LocalIndex)
@@ -13917,7 +13980,30 @@ namespace ProviderImplementation.ProvidedTypes
                 ilg.EndExceptionBlock()
 
                 ldres()
-#endif
+
+            | TryFinally(body, finallyBody) ->
+
+                let stres, ldres =
+                    if isEmpty expectedState then ignore, ignore
+                    else
+                        let local = ilg.DeclareLocal (transType body.Type)
+                        let stres = fun () -> ilg.Emit(I_stloc local.LocalIndex)
+                        let ldres = fun () -> ilg.Emit(I_ldloc local.LocalIndex)
+                        stres, ldres
+                
+                ilg.BeginExceptionBlock() |> ignore
+
+                emitExpr expectedState body
+                stres()
+                ilg.EndGuardedBlock()
+
+                ilg.BeginFinallyBlock() |> ignore
+
+                emitExpr expectedState finallyBody
+
+                ilg.EndExceptionBlock()
+
+                ldres()
 
             | VarSet(v,e) ->
                 emitExpr ExpectedStackState.Value e

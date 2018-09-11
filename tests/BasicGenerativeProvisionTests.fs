@@ -13,6 +13,7 @@ open System.Reflection.Emit
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Quotations
+open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Core.CompilerServices
 open Xunit
 
@@ -65,6 +66,9 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
                  let rec s14 x = if x = 0 then 1 else s14 (x-1) + s14 (x-1)
                  let rec s14 x = if x = 0 then 1 else s15 x + s15 x
                  and s15 x = s14 (x-1)
+                 let mutable j = 3
+                 for i in [ 1 .. 10 ] do 
+                     j <- j + 1
 
                  //Arithmetic - note, operations such as + are emitted as a call to the method in the F# library, even over integers
                  let z1 = 1 + 1 - 1 * 1 / 1
@@ -100,9 +104,16 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
         let adderCode (args: Expr list) = <@@ ignore (%%(args.[1]): System.EventHandler) @@>
         let removerCode (args: Expr list) = <@@ ignore (%%(args.[1]) : System.EventHandler) @@>
         let setterCode (args: Expr list) = <@@ ignore (%%(args.[1]) : string list) @@>
-        let ctorCode (_args: Expr list) = <@@ ignore 1 @@>
+        let ctorCode (args: Expr list) = <@@  ignore 1 @@>
         let cctorCode (_args: Expr list) = <@@ ignore 2 @@>
-        let ctorCode2 (args: Expr list) = <@@ ignore (%%(args.[0]) : string list)  @@>
+        let ctorCode2 (args: Expr list) = 
+            match args.[0] with 
+            | Var v -> if v.Name <> "this" then failwithf "args.[0].Name = %s" v.Name
+            | q -> failwithf "expected Var but got %A" q
+            match args.[1] with 
+            | Var v -> if v.Name <> "arg" then failwithf "args.[1].Name = %s" v.Name
+            | q -> failwithf "expected Var but got %A" q
+            <@@ ignore (%%(args.[1]) : string list)  @@>
 
         let myProp = ProvidedProperty("MyStaticProperty", typeof<string list>, isStatic = true, getterCode = testCode)
         let myProp2 = ProvidedProperty("MyInstaceProperty", typeof<string list>, isStatic = false, getterCode = testCode, setterCode = setterCode)
@@ -111,7 +122,7 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
         let myEvent1 = ProvidedEvent("MyEvent", typeof<System.EventHandler>, isStatic = false, adderCode = adderCode, removerCode = removerCode)
         let myCctor1 = ProvidedConstructor([], invokeCode = cctorCode, IsTypeInitializer=true)
         let myCtor1 = ProvidedConstructor([], invokeCode = ctorCode)
-        let myCtor2 = ProvidedConstructor([ProvidedParameter("arg", typeof<string list>)], invokeCode = ctorCode)
+        let myCtor2 = ProvidedConstructor([ProvidedParameter("arg", typeof<string list>)], invokeCode = ctorCode2)
         myType.AddMembers [ (myProp :> MemberInfo); (myProp2 :> MemberInfo); (myMeth1 :> MemberInfo); (myMeth2 :> MemberInfo); (myEvent1 :> MemberInfo); (myCctor1 :> MemberInfo);  (myCtor1 :> MemberInfo);  (myCtor2 :> MemberInfo)]
         myAssem.AddTypes [myType]
         myType
@@ -150,6 +161,8 @@ let hostedTestCases() =
 let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : unit  = 
     for (text, desc, supports, refs) in testCases() do
         if supports() then 
+            printfn "" 
+            printfn "----- GenerativePropertyProviderWithStaticParams hosted execution: %s ------- " desc 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
             let runtimeAssembly = runtimeAssemblyRefs.[0]
@@ -267,10 +280,11 @@ type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypePro
 let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correctly``() : unit  = 
     for (text, desc, supports, refs) in testCases() do
         if supports() then 
+            printfn "" 
             printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correctly: %s ------- " text 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
-            printfn "----- refs = %A ------- " runtimeAssemblyRefs
+            //printfn "refs = %A" runtimeAssemblyRefs
 
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
@@ -308,7 +322,7 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for ho
             printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes hosted execution: %s ------- " desc 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
-            printfn "----- refs = %A ------- " runtimeAssemblyRefs
+            //printfn "----- refs = %A ------- " runtimeAssemblyRefs
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs, isHostedExecution=true) 
             let tp = GenerativeProviderWithRecursiveReferencesToGeneratedTypes cfg :> TypeProviderForNamespaces
