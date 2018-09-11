@@ -101,6 +101,7 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
         let removerCode (args: Expr list) = <@@ ignore (%%(args.[1]) : System.EventHandler) @@>
         let setterCode (args: Expr list) = <@@ ignore (%%(args.[1]) : string list) @@>
         let ctorCode (_args: Expr list) = <@@ ignore 1 @@>
+        let cctorCode (_args: Expr list) = <@@ ignore 2 @@>
         let ctorCode2 (args: Expr list) = <@@ ignore (%%(args.[0]) : string list)  @@>
 
         let myProp = ProvidedProperty("MyStaticProperty", typeof<string list>, isStatic = true, getterCode = testCode)
@@ -108,9 +109,10 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
         let myMeth1 = ProvidedMethod("MyStaticMethod", [], typeof<string list>, isStatic = true, invokeCode = testCode)
         let myMeth2 = ProvidedMethod("MyInstanceMethod", [], typeof<string list>, isStatic = false, invokeCode = testCode)
         let myEvent1 = ProvidedEvent("MyEvent", typeof<System.EventHandler>, isStatic = false, adderCode = adderCode, removerCode = removerCode)
+        let myCctor1 = ProvidedConstructor([], invokeCode = cctorCode, IsTypeInitializer=true)
         let myCtor1 = ProvidedConstructor([], invokeCode = ctorCode)
         let myCtor2 = ProvidedConstructor([ProvidedParameter("arg", typeof<string list>)], invokeCode = ctorCode)
-        myType.AddMembers [ (myProp :> MemberInfo); (myProp2 :> MemberInfo); (myMeth1 :> MemberInfo); (myMeth2 :> MemberInfo); (myEvent1 :> MemberInfo); (myCtor1 :> MemberInfo);  (myCtor2 :> MemberInfo)]
+        myType.AddMembers [ (myProp :> MemberInfo); (myProp2 :> MemberInfo); (myMeth1 :> MemberInfo); (myMeth2 :> MemberInfo); (myEvent1 :> MemberInfo); (myCctor1 :> MemberInfo);  (myCtor1 :> MemberInfo);  (myCtor2 :> MemberInfo)]
         myAssem.AddTypes [myType]
         myType
 
@@ -165,10 +167,27 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             | _ -> failwithf "expected a ProvidedAssembly"  
 
             let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
-            Assert.NotEqual(assemContents.Length, 0)
+            Assert.NotEqual(0, assemContents.Length)
             
             // re-read the assembly with the more complete reader to allow us to look at generated references
             let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
+
+            printfn "typeName = %s" typeName
+            let typeName2 = providedType.Namespace + "." + typeName
+            printfn "typeName2 = %s" typeName2
+            let t2 = assem.GetType(typeName2)
+            Assert.NotNull(t2) 
+            let allCtors = t2.GetConstructors(BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Static ||| BindingFlags.Instance)
+            Assert.Equal(3, allCtors.Length) 
+            let ctors = allCtors |> Array.filter (fun c -> not c.IsStatic)
+            Assert.Equal(2, ctors.Length) 
+            for ctor in ctors do 
+                printfn "ctor.Name = %s" ctor.Name
+                Assert.Equal(".ctor", ctor.Name) 
+            let cctors = allCtors |> Array.filter (fun c -> c.IsStatic)
+            Assert.Equal(1, cctors.Length) 
+            printfn "cctors.[0].Name = %s" cctors.[0].Name
+            Assert.Equal(".cctor", cctors.[0].Name) 
             let res = [| for r in assem.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
             printfn "----- %s ------- " text 
             printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
@@ -268,7 +287,7 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correc
             | _ -> failwithf "expected a ProvidedAssembly"  
 
             let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
-            Assert.NotEqual(assemContents.Length, 0)
+            Assert.NotEqual(0, assemContents.Length)
             
             // re-read the assembly with the more complete reader to allow us to look at generated references
             let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)

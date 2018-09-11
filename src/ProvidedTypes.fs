@@ -6853,7 +6853,7 @@ namespace ProviderImplementation.ProvidedTypes
         inherit ConstructorInfo() 
         let gps = ((if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]), [| |])
 
-        override __.Name = ".ctor"
+        override __.Name = inp.Name
         override __.Attributes = inp.Attributes
         override __.MemberType = MemberTypes.Constructor
         override __.DeclaringType = declTy
@@ -7406,7 +7406,7 @@ namespace ProviderImplementation.ProvidedTypes
             let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
             { new ConstructorInfo() with
 
-                override __.Name = ".ctor"
+                override __.Name = inp.Name
                 override __.Attributes = inp.Attributes
                 override __.MemberType = MemberTypes.Constructor
                 override __.DeclaringType = declTy
@@ -13418,7 +13418,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.DefineGenericParameter(name, attrs) =  let eb = ILGenericParameterBuilder(name, attrs) in gparams.Add eb; eb
         member __.SetCustomAttribute(ca) = cattrs.Add(ca)
         member __.AddInterfaceImplementation(ty) = implements.Add(ty)
-        member this.DefineTypeInitializer () = let mb = ILMethodBuilder(this.ILType, ".cctor", MethodAttributes.Static ||| MethodAttributes.SpecialName, ILType.Void, [| |]) in methods.Add mb; mb
+        member this.DefineTypeInitializer () = let mb = ILMethodBuilder(this.ILType, ".cctor", MethodAttributes.Static ||| MethodAttributes.SpecialName  ||| MethodAttributes.RTSpecialName  ||| MethodAttributes.Private, ILType.Void, [| |]) in methods.Add mb; mb
         member __.SetParent ty = (extends <- Some ty)
         member this.DefineDefaultConstructor(attrs, baseCtor: ILMethodSpec) = 
             let ctor = this.DefineConstructor(attrs, [| |]) 
