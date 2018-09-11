@@ -8890,6 +8890,9 @@ namespace ProviderImplementation.ProvidedTypes
 
         and convCodeToTgt (codeFun: Expr list -> Expr, isStatic, isCtor, parameters: ProvidedParameter[], isGenerated) = 
             (fun argsT -> 
+                // argsT: the target arg expressions coming from host tooling.  Includes "this" for instance methods and generative constructors.
+                // parameters: the (source) parameters specific by the TPDTC. Does not include "this"
+                // paramNames: equal in length to argsT. The preferred named for the parameters. Seems to include "this" for instance methods and generative constructors.
                 let args = List.map convVarExprToSrc argsT
                 let paramNames = 
                     // https://github.com/fsprojects/SwaggerProvider/blob/cfb7a665fada77fd0200591f62faba0ba44e172c/src/SwaggerProvider.DesignTime/SwaggerProviderConfig.fs#L79
