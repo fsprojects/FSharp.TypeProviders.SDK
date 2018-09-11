@@ -11797,7 +11797,7 @@ namespace ProviderImplementation.ProvidedTypes
               td.GenericParams |> Array.iteri (fun n gp -> GenGenericParamPass3 cenv env n (TypeOrMethodDefTag.TypeDef, tidx) gp)  
               td.NestedTypes.Entries |> GenTypeDefsPass3 (addILTypeName enc td) cenv
            with e ->
-              failwith  ("Error in pass3 for type "+td.Name+", error: "+e.Message)
+              failwith  ("Error in pass3 for type "+td.Name+", error: "+e.ToString())
               reraise()
               raise e
 
@@ -13262,6 +13262,7 @@ namespace ProviderImplementation.ProvidedTypes
 
     type ILExceptionBlockBuilder(i: ILCodeLabel) =
         member __.StartIndex = i
+        member val EndIndex : int = 0 with get, set
         member val Clause : ILExceptionClauseBuilder option = None with get, set
 
     type ILGenerator(methodName) =
@@ -13289,44 +13290,49 @@ namespace ProviderImplementation.ProvidedTypes
             locals.Add(local)
             ILLocalBuilder(idx)
         
-        member __.BeginExceptionBlock() =
-            exceptionBlocks.Push(ILExceptionBlockBuilder(instrs.Count))
+        member ilg.BeginExceptionBlock() =
+            exceptionBlocks.Push(ILExceptionBlockBuilder(ilg.DefineLabelHere()))
         
-        member __.BeginCatchBlock(typ: ILType) =
+        member ilg.EndGuardedBlock() =
+            exceptionBlocks.Peek().EndIndex <- ilg.DefineLabelHere()
+        
+        member ilg.BeginCatchBlock(typ: ILType) =
             exceptionBlocks.Peek().Clause <- Some <|
-                ILExceptionClauseBuilder.TypeCatch(instrs.Count, typ)
+                ILExceptionClauseBuilder.TypeCatch(ilg.DefineLabelHere(), typ)
     
-        member __.BeginCatchFilterBlock(range: ILCodeLabel * ILCodeLabel) =
+        member ilg.BeginCatchFilterBlock(range: ILCodeLabel * ILCodeLabel) =
             exceptionBlocks.Peek().Clause <- Some <|
-                ILExceptionClauseBuilder.FilterCatch(instrs.Count, range)
+                ILExceptionClauseBuilder.FilterCatch(ilg.DefineLabelHere(), range)
         
-        member __.BeginFinallyBlock() =
+        member ilg.BeginFinallyBlock() =
             exceptionBlocks.Peek().Clause <- Some <|
-                ILExceptionClauseBuilder.Finally instrs.Count
+                ILExceptionClauseBuilder.Finally (ilg.DefineLabelHere())
     
-        member __.BeginFaultBlock() =
+        member ilg.BeginFaultBlock() =
             exceptionBlocks.Peek().Clause <- Some <|
-                ILExceptionClauseBuilder.Fault instrs.Count
+                ILExceptionClauseBuilder.Fault (ilg.DefineLabelHere())
         
-        member __.EndExceptionBlock() =
+        member ilg.EndExceptionBlock() =
             let exnBlock = exceptionBlocks.Pop()
-            let endIndex = instrs.Count
-            let clause = match exnBlock.Clause.Value with
-                         | ILExceptionClauseBuilder.Finally(start) ->
-                            ILExceptionClause.Finally (start, endIndex)
-                         | ILExceptionClauseBuilder.Fault(start) ->
-                            ILExceptionClause.Fault (start, endIndex)
-                         | ILExceptionClauseBuilder.FilterCatch(start, range) ->
-                            ILExceptionClause.FilterCatch (range, (start, endIndex))
-                         | ILExceptionClauseBuilder.TypeCatch(start, typ) ->
-                            ILExceptionClause.TypeCatch(typ, (start, endIndex))
+            let endIndex = ilg.DefineLabelHere()
+            let clause = 
+                match exnBlock.Clause.Value with
+                | ILExceptionClauseBuilder.Finally(start) ->
+                   ILExceptionClause.Finally (start, endIndex)
+                | ILExceptionClauseBuilder.Fault(start) ->
+                    ILExceptionClause.Fault (start, endIndex)
+                | ILExceptionClauseBuilder.FilterCatch(start, range) ->
+                   ILExceptionClause.FilterCatch (range, (start, endIndex))
+                | ILExceptionClauseBuilder.TypeCatch(start, typ) ->
+                   ILExceptionClause.TypeCatch(typ, (start, endIndex))
         
-            exceptions.Add { Range  = (exnBlock.StartIndex, endIndex)
+            exceptions.Add { Range  = (exnBlock.StartIndex, exnBlock.EndIndex)
                            ; Clause = clause
                            }
 
         member __.DefineLabel() = labelCount <- labelCount + 1; labelCount
         member __.MarkLabel(label) = labels.[label] <- instrs.Count
+        member this.DefineLabelHere() = let label = this.DefineLabel() in this.MarkLabel(label); label
         member __.Emit(opcode) = instrs.Add(opcode)
         override __.ToString() = "generator for " + methodName
 
@@ -13922,6 +13928,11 @@ namespace ProviderImplementation.ProvidedTypes
                 ilg.Emit(I_stloc lb.LocalIndex)
                 emitExpr expectedState b
 
+            | TypeTest(e, tgtTy) ->
+                let tgtTyT = transType tgtTy
+                emitExpr ExpectedStackState.Value e
+                ilg.Emit(I_isinst tgtTyT)
+
             | Sequential(e1, e2) ->
                 emitExpr ExpectedStackState.Empty e1
                 emitExpr expectedState e2
@@ -13960,6 +13971,7 @@ namespace ProviderImplementation.ProvidedTypes
 
                 emitExpr expectedState body
                 stres()
+                ilg.EndGuardedBlock()
 
                 ilg.BeginCatchBlock(transType  catchVar.Type)
                 ilg.Emit(I_stloc exceptionVar.LocalIndex)
@@ -13983,6 +13995,7 @@ namespace ProviderImplementation.ProvidedTypes
 
                 emitExpr expectedState body
                 stres()
+                ilg.EndGuardedBlock()
 
                 ilg.BeginFinallyBlock() |> ignore
 

@@ -66,6 +66,9 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
                  let rec s14 x = if x = 0 then 1 else s14 (x-1) + s14 (x-1)
                  let rec s14 x = if x = 0 then 1 else s15 x + s15 x
                  and s15 x = s14 (x-1)
+                 let mutable j = 3
+                 for i in [ 1 .. 10 ] do 
+                     j <- j + 1
 
                  //Arithmetic - note, operations such as + are emitted as a call to the method in the F# library, even over integers
                  let z1 = 1 + 1 - 1 * 1 / 1
@@ -158,6 +161,8 @@ let hostedTestCases() =
 let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : unit  = 
     for (text, desc, supports, refs) in testCases() do
         if supports() then 
+            printfn "" 
+            printfn "----- GenerativePropertyProviderWithStaticParams hosted execution: %s ------- " desc 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
             let runtimeAssembly = runtimeAssemblyRefs.[0]
@@ -275,10 +280,11 @@ type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypePro
 let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correctly``() : unit  = 
     for (text, desc, supports, refs) in testCases() do
         if supports() then 
+            printfn "" 
             printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correctly: %s ------- " text 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
-            printfn "----- refs = %A ------- " runtimeAssemblyRefs
+            //printfn "refs = %A" runtimeAssemblyRefs
 
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
@@ -316,7 +322,7 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for ho
             printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes hosted execution: %s ------- " desc 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
-            printfn "----- refs = %A ------- " runtimeAssemblyRefs
+            //printfn "----- refs = %A ------- " runtimeAssemblyRefs
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs, isHostedExecution=true) 
             let tp = GenerativeProviderWithRecursiveReferencesToGeneratedTypes cfg :> TypeProviderForNamespaces
