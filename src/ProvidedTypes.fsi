@@ -457,7 +457,12 @@ namespace ProviderImplementation.ProvidedTypes
         /// <param name="assemblyReplacementMap">
         ///    Optionally specify a map of assembly names from source model to referenced assemblies.
         /// </param>
-        new: config: TypeProviderConfig * namespaceName:string * types: ProvidedTypeDefinition list * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
+        ///               
+        /// <param name="addDefaultProbingLocation">
+        ///    Optionally specify that the location of the type provider design-time component should be used to resolve failing assembly resolutions.
+        ///    This flag or an equivalent call to RegisterProbingFolder is generally needed for any type provider design-time components loaded into .NET Core tooling.
+        /// </param>
+        new: config: TypeProviderConfig * namespaceName:string * types: ProvidedTypeDefinition list * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list * ?addDefaultProbingLocation: bool -> TypeProviderForNamespaces
 
         /// <summary>Initializes a type provider.</summary>
         /// <param name="sourceAssemblies">
@@ -469,7 +474,12 @@ namespace ProviderImplementation.ProvidedTypes
         /// <param name="assemblyReplacementMap">
         ///    Optionally specify a map of assembly names from source model to referenced assemblies.
         /// </param>
-        new: config: TypeProviderConfig * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
+        ///               
+        /// <param name="addDefaultProbingLocation">
+        ///    Optionally specify that the location of the type provider design-time component should be used to resolve failing assembly resolutions.
+        ///    This flag or an equivalent call to RegisterProbingFolder is generally needed for any type provider design-time components loaded into .NET Core tooling.
+        /// </param>
+        new: config: TypeProviderConfig * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list * ?addDefaultProbingLocation: bool -> TypeProviderForNamespaces
 
         /// Invoked by the type provider to add a namespace of provided types in the specification of the type provider.
         member AddNamespace: namespaceName:string * types: ProvidedTypeDefinition list -> unit
