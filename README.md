@@ -1,5 +1,3 @@
-[![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK/badge/issue)](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK)
-[![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK/badge/pr)](http://issuestats.com/github/fsprojects/FSharp.TypeProviders.SDK)
 
 # The F# Type Provider SDK 
 
