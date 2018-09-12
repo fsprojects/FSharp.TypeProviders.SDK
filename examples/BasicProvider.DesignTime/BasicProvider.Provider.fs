@@ -9,7 +9,7 @@ open System.Reflection
 
 [<TypeProvider>]
 type BasicErasingProvider (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces (config, assemblyReplacementMap=[("BasicProvider.DesignTime", "BasicProvider")])
+    inherit TypeProviderForNamespaces (config, assemblyReplacementMap=[("BasicProvider.DesignTime", "BasicProvider")], addDefaultProbingLocation=true)
 
     let ns = "BasicProvider.Provided"
     let asm = Assembly.GetExecutingAssembly()

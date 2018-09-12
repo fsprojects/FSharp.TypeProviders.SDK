@@ -21,7 +21,7 @@ type Server (name : string) =
 
 [<TypeProvider>]
 type StressErasingProvider (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces (config)
+    inherit TypeProviderForNamespaces (config, addDefaultProbingLocation=true)
 
     let ns = "StressProvider"
     let asm = Assembly.GetExecutingAssembly()

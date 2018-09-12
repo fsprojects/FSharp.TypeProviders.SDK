@@ -14548,7 +14548,7 @@ namespace ProviderImplementation.ProvidedTypes
     open ProviderImplementation.ProvidedTypes.AssemblyReader
     open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 
-    type TypeProviderForNamespaces(config: TypeProviderConfig, namespacesAndTypes: list<(string * list<ProvidedTypeDefinition>)>, assemblyReplacementMap: (string*string) list, sourceAssemblies: Assembly list) as this =
+    type TypeProviderForNamespaces(config: TypeProviderConfig, namespacesAndTypes: list<(string * list<ProvidedTypeDefinition>)>, assemblyReplacementMap: (string*string) list, sourceAssemblies: Assembly list, addDefaultProbingLocation: bool) as this =
 
         let ctxt = ProvidedTypesContext.Create (config, assemblyReplacementMap, sourceAssemblies)
 
@@ -14617,15 +14617,24 @@ namespace ProviderImplementation.ProvidedTypes
         do AppDomain.CurrentDomain.add_AssemblyResolve handler
 #endif
 
-        new (config, namespaceName, types, ?sourceAssemblies, ?assemblyReplacementMap) = 
-            let sourceAssemblies = defaultArg sourceAssemblies [ Assembly.GetCallingAssembly() ]
-            let assemblyReplacementMap = defaultArg assemblyReplacementMap []
-            new TypeProviderForNamespaces(config, [(namespaceName,types)], assemblyReplacementMap=assemblyReplacementMap, sourceAssemblies=sourceAssemblies)
+        // By default add the location of the TPDTC assembly (which is assumed to contain this file)
+        // as a probing location.
+        do if addDefaultProbingLocation  then
+            let thisAssembly = Assembly.GetExecutingAssembly() 
+            let folder = thisAssembly.Location |> Path.GetDirectoryName
+            probingFolders.Add folder 
 
-        new (config, ?sourceAssemblies, ?assemblyReplacementMap) = 
+        new (config, namespaceName, types, ?sourceAssemblies, ?assemblyReplacementMap, ?addDefaultProbingLocation) = 
             let sourceAssemblies = defaultArg sourceAssemblies [ Assembly.GetCallingAssembly() ]
             let assemblyReplacementMap = defaultArg assemblyReplacementMap []
-            new TypeProviderForNamespaces(config, [], assemblyReplacementMap=assemblyReplacementMap, sourceAssemblies=sourceAssemblies)
+            let addDefaultProbingLocation = defaultArg addDefaultProbingLocation false
+            new TypeProviderForNamespaces(config, [(namespaceName,types)], assemblyReplacementMap=assemblyReplacementMap, sourceAssemblies=sourceAssemblies, addDefaultProbingLocation=addDefaultProbingLocation)
+
+        new (config, ?sourceAssemblies, ?assemblyReplacementMap, ?addDefaultProbingLocation) = 
+            let sourceAssemblies = defaultArg sourceAssemblies [ Assembly.GetCallingAssembly() ]
+            let assemblyReplacementMap = defaultArg assemblyReplacementMap []
+            let addDefaultProbingLocation = defaultArg addDefaultProbingLocation false
+            new TypeProviderForNamespaces(config, [], assemblyReplacementMap=assemblyReplacementMap, sourceAssemblies=sourceAssemblies, addDefaultProbingLocation=addDefaultProbingLocation)
 
         member __.TargetContext = ctxt
 

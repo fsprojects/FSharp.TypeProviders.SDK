@@ -17,7 +17,7 @@ type SomeRuntimeHelper2() =
 
 [<TypeProvider>]
 type ComboErasingProvider (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces (config)
+    inherit TypeProviderForNamespaces (config, addDefaultProbingLocation=true)
 
     let ns = "ComboProvider"
     let asm = Assembly.GetExecutingAssembly()
