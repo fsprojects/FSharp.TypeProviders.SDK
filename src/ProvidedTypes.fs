@@ -275,6 +275,19 @@ namespace ProviderImplementation.ProvidedTypes
         let canBindNestedType (bindingFlags: BindingFlags) (c: Type) =
              hasFlag bindingFlags BindingFlags.Public && c.IsNestedPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsNestedPublic
 
+        // We only want to return source types "typeof<Void>" values as _target_ types in one very specific location due to a limitation in the
+        // F# compiler code for multi-targeting.
+        let ImportProvidedMethodBaseAsILMethodRef_OnStack_HACK() = 
+            let rec loop i = 
+                if i > 9 then 
+                    false 
+                else
+                    let frame = StackFrame(i, true)
+                    match frame.GetMethod() with
+                    | null -> loop (i+1)
+                    | m -> m.Name = "ImportProvidedMethodBaseAsILMethodRef" || loop (i+1)
+            loop 1
+
     //--------------------------------------------------------------------------------
     // UncheckedQuotations
 
@@ -1039,17 +1052,36 @@ namespace ProviderImplementation.ProvidedTypes
 
        // Implement overloads
         override __.GetParameters() = parameterInfos 
+
         override __.Attributes = attrs
+
         override __.Name = methodName
+
         override __.DeclaringType = declaringType |> nonNone "DeclaringType" :> Type
+
         override __.IsDefined(_attributeType, _inherit): bool = true
+
         override __.MemberType = MemberTypes.Method
+
         override x.CallingConvention =
             let cc = CallingConventions.Standard
             let cc = if not x.IsStatic then cc ||| CallingConventions.HasThis else cc
             cc
-        override __.ReturnType = returnType
+
+        override __.ReturnType = 
+            if isTgt then 
+                match returnType.Namespace, returnType.Name with 
+                | "System", "Void"->  
+                    if ImportProvidedMethodBaseAsILMethodRef_OnStack_HACK() then 
+                        typeof<Void>
+                    else 
+                        returnType
+                | _ -> returnType
+            else
+                returnType
+
         override __.ReturnParameter = null // REVIEW: Give it a name and type?
+
         override __.ToString() = "Method " + methodName
 
         // These don't have to return fully accurate results - they are used
@@ -3049,6 +3081,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
     type ILGlobals =
         { typ_Object: ILType
           typ_String: ILType
+          typ_Void: ILType
           typ_Type: ILType
           typ_TypedReference: ILType option
           typ_SByte: ILType
@@ -4537,6 +4570,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
               let mkILTyspec nsp nm =  mkILNonGenericTySpec(ILTypeRef(ILTypeRefScope.Top(systemRuntimeScopeRef),USome nsp,nm))
               { typ_Object = ILType.Boxed (mkILTyspec "System" "Object")
                 typ_String = ILType.Boxed (mkILTyspec "System" "String")
+                typ_Void = ILType.Value (mkILTyspec "System" "Void")
                 typ_Type = ILType.Boxed (mkILTyspec "System" "Type")
                 typ_Int64 = ILType.Value (mkILTyspec "System" "Int64")
                 typ_UInt64 = ILType.Value (mkILTyspec "System" "UInt64")
@@ -7465,7 +7499,17 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.Attributes = inp.Attributes
                 override __.GetParameters() = inp.Parameters |> Array.map (txILParameter (gps, gps2))
                 override __.CallingConvention = if inp.IsStatic then CallingConventions.Standard else CallingConventions.HasThis ||| CallingConventions.Standard
-                override __.ReturnType = inp.Return.Type |> txILType (gps, gps2)
+
+                override __.ReturnType = 
+                    let returnType = inp.Return.Type |> txILType (gps, gps2)
+                    match returnType.Namespace, returnType.Name with 
+                    | "System", "Void"->  
+                        if ImportProvidedMethodBaseAsILMethodRef_OnStack_HACK() then 
+                            typeof<Void>
+                        else 
+                            returnType
+                    | t -> returnType
+
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
                 override __.GetGenericArguments() = gps2
                 override __.IsGenericMethod = (gps2.Length <> 0)
@@ -7629,7 +7673,7 @@ namespace ProviderImplementation.ProvidedTypes
         and txILType gps (ty: ILType) =
 
             match ty with
-            | ILType.Void -> typeof<System.Void>
+            | ILType.Void -> txILType gps ilGlobals.typ_Void
             | ILType.Value tspec
             | ILType.Boxed tspec ->
                 let tdefR = txILTypeRef tspec.TypeRef
@@ -7855,7 +7899,7 @@ namespace ProviderImplementation.ProvidedTypes
                 //     https://github.com/Microsoft/visualfsharp/blob/44fa027b308681a1b78a089e44fa1ab35ff77b41/src/fsharp/MethodCalls.fs#L842
                 // for the accepted types.
                 match inp.Namespace, inp.Name with 
-                | USome "System", "Void"->  typeof<Void>
+                //| USome "System", "Void"->  typeof<Void>
                 (*
                 | USome "System", "Boolean" -> typeof<bool>
                 | USome "System", "String"->  typeof<string>
@@ -8835,6 +8879,12 @@ namespace ProviderImplementation.ProvidedTypes
                 Expr.NewObjectUnchecked (convConstructorRefToTgt c, exprsR)
             | Coerce (expr, t) ->
                 Expr.Coerce (convExprToTgt expr, convTypeToTgt t)
+            | TypeTest (expr, t) ->
+                Expr.TypeTest (convExprToTgt expr, convTypeToTgt t)
+            | TryWith (body, filterVar, filterBody, catchVar, catchBody) ->
+                Expr.TryWith (convExprToTgt body, convVarToTgt filterVar, convExprToTgt filterBody, convVarToTgt catchVar, convExprToTgt catchBody)
+            | TryFinally (body, compensation) ->
+                Expr.TryFinally (convExprToTgt body, convExprToTgt compensation)
             | NewArray (t, exprs) ->
                 Expr.NewArrayUnchecked (convTypeToTgt t, List.map convExprToTgt exprs)
             | NewTuple (exprs) ->
@@ -13260,8 +13310,9 @@ namespace ProviderImplementation.ProvidedTypes
         | FilterCatch of ILCodeLabel * (ILCodeLabel * ILCodeLabel)
         | TypeCatch of ILCodeLabel * ILType
 
-    type ILExceptionBlockBuilder(i: ILCodeLabel) =
+    type ILExceptionBlockBuilder(i: ILCodeLabel, leave: ILCodeLabel) =
         member __.StartIndex = i
+        member __.Leave = leave
         member val EndIndex : int = 0 with get, set
         member val Clause : ILExceptionClauseBuilder option = None with get, set
 
@@ -13291,10 +13342,12 @@ namespace ProviderImplementation.ProvidedTypes
             ILLocalBuilder(idx)
         
         member ilg.BeginExceptionBlock() =
-            exceptionBlocks.Push(ILExceptionBlockBuilder(ilg.DefineLabelHere()))
+            exceptionBlocks.Push(ILExceptionBlockBuilder(ilg.DefineLabelHere(), ilg.DefineLabel()))
         
         member ilg.EndGuardedBlock() =
-            exceptionBlocks.Peek().EndIndex <- ilg.DefineLabelHere()
+            let block = exceptionBlocks.Peek()
+            ilg.Emit(I_leave block.Leave)
+            block.EndIndex <- ilg.DefineLabelHere()
         
         member ilg.BeginCatchBlock(typ: ILType) =
             exceptionBlocks.Peek().Clause <- Some <|
@@ -13314,7 +13367,17 @@ namespace ProviderImplementation.ProvidedTypes
         
         member ilg.EndExceptionBlock() =
             let exnBlock = exceptionBlocks.Pop()
+            match exnBlock.Clause.Value with
+            | ILExceptionClauseBuilder.Finally(start) ->
+               ilg.Emit(I_endfinally)
+            | ILExceptionClauseBuilder.Fault(start) ->
+               ilg.Emit(I_endfinally)
+            | ILExceptionClauseBuilder.FilterCatch _ -> 
+               ilg.Emit(I_leave exnBlock.Leave)
+            | ILExceptionClauseBuilder.TypeCatch _ -> 
+               ilg.Emit(I_leave exnBlock.Leave)
             let endIndex = ilg.DefineLabelHere()
+            ilg.MarkLabel(exnBlock.Leave)
             let clause = 
                 match exnBlock.Clause.Value with
                 | ILExceptionClauseBuilder.Finally(start) ->
