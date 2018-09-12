@@ -201,7 +201,41 @@ It is important that the design-time assemblies you use (if any) are not loaded 
 
 That is, an explicit `.nuspec` file will be needed with an explicit `<references>` node (so that only the TPRTC gets added as a reference), see [this example](https://github.com/baronfel/FSharp.Data/blob/e0f133e6e79b4a41365776da51332227dccff9ab/nuget/FSharp.Data.nuspec).
 
+### FAQ
 
+#### How do I debug execution of a type provider when using .NET Framework tools on Windows?
+
+1. Capture output of `msbuild -v:n` in `args.txt` and trim out the rubbish leaving just the command line arguments to the F# compiler, usually starting with `-o:...`
+
+2. Run an explicit invocation of the compiler using this, checking that your failures still happen
+
+       fsc.exe @args.txt
+
+   Then debug that invocation using
+
+       devenv /debugexe fsc.exe @args.txt
+
+   If your failures only happen in the IDE then use `devenv /debugexe devenv.exe MyProj.fsproj`, set debug type to  ".NET Framework 4.0" and launch F5. Likewise if your failures only happen in F# Interactive then use `devenv /debugexe fsi.exe MyProj.fsproj`.
+
+   Set first-catch exception handling (Ctrl-Alt-E, select all CLR exceptions) and set Just My Code off
+
+#### How do I debug execution of a type provider when using .NET Core tools on Windows?
+
+One approach:
+
+1. Capture output of `dotnet build -v:n` in `args.txt` and trim out the rubbish leaving just the command line arguments to the F# compiler, usually starting with `-o:...`
+
+2. Run an explicit invocation of the compiler using:
+
+       "c:\Program Files\dotnet\dotnet.exe" "C:\Program Files\dotnet\sdk\2.1.401\FSharp\fsc.exe" @args.txt
+
+   Then debug that invocation using
+
+       devenv /debugexe "c:\Program Files\dotnet\dotnet.exe" "C:\Program Files\dotnet\sdk\2.1.401\FSharp\fsc.exe" @args.txt
+
+   Be careful to make sure Visual Studio debugging type is set to ".NET Core" (right click properties on dotnet and set debug type)
+
+   Set first-catch exception handling (Ctrl-Alt-E, select all CLR exceptions) and set Just My Code off.
 
 ### Some Type Provider terminology
 
