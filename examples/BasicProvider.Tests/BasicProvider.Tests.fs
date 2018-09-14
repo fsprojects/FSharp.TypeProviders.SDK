@@ -1,10 +1,7 @@
-#if INTERACTIVE
-#r @"../test/BasicProvider.dll"
-#endif
 
-module BasicProvider.Tests
+module MyProvider.Tests
 
-open BasicProvider.Provided
+open MyProvider.Provided
 open Xunit
 
 [<Fact>]
@@ -20,8 +17,8 @@ let ``Method with ReflectedDefinition parameter should get its name`` () =
     let myValue = 2
     Assert.Equal("myValue", MyType.NameOf(myValue))
 
-type Generative2 = BasicProvider.GenerativeProvider<2>
-type Generative4 = BasicProvider.GenerativeProvider<4>
+type Generative2 = MyProvider.GenerativeProvider<2>
+type Generative4 = MyProvider.GenerativeProvider<4>
 
 [<Fact>]
 let ``Can access properties of generative provider 2`` () =
