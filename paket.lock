@@ -7,7 +7,7 @@ NUGET
     Microsoft.NETCore.Platforms (2.1.1) - restriction: >= net461
     NETStandard.Library (2.0.3) - restriction: >= net461
       Microsoft.NETCore.Platforms (>= 1.1)
-    NetStandard.Library.NetFramework (2.0.0-preview2-25405-01)
+    NetStandard.Library.NETFramework (2.0.0-preview2-25405-01)
       Microsoft.NETCore.Platforms (>= 2.0.0-preview2-25405-01) - restriction: >= net461
       NETStandard.Library (>= 2.0.0-preview2-25401-01) - restriction: >= net461
     Nuget.CommandLine (4.6.2)

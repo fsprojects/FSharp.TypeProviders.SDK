@@ -5,7 +5,7 @@ frameworks: net45, netcoreapp2.0, netstandard2.0
 # Add the nuget packages you use here
 nuget FSharp.Core 4.3.4
 
-nuget NetStandard.Library.NetFramework
+nuget NetStandard.Library.NETFramework
 # nuget System.Text.Encoding.CodePages
 
 # THis lines are used by Paket to get the latest version of the Type Provider SDK files
