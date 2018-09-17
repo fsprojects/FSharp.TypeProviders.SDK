@@ -20,5 +20,3 @@ group Test
   nuget NUnit.Console 3.6.1
   nuget NUnit3TestAdapter 3.7.0 version_in_path: true
   nuget FSharp.Core 4.3.4
-
-  github fsprojects/FsUnit src/FsUnit.NUnit/FsUnit.fs

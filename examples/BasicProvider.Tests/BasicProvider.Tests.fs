@@ -1,7 +1,7 @@
 
-module MyProvider.Tests
+module BasicProvider.Tests
 
-open MyProvider.Provided
+open BasicProvider.Provided
 open Xunit
 
 [<Fact>]
@@ -17,8 +17,8 @@ let ``Method with ReflectedDefinition parameter should get its name`` () =
     let myValue = 2
     Assert.Equal("myValue", MyType.NameOf(myValue))
 
-type Generative2 = MyProvider.GenerativeProvider<2>
-type Generative4 = MyProvider.GenerativeProvider<4>
+type Generative2 = BasicProvider.GenerativeProvider<2>
+type Generative4 = BasicProvider.GenerativeProvider<4>
 
 [<Fact>]
 let ``Can access properties of generative provider 2`` () =

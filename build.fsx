@@ -15,7 +15,7 @@ open Fake
 // --------------------------------------------------------------------------------------
 
 let project = "FSharp.TypeProviders.SDK"
-let authors = ["Tomas Petricek"; "Gustavo Guerra"; "Michael Newton"; "Don Syme" ]
+let authors = ["FSharp.TypeProviders.SDK contributors" ]
 let summary = "Helper code and examples for getting started with Type Providers"
 let description = """
   The F# Type Provider SDK provides utilities for authoring type providers."""
@@ -25,6 +25,7 @@ let gitHome = "https://github.com/fsprojects"
 let gitName = "FSharp.TypeProviders.SDK"
 
 let config = "Release"
+let outputPath = __SOURCE_DIRECTORY__ + "/bin"
 
 // Read release notes & version info from RELEASE_NOTES.md
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
@@ -44,6 +45,10 @@ if DotNetCli.isInstalled() then printfn "DotNetCli.getVersion() = %s" (DotNetCli
 let exec p args = 
     printfn "Executing %s %s" p args 
     Shell.Exec(p, args) |> function 0 -> () | d -> failwithf "%s %s exited with error %d" p args d
+
+let execIn dir p args = 
+    printfn "Executing %s %s in %s" p args dir
+    Shell.Exec(p, args, dir=dir) |> function 0 -> () | d -> failwithf "%s %s exited with error %d" p args d
 
 let pullRequest =
     match getBuildParamOrDefault "APPVEYOR_PULL_REQUEST_NUMBER" "" with
@@ -142,12 +147,57 @@ Target "RunTests" (fun _ ->
 )
 
 Target "Pack" (fun _ ->
-    DotNetCli.Pack  (fun p -> { p with Configuration = config; Project = "src/FSharp.TypeProviders.SDK.fsproj"; ToolPath =  getSdkPath() })
-    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/BasicProvider/BasicProvider.fsproj"; ToolPath =  getSdkPath() })
-    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/ComboProvider/ComboProvider.fsproj"; ToolPath =  getSdkPath() })
-    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/StressProvider/StressProvider.fsproj"; ToolPath =  getSdkPath() })
+    DotNetCli.Pack  (fun p -> { p with Configuration = config; 
+                                       Project = "src/FSharp.TypeProviders.SDK.fsproj"; 
+                                       ToolPath =  getSdkPath(); OutputPath = outputPath; 
+                                       AdditionalArgs= [ sprintf "/p:PackageVersion=%s" release.NugetVersion;
+                                                         sprintf "/p:ReleaseNotes=\"%s\"" (String.concat " " release.Notes)  ] })
+    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/BasicProvider/BasicProvider.fsproj"; ToolPath =  getSdkPath(); OutputPath = outputPath })
+    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/ComboProvider/ComboProvider.fsproj"; ToolPath =  getSdkPath(); OutputPath = outputPath })
+    DotNetCli.Pack   (fun p -> { p with Configuration = config; Project = "examples/StressProvider/StressProvider.fsproj"; ToolPath =  getSdkPath(); OutputPath = outputPath })
+    NuGetHelper.NuGetPack (fun p -> { p with WorkingDir = "templates"; OutputPath = outputPath; Version = release.NugetVersion; ReleaseNotes = toLines release.Notes}) @"templates/FSharp.TypeProviders.Templates.nuspec"
 )
 
+Target "TestTemplatesNuGet" (fun _ ->
+
+    // Globally install the templates from the template nuget package we just built
+    DotNetCli.RunCommand id ("new -i " + outputPath + "/FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg")
+
+    let testAppName = "tp2" + string (abs (hash System.DateTime.Now.Ticks) % 100)
+    CleanDir testAppName
+    DotNetCli.RunCommand id (sprintf "new typeprovider -n %s -lang F#" testAppName)
+
+    let pkgs = Path.GetFullPath(outputPath)
+    // When restoring, using the build_output as a package source to pick up the package we just compiled
+    execIn testAppName ".paket/paket.exe" "update"
+    //DotNetCli.RunCommand id (sprintf "restore %s/%s/%s.fsproj  --source https://api.nuget.org/v3/index.json --source %s" testAppName testAppName testAppName pkgs)
+    
+//    let slash = if isUnix then "\\" else ""
+//    for c in ["Debug"; "Release"] do 
+//        for p in ["Any CPU"; "iPhoneSimulator"] do 
+//            exec "msbuild" (sprintf "%s/%s.sln /p:Platform=\"%s\" /p:Configuration=%s /p:PackageSources=%s\"https://api.nuget.org/v3/index.json%s;%s%s\"" testAppName testAppName p c  slash slash pkgs slash)
+    DotNetCli.RunCommand (fun p -> { p with  WorkingDir=testAppName }) (sprintf "build -c debug")
+    DotNetCli.RunCommand (fun p -> { p with  WorkingDir=testAppName }) (sprintf "test -c debug")
+
+    (* Manual steps without building nupkg
+        dotnet pack src\FSharp.TypeProviders.SDK.fsproj /p:PackageVersion=0.0.0.99 --output bin -c release
+        .nuget\nuget.exe pack -OutputDirectory bin -Version 0.0.0.99 templates/FSharp.TypeProviders.Templates.nuspec
+        dotnet new -i  bin/FSharp.TypeProviders.Templates.0.0.0.99.nupkg
+        dotnet new typeprovider -n tp3 -lang:F#
+        
+        .\build LibraryNuGet
+        dotnet new -i  templates
+        rmdir /s /q testapp2
+        dotnet new fabulous-app -n testapp2 -lang F#
+        dotnet restore testapp2/testapp2/testapp2.fsproj -s build_output/
+        dotnet new -i  templates && rmdir /s /q testapp2 && dotnet new fabulous-app -n testapp2 -lang F# && dotnet restore testapp2/testapp2/testapp2.fsproj && msbuild testapp2/testapp2.Android/testapp2.Android.fsproj /t:RestorePackages && msbuild testapp2/testapp2.Android/testapp2.Android.fsproj
+        dotnet new -i  templates && rmdir /s /q testapp2 && dotnet new fabulous-app -n testapp2 -lang F# && dotnet restore testapp2/testapp2/testapp2.fsproj && msbuild testapp2/testapp2.iOS/testapp2.iOS.fsproj /t:RestorePackages  && msbuild testapp2/testapp2.iOS/testapp2.iOS.fsproj
+        dotnet new -i  templates && rmdir /s /q testapp2 && dotnet new fabulous-app -n testapp2 -lang F# --CreateMacProject && dotnet restore testapp2/testapp2/testapp2.fsproj && msbuild testapp2/testapp2.macOS/testapp2.macOS.fsproj /t:RestorePackages  && msbuild testapp2/testapp2.macOS/testapp2.macOS.fsproj
+        *)
+
+)
+
+  
 "Clean" ==> "Pack"
 "Build" ==> "Examples" ==> "Pack"
 "Build" ==> "Examples" ==> "RunTests" ==> "Pack"
