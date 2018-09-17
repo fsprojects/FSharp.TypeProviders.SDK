@@ -1,30 +1,36 @@
 
-# The F# Type Provider SDK 
+# The F# Type Provider SDK
 
-The F# Type Provider SDK is two things: 
+The F# Type Provider SDK is two things:
 
 1. The ``ProvidedTypes.fs`` API files you need to author type providers
 
 2. Documentation and samples on type provider creation
 
-This package is actively seeking contributions.
-
-## Build status
-
-
 [![Build status (Windows)](https://ci.appveyor.com/api/projects/status/y1c6gs2r0ihog1re)](https://ci.appveyor.com/project/mavnn/fsharp-typeproviders-sdk)  [![Build Status (MacOS, mono)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.SDK.svg?branch=master)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.SDK)
 
-## The ProvidedTypes API - Adding the Files
+## Getting Started
 
-Building a type provider nearly always starts with adding these files to your project:
+To create a type provider use:
 
-* ProvidedTypes.fsi
-* ProvidedTypes.fs
+    dotnet new -i FSharp.TypeProviders.Templates
+    dotnet new typeprovider -n LemonadeProvider -lang F#
 
-If using Paket, you can add code files by direct GitHub references like [this](https://github.com/dsyme/FSharp.Data/blob/e841dde62091a82225b91b2f38b76513dafbfc05/paket.dependencies#L20-L22) and reference the files in a project file like [this](https://github.com/dsyme/FSharp.Data/blob/b5df1ca30f5bb7749c4fd340b61f1b7fc43fb547/src/FSharp.Data.DesignTime.fsproj#L55).
+The template uses paket to acquire the files of the latest published type provider SDK.
 
+    cd LemonadeProvider
 
-Type providers may be used in projects that generate .NET Standard code or target other .NET Frameworks than that being used to execute the F# compiler. 
+    .paket\paket.exe update
+
+    dotnet build -c release
+
+    dotnet test -c release
+
+The type provider also contains the logic necessary to package the type provider:
+
+    .paket\paket.exe pack src\LemonadeProvider.Runtime\paket.template --version 0.0.1
+
+If you want you can remove the use of paket for the last stage and switch to `dotnet pack` though you'll have to work out how to do that yourself at the moment (it shouldn't be too hard).
 
 ## The ProvidedTypes API - A Basic Type Provider
 

@@ -22,7 +22,7 @@ matrix:
 sudo: true  # use the new container-based Travis infrastructure
 
 script:
-  - ./build.sh Pack
+  - ./build.sh All
 
 allow_failures:
     - mono: weekly

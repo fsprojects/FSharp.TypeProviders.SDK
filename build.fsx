@@ -187,10 +187,9 @@ Target "TestTemplatesNuGet" (fun _ ->
 
 )
 
-  
-"Clean" ==> "Pack"
-"Build" ==> "Examples" ==> "Pack"
-"Build" ==> "Examples" ==> "RunTests" ==> "Pack"
-"Build" ==> "Examples" ==> "RunTests" ==> "Pack" ==> "TestTemplatesNuGet"
+Target "All" id
 
-RunTargetOrDefault "Pack"
+"Clean" ==> "Pack"
+"Build" ==> "Examples" ==> "RunTests" ==> "Pack" ==> "TestTemplatesNuGet" ==> "All"
+
+RunTargetOrDefault "All"
