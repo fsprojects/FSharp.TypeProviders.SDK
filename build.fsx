@@ -173,7 +173,7 @@ Target "TestTemplatesNuGet" (fun _ ->
 
     // NOTE: when restoring this won't use the local version of TPSDK but the one in github.  Perhaps we can use
     // this local repo as a source for the paket update, or remove the use of paket in the template
-    execIn testAppName ".paket/paket.exe" "update"
+    execIn testAppName ".paket/paket.exe" "restore"
     
     DotNetCli.RunCommand (fun p -> { p with  ToolPath =  getSdkPath(); WorkingDir=testAppName }) (sprintf "build -c debug")
     DotNetCli.RunCommand (fun p -> { p with ToolPath =  getSdkPath();  WorkingDir=testAppName }) (sprintf "test -c debug")
