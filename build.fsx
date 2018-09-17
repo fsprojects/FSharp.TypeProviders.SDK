@@ -162,12 +162,12 @@ Target "Pack" (fun _ ->
 Target "TestTemplatesNuGet" (fun _ ->
 
     // Globally install the templates from the template nuget package we just built
-    DotNetCli.RunCommand id ("new -i " + outputPath + "/FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg")
+    DotNetCli.RunCommand (fun p -> { p with ToolPath =  getSdkPath() }) ("new -i " + outputPath + "/FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg")
 
     // Instantiate the template into a randomly generated name
     let testAppName = "tp2" + string (abs (hash System.DateTime.Now.Ticks) % 100)
     CleanDir testAppName
-    DotNetCli.RunCommand id (sprintf "new typeprovider -n %s -lang F#" testAppName)
+    DotNetCli.RunCommand (fun p -> { p with ToolPath =  getSdkPath() }) (sprintf "new typeprovider -n %s -lang F#" testAppName)
 
     let pkgs = Path.GetFullPath(outputPath)
 
@@ -175,8 +175,8 @@ Target "TestTemplatesNuGet" (fun _ ->
     // this local repo as a source for the paket update, or remove the use of paket in the template
     execIn testAppName ".paket/paket.exe" "update"
     
-    DotNetCli.RunCommand (fun p -> { p with  WorkingDir=testAppName }) (sprintf "build -c debug")
-    DotNetCli.RunCommand (fun p -> { p with  WorkingDir=testAppName }) (sprintf "test -c debug")
+    DotNetCli.RunCommand (fun p -> { p with  ToolPath =  getSdkPath(); WorkingDir=testAppName }) (sprintf "build -c debug")
+    DotNetCli.RunCommand (fun p -> { p with ToolPath =  getSdkPath();  WorkingDir=testAppName }) (sprintf "test -c debug")
 
     (* Manual steps without building nupkg
         dotnet pack src\FSharp.TypeProviders.SDK.fsproj /p:PackageVersion=0.0.0.99 --output bin -c release
