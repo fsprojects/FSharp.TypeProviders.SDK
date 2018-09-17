@@ -147,6 +147,7 @@ Target "RunTests" (fun _ ->
 )
 
 Target "Pack" (fun _ ->
+    // TODO: This is using an awkward mix of Paket and dotnet to do packaging. We should just use paket.
     DotNetCli.Pack  (fun p -> { p with Configuration = config; 
                                        Project = "src/FSharp.TypeProviders.SDK.fsproj"; 
                                        ToolPath =  getSdkPath(); OutputPath = outputPath; 
@@ -163,19 +164,17 @@ Target "TestTemplatesNuGet" (fun _ ->
     // Globally install the templates from the template nuget package we just built
     DotNetCli.RunCommand id ("new -i " + outputPath + "/FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg")
 
+    // Instantiate the template into a randomly generated name
     let testAppName = "tp2" + string (abs (hash System.DateTime.Now.Ticks) % 100)
     CleanDir testAppName
     DotNetCli.RunCommand id (sprintf "new typeprovider -n %s -lang F#" testAppName)
 
     let pkgs = Path.GetFullPath(outputPath)
-    // When restoring, using the build_output as a package source to pick up the package we just compiled
+
+    // NOTE: when restoring this won't use the local version of TPSDK but the one in github.  Perhaps we can use
+    // this local repo as a source for the paket update, or remove the use of paket in the template
     execIn testAppName ".paket/paket.exe" "update"
-    //DotNetCli.RunCommand id (sprintf "restore %s/%s/%s.fsproj  --source https://api.nuget.org/v3/index.json --source %s" testAppName testAppName testAppName pkgs)
     
-//    let slash = if isUnix then "\\" else ""
-//    for c in ["Debug"; "Release"] do 
-//        for p in ["Any CPU"; "iPhoneSimulator"] do 
-//            exec "msbuild" (sprintf "%s/%s.sln /p:Platform=\"%s\" /p:Configuration=%s /p:PackageSources=%s\"https://api.nuget.org/v3/index.json%s;%s%s\"" testAppName testAppName p c  slash slash pkgs slash)
     DotNetCli.RunCommand (fun p -> { p with  WorkingDir=testAppName }) (sprintf "build -c debug")
     DotNetCli.RunCommand (fun p -> { p with  WorkingDir=testAppName }) (sprintf "test -c debug")
 
@@ -184,15 +183,6 @@ Target "TestTemplatesNuGet" (fun _ ->
         .nuget\nuget.exe pack -OutputDirectory bin -Version 0.0.0.99 templates/FSharp.TypeProviders.Templates.nuspec
         dotnet new -i  bin/FSharp.TypeProviders.Templates.0.0.0.99.nupkg
         dotnet new typeprovider -n tp3 -lang:F#
-        
-        .\build LibraryNuGet
-        dotnet new -i  templates
-        rmdir /s /q testapp2
-        dotnet new fabulous-app -n testapp2 -lang F#
-        dotnet restore testapp2/testapp2/testapp2.fsproj -s build_output/
-        dotnet new -i  templates && rmdir /s /q testapp2 && dotnet new fabulous-app -n testapp2 -lang F# && dotnet restore testapp2/testapp2/testapp2.fsproj && msbuild testapp2/testapp2.Android/testapp2.Android.fsproj /t:RestorePackages && msbuild testapp2/testapp2.Android/testapp2.Android.fsproj
-        dotnet new -i  templates && rmdir /s /q testapp2 && dotnet new fabulous-app -n testapp2 -lang F# && dotnet restore testapp2/testapp2/testapp2.fsproj && msbuild testapp2/testapp2.iOS/testapp2.iOS.fsproj /t:RestorePackages  && msbuild testapp2/testapp2.iOS/testapp2.iOS.fsproj
-        dotnet new -i  templates && rmdir /s /q testapp2 && dotnet new fabulous-app -n testapp2 -lang F# --CreateMacProject && dotnet restore testapp2/testapp2/testapp2.fsproj && msbuild testapp2/testapp2.macOS/testapp2.macOS.fsproj /t:RestorePackages  && msbuild testapp2/testapp2.macOS/testapp2.macOS.fsproj
         *)
 
 )
@@ -201,5 +191,6 @@ Target "TestTemplatesNuGet" (fun _ ->
 "Clean" ==> "Pack"
 "Build" ==> "Examples" ==> "Pack"
 "Build" ==> "Examples" ==> "RunTests" ==> "Pack"
+"Build" ==> "Examples" ==> "RunTests" ==> "Pack" ==> "TestTemplatesNuGet"
 
-RunTargetOrDefault "RunTests"
+RunTargetOrDefault "Pack"
