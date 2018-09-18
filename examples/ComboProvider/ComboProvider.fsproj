@@ -16,13 +16,13 @@
     <!-- These files are the facades necessary to run .NET Standard 2.0 components on .NET Framework 4.6.1 (.NET Framework 4.7 will -->
     <!-- come with these facades included). Because the type provider is a .NET Standard 2.0 component, the deployment of the type -->
     <!--  provider must include these facade DLLs if it is to run hosted inside an F# compiler executing using  .NET Framework 4.6.1 or Mono 5.0. -->
-    <None Include="..\..\packages\NetStandard.Library.NetFramework\build\net461\lib\netstandard.dll">
+    <None Include="..\..\packages\NETStandard.Library.NETFramework\build\net461\lib\netstandard.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\packages\NetStandard.Library.NetFramework\build\net461\lib\System.Reflection.dll">
+    <None Include="..\..\packages\NETStandard.Library.NETFramework\build\net461\lib\System.Reflection.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\packages\NetStandard.Library.NetFramework\build\net461\lib\System.Runtime.dll">
+    <None Include="..\..\packages\NETStandard.Library.NETFramework\build\net461\lib\System.Runtime.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>  
   </ItemGroup>

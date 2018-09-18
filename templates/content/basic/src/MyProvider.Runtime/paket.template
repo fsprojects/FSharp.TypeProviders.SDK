@@ -1,0 +1,39 @@
+type file
+id MyProvider
+authors
+    Steffen Forkmann, Gustavo Guerra, JohnDoeKyrgyz, Don Syme
+owners
+    Steffen Forkmann, Gustavo Guerra, JohnDoeKyrgyz, Don Syme
+projectUrl
+    http://github.com/fsprojects/MyProvider
+iconUrl
+    https://raw.githubusercontent.com/fsprojects/MyProvider/master/docs/files/img/logo.png
+licenseUrl
+    http://github.com/fsprojects/MyProvider/blob/master/LICENSE.txt
+requireLicenseAcceptance
+    false
+tags
+    F# fsharp typeproviders MyProvider
+summary
+    This library is for the .NET platform implementing MyProvider.
+description
+    This library is for the .NET platform implementing MyProvider.
+tags
+    F# fsharp typeproviders MyProvider
+files
+    bin/Release/net45/MyProvider.Runtime.* ==> lib/net45
+    bin/Release/netstandard2.0/MyProvider.Runtime.* ==> lib/netstandard2.0
+    bin/Release/typeproviders/fsharp41/netstandard2.0/*.dll ==> typeproviders/fsharp41/netstandard2.0
+    bin/Release/typeproviders/fsharp41/netcoreapp2.0/*.dll ==> typeproviders/fsharp41/netcoreapp2.0
+    bin/Release/typeproviders/fsharp41/net45/*.dll ==> typeproviders/fsharp41/net45
+references
+    MyProvider.Runtime.dll
+dependencies
+  FSharp.Core >= LOCKEDVERSION
+
+# put any package references here
+#  Some.Package
+#  framework: netcoreapp2.0
+#    System.Text.Encoding.CodePages >= LOCKEDVERSION
+#  framework: netstandard2.0
+#    System.Text.Encoding.CodePages >= LOCKEDVERSION

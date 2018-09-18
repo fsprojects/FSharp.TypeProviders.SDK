@@ -1,6 +1,3 @@
-#if INTERACTIVE
-#r @"../test/BasicProvider.dll"
-#endif
 
 module BasicProvider.Tests
 

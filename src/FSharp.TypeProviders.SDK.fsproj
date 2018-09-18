@@ -6,6 +6,14 @@
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Authors>FSharp.TypeProviders.SDK contributors</Authors>
+    <PackageLicenseUrl>http://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/LICENSE.md</PackageLicenseUrl>
+    <PackageProjectUrl>http://github.com/fsprojects/FSharp.TypeProviders.SDK</PackageProjectUrl>
+    <PackageIconUrl>https://raw.githubusercontent.com/fsprojects/FSharp.TypeProviders.SDK/master/docs/files/img/logo.png</PackageIconUrl>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Description>The core implementation of an F# type provider</Description>
+    <Copyright>Copyright 2017 FSharp.TypeProviders.SDK contributors</Copyright>
+    <tags>F# fsharp typeprovider</tags>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ProvidedTypes.fsi" />
@@ -16,4 +24,5 @@
     <PackageReference Include="FSharp.Core" Version="3.1.2.5" Condition="'$(TargetFramework)' == 'net45'" />
     <PackageReference Include="FSharp.Core" Version="4.2.*" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
   </ItemGroup>
+  <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>
