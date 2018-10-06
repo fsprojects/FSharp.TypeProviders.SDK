@@ -165,7 +165,7 @@ Here is a guide to the steps to perform:
    
    * If the TPDTC **doesn't** depend on .NET Framework, then target the TPDTC to `netstandard2.0`
    
-   Beware that your TPDTC might have a **false** dependency induced by including a copy of the TPRTC source code into the TPDTC (which is generally a good technique). It is likely such a dependency can be removed by selectively stubbing out runtime code using a `IS_DESIGNTIME` define.  The TPDTC only needs access to an "API" that has the same logical shape as the TPRTC in order to generate code and types.  That "API" is then translated to match the targret references assemblies in an actual compilation.
+   Beware that your TPDTC might have a **false** dependency induced by including a copy of the TPRTC source code into the TPDTC (which is generally a good technique). It is likely such a dependency can be removed by selectively stubbing out runtime code using a `IS_DESIGNTIME` define.  The TPDTC only needs access to an "API" that has the same logical shape as the TPRTC in order to generate code and types.  That "API" is then translated to match the target references assemblies in an actual compilation.
 
 7. Modify your project to copy the design-time DLLs into the right place, e.g. see [this example](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider/BasicProvider.fsproj#L16)
 
@@ -245,7 +245,7 @@ One approach:
 
 * TPRTC - Type Provider Referenced Component, e.g. ``FSharp.Data.dll``. 
 
-  * This is the component referenced by ``#r`` or ``-r:`` on the command line or other confugration of a host tool
+  * This is the component referenced by ``#r`` or ``-r:`` on the command line or other configration of a host tool
   
   * May be the same physical file as the TPDTC.
   
