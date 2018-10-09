@@ -231,6 +231,35 @@ let ``GenerativePropertyProviderWithStaticParams attributes are read correctly``
             let firstMethod = t.GetMembers() |> Array.find (fun m -> m :? ProvidedMethod )
             let attrib = firstMethod.GetCustomAttributes<CompiledNameAttribute>()
             Assert.NotNull attrib
+            
+[<Fact>]
+let ``GenerativePropertyProviderWithStaticParams reflection on MethodSymbol and ConstructorSymbols do not throw``() : unit  = 
+    for (text, desc, supports, refs) in testCases() do
+        if supports() then 
+            let staticArgs = [|  box 3; box 4  |] 
+            let runtimeAssemblyRefs = refs()
+            let runtimeAssembly = runtimeAssemblyRefs.[0]
+            let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
+            let tp = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
+            let providedNamespace = tp.Namespaces.[0] 
+            let providedTypes  = providedNamespace.GetTypes()
+            let providedType = providedTypes.[0] 
+            let typeName = providedType.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
+
+            let t = (tp :> ITypeProvider).ApplyStaticArguments(providedType, [| typeName |], staticArgs)
+
+            let genericContainer = ProvidedTypeBuilder.MakeGenericType(typedefof<Option<_>>, [t])
+            
+            let methods = genericContainer.GetMethods(BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Static ||| BindingFlags.Instance) 
+            let methodCustomAttributes =
+                methods |> Array.choose (fun methodSymbol -> methodSymbol.GetCustomAttributes(true) |> Array.tryHead )
+            Assert.NotEmpty methodCustomAttributes
+            
+            let ctors = genericContainer.GetConstructors(BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Static ||| BindingFlags.Instance)
+            let ctorCustomAttributes = ctors |> Array.choose (fun ctorSymbol -> ctorSymbol.GetCustomAttributes(true) |> Array.tryHead )
+            Assert.NotEmpty ctorCustomAttributes
+                            
+
 
 [<TypeProvider>]
 type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypeProviderConfig) as this =
