@@ -34,33 +34,7 @@ If you want you can remove the use of paket for the last stage and switch to `do
 
 ## The ProvidedTypes API - A Basic Type Provider
 
-Here is a basic erasing type provider using the Provided Types API:
-
-```fsharp
-open ProviderImplementation
-open ProviderImplementation.ProvidedTypes
-open Microsoft.FSharp.Core.CompilerServices
-open System.Reflection
-
-[<TypeProvider>]
-type BasicProvider (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces (config)
-
-    let ns = "StaticProperty.Provided"
-    let asm = Assembly.GetExecutingAssembly()
-
-    let createTypes () =
-        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        let myProp = ProvidedProperty("MyProperty", typeof<string>, isStatic = true, getterCode = (fun args -> <@@ "Hello world" @@>))
-        myType.AddMember(myProp)
-        [myType]
-
-    do
-        this.AddNamespace(ns, createTypes())
-
-[<assembly:TypeProviderAssembly>]
-do ()
-```
+When you instantiate the template above you get basic erasing and geneative type providers.
 
 ## Some unit testing helpers
 
