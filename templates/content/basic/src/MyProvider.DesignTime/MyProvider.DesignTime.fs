@@ -63,7 +63,7 @@ type BasicErasingProvider (config : TypeProviderConfig) as this =
 
 [<TypeProvider>]
 type BasicGenerativeProvider (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces (config, assemblyReplacementMap=[("BasicGenerativeProvider.DesignTime", "MyProvider")])
+    inherit TypeProviderForNamespaces (config, assemblyReplacementMap=[("MyProvider.DesignTime", "MyProvider.Runtime")])
 
     let ns = "MyProvider"
     let asm = Assembly.GetExecutingAssembly()
