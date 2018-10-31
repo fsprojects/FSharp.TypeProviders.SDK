@@ -9159,6 +9159,12 @@ namespace ProviderImplementation.ProvidedTypes
                   member __.GetTypes() = Array.map convTypeDefToTgt (x.GetTypes())
                   member __.ResolveTypeName typeName = convTypeDefToTgt (x.ResolveTypeName typeName) }
 
+        /// Gets the equivalent target method
+        member __.ConvertSourceMethodRefToTarget t = convMethodRefToTgt t
+
+        /// Gets the equivalent target constructor
+        member __.ConvertSourceConstructorRefToTarget t = convConstructorRefToTgt t
+
         /// Gets the equivalent target type
         member __.ConvertSourceTypeToTarget t = convTypeToTgt t
 
@@ -9167,7 +9173,9 @@ namespace ProviderImplementation.ProvidedTypes
         member __.ConvertSourceExprToTarget e = convExprToTgt e
 
         member __.ConvertSourceNamespaceToTarget ns = convNamespaceToTgt ns
+
         member __.ConvertSourceProvidedTypeDefinitionToTarget ptd = convProvidedTypeDefToTgt ptd
+
         member __.TryBindILAssemblyRefToTgt(aref: ILAssemblyRef): Choice<Assembly, exn> = tryBindTargetAssemblySimple(aref.Name)
 
         member __.TryBindAssemblyNameToTarget(aref: AssemblyName): Choice<Assembly, exn> = tryBindTargetAssemblySimple(aref.Name)
@@ -14340,12 +14348,17 @@ namespace ProviderImplementation.ProvidedTypes
 
                                 let pb = mb.DefineParameter(i+1, p.Attributes, p.Name)
                                 if p.HasDefaultParameterValue then
-                                    let ctor = typeof<System.Runtime.InteropServices.DefaultParameterValueAttribute>.GetConstructor([|typeof<obj>|])
-                                    let ca = mkILCustomAttribMethRef (transCtorSpec ctor, [p.RawDefaultValue], [], [])
+                                    let ctorTy = typeof<System.Runtime.InteropServices.DefaultParameterValueAttribute>
+                                    let ctor = ctorTy.GetConstructor([|typeof<obj>|])
+                                    let ctorTgt = context.ConvertSourceConstructorRefToTarget ctor
+
+                                    let ca = mkILCustomAttribMethRef (transCtorSpec ctorTgt, [p.RawDefaultValue], [], [])
                                     pb.SetCustomAttribute ca
 
-                                    let ctor = typeof<System.Runtime.InteropServices.OptionalAttribute>.GetConstructor([||])
-                                    let ca = mkILCustomAttribMethRef (transCtorSpec ctor, [], [], [])
+                                    let ctorTy = typeof<System.Runtime.InteropServices.OptionalAttribute>
+                                    let ctor = ctorTy.GetConstructor([||])
+                                    let ctorTgt = context.ConvertSourceConstructorRefToTarget ctor
+                                    let ca = mkILCustomAttribMethRef (transCtorSpec ctorTgt, [], [], [])
                                     pb.SetCustomAttribute ca
 
                                     pb.SetConstant p.RawDefaultValue
