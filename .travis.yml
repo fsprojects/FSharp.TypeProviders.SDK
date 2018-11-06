@@ -18,6 +18,12 @@ matrix:
     - mono: latest
       env: USE_MSBUILD=1
       os: linux
+    - mono: weekly
+      env: USE_MSBUILD=1
+      os: linux
+    - mono: nightly
+      env: USE_MSBUILD=1
+      os: linux
       
 sudo: true  # use the new container-based Travis infrastructure
 
@@ -26,5 +32,8 @@ script:
 
 allow_failures:
     - mono: weekly
+      env: USE_MSBUILD=1
+      os: linux
+    - mono: nightly
       env: USE_MSBUILD=1
       os: linux
