@@ -8722,7 +8722,7 @@ namespace ProviderImplementation.ProvidedTypes
                     convTypeDefToTgt t
                     
                 | _ -> 
-                let asms = (if toTgt then getTargetAssemblies() else getSourceAssemblies())
+                let asms = System.Linq.Enumerable.Reverse(if toTgt then getTargetAssemblies() else getSourceAssemblies())
                 let fullName = fixName t.FullName
 
                 // TODO: this linear search through all available source/target assemblies feels as if it must be too slow in some cases.
