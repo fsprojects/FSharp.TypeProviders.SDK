@@ -8727,17 +8727,20 @@ namespace ProviderImplementation.ProvidedTypes
 
                 // TODO: this linear search through all available source/target assemblies feels as if it must be too slow in some cases.
                 // However, we store type translations in various tables (typeTableFwd and typeTableBwd) so perhaps it is not a problem
-                match asms |> Seq.tryPick (tryGetTypeFromAssembly toTgt t.Assembly.FullName fullName) with
-                | Some (newT, canSave) ->
-                     if canSave then table.[t] <- newT
-                     newT
-                | _ ->
-                    let msg =
-                        if toTgt then sprintf "The design-time type '%O' utilized by a type provider was not found in the target reference assembly set '%A'. You may be referencing a profile which contains fewer types than those needed by the type provider you are using." t (getTargetAssemblies() |> Seq.toList)
-                        elif getSourceAssemblies() |> Seq.length = 0 then sprintf "A failure occured while determining compilation references"
-                        else sprintf "The target type '%O' utilized by a type provider was not found in the design-time assembly set '%A'. Please report this problem to the project site for the type provider." t (getSourceAssemblies() |> Seq.toList)
-                    failwith msg
-
+                let rec loop i = 
+                    if i < 0 then 
+                        let msg =
+                            if toTgt then sprintf "The design-time type '%O' utilized by a type provider was not found in the target reference assembly set '%A'. You may be referencing a profile which contains fewer types than those needed by the type provider you are using." t (getTargetAssemblies() |> Seq.toList)
+                            elif getSourceAssemblies() |> Seq.length = 0 then sprintf "A failure occured while determining compilation references"
+                            else sprintf "The target type '%O' utilized by a type provider was not found in the design-time assembly set '%A'. Please report this problem to the project site for the type provider." t (getSourceAssemblies() |> Seq.toList)
+                        failwith msg
+                    else
+                        match tryGetTypeFromAssembly toTgt t.Assembly.FullName fullName asms.[i] with
+                        | Some (newT, canSave) ->
+                            if canSave then table.[t] <- newT
+                            newT
+                        | None -> loop (i - 1)
+                loop (asms.Count - 1)
 
         and convType toTgt (t:Type) =
             let table = (if toTgt then typeTableFwd else typeTableBwd)
