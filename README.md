@@ -226,11 +226,11 @@ One approach:
 
 2. Run an explicit invocation of the compiler using:
 
-       "c:\Program Files\dotnet\dotnet.exe" "C:\Program Files\dotnet\sdk\2.1.401\FSharp\fsc.exe" @args.txt
+       "c:\Program Files\dotnet\dotnet.exe" "C:\Program Files\dotnet\sdk\2.1.403\FSharp\fsc.exe" @args.txt
 
    Then debug that invocation using
 
-       devenv /debugexe "c:\Program Files\dotnet\dotnet.exe" "C:\Program Files\dotnet\sdk\2.1.401\FSharp\fsc.exe" @args.txt
+       devenv /debugexe "c:\Program Files\dotnet\dotnet.exe" "C:\Program Files\dotnet\sdk\2.1.403\FSharp\fsc.exe" @args.txt
 
    Be careful to make sure Visual Studio debugging type is set to ".NET Core" (right click properties on dotnet and set debug type)
 
