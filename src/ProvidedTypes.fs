@@ -9197,7 +9197,7 @@ namespace ProviderImplementation.ProvidedTypes
             let ilg = ilGlobals.Force()
             let is = ByteFile(bytes)
             let pe = PEReader(fileName, is)
-            let mdchunk = File.ReadBinaryChunk (fileName, pe.MetadataPhysLoc, pe.MetadataSize)
+            let mdchunk = bytes.[pe.MetadataPhysLoc .. pe.MetadataPhysLoc + pe.MetadataSize - 1]
             let mdfile = ByteFile(mdchunk)
             let reader = ILModuleReader(fileName, mdfile, ilg, true)
             TargetAssembly(ilg, this.TryBindILAssemblyRefToTgt, Some reader, fileName) :> Assembly
@@ -14518,12 +14518,12 @@ namespace ProviderImplementation.ProvidedTypes
             assemblyBuilder.Save ()
             //printfn "re-reading generated binary from '%s'" assemblyFileName
             let reader = ILModuleReaderAfterReadingAllBytes(assemblyFileName, ilg)
+            let bytes = File.ReadAllBytes(assemblyFileName)
 #if DEBUG
             printfn "generated binary is at '%s'" assemblyFileName
 #else
             File.Delete assemblyFileName
 #endif
-            let bytes = File.ReadAllBytes(assemblyFileName)
 
             // Use a real Reflection Load when running in F# Interactive
             if isHostedExecution then 
