@@ -4185,9 +4185,10 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
     type ByteFile(bytes:byte[]) =
 
-        member __.Bytes = bytes
         member __.ReadByte addr = bytes.[addr]
+
         member __.ReadBytes addr len = Array.sub bytes addr len
+
         member __.CountUtf8String addr =
             let mutable p = addr
             while bytes.[p] <> 0uy do
@@ -4590,7 +4591,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                 typ_UIntPtr = ILType.Value (mkILTyspec "System" "UIntPtr")
                 systemRuntimeScopeRef = systemRuntimeScopeRef }
 
-        type ILModuleReader(infile: string, is: ByteFile, ilg: ILGlobals, lowMem: bool) =
+        type PEReader(infile: string, is: ByteFile) =
 
             //-----------------------------------------------------------------------
             // Crack the binary headers, build a reader context and return the lazy
@@ -4663,6 +4664,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             let cliHeaderPhysLoc = anyV2P ("cli header",cliHeaderAddr)
 
             let metadataAddr = seekReadInt32 is (cliHeaderPhysLoc + 8)
+            let metadataSize = seekReadInt32 is (cliHeaderPhysLoc + 12)
             let cliFlags = seekReadInt32 is (cliHeaderPhysLoc + 16)
             let ilOnly = (cliFlags &&& 0x01) <> 0x00
             let only32 = (cliFlags &&& 0x02) <> 0x00
@@ -4672,6 +4674,13 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             let resourcesAddr = seekReadInt32 is (cliHeaderPhysLoc + 24)
 
             let metadataPhysLoc = anyV2P ("metadata",metadataAddr)
+
+            member __.MetadataPhysLoc = metadataPhysLoc
+            member __.MetadataSize = metadataSize
+
+        type ILModuleReader(infile: string, is: ByteFile, ilg: ILGlobals, lowMem: bool) =
+
+            let metadataPhysLoc = 0
             let magic = seekReadUInt16AsInt32 is metadataPhysLoc
             do if magic <> 0x5342 then failwith (infile + ": bad metadata magic number: " + string magic);
             let magic2 = seekReadUInt16AsInt32 is (metadataPhysLoc + 2)
@@ -5207,15 +5216,6 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                 let implIdx = seekReadImplementationIdx &addr
                 (flags,tok,nameIdx,namespaceIdx,implIdx)
 
-            /// Read Table ManifestResource
-            let seekReadManifestResourceRow idx =
-                let mutable addr = rowAddr ILTableNames.ManifestResource idx
-                let offset = seekReadInt32Adv &addr
-                let flags = seekReadInt32Adv &addr
-                let nameIdx = seekReadStringIdx &addr
-                let implIdx = seekReadImplementationIdx &addr
-                (offset,flags,nameIdx,implIdx)
-
             /// Read Table Nested
             let seekReadNestedRow idx =
                 let mutable addr = rowAddr ILTableNames.Nested idx
@@ -5279,7 +5279,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             //let subsysversion = (subsysMajor, subsysMinor)
             let ilMetadataVersion = Encoding.UTF8.GetString (ilMetadataVersion, 0, ilMetadataVersion.Length)
 
-            let rec seekReadModule (subsys, subsysversion, useHighEntropyVA, ilOnly, only32, is32bitpreferred, only64, platform, isDll, alignVirt, alignPhys, imageBaseReal, ilMetadataVersion) idx =
+            let rec seekReadModule (ilMetadataVersion) idx =
                 let (_generation, nameIdx, _mvidIdx, _encidIdx, _encbaseidIdx) = seekReadModuleRow idx
                 let ilModuleName = readStringHeap nameIdx
                 //let nativeResources = readNativeResources tgt
@@ -5291,21 +5291,21 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                   Name = ilModuleName;
                   //NativeResources=nativeResources;
                   TypeDefs = ILTypeDefs (lazy (seekReadTopTypeDefs ()));
-                  SubSystemFlags = int32 subsys;
-                  IsILOnly = ilOnly;
-                  SubsystemVersion = subsysversion
-                  UseHighEntropyVA = useHighEntropyVA
-                  Platform = platform;
-                  StackReserveSize = None;
-                  Is32Bit = only32;
-                  Is32BitPreferred = is32bitpreferred;
-                  Is64Bit = only64;
-                  IsDLL=isDll;
-                  VirtualAlignment = alignVirt;
-                  PhysicalAlignment = alignPhys;
-                  ImageBase = imageBaseReal;
-                  MetadataVersion = ilMetadataVersion;
-                  Resources = seekReadManifestResources ();
+                  SubsystemVersion = (4, 0)
+                  UseHighEntropyVA = false
+                  SubSystemFlags=3
+                  IsDLL=true
+                  IsILOnly=true
+                  Platform=None
+                  StackReserveSize=None
+                  Is32Bit=false
+                  Is32BitPreferred=false
+                  Is64Bit=false
+                  PhysicalAlignment=512
+                  VirtualAlignment=0x2000
+                  ImageBase=0x034f0000
+                  MetadataVersion=""
+                  Resources = ILResources (Lazy<_>.CreateFromValue [| |])
                   }
 
             and seekReadAssemblyManifest idx =
@@ -5314,13 +5314,12 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                 let pubkey = readBlobHeapOption publicKeyIdx
                 { Name= name;
                   AuxModuleHashAlgorithm=hash
-                  //SecurityDecls= seekReadSecurityDecls (TaggedIndex(hds_Assembly,idx));
-                  PublicKey= pubkey;
-                  Version= USome (Version(int v1,int v2,int v3,int v4));
-                  Locale= readStringHeapOption localeIdx;
-                  CustomAttrs = seekReadCustomAttrs (TaggedIndex(HasCustomAttributeTag.Assembly,idx));
-                  ExportedTypes= seekReadTopExportedTypes ();
-                  EntrypointElsewhere=(if fst entryPointToken = ILTableNames.File then Some (seekReadFile (snd entryPointToken)) else None);
+                  PublicKey= pubkey
+                  Version= USome (Version(int v1,int v2,int v3,int v4))
+                  Locale= readStringHeapOption localeIdx
+                  CustomAttrs = seekReadCustomAttrs (TaggedIndex(HasCustomAttributeTag.Assembly,idx))
+                  ExportedTypes= seekReadTopExportedTypes ()
+                  EntrypointElsewhere=None
                   Retargetable = 0 <> (flags &&& 0x100);
                   DisableJitOptimizations = 0 <> (flags &&& 0x4000);
                   JitTracking = 0 <> (flags &&& 0x8000)
@@ -6054,28 +6053,6 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
               | x when x = uint16 et_CLASS || x = uint16 et_OBJECT ->  null
               | _ -> null
 
-            and seekReadManifestResources () =
-                ILResources
-                  (lazy
-                     [| for i = 1 to getNumRows ILTableNames.ManifestResource do
-                         let (offset,flags,nameIdx,implIdx) = seekReadManifestResourceRow i
-                         let scoref = seekReadImplAsScopeRef implIdx
-                         let datalab =
-                           match scoref with
-                           | ILScopeRef.Local ->
-                              let start = anyV2P ("resource",offset + resourcesAddr)
-                              let len = seekReadInt32 is start
-                              ILResourceLocation.Local (fun () -> seekReadBytes is (start + 4) len)
-                           | ILScopeRef.Module mref -> ILResourceLocation.File (mref,offset)
-                           | ILScopeRef.Assembly aref -> ILResourceLocation.Assembly aref
-
-                         let r =
-                           { Name= readStringHeap nameIdx;
-                             Location = datalab;
-                             Access = (if (flags &&& 0x01) <> 0x0 then ILResourceAccess.Public else ILResourceAccess.Private);
-                             CustomAttrs =  seekReadCustomAttrs (TaggedIndex(HasCustomAttributeTag.ManifestResource, i)) }
-                         yield r |])
-
             and seekReadNestedExportedTypes parentIdx =
                 ILNestedExportedTypesAndForwarders
                   (lazy
@@ -6118,10 +6095,9 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                                yield entry |])
 
 
-            let ilModule = seekReadModule (subsys, (subsysMajor, subsysMinor), useHighEntropyVA, ilOnly, only32, is32bitpreferred, only64, platform, isDll, alignVirt, alignPhys, imageBaseReal, ilMetadataVersion) 1
+            let ilModule = seekReadModule (ilMetadataVersion) 1
             let ilAssemblyRefs = [ for i in 1 .. getNumRows ILTableNames.AssemblyRef do yield seekReadAssemblyRef i ]
 
-            member __.Bytes = is.Bytes
             member __.ILGlobals = ilg
             member __.ILModuleDef = ilModule
             member __.ILAssemblyRefs = ilAssemblyRefs
@@ -6645,7 +6621,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             with err -> 
               failwithf  "FAILED decodeILCustomAttribData, data.Length = %d, data = %A, meth = %A, argtypes = %A, fixedArgs=%A, nnamed = %A, sigptr before named = %A,  innerError = %A" bytes.Length bytes ca.Method.EnclosingType ca.Method.FormalArgTypes fixedArgs nnamed sigptr (err.ToString())
 
-        type CacheValue = ILModuleReader
+        type CacheValue = ILModuleReader * DateTime
         let (|CacheValue|_|) (wr: WeakReference) = match wr.Target with null -> None | v -> Some (v :?> CacheValue)
         let CacheValue (reader: CacheValue) = System.WeakReference reader
 
@@ -6653,15 +6629,30 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
         // resources when all instantiated at the same time.
         let readersWeakCache = ConcurrentDictionary<(string * string), WeakReference>()
 
-        let ILModuleReaderAfterReadingAllBytes  (file:string, ilGlobals: ILGlobals) =
-            let bytes = File.ReadAllBytes file
-            let key = (file, ilGlobals.systemRuntimeScopeRef.QualifiedName)
+        type File with 
+            static member ReadBinaryChunk (fileName: string, start, len) = 
+                use stream = new FileStream(fileName,FileMode.Open,FileAccess.Read,FileShare.ReadWrite)
+                stream.Seek(int64 start, SeekOrigin.Begin) |> ignore
+                let buffer = Array.zeroCreate len 
+                let mutable n = 0
+                while n < len do 
+                    n <- n + stream.Read(buffer, n, len-n)
+                buffer
+
+        let ILModuleReaderAfterReadingAllBytes  (fileName:string, ilGlobals: ILGlobals) =
+            let timeStamp = File.GetLastWriteTimeUtc(fileName)
+            let key = (fileName, ilGlobals.systemRuntimeScopeRef.QualifiedName)
             match readersWeakCache.TryGetValue (key) with
-            | true, CacheValue mr2  when bytes = mr2.Bytes ->
+            | true, CacheValue (mr2, timeStamp2) when timeStamp = timeStamp2 ->
                 mr2 // throw away the bytes we just read and recycle the existing ILModuleReader
             | _ ->
-                let mr = ILModuleReader(file, ByteFile(bytes), ilGlobals, true)
-                readersWeakCache.[key] <- CacheValue (mr)
+                let bytes = File.ReadAllBytes fileName
+                let is = ByteFile(bytes)
+                let pe = PEReader(fileName, is)
+                let mdchunk = File.ReadBinaryChunk (fileName, pe.MetadataPhysLoc, pe.MetadataSize)
+                let mdfile = ByteFile(mdchunk)
+                let mr = ILModuleReader(fileName, mdfile, ilGlobals, true)
+                readersWeakCache.[key] <- CacheValue (mr, timeStamp)
                 mr
 
 
@@ -7952,10 +7943,11 @@ namespace ProviderImplementation.ProvidedTypes
         override __.ReflectionOnly = true
 
         override x.GetManifestResourceStream(resourceName:string) =
-            let r = getReader().ILModuleDef.Resources.Entries |> Seq.find (fun r -> r.Name = resourceName)
-            match r.Location with
-            | ILResourceLocation.Local f -> new MemoryStream(f()) :> Stream
-            | _ -> notRequired x "reading manifest resource %s from non-embedded location" resourceName
+            //let r = getReader().ILModuleDef.Resources.Entries |> Seq.find (fun r -> r.Name = resourceName)
+            //match r.Location with
+            //| ILResourceLocation.Local f -> new MemoryStream(f()) :> Stream
+            //| _ -> 
+            notRequired x "reading manifest resource %s" resourceName
 
         member __.TxILTypeDef declTyOpt inp = txILTypeDef declTyOpt inp
 
@@ -9203,7 +9195,11 @@ namespace ProviderImplementation.ProvidedTypes
         member this.ReadRelatedAssembly(bytes:byte[]) = 
             let fileName = "file.dll"
             let ilg = ilGlobals.Force()
-            let reader = ILModuleReader(fileName, ByteFile(bytes), ilg, true)
+            let is = ByteFile(bytes)
+            let pe = PEReader(fileName, is)
+            let mdchunk = bytes.[pe.MetadataPhysLoc .. pe.MetadataPhysLoc + pe.MetadataSize - 1]
+            let mdfile = ByteFile(mdchunk)
+            let reader = ILModuleReader(fileName, mdfile, ilg, true)
             TargetAssembly(ilg, this.TryBindILAssemblyRefToTgt, Some reader, fileName) :> Assembly
 
         member __.AddSourceAssembly(asm: Assembly) = 
@@ -14522,12 +14518,12 @@ namespace ProviderImplementation.ProvidedTypes
             assemblyBuilder.Save ()
             //printfn "re-reading generated binary from '%s'" assemblyFileName
             let reader = ILModuleReaderAfterReadingAllBytes(assemblyFileName, ilg)
+            let bytes = File.ReadAllBytes(assemblyFileName)
 #if DEBUG
             printfn "generated binary is at '%s'" assemblyFileName
 #else
             File.Delete assemblyFileName
 #endif
-            let bytes = reader.Bytes
 
             // Use a real Reflection Load when running in F# Interactive
             if isHostedExecution then 
