@@ -6639,18 +6639,18 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                     n <- n + stream.Read(buffer, n, len-n)
                 buffer
 
-        let ILModuleReaderAfterReadingAllBytes  (file:string, ilGlobals: ILGlobals) =
-            let bytes = File.ReadAllBytes file
-            let key = (file, ilGlobals.systemRuntimeScopeRef.QualifiedName)
+        let ILModuleReaderAfterReadingAllBytes  (fileName:string, ilGlobals: ILGlobals) =
+            let bytes = File.ReadAllBytes fileName
+            let key = (fileName, ilGlobals.systemRuntimeScopeRef.QualifiedName)
             match readersWeakCache.TryGetValue (key) with
             | true, CacheValue mr2  when bytes = mr2.Bytes ->
                 mr2 // throw away the bytes we just read and recycle the existing ILModuleReader
             | _ ->
                 let is = ByteFile(bytes)
-                let pe = PEReader(file, is)
-                let mdchunk = File.ReadBinaryChunk (file, pe.MetadataPhysLoc, pe.MetadataSize)
+                let pe = PEReader(fileName, is)
+                let mdchunk = File.ReadBinaryChunk (fileName, pe.MetadataPhysLoc, pe.MetadataSize)
                 let mdfile = ByteFile(mdchunk)
-                let mr = ILModuleReader(file, mdfile, ilGlobals, true)
+                let mr = ILModuleReader(fileName, mdfile, ilGlobals, true)
                 readersWeakCache.[key] <- CacheValue (mr)
                 mr
 
