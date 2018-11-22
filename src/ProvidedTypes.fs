@@ -4185,9 +4185,10 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
     type ByteFile(bytes:byte[]) =
 
-        member __.Bytes = bytes
         member __.ReadByte addr = bytes.[addr]
+
         member __.ReadBytes addr len = Array.sub bytes addr len
+
         member __.CountUtf8String addr =
             let mutable p = addr
             while bytes.[p] <> 0uy do
@@ -6097,7 +6098,6 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             let ilModule = seekReadModule (ilMetadataVersion) 1
             let ilAssemblyRefs = [ for i in 1 .. getNumRows ILTableNames.AssemblyRef do yield seekReadAssemblyRef i ]
 
-            member __.MetadataBytes = is.Bytes
             member __.ILGlobals = ilg
             member __.ILModuleDef = ilModule
             member __.ILAssemblyRefs = ilAssemblyRefs
