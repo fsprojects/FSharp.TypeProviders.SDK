@@ -6097,7 +6097,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             let ilModule = seekReadModule (ilMetadataVersion) 1
             let ilAssemblyRefs = [ for i in 1 .. getNumRows ILTableNames.AssemblyRef do yield seekReadAssemblyRef i ]
 
-            member __.Bytes = is.Bytes
+            member __.MetadataBytes = is.Bytes
             member __.ILGlobals = ilg
             member __.ILModuleDef = ilModule
             member __.ILAssemblyRefs = ilAssemblyRefs
@@ -6627,7 +6627,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
         // Amortize readers weakly - this is enough that all the type providers in this DLL will at least share
         // resources when all instantiated at the same time.
-        let readersWeakCache = ConcurrentDictionary<(string * string), WeakReference>()
+        let readersWeakCache = ConcurrentDictionary<(string * DateTime * string), WeakReference>()
 
         type File with 
             static member ReadBinaryChunk (fileName: string, start, len) = 
@@ -6640,12 +6640,13 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                 buffer
 
         let ILModuleReaderAfterReadingAllBytes  (fileName:string, ilGlobals: ILGlobals) =
-            let bytes = File.ReadAllBytes fileName
-            let key = (fileName, ilGlobals.systemRuntimeScopeRef.QualifiedName)
+            let timeStamp = File.GetLastWriteTimeUtc(fileName)
+            let key = (fileName, timeStamp, ilGlobals.systemRuntimeScopeRef.QualifiedName)
             match readersWeakCache.TryGetValue (key) with
-            | true, CacheValue mr2  when bytes = mr2.Bytes ->
+            | true, CacheValue mr2 ->
                 mr2 // throw away the bytes we just read and recycle the existing ILModuleReader
             | _ ->
+                let bytes = File.ReadAllBytes fileName
                 let is = ByteFile(bytes)
                 let pe = PEReader(fileName, is)
                 let mdchunk = File.ReadBinaryChunk (fileName, pe.MetadataPhysLoc, pe.MetadataSize)
@@ -9194,7 +9195,11 @@ namespace ProviderImplementation.ProvidedTypes
         member this.ReadRelatedAssembly(bytes:byte[]) = 
             let fileName = "file.dll"
             let ilg = ilGlobals.Force()
-            let reader = ILModuleReader(fileName, ByteFile(bytes), ilg, true)
+            let is = ByteFile(bytes)
+            let pe = PEReader(fileName, is)
+            let mdchunk = File.ReadBinaryChunk (fileName, pe.MetadataPhysLoc, pe.MetadataSize)
+            let mdfile = ByteFile(mdchunk)
+            let reader = ILModuleReader(fileName, mdfile, ilg, true)
             TargetAssembly(ilg, this.TryBindILAssemblyRefToTgt, Some reader, fileName) :> Assembly
 
         member __.AddSourceAssembly(asm: Assembly) = 
@@ -14518,7 +14523,7 @@ namespace ProviderImplementation.ProvidedTypes
 #else
             File.Delete assemblyFileName
 #endif
-            let bytes = reader.Bytes
+            let bytes = File.ReadAllBytes(assemblyFileName)
 
             // Use a real Reflection Load when running in F# Interactive
             if isHostedExecution then 
