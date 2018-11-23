@@ -543,6 +543,42 @@ let ``test basic symbol type ops``() =
    t2T.GetConstructors() |> ignore
    t2T.GetMethod("get_Item1") |> ignore
 
+#if INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS
+
+[<Fact>]
+let ``test reader cache actually caches``() =
+    for i = 1 to 1000 do
+        let refs = Targets.DotNet45FSharp40Refs()
+        let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+        use tp = new TypeProviderForNamespaces(config)
+        let ctxt = tp.TargetContext
+
+        //let fscore =  ctxt1.TryBindAssemblyNameToTarget(AssemblyName("FSharp.Core")) 
+        let decimalT = typeof<decimal>
+        let kg = ProvidedMeasureBuilder.SI "kg"
+        let t1 = ProvidedMeasureBuilder.AnnotateType(decimalT, [ kg ])
+
+        match kg with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol"
+        match t1 with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#2"
+
+        let t1T = ctxt.ConvertSourceTypeToTarget t1
+        let kgT = ctxt.ConvertSourceTypeToTarget kg
+        match kgT with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol#3"
+        match t1T with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#4"
+
+        let _ = ProvidedTypeBuilder.MakeTupleType([ t1; t1 ])
+        ()
+
+    let dict = AssemblyReader.Reader.GetReaderCache()
+    Assert.True(dict.Count > 0, "Reader Cache has not count")
+    dict
+    |> Seq.iter (fun pair ->
+        let _, count, _ = pair.Value
+        Assert.False(count > 500, "Too many instances of an assembly")
+    )
+
+#endif
+
 [<TypeProvider>]
 type public SampleTypeProvider(config : TypeProviderConfig) as this = 
     inherit TypeProviderForNamespaces(config)

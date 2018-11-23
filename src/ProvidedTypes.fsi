@@ -8,6 +8,21 @@
 //
 // This code has been modified and is appropriate for use in conjunction with the F# 3.0-4.0 releases
 
+#if INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS
+
+namespace ProviderImplementation.ProvidedTypes.AssemblyReader
+
+open System
+open System.Collections.ObjectModel
+
+[<AutoOpen>]
+module internal Reader =
+
+    type ILModuleReader = class end
+
+    val GetReaderCache : unit -> ReadOnlyDictionary<(string * string), DateTime * int * ILModuleReader>
+
+#endif
 
 namespace ProviderImplementation.ProvidedTypes
 
