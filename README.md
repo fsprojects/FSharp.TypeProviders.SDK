@@ -28,7 +28,7 @@ The template uses paket to acquire the files of the latest published type provid
 
 The type provider also contains the logic necessary to package the type provider:
 
-    .paket\paket.exe pack src\LemonadeProvider.Runtime\paket.template --version 0.0.1
+    .paket\paket.exe pack src\LemonadeProvider.Runtime --version 0.0.1
 
 If you want you can remove the use of paket for the last stage and switch to `dotnet pack` though you'll have to work out how to do that yourself at the moment (it shouldn't be too hard).
 
