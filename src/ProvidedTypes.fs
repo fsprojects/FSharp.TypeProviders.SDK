@@ -274,6 +274,90 @@ namespace ProviderImplementation.ProvidedTypes
 
         let canBindNestedType (bindingFlags: BindingFlags) (c: Type) =
              hasFlag bindingFlags BindingFlags.Public && c.IsNestedPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsNestedPublic
+             
+        open System.Collections.ObjectModel
+        open System.Runtime.CompilerServices
+            
+        [<Extension>]
+        type AttributeExtensions =
+        
+            [<Extension>]
+            static member CreateAttribute(data: CustomAttributeData) : Attribute =
+            
+                let arguments = data.ConstructorArguments.GetConstructorValues() |> Seq.toArray
+                let attribute = data.Constructor.Invoke(arguments) :?> Attribute
+    
+                match data.NamedArguments with
+                | null -> attribute
+                | namedArguments -> 
+                    for namedArgument in namedArguments do
+                        let propertyInfo = namedArgument.MemberInfo :?> PropertyInfo
+                        let value = namedArgument.TypedValue.GetArgumentValue()
+        
+                        if not (isNull propertyInfo)
+                        then propertyInfo.SetValue(attribute, value, null)
+                        else
+                            let fieldInfo = namedArgument.MemberInfo :?> FieldInfo
+                            if not (isNull fieldInfo) then
+                                fieldInfo.SetValue(attribute, value)
+    
+                    attribute
+    
+            [<Extension>]
+            static member GetCustomAttributesCopy(typ: Type) : IEnumerable<Attribute> =
+                CustomAttributeData.GetCustomAttributes(typ).CreateAttributes()
+            
+            [<Extension>]
+            static member GetCustomAttributesCopy(assembly: Assembly) : IEnumerable<Attribute> =
+                CustomAttributeData.GetCustomAttributes(assembly).CreateAttributes();
+            
+            [<Extension>]
+            static member GetCustomAttributesCopy(memberInfo: MemberInfo) : IEnumerable<Attribute> =
+                CustomAttributeData.GetCustomAttributes(memberInfo).CreateAttributes()
+            
+            [<Extension>]
+            static member CreateAttributes(attributesData: IEnumerable<CustomAttributeData>) : IEnumerable<Attribute> =
+                seq {for attributeData in attributesData do
+                        yield attributeData.CreateAttribute() }
+    
+            [<Extension>]
+            static member GetConstructorValues(arguments: IEnumerable<CustomAttributeTypedArgument>) : IEnumerable<obj> =
+                seq {for argument in arguments do
+                        yield argument.GetArgumentValue() }
+            
+            [<Extension>]
+            static member GetArgumentValue(argument: CustomAttributeTypedArgument) : obj =
+            
+                let value =
+                    if (argument.ArgumentType.IsEnum)
+                    then
+                        let argumentType =
+                            
+                            match argument.ArgumentType with
+                            | :? TypeDelegator as td ->
+                                let fullAssyName = td.Assembly.FullName
+                                let fullTypeName = td.FullName
+                                let t = Type.GetType(fullTypeName + "," + fullAssyName, true, true)
+                                t
+                            | other -> other
+                        
+                        Enum.ToObject(argumentType, argument.Value)
+                    else argument.Value
+                
+                match value with
+                | :? ReadOnlyCollection<CustomAttributeTypedArgument> as collectionValue ->
+                    box <| AttributeExtensions.ConvertCustomAttributeTypedArgumentArray(collectionValue, argument.ArgumentType.GetElementType())
+                | _ -> value
+                
+    
+            static member ConvertCustomAttributeTypedArgumentArray(arguments: IEnumerable<CustomAttributeTypedArgument>, elementType: Type) : Array =
+                let valueArray =
+                    arguments
+                    |> Seq.map(fun x -> x.Value)
+                    |> Seq.toArray
+                let newArray = Array.CreateInstance(elementType, valueArray.Length)
+                Array.Copy(valueArray, newArray, newArray.Length)
+                newArray
 
         // We only want to return source types "typeof<Void>" values as _target_ types in one very specific location due to a limitation in the
         // F# compiler code for multi-targeting.
@@ -1151,8 +1235,19 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MemberType: MemberTypes = MemberTypes.Property
 
         override this.ReflectedType = notRequired this "ReflectedType" propertyName
-        override __.GetCustomAttributes(_inherit) = emptyAttributes
-        override __.GetCustomAttributes(attributeType, _inherit) = Attributes.CreateEmpty attributeType
+        override __.GetCustomAttributes(_inherit) =
+            let attribs =
+                customAttributesImpl.GetCustomAttributesData()
+                |> Seq.map (fun attrib -> attrib.CreateAttribute())
+                |> Seq.toArray
+            attribs |> box |> unbox<obj[]>
+        override __.GetCustomAttributes(attributeType, _inherit) =
+            let attribs =
+                customAttributesImpl.GetCustomAttributesData()
+                |> Seq.filter (fun attrib -> attrib.AttributeType.FullName = attributeType.FullName)
+                |> Seq.map (fun attrib -> attrib.CreateAttribute())
+                |> Seq.toArray
+            attribs |> box |> unbox<obj[]>
         override this.IsDefined(_attributeType, _inherit) = notRequired this "IsDefined" propertyName
 
     and ProvidedEvent(isTgt: bool, eventName:string, attrs: EventAttributes, eventHandlerType:Type, isStatic: bool, adder: (unit -> MethodInfo), remover: (unit -> MethodInfo), customAttributesData) =
