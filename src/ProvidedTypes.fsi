@@ -131,37 +131,6 @@ namespace ProviderImplementation.ProvidedTypes
 
     /// Represents an erased provided property.
     [<Class>]
-    type ProvidedProperty =
-        inherit PropertyInfo
-
-        /// Create a new provided property. It is not initially associated with any specific provided type definition.
-        new: propertyName: string * propertyType: Type * ?getterCode: (Expr list -> Expr) * ?setterCode: (Expr list -> Expr) * ?isStatic: bool * ?indexParameters: ProvidedParameter list -> ProvidedProperty
-
-        /// Add a 'Obsolete' attribute to this provided property
-        member AddObsoleteAttribute: message: string * ?isError: bool -> unit
-
-        /// Add XML documentation information to this provided constructor
-        member AddXmlDoc: xmlDoc: string -> unit
-
-        /// Add XML documentation information to this provided constructor, where the computation of the documentation is delayed until necessary
-        member AddXmlDocDelayed: xmlDocFunction: (unit -> string) -> unit
-
-        /// Add XML documentation information to this provided constructor, where the computation of the documentation is delayed until necessary
-        /// The documentation is re-computed  every time it is required.
-        member AddXmlDocComputed: xmlDocFunction: (unit -> string) -> unit
-
-        /// Get or set a flag indicating if the property is static.
-        member IsStatic: bool
-
-        /// Add definition location information to the provided type definition.
-        member AddDefinitionLocation: line:int * column:int * filePath:string -> unit
-
-        /// Add a custom attribute to the provided property definition.
-        member AddCustomAttribute: CustomAttributeData -> unit
-
-
-    /// Represents an erased provided property.
-    [<Class>]
     type ProvidedEvent =
         inherit EventInfo
 
@@ -267,11 +236,61 @@ namespace ProviderImplementation.ProvidedTypes
         /// Returns a type where the type has been annotated with the given types and/or units-of-measure.
         /// e.g. float<kg>, Vector<int, kg>
         static member AnnotateType: basic: Type * argument: Type list -> Type
+        
+    /// Represents an erased provided property.
+    type [<Class>] ProvidedProperty =
+        inherit PropertyInfo
 
+        /// Create a new provided property. It is not initially associated with any specific provided type definition.
+        new: propertyName: string * propertyType: Type * ?getterCode: (Expr list -> Expr) * ?setterCode: (Expr list -> Expr) * ?isStatic: bool * ?indexParameters: ProvidedParameter list -> ProvidedProperty
 
+        /// Add a 'Obsolete' attribute to this provided property
+        member AddObsoleteAttribute: message: string * ?isError: bool -> unit
+
+        /// Add XML documentation information to this provided constructor
+        member AddXmlDoc: xmlDoc: string -> unit
+
+        /// Add XML documentation information to this provided constructor, where the computation of the documentation is delayed until necessary
+        member AddXmlDocDelayed: xmlDocFunction: (unit -> string) -> unit
+
+        /// Add XML documentation information to this provided constructor, where the computation of the documentation is delayed until necessary
+        /// The documentation is re-computed  every time it is required.
+        member AddXmlDocComputed: xmlDocFunction: (unit -> string) -> unit
+
+        /// Get or set a flag indicating if the property is static.
+        member IsStatic: bool
+
+        /// Add definition location information to the provided type definition.
+        member AddDefinitionLocation: line:int * column:int * filePath:string -> unit
+
+        /// Add a custom attribute to the provided property definition.
+        member AddCustomAttribute: CustomAttributeData -> unit
+        
+        override GetAccessors : _nonPublic:bool -> System.Reflection.MethodInfo []
+        override GetCustomAttributes : _inherit:bool -> obj []
+        override GetCustomAttributes : attributeType:System.Type * _inherit:bool -> obj []
+        override GetCustomAttributesData : unit -> System.Collections.Generic.IList<System.Reflection.CustomAttributeData>
+        override GetGetMethod : _nonPublic:bool -> System.Reflection.MethodInfo
+        override GetIndexParameters : unit -> System.Reflection.ParameterInfo []
+        override GetSetMethod : _nonPublic:bool -> System.Reflection.MethodInfo
+        override GetValue : _obj:obj * _invokeAttr:System.Reflection.BindingFlags * _binder:System.Reflection.Binder * _index:obj [] * _culture:System.Globalization.CultureInfo -> obj
+        override IsDefined : _attributeType:System.Type * _inherit:bool -> bool
+        override SetValue : _obj:obj * _value:obj * _invokeAttr:System.Reflection.BindingFlags * _binder:System.Reflection.Binder * _index:obj [] * _culture:System.Globalization.CultureInfo -> unit
+        override Attributes : System.Reflection.PropertyAttributes
+        override CanRead : bool
+        override CanWrite : bool
+        override DeclaringType : System.Type
+        override MemberType : System.Reflection.MemberTypes
+        override Name : string
+        override PropertyType : System.Type
+        override ReflectedType : System.Type
+        
+        member internal Getter : (unit -> System.Reflection.MethodInfo) option
+        
+        member PatchDeclaringType : x:ProvidedTypeDefinition -> unit
+        
     /// Represents a provided type definition.
-    [<Class>]
-    type ProvidedTypeDefinition =
+    and [<Class>] ProvidedTypeDefinition =
         inherit TypeDelegator
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
@@ -358,6 +377,8 @@ namespace ProviderImplementation.ProvidedTypes
         /// Add a custom attribute to the provided type definition.
         member AddCustomAttribute: CustomAttributeData -> unit
 
+        member internal GetMethodOverrides : unit -> (ProvidedMethod * System.Reflection.MethodInfo) []
+
         /// Emulate the F# type provider type erasure mechanism to get the
         /// actual (erased) type. We erase ProvidedTypes to their base type
         /// and we erase array of provided type to array of base type. In the
@@ -368,6 +389,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// Get or set a utility function to log the creation of root Provided Type. Used to debug caching/invalidation.
         static member Logger: (string -> unit) option ref
 
+        member PatchDeclaringType : x:ProvidedTypeDefinition -> unit
 
 #if !NO_GENERATIVE
     /// A provided generated assembly
@@ -527,7 +549,7 @@ namespace ProviderImplementation.ProvidedTypes
         interface ITypeProvider
 
 
-    module internal UncheckedQuotations =
+    module UncheckedQuotations =
 
       type Expr with
         static member NewDelegateUnchecked: ty:Type * vs:Var list * body:Expr -> Expr
@@ -546,6 +568,8 @@ namespace ProviderImplementation.ProvidedTypes
         static member FieldSetUnchecked: obj:Expr * pinfo:FieldInfo * value:Expr -> Expr
         static member TupleGetUnchecked: e:Expr * n:int -> Expr
         static member LetUnchecked: v:Var * e:Expr * body:Expr -> Expr
+        static member IfThenElseUnchecked : e:Expr * t:Expr * f:Expr -> Expr
+        static member NewUnionCaseUnchecked : uci:Reflection.UnionCaseInfo * args:Expr list -> Expr
 
       type Shape
       val ( |ShapeCombinationUnchecked|ShapeVarUnchecked|ShapeLambdaUnchecked| ): e:Expr -> Choice<(Shape * Expr list),Var, (Var * Expr)>
