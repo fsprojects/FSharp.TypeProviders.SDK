@@ -19,6 +19,13 @@ open Xunit
 
 #nowarn "760" // IDisposable needs new
 
+type CustomAttributeData with
+    static member Make(ctorInfo, ?args, ?namedArgs) = 
+        { new CustomAttributeData() with 
+            member __.Constructor =  ctorInfo
+            member __.ConstructorArguments = defaultArg args [||] :> Collections.Generic.IList<_>
+            member __.NamedArguments = defaultArg namedArgs [||] :> Collections.Generic.IList<_> }
+
 [<TypeProvider>]
 type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces (config)
@@ -117,6 +124,13 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 
         let myProp = ProvidedProperty("MyStaticProperty", typeof<string list>, isStatic = true, getterCode = testCode)
         let myProp2 = ProvidedProperty("MyInstaceProperty", typeof<string list>, isStatic = false, getterCode = testCode, setterCode = setterCode)
+        
+        //Add a CompilationMappingAttribute to a property to test ProvidedProperty custom attributes
+        let compilationMappingCtor = typeof<CompilationMappingAttribute>.GetConstructor([|typeof<SourceConstructFlags>; typeof<int> |])
+        let arguments = [| CustomAttributeTypedArgument (typeof<SourceConstructFlags>, SourceConstructFlags.Field)
+                           CustomAttributeTypedArgument (typeof<int>, 0) |]
+        myProp2.AddCustomAttribute(CustomAttributeData.Make(compilationMappingCtor, args = arguments))
+
         let myMeth1 = ProvidedMethod("MyStaticMethod", [], typeof<string list>, isStatic = true, invokeCode = testCode)
         let myMeth2 = ProvidedMethod("MyInstanceMethod", [], typeof<string list>, isStatic = false, invokeCode = testCode)
         let myEvent1 = ProvidedEvent("MyEvent", typeof<System.EventHandler>, isStatic = false, adderCode = adderCode, removerCode = removerCode)
@@ -231,6 +245,10 @@ let ``GenerativePropertyProviderWithStaticParams attributes are read correctly``
             let firstMethod = t.GetMembers() |> Array.find (fun m -> m :? ProvidedMethod )
             let attrib = firstMethod.GetCustomAttributes<CompiledNameAttribute>()
             Assert.NotNull attrib
+            
+            let myInstaceProperty = t.GetMembers() |> Array.find (fun m -> m :? ProvidedProperty && m.Name = "MyInstaceProperty" )
+            let myInstacePropertyAttrib = myInstaceProperty.GetCustomAttributes<CompilationMappingAttribute>()
+            Assert.NotNull myInstacePropertyAttrib
             
 [<Fact>]
 let ``GenerativePropertyProviderWithStaticParams reflection on MethodSymbol and ConstructorSymbols do not throw``() : unit  = 
