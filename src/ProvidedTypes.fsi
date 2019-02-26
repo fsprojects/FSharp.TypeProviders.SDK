@@ -377,6 +377,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// Add a custom attribute to the provided type definition.
         member AddCustomAttribute: CustomAttributeData -> unit
 
+        /// Returns an array of members that have been overidden along with the ProvidedMethods defining them.
         member internal GetMethodOverrides : unit -> (ProvidedMethod * System.Reflection.MethodInfo) []
 
         /// Emulate the F# type provider type erasure mechanism to get the
@@ -389,6 +390,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// Get or set a utility function to log the creation of root Provided Type. Used to debug caching/invalidation.
         static member Logger: (string -> unit) option ref
 
+        /// Provides a way of setting the Declaring type which is normally done via AddMember/s.
         member PatchDeclaringType : x:ProvidedTypeDefinition -> unit
 
 #if !NO_GENERATIVE
