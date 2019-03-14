@@ -572,6 +572,7 @@ namespace ProviderImplementation.ProvidedTypes
         static member LetUnchecked: v:Var * e:Expr * body:Expr -> Expr
         static member IfThenElseUnchecked : e:Expr * t:Expr * f:Expr -> Expr
         static member NewUnionCaseUnchecked : uci:Reflection.UnionCaseInfo * args:Expr list -> Expr
+        static member NewRecordUnchecked : ty:Type * args:Expr list -> Expr
 
       type Shape
       val ( |ShapeCombinationUnchecked|ShapeVarUnchecked|ShapeLambdaUnchecked| ): e:Expr -> Choice<(Shape * Expr list),Var, (Var * Expr)>
