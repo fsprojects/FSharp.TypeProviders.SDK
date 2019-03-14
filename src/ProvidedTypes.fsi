@@ -546,6 +546,7 @@ namespace ProviderImplementation.ProvidedTypes
         static member FieldSetUnchecked: obj:Expr * pinfo:FieldInfo * value:Expr -> Expr
         static member TupleGetUnchecked: e:Expr * n:int -> Expr
         static member LetUnchecked: v:Var * e:Expr * body:Expr -> Expr
+        static member NewRecordUnchecked : ty:Type * args:Expr list -> Expr
 
       type Shape
       val ( |ShapeCombinationUnchecked|ShapeVarUnchecked|ShapeLambdaUnchecked| ): e:Expr -> Choice<(Shape * Expr list),Var, (Var * Expr)>
