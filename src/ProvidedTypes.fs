@@ -370,6 +370,8 @@ namespace ProviderImplementation.ProvidedTypes
         assert (ifThenElseOp |> isNull |> not)
         let newUnionCaseOp = qTy.GetMethod("NewNewUnionCaseOp", bindAll)
         assert (newUnionCaseOp |> isNull |> not)
+        let newRecordOp = qTy.GetMethod("NewNewRecordOp", bindAll)
+        assert (newRecordOp |> isNull |> not)
 
         type Microsoft.FSharp.Quotations.Expr with
 
@@ -457,6 +459,10 @@ namespace ProviderImplementation.ProvidedTypes
 
             static member NewUnionCaseUnchecked (uci:Reflection.UnionCaseInfo, args:Expr list) = 
                 let op = newUnionCaseOp.Invoke(null, [| box uci |])
+                mkFEN.Invoke(null, [| box op; box args |]) :?> Expr
+                
+            static member NewRecordUnchecked (ty:Type, args:Expr list) = 
+                let op = newRecordOp.Invoke(null, [| box ty |])
                 mkFEN.Invoke(null, [| box op; box args |]) :?> Expr
                 
         type Shape = Shape of (Expr list -> Expr)
