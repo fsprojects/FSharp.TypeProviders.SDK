@@ -27,7 +27,7 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
     let container = ProvidedTypeDefinition(tempAssembly, ns, "Contracts", Some typeof<obj>, isErased = false)
 
     let createAbstractClass name (members: (string * (string * Type) list * Type * bool) list) =
-        let t = ProvidedTypeDefinition(name, Some typeof<obj>, hideObjectMethods = true, isErased = false)
+        let t = ProvidedTypeDefinition(name, Some typeof<System.MarshalByRefObject>, hideObjectMethods = true, isErased = false)
         t.SetAttributes(TypeAttributes.AutoLayout ||| TypeAttributes.AnsiClass ||| TypeAttributes.Class ||| TypeAttributes.Public ||| TypeAttributes.Abstract ||| TypeAttributes.Serializable ||| TypeAttributes.BeforeFieldInit)
         
         members

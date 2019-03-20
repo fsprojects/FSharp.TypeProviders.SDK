@@ -28,7 +28,7 @@ type GenerativeInterfacesProvider (config: TypeProviderConfig) as this =
     let container = ProvidedTypeDefinition(tempAssembly, ns, "Contracts", Some typeof<obj>, isErased = false)
 
     let createInterface name (members: (string * (string * Type) list * Type) list) =
-        let t = ProvidedTypeDefinition(name, Some typeof<obj>, hideObjectMethods = true, isErased = false)
+        let t = ProvidedTypeDefinition(name, None, hideObjectMethods = true, isErased = false)
         t.SetAttributes(TypeAttributes.AutoLayout ||| TypeAttributes.AnsiClass ||| TypeAttributes.Class ||| TypeAttributes.Public ||| TypeAttributes.ClassSemanticsMask ||| TypeAttributes.Abstract)
 
         members
