@@ -4,6 +4,12 @@
      <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
      <IsPackable>false</IsPackable>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netcoreapp2.0|AnyCPU'">
+    <DefineConstants>TRACE;INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp2.0|AnyCPU'">
+    <DefineConstants>TRACE;INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <None Include="Script1.fsx" />
     <None Include="xunit.runner.json">
