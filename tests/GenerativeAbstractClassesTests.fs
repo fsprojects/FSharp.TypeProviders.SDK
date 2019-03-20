@@ -90,12 +90,29 @@ let ``Abstract classes with abstract members are generated correctly``() =
     testProvidedAssembly <| fun container -> 
         let contract = container.GetNestedType "Contract"
         Assert.NotNull contract
-        let contractMethods = contract.GetMethods() |> Array.map (fun m -> m.Name) |> set
-        Assert.True(contractMethods.IsProperSupersetOf(set [|"GetString";"Sum"|]))
+        let contractGetString = contract.GetMethod("GetString")
+        Assert.NotNull contractGetString
+        Assert.True(contractGetString.IsAbstract, "Expected GetString method to be abstract")
+        Assert.True(contractGetString.IsVirtual, "Expected GetString method to be virtual")
+        let contractSum = contract.GetMethod("Sum")
+        Assert.NotNull contractSum
+        Assert.True(contractSum.IsAbstract, "Expected Sum method to be abstract")
+        Assert.True(contractSum.IsVirtual, "Expected Sum method to be virtual")
 
+[<Fact>]
+let ``Abstract classes with virtual members are generated correctly``() =
+  // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/211 
+  // if not runningOnMono then 
+    testProvidedAssembly <| fun container -> 
         let virtualContract = container.GetNestedType "VirtualContract"
         Assert.NotNull virtualContract
-        let virtualMethods = virtualContract.GetMethods() |> Array.map (fun m -> m.Name) |> set
-        Assert.True(virtualMethods.IsProperSupersetOf(set [|"GetString";"Sum"|]))
+        let virtualGetString = virtualContract.GetMethod("GetString")
+        Assert.NotNull virtualGetString
+        Assert.False(virtualGetString.IsAbstract, "Expected GetString method to not be abstract")
+        Assert.True(virtualGetString.IsVirtual, "Expected GetString method to be virtual")
+        let virtualSum = virtualContract.GetMethod("Sum")
+        Assert.NotNull virtualSum
+        Assert.False(virtualSum.IsAbstract, "Expected Sum method to not be abstract")
+        Assert.True(virtualSum.IsVirtual, "Expected Sum method to be virtual")
 
 #endif
