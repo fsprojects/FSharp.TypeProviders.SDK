@@ -44,7 +44,7 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
                 m
             else
                 let m = ProvidedMethod(name, ps, retType)
-                //m.AddMethodAttrs (MethodAttributes.Virtual ||| MethodAttributes.Abstract)
+                m.AddMethodAttrs (MethodAttributes.Virtual ||| MethodAttributes.Abstract)
                 m
             )
         |> t.AddMembers
