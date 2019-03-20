@@ -38,7 +38,7 @@ type GenerativeInterfacesProvider (config: TypeProviderConfig) as this =
                 |> List.map (fun (name, ty) ->
                     ProvidedParameter(name, ty))
             let m = ProvidedMethod(name, ps, retType)
-            m.SetMethodAttrs (MethodAttributes.Public ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual)
+            m.SetMethodAttrs (MethodAttributes.PrivateScope ||| MethodAttributes.Public ||| MethodAttributes.Virtual ||| MethodAttributes.HideBySig ||| MethodAttributes.VtableLayoutMask ||| MethodAttributes.Abstract)
             m)
         |> t.AddMembers
         

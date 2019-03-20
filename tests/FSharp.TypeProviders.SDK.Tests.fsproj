@@ -5,6 +5,7 @@
      <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="Script1.fsx" />
     <None Include="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
