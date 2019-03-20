@@ -29,7 +29,7 @@ type GenerativeInterfacesProvider (config: TypeProviderConfig) as this =
 
     let createInterface name (members: (string * (string * Type) list * Type) list) =
         let t = ProvidedTypeDefinition(name, Some typeof<obj>, hideObjectMethods = true, isErased = false)
-        t.SetAttributes(TypeAttributes.Interface ||| TypeAttributes.Public ||| TypeAttributes.AutoClass ||| TypeAttributes.AnsiClass ||| TypeAttributes.Abstract)
+        t.SetAttributes(TypeAttributes.AutoLayout ||| TypeAttributes.AnsiClass ||| TypeAttributes.Class ||| TypeAttributes.Public ||| TypeAttributes.ClassSemanticsMask ||| TypeAttributes.Abstract)
 
         members
         |> List.map (fun (name, parameters, retType) ->

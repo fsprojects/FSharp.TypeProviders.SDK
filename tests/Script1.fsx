@@ -3,9 +3,15 @@
 open System
 open FSharp.TypeProviders.SDK.Tests
 
-typeof<IComparable>.GetMethod("CompareTo")
-typeof<IO.Stream>.GetMethod("Read")
-typeof<IO.Stream>.GetMethod("BeginRead")
+let comparable = typeof<IComparable>
+comparable.Attributes
+comparable.GetMethod("CompareTo")
+typeof<Collections.IEnumerable>.Attributes
+let stream = typeof<IO.Stream>
+stream.Attributes
+stream.GetMethod("Read")
+stream.GetMethod("BeginRead")
+typeof<IO.TextReader>.Attributes
 let t = typeof<FSharp.TypeProviders.SDK.Tests.StaticProperty.SampleTypeProvider>
 let x = t.Assembly.GetTypes()
 x

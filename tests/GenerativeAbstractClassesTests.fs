@@ -28,7 +28,7 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
 
     let createAbstractClass name (members: (string * (string * Type) list * Type * bool) list) =
         let t = ProvidedTypeDefinition(name, Some typeof<obj>, hideObjectMethods = true, isErased = false)
-        t.SetAttributes(TypeAttributes.Public ||| TypeAttributes.AutoClass ||| TypeAttributes.AnsiClass ||| TypeAttributes.Abstract ||| TypeAttributes.BeforeFieldInit)
+        t.SetAttributes(TypeAttributes.AutoLayout ||| TypeAttributes.AnsiClass ||| TypeAttributes.Class ||| TypeAttributes.Public ||| TypeAttributes.Abstract ||| TypeAttributes.Serializable ||| TypeAttributes.BeforeFieldInit)
         
         members
         |> List.map (fun (name, parameters, retType, isVirtual) ->
