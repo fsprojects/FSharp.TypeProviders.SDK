@@ -4,7 +4,7 @@
 
 #else
 
-module FSharp.TypeProviders.SDK.Tests.GenerativeAbstractClassesTests
+module FSharp.TypeProviders.SDK.Tests.GenerativeAbstractClassVirtualMethodTests
 #endif
 
 #nowarn "760" // IDisposable needs new
@@ -22,7 +22,7 @@ open ProviderImplementation.ProvidedTypesTesting
 type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces (config)
 
-    let ns = "AbstractClasses.Provided"
+    let ns = "AbstractClassVirtualMethod.Provided"
     let tempAssembly = ProvidedAssembly()
     let container = ProvidedTypeDefinition(tempAssembly, ns, "Contracts", Some typeof<obj>, isErased = false)
 
@@ -52,10 +52,10 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
         t
 
     do
-        let members = [ "GetString", [], typeof<string>, false
-                        "Sum", [("x", typeof<int>); ("y", typeof<int>)], typeof<int>, false ]
-        let contract = createAbstractClass "Contract" members
-        container.AddMember contract
+        let members = [ "GetString", [], typeof<string>, true
+                        "Sum", [("x", typeof<int>); ("y", typeof<int>)], typeof<int>, true ]
+        let virtualContract = createAbstractClass "VirtualContract" members
+        container.AddMember virtualContract
 
         tempAssembly.AddTypes [container]
         this.AddNamespace(container.Namespace, [container])
@@ -79,11 +79,10 @@ let testProvidedAssembly test =
 let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false 
 
 [<Fact>]
-let ``Abstract classes with abstract members are generated correctly``() =
+let ``Abstract classes with virtual members are generated correctly``() =
   // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/211 
   // if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
-        let contract = container.GetNestedType "Contract"
-        Assert.NotNull contract
-
+        let virtualContract = container.GetNestedType "VirtualContract"
+        Assert.NotNull virtualContract
 #endif

@@ -24,6 +24,7 @@
     <Compile Include="GenerativeEnumsProvisionTests.fs" />
     <Compile Include="GenerativeInterfacesTests.fs" />
     <Compile Include="GenerativeAbstractClassesTests.fs" />
+    <Compile Include="GenerativeAbstractClassVirtualMethodTests.fs" />
     <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp2.0' " />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170517-02" />
     <PackageReference Include="xunit" Version="2.2.0" />
