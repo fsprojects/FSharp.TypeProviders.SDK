@@ -37,7 +37,7 @@ type GenerativeInterfacesProvider (config: TypeProviderConfig) as this =
                 parameters
                 |> List.map (fun (name, ty) ->
                     ProvidedParameter(name, ty))
-            let m = ProvidedMethod(name, ps, retType, invokeCode = fun args -> <@@ () @@>)
+            let m = ProvidedMethod(name, ps, retType)
             m.SetMethodAttrs (MethodAttributes.Public ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual)
             m)
         |> t.AddMembers

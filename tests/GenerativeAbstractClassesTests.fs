@@ -38,13 +38,14 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
                 |> List.map (fun (name, ty) ->
                     ProvidedParameter(name, ty))
             if isVirtual then
+                //let m = ProvidedMethod(name, ps, retType)
                 let m = ProvidedMethod(name, ps, retType, invokeCode = fun args ->
                     <@ raise (NotImplementedException(name + " is not implemented")) @>.Raw
                     )
                 m.SetMethodAttrs (MethodAttributes.Public ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual)
                 m
             else
-                let m = ProvidedMethod(name, ps, retType, invokeCode = fun args -> <@@ () @@>)
+                let m = ProvidedMethod(name, ps, retType)
                 m.SetMethodAttrs (MethodAttributes.Public ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual)
                 m
             )

@@ -14477,7 +14477,7 @@ namespace ProviderImplementation.ProvidedTypes
                         match pminfo.GetInvokeCode with
                         | Some _ when ptdT.IsInterface ->
                             failwith "The provided type definition is an interface; therefore, it should not define an implementation for its members."
-                        | Some _ when pminfo.IsAbstract ->
+                        | Some _ when pminfo.IsAbstract && not pminfo.IsVirtual ->
                             failwith "The provided method is marked as an abstract method; therefore, it should not define an implementation."
                         | None when not pminfo.IsAbstract ->
                             failwith "The provided method is not marked as an abstract method; therefore, it should define an implementation."
