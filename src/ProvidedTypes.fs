@@ -1854,6 +1854,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
     open System
     open System.Collections.Generic
     open System.Collections.Concurrent
+    open System.Collections.ObjectModel
     open System.IO
     open System.Reflection
     open System.Text
@@ -6627,13 +6628,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             with err -> 
               failwithf  "FAILED decodeILCustomAttribData, data.Length = %d, data = %A, meth = %A, argtypes = %A, fixedArgs=%A, nnamed = %A, sigptr before named = %A,  innerError = %A" bytes.Length bytes ca.Method.EnclosingType ca.Method.FormalArgTypes fixedArgs nnamed sigptr (err.ToString())
 
-        type CacheValue = ILModuleReader * DateTime
-        let (|CacheValue|_|) (wr: WeakReference) = match wr.Target with null -> None | v -> Some (v :?> CacheValue)
-        let CacheValue (reader: CacheValue) = System.WeakReference reader
-
-        // Amortize readers weakly - this is enough that all the type providers in this DLL will at least share
-        // resources when all instantiated at the same time.
-        let readersWeakCache = ConcurrentDictionary<(string * string), WeakReference>()
+        // Share DLLs across providers by caching them
+        let readerCache = ConcurrentDictionary<(string * string), DateTime * int * ILModuleReader>()
 
         type File with 
             static member ReadBinaryChunk (fileName: string, start, len) = 
@@ -6645,22 +6641,32 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                     n <- n + stream.Read(buffer, n, len-n)
                 buffer
 
-        let ILModuleReaderAfterReadingAllBytes  (fileName:string, ilGlobals: ILGlobals) =
-            let timeStamp = File.GetLastWriteTimeUtc(fileName)
-            let key = (fileName, ilGlobals.systemRuntimeScopeRef.QualifiedName)
-            match readersWeakCache.TryGetValue (key) with
-            | true, CacheValue (mr2, timeStamp2) when timeStamp = timeStamp2 ->
-                mr2 // throw away the bytes we just read and recycle the existing ILModuleReader
-            | _ ->
-                let bytes = File.ReadAllBytes fileName
-                let is = ByteFile(bytes)
-                let pe = PEReader(fileName, is)
-                let mdchunk = File.ReadBinaryChunk (fileName, pe.MetadataPhysLoc, pe.MetadataSize)
-                let mdfile = ByteFile(mdchunk)
-                let mr = ILModuleReader(fileName, mdfile, ilGlobals, true)
-                readersWeakCache.[key] <- CacheValue (mr, timeStamp)
-                mr
+        let createReader ilGlobals (fileName: string) =
+            let bytes = File.ReadAllBytes fileName
+            let is = ByteFile(bytes)
+            let pe = PEReader(fileName, is)
+            let mdchunk = File.ReadBinaryChunk (fileName, pe.MetadataPhysLoc, pe.MetadataSize)
+            let mdfile = ByteFile(mdchunk)
+            let reader = ILModuleReader(fileName, mdfile, ilGlobals, true)
+            reader
 
+        let GetReaderCache () = ReadOnlyDictionary(readerCache)
+
+        let ILModuleReaderAfterReadingAllBytes (file:string, ilGlobals: ILGlobals) =
+            let key = (file, ilGlobals.systemRuntimeScopeRef.QualifiedName)
+            let add _ = 
+                let lastWriteTime = File.GetLastWriteTime(file)
+                let reader = createReader ilGlobals file
+                (lastWriteTime, 1, reader)
+            let update _ (currentLastWriteTime, count, reader) =
+                let lastWriteTime = File.GetLastWriteTime(file)
+                if currentLastWriteTime <> lastWriteTime then
+                    let reader = createReader ilGlobals file
+                    (lastWriteTime, count + 1, reader)
+                else
+                    (lastWriteTime, count, reader)
+            let _, _, reader = readerCache.AddOrUpdate(key, add, update)
+            reader
 
         (* NOTE: ecma_ prefix refers to the standard "mscorlib" *)
         let EcmaPublicKey = PublicKeyToken ([|0xdeuy; 0xaduy; 0xbeuy; 0xefuy; 0xcauy; 0xfeuy; 0xfauy; 0xceuy |])
