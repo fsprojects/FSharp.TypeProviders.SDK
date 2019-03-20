@@ -40,11 +40,11 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
                 let m = ProvidedMethod(name, ps, retType, invokeCode = fun args ->
                     <@@ raise (NotImplementedException(name + " is not implemented")) @@>
                     )
-                m.SetMethodAttrs (MethodAttributes.PrivateScope ||| MethodAttributes.Public ||| MethodAttributes.Virtual ||| MethodAttributes.HideBySig ||| MethodAttributes.VtableLayoutMask ||| MethodAttributes.HasSecurity)
+                m.AddMethodAttrs (MethodAttributes.Virtual ||| MethodAttributes.HasSecurity)
                 m
             else
                 let m = ProvidedMethod(name, ps, retType)
-                m.SetMethodAttrs (MethodAttributes.PrivateScope ||| MethodAttributes.Public ||| MethodAttributes.Virtual ||| MethodAttributes.HideBySig ||| MethodAttributes.VtableLayoutMask ||| MethodAttributes.Abstract)
+                //m.AddMethodAttrs (MethodAttributes.Virtual ||| MethodAttributes.Abstract)
                 m
             )
         |> t.AddMembers
@@ -56,6 +56,11 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
                         "Sum", [("x", typeof<int>); ("y", typeof<int>)], typeof<int>, false ]
         let contract = createAbstractClass "Contract" members
         container.AddMember contract
+
+        let members = [ "GetString", [], typeof<string>, true
+                        "Sum", [("x", typeof<int>); ("y", typeof<int>)], typeof<int>, true ]
+        let virtualContract = createAbstractClass "VirtualContract" members
+        container.AddMember virtualContract
 
         tempAssembly.AddTypes [container]
         this.AddNamespace(container.Namespace, [container])
@@ -85,5 +90,12 @@ let ``Abstract classes with abstract members are generated correctly``() =
     testProvidedAssembly <| fun container -> 
         let contract = container.GetNestedType "Contract"
         Assert.NotNull contract
+        let contractMethods = contract.GetMethods() |> Array.map (fun m -> m.Name) |> set
+        Assert.True(contractMethods.IsProperSupersetOf(set [|"GetString";"Sum"|]))
+
+        let virtualContract = container.GetNestedType "VirtualContract"
+        Assert.NotNull virtualContract
+        let virtualMethods = virtualContract.GetMethods() |> Array.map (fun m -> m.Name) |> set
+        Assert.True(virtualMethods.IsProperSupersetOf(set [|"GetString";"Sum"|]))
 
 #endif

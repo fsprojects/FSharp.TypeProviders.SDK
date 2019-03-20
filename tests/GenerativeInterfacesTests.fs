@@ -28,17 +28,14 @@ type GenerativeInterfacesProvider (config: TypeProviderConfig) as this =
     let container = ProvidedTypeDefinition(tempAssembly, ns, "Contracts", Some typeof<obj>, isErased = false)
 
     let createInterface name (members: (string * (string * Type) list * Type) list) =
-        let t = ProvidedTypeDefinition(name, None, hideObjectMethods = true, isErased = false)
-        t.SetAttributes(TypeAttributes.AutoLayout ||| TypeAttributes.AnsiClass ||| TypeAttributes.Class ||| TypeAttributes.Public ||| TypeAttributes.ClassSemanticsMask ||| TypeAttributes.Abstract)
+        let t = ProvidedTypeDefinition(name, None, isErased = false, isInterface = true)
 
         members
         |> List.map (fun (name, parameters, retType) ->
-            let ps =
-                parameters
-                |> List.map (fun (name, ty) ->
-                    ProvidedParameter(name, ty))
+            let ps = parameters |> List.map (fun (name, ty) -> ProvidedParameter(name, ty))
             let m = ProvidedMethod(name, ps, retType)
-            m.SetMethodAttrs (MethodAttributes.PrivateScope ||| MethodAttributes.Public ||| MethodAttributes.Virtual ||| MethodAttributes.HideBySig ||| MethodAttributes.VtableLayoutMask ||| MethodAttributes.Abstract)
+            //m.SetMethodAttrs (MethodAttributes.PrivateScope ||| MethodAttributes.Public ||| MethodAttributes.Virtual ||| MethodAttributes.HideBySig ||| MethodAttributes.VtableLayoutMask ||| MethodAttributes.Abstract)
+            m.AddMethodAttrs (MethodAttributes.Virtual ||| MethodAttributes.Abstract)
             m)
         |> t.AddMembers
         

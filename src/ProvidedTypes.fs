@@ -1310,7 +1310,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         static let defaultAttributes (isErased, isSealed, isInterface) = 
             TypeAttributes.Public ||| 
-            (if isInterface then TypeAttributes.Interface else TypeAttributes.Class) |||
+            (if isInterface then TypeAttributes.Interface ||| TypeAttributes.Abstract else TypeAttributes.Class) |||
             (if isSealed then TypeAttributes.Sealed else enum 0) |||
             enum (if isErased then int32 TypeProviderTypeAttributes.IsErased else 0)
 
@@ -14475,12 +14475,14 @@ namespace ProviderImplementation.ProvidedTypes
                             [ for v in parameterVars -> Expr.Var v ]
 
                         match pminfo.GetInvokeCode with
+                        (*
                         | Some _ when ptdT.IsInterface ->
                             failwith "The provided type definition is an interface; therefore, it should not define an implementation for its members."
-                        | Some _ when pminfo.IsAbstract && not pminfo.IsVirtual ->
+                        | Some _ when pminfo.IsAbstract ->
                             failwith "The provided method is marked as an abstract method; therefore, it should not define an implementation."
                         | None when not pminfo.IsAbstract ->
                             failwith "The provided method is not marked as an abstract method; therefore, it should define an implementation."
+                        *)
                         | None -> ()
                         | Some invokeCode ->
                             let expr = invokeCode parameters
@@ -14732,12 +14734,14 @@ namespace ProviderImplementation.ProvidedTypes
                 match methodBaseT with
                 | :? ProvidedMethod as mT when (match methodBaseT.DeclaringType with :? ProvidedTypeDefinition as pt -> pt.IsErased | _ -> true) ->
                     match mT.GetInvokeCode with
+                    (*
                     | Some _ when methodBaseT.DeclaringType.IsInterface ->
                         failwith "The provided type definition is an interface; therefore, it should not define an implementation for its members."
                     | Some _ when mT.IsAbstract ->
                         failwith "The provided method is defined as abstract; therefore, it should not define an implementation."
                     | None when not mT.IsAbstract ->
                         failwith "The provided method is not defined as abstract; therefore it should define an implementation."
+                    *)
                     | Some invokeCode ->
                         let exprT = invokeCode(Array.toList parametersT)
                         check exprT
