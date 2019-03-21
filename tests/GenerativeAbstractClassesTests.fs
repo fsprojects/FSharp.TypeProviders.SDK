@@ -27,8 +27,7 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
     let container = ProvidedTypeDefinition(tempAssembly, ns, "Contracts", Some typeof<obj>, isErased = false)
 
     let createAbstractClass name (members: (string * (string * Type) list * Type * bool) list) =
-        let t = ProvidedTypeDefinition(name, Some typeof<System.MarshalByRefObject>, hideObjectMethods = true, isErased = false)
-        t.AddAttributes(TypeAttributes.Abstract)
+        let t = ProvidedTypeDefinition(name, Some typeof<System.MarshalByRefObject>, hideObjectMethods = true, isErased = false, isAbstract = true)
         
         members
         |> List.map (fun (name, parameters, retType, isVirtual) ->
@@ -90,6 +89,7 @@ let ``Abstract classes with abstract members are generated correctly``() =
     testProvidedAssembly <| fun container -> 
         let contract = container.GetNestedType "Contract"
         Assert.NotNull contract
+        Assert.True(contract.IsAbstract, "Expected Contract to be an abstract type")
 
         let contractGetString = contract.GetMethod("GetString")
         Assert.NotNull contractGetString
@@ -108,15 +108,16 @@ let ``Abstract classes with virtual members are generated correctly``() =
     testProvidedAssembly <| fun container -> 
         let contract = container.GetNestedType "VirtualContract"
         Assert.NotNull contract
+        Assert.True(contract.IsAbstract, "Expected VirtualContract to be an abstract type")
 
         let contractGetString = contract.GetMethod("GetString")
         Assert.NotNull contractGetString
         Assert.False(contractGetString.IsAbstract, "Expected GetString method to not be abstract")
-        Assert.True(contractGetString.IsVirtual, "Expected GetString method to be contract")
+        Assert.True(contractGetString.IsVirtual, "Expected GetString method to be virtual")
 
         let contractSum = contract.GetMethod("Sum")
         Assert.NotNull contractSum
         Assert.False(contractSum.IsAbstract, "Expected Sum method to not be abstract")
-        Assert.True(contractSum.IsVirtual, "Expected Sum method to be contract")
+        Assert.True(contractSum.IsVirtual, "Expected Sum method to be virtual")
 
 #endif

@@ -290,10 +290,10 @@ namespace ProviderImplementation.ProvidedTypes
         inherit TypeDelegator
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        new: className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool * ?isSealed: bool * ?isInterface: bool -> ProvidedTypeDefinition
+        new: className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool * ?isSealed: bool * ?isInterface: bool * ?isAbstract: bool -> ProvidedTypeDefinition
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        new: assembly: Assembly * namespaceName: string * className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool * ?isSealed: bool * ?isInterface: bool -> ProvidedTypeDefinition
+        new: assembly: Assembly * namespaceName: string * className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool * ?isSealed: bool * ?isInterface: bool * ?isAbstract: bool -> ProvidedTypeDefinition
 
         /// Add the given type as an implemented interface.
         member AddInterfaceImplementation: interfaceType: Type -> unit
@@ -329,9 +329,6 @@ namespace ProviderImplementation.ProvidedTypes
         /// Add XML documentation information to this provided constructor, where the computation of the documentation is delayed until necessary
         /// The documentation is re-computed  every time it is required.
         member AddXmlDocComputed: xmlDocFunction: (unit -> string) -> unit
-
-        /// Add the attributes on the provided type.
-        member AddAttributes: TypeAttributes -> unit
 
         /// Set the attributes on the provided type. This fully replaces the default TypeAttributes.
         member SetAttributes: TypeAttributes -> unit

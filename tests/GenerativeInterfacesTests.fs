@@ -72,13 +72,31 @@ let testProvidedAssembly test =
 let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false 
 
 [<Fact>]
-let ``Interfaces are generated correctly``() =
+let ``Marker interfaces are generated correctly``() =
   // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/211 
   // if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
         let marker = container.GetNestedType "IMarker"
         Assert.NotNull marker
+        Assert.True(marker.IsInterface, "Expected IMarker to be an interface")
 
+[<Fact>]
+let ``Interfaces with methods are generated correctly``() =
+  // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/211 
+  // if not runningOnMono then 
+    testProvidedAssembly <| fun container -> 
         let contract = container.GetNestedType "IContract"
         Assert.NotNull contract
+        Assert.True(contract.IsInterface, "Expected IContract to be an interface")
+
+        let contractGetString = contract.GetMethod("GetString")
+        Assert.NotNull contractGetString
+        Assert.True(contractGetString.IsAbstract, "Expected GetString method to be abstract")
+        Assert.True(contractGetString.IsVirtual, "Expected GetString method to be virtual")
+
+        let contractSum = contract.GetMethod("Sum")
+        Assert.NotNull contractSum
+        Assert.True(contractSum.IsAbstract, "Expected Sum method to be abstract")
+        Assert.True(contractSum.IsVirtual, "Expected Sum method to be virtual")
+
 #endif
