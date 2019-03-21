@@ -1706,6 +1706,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.SetBaseTypeDelayed baseTypeFunction = 
             if baseType.IsValueCreated then failwithf "The base type has already been evaluated for this type. Please call SetBaseType before any operations which traverse the type hierarchy. stacktrace = %A" Environment.StackTrace
             baseType <- lazy (Some (baseTypeFunction()))
+        member __.AddAttributes x = attrs <- attrs ||| x
         member __.SetAttributes x = attrs <- x
 
         member this.AddMembers(memberInfos:list<#MemberInfo>) = 
@@ -14483,10 +14484,12 @@ namespace ProviderImplementation.ProvidedTypes
                         match pminfo.GetInvokeCode with
                         | Some _ when ptdT.IsInterface ->
                             failwith "The provided type definition is an interface; therefore, it should not define an implementation for its members."
+                        (* NOTE: These checks appear to fail for generative abstract and virtual methods.
                         | Some _ when pminfo.IsAbstract ->
                             failwith "The provided method is marked as an abstract method; therefore, it should not define an implementation."
                         | None when not pminfo.IsAbstract ->
                             failwith "The provided method is not marked as an abstract method; therefore, it should define an implementation."
+                        *)
                         | None -> ()
                         | Some invokeCode ->
                             let expr = invokeCode parameters
@@ -14740,10 +14743,12 @@ namespace ProviderImplementation.ProvidedTypes
                     match mT.GetInvokeCode with
                     | Some _ when methodBaseT.DeclaringType.IsInterface ->
                         failwith "The provided type definition is an interface; therefore, it should not define an implementation for its members."
+                    (* NOTE: These checks appear to fail for generative abstract and virtual methods.
                     | Some _ when mT.IsAbstract ->
                         failwith "The provided method is defined as abstract; therefore, it should not define an implementation."
                     | None when not mT.IsAbstract ->
                         failwith "The provided method is not defined as abstract; therefore it should define an implementation."
+                    *)
                     | Some invokeCode ->
                         let exprT = invokeCode(Array.toList parametersT)
                         check exprT

@@ -28,7 +28,7 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
 
     let createAbstractClass name (members: (string * (string * Type) list * Type * bool) list) =
         let t = ProvidedTypeDefinition(name, Some typeof<System.MarshalByRefObject>, hideObjectMethods = true, isErased = false)
-        t.SetAttributes(TypeAttributes.AutoLayout ||| TypeAttributes.AnsiClass ||| TypeAttributes.Class ||| TypeAttributes.Public ||| TypeAttributes.Abstract ||| TypeAttributes.Serializable ||| TypeAttributes.BeforeFieldInit)
+        t.AddAttributes(TypeAttributes.Abstract)
         
         members
         |> List.map (fun (name, parameters, retType, isVirtual) ->
@@ -38,13 +38,13 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
                     ProvidedParameter(name, ty))
             if isVirtual then
                 let m = ProvidedMethod(name, ps, retType, invokeCode = fun args ->
-                    <@@ raise (NotImplementedException(name + " is not implemented")) @@>
+                    <@ raise (NotImplementedException(name + " is not implemented")) @>.Raw
                     )
                 m.AddMethodAttrs (MethodAttributes.Virtual ||| MethodAttributes.HasSecurity)
                 m
             else
                 let m = ProvidedMethod(name, ps, retType)
-                m.AddMethodAttrs (MethodAttributes.Virtual ||| MethodAttributes.Abstract)
+                //m.AddMethodAttrs (MethodAttributes.Virtual ||| MethodAttributes.Abstract)
                 m
             )
         |> t.AddMembers
@@ -90,10 +90,12 @@ let ``Abstract classes with abstract members are generated correctly``() =
     testProvidedAssembly <| fun container -> 
         let contract = container.GetNestedType "Contract"
         Assert.NotNull contract
+
         let contractGetString = contract.GetMethod("GetString")
         Assert.NotNull contractGetString
         Assert.True(contractGetString.IsAbstract, "Expected GetString method to be abstract")
         Assert.True(contractGetString.IsVirtual, "Expected GetString method to be virtual")
+
         let contractSum = contract.GetMethod("Sum")
         Assert.NotNull contractSum
         Assert.True(contractSum.IsAbstract, "Expected Sum method to be abstract")
@@ -104,15 +106,17 @@ let ``Abstract classes with virtual members are generated correctly``() =
   // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/211 
   // if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
-        let virtualContract = container.GetNestedType "VirtualContract"
-        Assert.NotNull virtualContract
-        let virtualGetString = virtualContract.GetMethod("GetString")
-        Assert.NotNull virtualGetString
-        Assert.False(virtualGetString.IsAbstract, "Expected GetString method to not be abstract")
-        Assert.True(virtualGetString.IsVirtual, "Expected GetString method to be virtual")
-        let virtualSum = virtualContract.GetMethod("Sum")
-        Assert.NotNull virtualSum
-        Assert.False(virtualSum.IsAbstract, "Expected Sum method to not be abstract")
-        Assert.True(virtualSum.IsVirtual, "Expected Sum method to be virtual")
+        let contract = container.GetNestedType "VirtualContract"
+        Assert.NotNull contract
+
+        let contractGetString = contract.GetMethod("GetString")
+        Assert.NotNull contractGetString
+        Assert.False(contractGetString.IsAbstract, "Expected GetString method to not be abstract")
+        Assert.True(contractGetString.IsVirtual, "Expected GetString method to be contract")
+
+        let contractSum = contract.GetMethod("Sum")
+        Assert.NotNull contractSum
+        Assert.False(contractSum.IsAbstract, "Expected Sum method to not be abstract")
+        Assert.True(contractSum.IsVirtual, "Expected Sum method to be contract")
 
 #endif

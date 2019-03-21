@@ -330,6 +330,9 @@ namespace ProviderImplementation.ProvidedTypes
         /// The documentation is re-computed  every time it is required.
         member AddXmlDocComputed: xmlDocFunction: (unit -> string) -> unit
 
+        /// Add the attributes on the provided type.
+        member AddAttributes: TypeAttributes -> unit
+
         /// Set the attributes on the provided type. This fully replaces the default TypeAttributes.
         member SetAttributes: TypeAttributes -> unit
 
