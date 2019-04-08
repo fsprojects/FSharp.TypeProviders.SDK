@@ -312,6 +312,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let qTy = typeof<Var>.Assembly.GetType("Microsoft.FSharp.Quotations.ExprConstInfo")
         assert (not (isNull qTy))
+
         let pTy = typeof<Var>.Assembly.GetType("Microsoft.FSharp.Quotations.PatternsModule")
         assert (not (isNull pTy))
 
@@ -319,12 +320,16 @@ namespace ProviderImplementation.ProvidedTypes
         // these function names have been stable since F# 2.0.
         let mkFE0 = pTy.GetMethod("mkFE0", bindAll)
         assert (not (isNull mkFE0))
+
         let mkFE1 = pTy.GetMethod("mkFE1", bindAll)
         assert (not (isNull mkFE1))
+
         let mkFE2 = pTy.GetMethod("mkFE2", bindAll)
         assert (mkFE2 |> isNull |> not)
+
         let mkFE3 = pTy.GetMethod("mkFE3", bindAll)
         assert (mkFE3 |> isNull |> not)
+
         let mkFEN = pTy.GetMethod("mkFEN", bindAll)
         assert (mkFEN |> isNull |> not)
 
@@ -332,44 +337,64 @@ namespace ProviderImplementation.ProvidedTypes
         // these function names have been stable since F# 2.0.
         let newDelegateOp = qTy.GetMethod("NewNewDelegateOp", bindAll)
         assert (newDelegateOp |> isNull |> not)
+
         let instanceCallOp = qTy.GetMethod("NewInstanceMethodCallOp", bindAll)
         assert (instanceCallOp |> isNull |> not)
+
         let staticCallOp = qTy.GetMethod("NewStaticMethodCallOp", bindAll)
         assert (staticCallOp |> isNull |> not)
+
         let newObjectOp = qTy.GetMethod("NewNewObjectOp", bindAll)
         assert (newObjectOp |> isNull |> not)
+
         let newArrayOp = qTy.GetMethod("NewNewArrayOp", bindAll)
         assert (newArrayOp |> isNull |> not)
+
         let appOp = qTy.GetMethod("get_AppOp", bindAll)
         assert (appOp |> isNull |> not)
+
         let instancePropGetOp = qTy.GetMethod("NewInstancePropGetOp", bindAll)
         assert (instancePropGetOp |> isNull |> not)
+
         let staticPropGetOp = qTy.GetMethod("NewStaticPropGetOp", bindAll)
         assert (staticPropGetOp |> isNull |> not)
+
         let instancePropSetOp = qTy.GetMethod("NewInstancePropSetOp", bindAll)
         assert (instancePropSetOp |> isNull |> not)
+
         let staticPropSetOp = qTy.GetMethod("NewStaticPropSetOp", bindAll)
         assert (staticPropSetOp |> isNull |> not)
+
         let instanceFieldGetOp = qTy.GetMethod("NewInstanceFieldGetOp", bindAll)
         assert (instanceFieldGetOp |> isNull |> not)
+
         let staticFieldGetOp = qTy.GetMethod("NewStaticFieldGetOp", bindAll)
         assert (staticFieldGetOp |> isNull |> not)
+
         let instanceFieldSetOp = qTy.GetMethod("NewInstanceFieldSetOp", bindAll)
         assert (instanceFieldSetOp |> isNull |> not)
+
         let staticFieldSetOp = qTy.GetMethod("NewStaticFieldSetOp", bindAll)
         assert (staticFieldSetOp |> isNull |> not)
+
         let tupleGetOp = qTy.GetMethod("NewTupleGetOp", bindAll)
         assert (tupleGetOp |> isNull |> not)
+
         let letOp = qTy.GetMethod("get_LetOp", bindAll)
         assert (letOp |> isNull |> not)
+
         let forIntegerRangeLoopOp = qTy.GetMethod("get_ForIntegerRangeLoopOp", bindAll)
         assert (forIntegerRangeLoopOp |> isNull |> not)
+
         let whileLoopOp = qTy.GetMethod("get_WhileLoopOp", bindAll)
         assert (whileLoopOp |> isNull |> not)
+
         let ifThenElseOp = qTy.GetMethod("get_IfThenElseOp", bindAll)
         assert (ifThenElseOp |> isNull |> not)
+
         let newUnionCaseOp = qTy.GetMethod("NewNewUnionCaseOp", bindAll)
         assert (newUnionCaseOp |> isNull |> not)
+
         let newRecordOp = qTy.GetMethod("NewNewRecordOp", bindAll)
         assert (newRecordOp |> isNull |> not)
 
@@ -460,11 +485,11 @@ namespace ProviderImplementation.ProvidedTypes
             static member NewUnionCaseUnchecked (uci:Reflection.UnionCaseInfo, args:Expr list) = 
                 let op = newUnionCaseOp.Invoke(null, [| box uci |])
                 mkFEN.Invoke(null, [| box op; box args |]) :?> Expr
-                
-            static member NewRecordUnchecked (ty:Type, args:Expr list) = 
+
+            static member NewRecordUnchecked (ty:Type, args:Expr list) =
                 let op = newRecordOp.Invoke(null, [| box ty |])
                 mkFEN.Invoke(null, [| box op; box args |]) :?> Expr
-                
+
         type Shape = Shape of (Expr list -> Expr)
 
         let (|ShapeCombinationUnchecked|ShapeVarUnchecked|ShapeLambdaUnchecked|) e =
@@ -6629,7 +6654,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
               failwithf  "FAILED decodeILCustomAttribData, data.Length = %d, data = %A, meth = %A, argtypes = %A, fixedArgs=%A, nnamed = %A, sigptr before named = %A,  innerError = %A" bytes.Length bytes ca.Method.EnclosingType ca.Method.FormalArgTypes fixedArgs nnamed sigptr (err.ToString())
 
         // Share DLLs across providers by caching them
-        let readerCache = ConcurrentDictionary<(string * string), DateTime * int * ILModuleReader>()
+        let readerCache = ConcurrentDictionary<(string * string), DateTime * int * ILModuleReader>(HashIdentity.Structural)
 
         type File with 
             static member ReadBinaryChunk (fileName: string, start, len) = 
@@ -6652,12 +6677,36 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
         let GetReaderCache () = ReadOnlyDictionary(readerCache)
 
+        // Auto-clear the cache every 30.0 seconds.
+        // We would use System.Runtime.Caching but some version constraints make this difficult.
+        let enableAutoClear = try Environment.GetEnvironmentVariable("FSHARP_TPREADER_AUTOCLEAR_OFF") = null with _ -> true
+        let clearSpanDefault = 30000
+        let clearSpan = try (match Environment.GetEnvironmentVariable("FSHARP_TPREADER_AUTOCLEAR_SPAN") with null -> clearSpanDefault | s -> int32 s) with _ -> clearSpanDefault
+        let lastAccessLock = obj()
+        let mutable lastAccess = DateTime.Now
+
+        let StartClearReaderCache() = 
+            if enableAutoClear then 
+                async {
+                    while true do
+                        do! Async.Sleep clearSpan
+                        let timeSinceLastAccess = DateTime.Now - lock lastAccessLock (fun () -> lastAccess)
+                        if timeSinceLastAccess > TimeSpan.FromMilliseconds(float clearSpan) then
+                            readerCache.Clear()
+                    }
+                |> Async.Start
+
+        do StartClearReaderCache()
+
         let ILModuleReaderAfterReadingAllBytes (file:string, ilGlobals: ILGlobals) =
             let key = (file, ilGlobals.systemRuntimeScopeRef.QualifiedName)
+            lock lastAccessLock (fun () -> lastAccess <- DateTime.Now)
+
             let add _ = 
                 let lastWriteTime = File.GetLastWriteTime(file)
                 let reader = createReader ilGlobals file
                 (lastWriteTime, 1, reader)
+
             let update _ (currentLastWriteTime, count, reader) =
                 let lastWriteTime = File.GetLastWriteTime(file)
                 if currentLastWriteTime <> lastWriteTime then
@@ -14576,7 +14625,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         let ctxt = ProvidedTypesContext.Create (config, assemblyReplacementMap, sourceAssemblies)
 
-
 #if !NO_GENERATIVE
         let theTable = ConcurrentDictionary<string, byte[]>()
 
@@ -14701,11 +14749,14 @@ namespace ProviderImplementation.ProvidedTypes
                 AppDomain.CurrentDomain.remove_AssemblyResolve handler
 #endif
 
-        member __.AddNamespace (namespaceName, types) = namespacesT.Add (makeProvidedNamespace namespaceName types)
+        member __.AddNamespace (namespaceName, types) = 
+            namespacesT.Add (makeProvidedNamespace namespaceName types)
 
-        member __.Namespaces = namespacesT.ToArray()
+        member __.Namespaces = 
+            namespacesT.ToArray()
 
-        member this.Invalidate() = invalidateE.Trigger(this,EventArgs())
+        member this.Invalidate() = 
+            invalidateE.Trigger(this,EventArgs())
 
         member __.GetStaticParametersForMethod(mb: MethodBase) =
             match mb with
