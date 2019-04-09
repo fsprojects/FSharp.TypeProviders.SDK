@@ -3,7 +3,7 @@
 //#load "../src/AssemblyReaderReflection.fs"  (strangely fails to bind)
 
 #else
-module FSharp.TypeProviders.SDK.Tests.AssemblyReaderTests
+module TPSDK.AssemblyReaderTests
 #endif
 
 open System

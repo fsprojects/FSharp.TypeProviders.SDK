@@ -4,7 +4,7 @@
 
 #else
 
-module FSharp.TypeProviders.SDK.Tests.StaticProperty
+module TPSDK.BasicErasedTests
 #endif
 
 open System
@@ -545,9 +545,7 @@ let ``test basic symbol type ops``() =
 
 #if INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS
 
-[<Fact>]
-let ``test reader cache actually caches``() =
-    for i = 1 to 1000 do
+let stressTestCore() = 
         let refs = Targets.DotNet45FSharp40Refs()
         let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
         use tp = new TypeProviderForNamespaces(config)
@@ -567,15 +565,45 @@ let ``test reader cache actually caches``() =
         match t1T with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#4"
 
         let _ = ProvidedTypeBuilder.MakeTupleType([ t1; t1 ])
-        ()
+        tp
 
-    let dict = AssemblyReader.Reader.GetReaderCache()
-    Assert.True(dict.Count > 0, "Reader Cache has not count")
-    dict
-    |> Seq.iter (fun pair ->
-        let _, count, _ = pair.Value
-        Assert.False(count > 500, "Too many instances of an assembly")
+[<Fact>]
+let ``test reader cache actually caches``() =
+    let mutable latestTp = None
+    let weakDict = AssemblyReader.Reader.GetWeakReaderCache()
+    let strongDict = AssemblyReader.Reader.GetStrongReaderCache()
+    weakDict.Clear()
+    strongDict.Clear()
+
+    for i = 1 to 1000 do
+        latestTp <- Some (stressTestCore())
+
+    Assert.True(weakDict.Count > 0, "Weak Reader Cache has zero count")
+    Assert.True(strongDict.Count > 0, "Strong Reader Cache has zero count")
+
+    // We created 1000 TP instances rapidly but we should not be re-creating readers.
+    strongDict
+    |> Seq.iter (fun (KeyValue(_, (_, count, _))) ->
+        Assert.False(count > 5, "Too many instances of an assembly")
     )
+
+    // After we are done the weak handles should still be populated as we have a handle to the last TP
+    System.GC.Collect()
+    for (KeyValue(_, (_, wh))) in weakDict do
+        let alive = fst(wh.TryGetTarget())
+        Assert.True(alive, "Weak handle should still be populated as latest TP still alive")
+
+    latestTp <- None
+    strongDict.Clear()
+
+    System.GC.Collect()
+    System.GC.WaitForPendingFinalizers()
+
+// This seems to fail when run via 'dotnet test' but succeeds if called via 'main' from 'Program.fs'.  So for
+// now this is tested manually.
+//   for (KeyValue(key, (_, wh))) in weakDict do
+//        let alive = fst(wh.TryGetTarget())
+//        Assert.False(alive, sprintf "Weak handle for %A should no longer be populated as latest TP no longer alive" key)
 
 #endif
 

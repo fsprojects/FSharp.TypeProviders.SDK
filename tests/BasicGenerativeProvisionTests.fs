@@ -3,7 +3,7 @@
 #load "../src/ProvidedTypesTesting.fs"
 
 #else
-module FSharp.TypeProviders.SDK.Tests.BasicGenerativeTests
+module TPSDK.Tests.BasicGenerativeTests
 #endif
 
 open System

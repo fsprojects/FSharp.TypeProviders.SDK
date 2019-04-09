@@ -6653,8 +6653,11 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             with err -> 
               failwithf  "FAILED decodeILCustomAttribData, data.Length = %d, data = %A, meth = %A, argtypes = %A, fixedArgs=%A, nnamed = %A, sigptr before named = %A,  innerError = %A" bytes.Length bytes ca.Method.EnclosingType ca.Method.FormalArgTypes fixedArgs nnamed sigptr (err.ToString())
 
-        // Share DLLs across providers by caching them
-        let readerCache = ConcurrentDictionary<(string * string), DateTime * int * ILModuleReader>(HashIdentity.Structural)
+        // Share DLLs within a provider by weak-caching them. 
+        let readerWeakCache = ConcurrentDictionary<(string * string), DateTime * WeakReference<ILModuleReader>>(HashIdentity.Structural)
+
+        // Share DLLs across providers by strong-caching them, but flushing regularly
+        let readerStrongCache = ConcurrentDictionary<(string * string), DateTime * int * ILModuleReader>(HashIdentity.Structural)
 
         type File with 
             static member ReadBinaryChunk (fileName: string, start, len) = 
@@ -6675,7 +6678,8 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             let reader = ILModuleReader(fileName, mdfile, ilGlobals, true)
             reader
 
-        let GetReaderCache () = ReadOnlyDictionary(readerCache)
+        let GetWeakReaderCache () = readerWeakCache
+        let GetStrongReaderCache () = readerStrongCache
 
         // Auto-clear the cache every 30.0 seconds.
         // We would use System.Runtime.Caching but some version constraints make this difficult.
@@ -6692,30 +6696,48 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
                         do! Async.Sleep clearSpan
                         let timeSinceLastAccess = DateTime.Now - lock lastAccessLock (fun () -> lastAccess)
                         if timeSinceLastAccess > TimeSpan.FromMilliseconds(float clearSpan) then
-                            readerCache.Clear()
+                            readerStrongCache.Clear()
                     }
                 |> Async.Start
 
         do StartClearReaderCache()
 
+        let (|WeakReference|_|) (x: WeakReference<'T>) = 
+            match x.TryGetTarget() with 
+            | true, v -> Some v
+            | _ -> None
+
         let ILModuleReaderAfterReadingAllBytes (file:string, ilGlobals: ILGlobals) =
             let key = (file, ilGlobals.systemRuntimeScopeRef.QualifiedName)
             lock lastAccessLock (fun () -> lastAccess <- DateTime.Now)
+            
+            // Check the weak cache, to enable sharing within a provider, even if the strong cache is flushed.
+            match readerWeakCache.TryGetValue(key) with 
+            | true, (currentLastWriteTime, WeakReference(reader)) when 
+                    let lastWriteTime = File.GetLastWriteTime(file)
+                    currentLastWriteTime = lastWriteTime ->
 
-            let add _ = 
-                let lastWriteTime = File.GetLastWriteTime(file)
-                let reader = createReader ilGlobals file
-                (lastWriteTime, 1, reader)
+                reader
 
-            let update _ (currentLastWriteTime, count, reader) =
-                let lastWriteTime = File.GetLastWriteTime(file)
-                if currentLastWriteTime <> lastWriteTime then
+            | _ -> 
+                let add _ = 
+                    let lastWriteTime = File.GetLastWriteTime(file)
                     let reader = createReader ilGlobals file
-                    (lastWriteTime, count + 1, reader)
-                else
-                    (lastWriteTime, count, reader)
-            let _, _, reader = readerCache.AddOrUpdate(key, add, update)
-            reader
+                    // record in the weak cache, to enable sharing within a provider, even if the strong cache is flushed.
+                    readerWeakCache.[key] <-  (lastWriteTime, WeakReference<_>(reader))
+                    (lastWriteTime, 1, reader)
+
+                let update _ (currentLastWriteTime, count, reader) =
+                    let lastWriteTime = File.GetLastWriteTime(file)
+                    if currentLastWriteTime <> lastWriteTime then
+                        let reader = createReader ilGlobals file
+                        // record in the weak cache, to enable sharing within a provider, even if the strong cache is flushed.
+                        readerWeakCache.[key] <-  (lastWriteTime, WeakReference<_>(reader))
+                        (lastWriteTime, count + 1, reader)
+                    else
+                        (lastWriteTime, count, reader)
+                let _, _, reader = readerStrongCache.AddOrUpdate(key, add, update)
+                reader
 
         (* NOTE: ecma_ prefix refers to the standard "mscorlib" *)
         let EcmaPublicKey = PublicKeyToken ([|0xdeuy; 0xaduy; 0xbeuy; 0xefuy; 0xcauy; 0xfeuy; 0xfauy; 0xceuy |])
