@@ -567,8 +567,7 @@ let stressTestCore() =
         let _ = ProvidedTypeBuilder.MakeTupleType([ t1; t1 ])
         tp
 
-[<Fact>]
-let ``test reader cache actually caches``() =
+let stressTestLoop() = 
     let mutable latestTp = None
     let weakDict = AssemblyReader.Reader.GetWeakReaderCache()
     let strongDict = AssemblyReader.Reader.GetStrongReaderCache()
@@ -596,14 +595,19 @@ let ``test reader cache actually caches``() =
     latestTp <- None
     strongDict.Clear()
 
-    System.GC.Collect()
+[<Fact>]
+let ``test reader cache actually caches``() =
+    let weakDict = AssemblyReader.Reader.GetWeakReaderCache()
+    // We factor this test into another ethod to ensure that things get collecte properly on all version of .NET
+    // i.e. that the stack frame isn't keeping any strong handles to anything.
+    stressTestLoop()
+    System.GC.Collect (2, GCCollectionMode.Forced, true, true)
     System.GC.WaitForPendingFinalizers()
+    System.GC.Collect (2, GCCollectionMode.Forced, true, true)
 
-// This seems to fail when run via 'dotnet test' but succeeds if called via 'main' from 'Program.fs'.  So for
-// now this is tested manually.
-//   for (KeyValue(key, (_, wh))) in weakDict do
-//        let alive = fst(wh.TryGetTarget())
-//        Assert.False(alive, sprintf "Weak handle for %A should no longer be populated as latest TP no longer alive" key)
+    for (KeyValue(key, (_, wh))) in weakDict do
+        let alive = fst(wh.TryGetTarget())
+        Assert.False(alive, sprintf "Weak handle for %A should no longer be populated as latest TP no longer alive" key)
 
 #endif
 
