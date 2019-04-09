@@ -8566,7 +8566,7 @@ namespace ProviderImplementation.ProvidedTypes
 
     /// Represents the type binding context for the type provider based on the set of assemblies
     /// referenced by the compilation.
-    type ProvidedTypesContext(referencedAssemblyPaths: string[], assemblyReplacementMap: (string*string) list, sourceAssemblies: Assembly list) as this =
+    type ProvidedTypesContext(referencedAssemblyPaths: string list, assemblyReplacementMap: (string*string) list, sourceAssemblies: Assembly list) as this =
 
         // A duplicate 'mscorlib' appears in the paths reported by the F# compiler
         let referencedAssemblyPaths = referencedAssemblyPaths |> Seq.distinctBy Path.GetFileNameWithoutExtension |> Seq.toList
@@ -9226,7 +9226,7 @@ namespace ProviderImplementation.ProvidedTypes
 
             // Use the reflection hack to determine the set of referenced assemblies by reflecting over the SystemRuntimeContainsType
             // closure in the TypeProviderConfig object.
-            let referencedAssemblyPaths = config.ReferenecedAssemblies |> Array.toList
+            let referencedAssemblyPaths = config.ReferencedAssemblies |> Array.toList
             ProvidedTypesContext(referencedAssemblyPaths, assemblyReplacementMap, sourceAssemblies)
 
 
