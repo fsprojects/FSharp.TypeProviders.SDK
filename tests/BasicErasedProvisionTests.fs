@@ -604,11 +604,11 @@ let ``test reader cache actually caches``() =
     System.GC.Collect (2, GCCollectionMode.Forced, true, true)
     System.GC.WaitForPendingFinalizers()
     System.GC.Collect (2, GCCollectionMode.Forced, true, true)
-
-    for (KeyValue(key, (_, wh))) in weakDict do
-        let alive = fst(wh.TryGetTarget())
-        Assert.False(alive, sprintf "Weak handle for %A should no longer be populated as latest TP no longer alive" key)
-
+    let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false 
+    if not runningOnMono then 
+        for (KeyValue(key, (_, wh))) in weakDict do
+            let alive = fst(wh.TryGetTarget())
+            Assert.False(alive, sprintf "Weak handle for %A should no longer be populated as latest TP no longer alive" key)
 #endif
 
 [<TypeProvider>]
