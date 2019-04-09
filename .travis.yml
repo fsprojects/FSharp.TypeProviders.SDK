@@ -3,7 +3,7 @@ dist: trusty
 
 matrix:
   include:
-    - mono: 5.18.0
+    - mono: 5.16.0
       os: linux
     - mono: latest
       os: osx
