@@ -19,51 +19,16 @@ open Microsoft.FSharp.Reflection
 module Utils = 
     let isNull x = match x with null -> true | _ -> false
 
-
-/// Simulate a real host of TypeProviderConfig
-type internal DllInfo(path: string) =
-    member __.FileName = path
-
-/// Simulate a real host of TypeProviderConfig
-type internal TcImports(bas: TcImports option, dllInfos: DllInfo list) =
-    member __.Base = bas
-    member __.DllInfos = dllInfos
-
-
 type internal Testing() =
 
     /// Simulates a real instance of TypeProviderConfig
     static member MakeSimulatedTypeProviderConfig (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list, ?isHostedExecution, ?isInvalidationSupported) =
-
-        let cfg = TypeProviderConfig(fun _ -> false)
+        let cfg = TypeProviderConfig(fun _ -> failwith "SystemRuntimeContainsType is deprecated and should never be called")
         cfg.IsHostedExecution <- defaultArg isHostedExecution false
         cfg.IsInvalidationSupported <- defaultArg isInvalidationSupported true
-        let (?<-) cfg prop value =
-            let ty = cfg.GetType()
-            match ty.GetProperty(prop,BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic) with
-            | null -> 
-                let fld = ty.GetField(prop,BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic)
-                if fld = null then failwith ("expected TypeProviderConfig to have a property or field "+prop)
-                fld.SetValue(cfg, value)|> ignore
-            | p -> 
-                p.GetSetMethod(nonPublic = true).Invoke(cfg, [| box value |]) |> ignore
-        cfg?ResolutionFolder <- resolutionFolder
-        cfg?RuntimeAssembly <- runtimeAssembly
-        cfg?ReferencedAssemblies <- Array.zeroCreate<string> 0
-
-        // Fake an implementation of SystemRuntimeContainsType the shape expected by AssemblyResolver.fs.
-        let dllInfos = [yield DllInfo(runtimeAssembly); for r in runtimeAssemblyRefs do yield DllInfo(r)]
-        let tcImports = TcImports(Some(TcImports(None,[])),dllInfos)
-        let systemRuntimeContainsType = (fun (_s:string) -> if tcImports.DllInfos.Length = 1 then true else true)
-        cfg?systemRuntimeContainsType <- systemRuntimeContainsType
-
-        //Diagnostics.Debugger.Launch() |> ignore
-        Diagnostics.Debug.Assert(cfg.GetType().GetField("systemRuntimeContainsType",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
-        Diagnostics.Debug.Assert(systemRuntimeContainsType.GetType().GetField("tcImports",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
-        Diagnostics.Debug.Assert(typeof<TcImports>.GetField("dllInfos",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
-        Diagnostics.Debug.Assert(typeof<TcImports>.GetProperty("Base",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
-        Diagnostics.Debug.Assert(typeof<DllInfo>.GetProperty("FileName",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
-
+        cfg.ResolutionFolder <- resolutionFolder
+        cfg.RuntimeAssembly <- runtimeAssembly
+        cfg.ReferencedAssemblies <- Array.ofList runtimeAssemblyRefs
         cfg
 
     /// Simulates a real instance of TypeProviderConfig and then creates an instance of the last
