@@ -4,7 +4,7 @@
 
 #else
 
-module FSharp.TypeProviders.SDK.Tests.GenerativeEnumsProvisionTests
+module TPSDK.GenerativeEnumsProvisionTests
 #endif
 
 #nowarn "760" // IDisposable needs new

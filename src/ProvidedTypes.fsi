@@ -20,7 +20,8 @@ module internal Reader =
 
     type ILModuleReader = class end
 
-    val GetReaderCache : unit -> ReadOnlyDictionary<(string * string), DateTime * int * ILModuleReader>
+    val GetWeakReaderCache : unit -> System.Collections.Concurrent.ConcurrentDictionary<(string * string), DateTime * WeakReference<ILModuleReader>>
+    val GetStrongReaderCache : unit -> System.Collections.Concurrent.ConcurrentDictionary<(string * string), DateTime * int * ILModuleReader>
 
 #endif
 
