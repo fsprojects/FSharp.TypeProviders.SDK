@@ -23,6 +23,7 @@ type internal Testing() =
 
     /// Simulates a real instance of TypeProviderConfig
     static member MakeSimulatedTypeProviderConfig (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list, ?isHostedExecution, ?isInvalidationSupported) =
+        let runtimeAssemblyRefs = (runtimeAssembly :: runtimeAssemblyRefs) |> List.distinct
         let cfg = TypeProviderConfig(fun _ -> failwith "SystemRuntimeContainsType is deprecated and should never be called")
         cfg.IsHostedExecution <- defaultArg isHostedExecution false
         cfg.IsInvalidationSupported <- defaultArg isInvalidationSupported true
