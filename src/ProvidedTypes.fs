@@ -1036,6 +1036,7 @@ namespace ProviderImplementation.ProvidedTypes
         let mutable staticParams = staticParams
         let mutable staticParamsApply = staticParamsApply
         let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
+        let mutable returnTypeFixCache = None
 
         /// The public constructor for the design-time/source model
         new (methodName, parameters, returnType, ?invokeCode, ?isStatic) =
@@ -1101,13 +1102,19 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.ReturnType = 
             if isTgt then 
-                match returnType.Namespace, returnType.Name with 
-                | "System", "Void"->  
-                    if ImportProvidedMethodBaseAsILMethodRef_OnStack_HACK() then 
-                        typeof<Void>
-                    else 
-                        returnType
-                | _ -> returnType
+                match returnTypeFixCache with 
+                | Some returnTypeFix -> returnTypeFix
+                | None -> 
+                    let returnTypeFix = 
+                        match returnType.Namespace, returnType.Name with 
+                        | "System", "Void"->  
+                            if ImportProvidedMethodBaseAsILMethodRef_OnStack_HACK() then 
+                                typeof<Void>
+                            else 
+                                returnType
+                        | _ -> returnType
+                    returnTypeFixCache <- Some returnTypeFix
+                    returnTypeFix
             else
                 returnType
 
@@ -7565,6 +7572,7 @@ namespace ProviderImplementation.ProvidedTypes
         and txILMethodDef (declTy: Type) (inp: ILMethodDef) =
             let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
             let rec gps2 = inp.GenericParams |> Array.mapi (fun i gp -> txILGenericParam (fun () -> gps, gps2) (i + gps.Length) gp)
+            let mutable returnTypeFixCache = None
             { new MethodInfo() with
 
                 override __.Name = inp.Name
@@ -7575,14 +7583,21 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.CallingConvention = if inp.IsStatic then CallingConventions.Standard else CallingConventions.HasThis ||| CallingConventions.Standard
 
                 override __.ReturnType = 
-                    let returnType = inp.Return.Type |> txILType (gps, gps2)
-                    match returnType.Namespace, returnType.Name with 
-                    | "System", "Void"->  
-                        if ImportProvidedMethodBaseAsILMethodRef_OnStack_HACK() then 
-                            typeof<Void>
-                        else 
-                            returnType
-                    | t -> returnType
+                    match returnTypeFixCache with 
+                    | None -> 
+                        let returnType = inp.Return.Type |> txILType (gps, gps2)
+                        let returnTypeFix =
+                            match returnType.Namespace, returnType.Name with 
+                            | "System", "Void"->  
+                                if ImportProvidedMethodBaseAsILMethodRef_OnStack_HACK() then 
+                                    typeof<Void>
+                                else 
+                                    returnType
+                            | t -> returnType
+                        returnTypeFixCache <- Some returnTypeFix
+                        returnTypeFix
+                    | Some returnTypeFix ->
+                        returnTypeFix
 
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
                 override __.GetGenericArguments() = gps2
