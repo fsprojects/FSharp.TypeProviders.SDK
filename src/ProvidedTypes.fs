@@ -8091,6 +8091,8 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetTypes () = theTypesArray.Force()
 
+        override __.ToString () = assemblyName.ToString()
+
         override x.GetType (nm: string) = 
             if nm.Contains("+") then
                 let i = nm.LastIndexOf("+")
