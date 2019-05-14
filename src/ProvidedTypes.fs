@@ -8666,7 +8666,7 @@ namespace ProviderImplementation.ProvidedTypes
             referencedAssemblyPaths |> List.tryPick (fun path ->
               try
                 let simpleName = Path.GetFileNameWithoutExtension path
-                if simpleName = "mscorlib" || simpleName = "System.Runtime" || simpleName = "netstandard" then
+                if simpleName = "mscorlib" || simpleName = "System.Runtime" || simpleName = "netstandard" || simpleName = "System.Private.CoreLib" then
                     let reader = ILModuleReaderAfterReadingAllBytes (path, mkILGlobals EcmaMscorlibScopeRef)
                     let mdef = reader.ILModuleDef
                     match mdef.TypeDefs.TryFindByName(USome "System", "Object") with
