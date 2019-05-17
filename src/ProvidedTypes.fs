@@ -2773,7 +2773,9 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             lmap
 
         member __.Entries = larr.Force()
-        member __.FindByName nm =  getmap().[nm]
+        member __.FindByName nm =  
+            let scc,ys = getmap().TryGetValue(nm)
+            if scc then ys else Array.empty
         member x.FindByNameAndArity (nm,arity) =  x.FindByName nm |> Array.filter (fun x -> x.Parameters.Length = arity)
         member x.TryFindUniqueByName name =  
             match x.FindByName(name) with
@@ -13724,6 +13726,42 @@ namespace ProviderImplementation.ProvidedTypes
         let dateTimeConstructor() = (convTypeToTgt typeof<DateTime>).GetConstructor([| typeof<int64>; typeof<DateTimeKind> |])
         let dateTimeOffsetConstructor() = (convTypeToTgt typeof<DateTimeOffset>).GetConstructor([| typeof<int64>; typeof<TimeSpan> |])
         let timeSpanConstructor() = (convTypeToTgt typeof<TimeSpan>).GetConstructor([|typeof<int64>|])
+        
+        let decimalTypeTgt = convTypeToTgt typeof<decimal>
+
+        let (|SpecificCall|_|) templateParameter = 
+            // Note: precomputation
+            match templateParameter with
+            | (Lambdas(_, Call(_, minfo1, _)) | Call(_, minfo1, _)) ->
+                let targetType = convTypeToTgt minfo1.DeclaringType
+                let minfo1 = targetType.GetMethod(minfo1.Name, bindAll)
+                let isg1 = minfo1.IsGenericMethod
+                let gmd = 
+                    if minfo1.IsGenericMethodDefinition then 
+                        minfo1
+                    elif isg1 then 
+                        minfo1.GetGenericMethodDefinition() 
+                    else null
+
+                // end-of-precomputation
+
+                (fun tm ->
+                   match tm with
+                   | Call(obj, minfo2, args)
+        #if FX_NO_REFLECTION_METADATA_TOKENS
+                      when ( // if metadata tokens are not available we'll rely only on equality of method references
+        #else
+                      when (minfo1.MetadataToken = minfo2.MetadataToken &&
+        #endif
+                            if isg1 then
+                              minfo2.IsGenericMethod && gmd = minfo2.GetGenericMethodDefinition()
+                            else
+                              minfo1 = minfo2) ->
+                       Some(obj, (minfo2.GetGenericArguments() |> Array.toList), args)
+                   | _ -> None)
+            | _ ->
+                 invalidArg "templateParameter" "The parameter is not a recognized method name"
+
 
         let isEmpty s = (s = ExpectedStackState.Empty)
         let isAddress s = (s = ExpectedStackState.Address)
@@ -13788,7 +13826,31 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_conv DT_I1)
                 elif t1 = typeof<byte> then
                     ilg.Emit(I_conv DT_U1)
-
+            let emitOp1 name opcode (t1 : Type) a1 = 
+                emitExpr ExpectedStackState.Value a1
+                match t1.GetMethod(name,[|t1|]) with 
+                | null ->
+                    ilg.Emit(opcode)
+                    emitConvIfNecessary t1
+                    popIfEmptyExpected expectedState
+                | m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+            let emitOp2 name opcode (t1 : Type) (t2 : Type) a1 a2 = 
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1.GetMethod(name,[|t1;t2|]) with 
+                | null ->
+                    match t2.GetMethod(name,[|t1;t2|]) with 
+                    | null ->
+                        assert(t1 = t2)
+                        ilg.Emit(opcode)
+                        emitConvIfNecessary t1
+                        popIfEmptyExpected expectedState
+                    | m -> 
+                        ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                
             /// emits given expression to corresponding IL
             match expr with
             | ForIntegerRangeLoop(loopVar, first, last, body) ->
@@ -13890,6 +13952,23 @@ namespace ProviderImplementation.ProvidedTypes
 
                 popIfEmptyExpected expectedState
 
+            | SpecificCall <@ (-) @>(None, [t1; t2; _], [a1; a2]) -> 
+                emitOp2 "op_Subtraction" I_sub t1 t2 a1 a2
+            
+            | SpecificCall <@ (~-) @>(None, [t1], [a1]) -> 
+                emitOp1 "op_UnaryNegation" I_neg t1 a1
+                
+            | SpecificCall <@ (/) @>(None, [t1; t2; _], [a1; a2]) -> 
+                emitOp2 "op_Division" I_div t1 t2 a1 a2
+
+            | SpecificCall <@ (~+) @>(None, [t1], [a1]) -> 
+                match t1.GetMethod("op_UnaryPlus", [|t1|]) with 
+                | null ->
+                    emitExpr expectedState a1
+                | m -> 
+                    emitExpr ExpectedStackState.Value a1
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+            
             | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray @> (None, [ty], [arr; index]) ->
                 // observable side-effect - IndexOutOfRangeException
                 emitExpr ExpectedStackState.Value arr
@@ -14129,7 +14208,7 @@ namespace ProviderImplementation.ProvidedTypes
                 popIfEmptyExpected expectedState
             | n ->
                 failwithf "unknown expression '%A' in generated method" n
-
+        
         member __.EmitExpr (expectedState, expr) = emitExpr expectedState expr
 
     //-------------------------------------------------------------------------------------------------
