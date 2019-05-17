@@ -13728,6 +13728,7 @@ namespace ProviderImplementation.ProvidedTypes
         let timeSpanConstructor() = (convTypeToTgt typeof<TimeSpan>).GetConstructor([|typeof<int64>|])
         
         let decimalTypeTgt = convTypeToTgt typeof<decimal>
+        let stringTypeTgt = convTypeToTgt typeof<string>
 
         let (|SpecificCall|_|) templateParameter = 
             // Note: precomputation
@@ -13826,6 +13827,20 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_conv DT_I1)
                 elif t1 = typeof<byte> then
                     ilg.Emit(I_conv DT_U1)
+            let emitConv (rt : Type) opcode (t1 : Type) a1 = 
+                emitExpr ExpectedStackState.Value a1
+                match t1.GetMethod("op_Explicit",[|t1|]) with 
+                | null ->
+                    if t1 = stringTypeTgt then 
+                        let rtTgt = convTypeToTgt rt
+                        let m = rtTgt.GetMethod("Parse",[|stringTypeTgt|])
+                        ilg.Emit(I_call(Normalcall, transMeth m, None))
+                    else
+                        ilg.Emit(opcode)
+                        emitConvIfNecessary t1
+                        popIfEmptyExpected expectedState
+                | m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
             let emitOp1 name opcode (t1 : Type) a1 = 
                 emitExpr ExpectedStackState.Value a1
                 match t1.GetMethod(name,[|t1|]) with 
@@ -13848,6 +13863,17 @@ namespace ProviderImplementation.ProvidedTypes
                         popIfEmptyExpected expectedState
                     | m -> 
                         ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                
+            let emitBitOp name opcode (t1 : Type) a1 a2 = 
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1.GetMethod(name,[|t1|]) with 
+                | null ->
+                    ilg.Emit(opcode)
+                    emitConvIfNecessary t1
+                    popIfEmptyExpected expectedState
                 | m -> 
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 
@@ -13951,7 +13977,13 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_castclass (transType  targetTy))
 
                 popIfEmptyExpected expectedState
-
+                
+            | SpecificCall <@ (*) @>(None, [t1; t2; _], [a1; a2]) -> 
+                emitOp2 "op_Multiply" I_mul t1 t2 a1 a2
+           
+            | SpecificCall <@ (+) @>(None, [t1; t2; _], [a1; a2]) -> 
+                emitOp2 "op_Addition" I_add t1 t2 a1 a2
+            
             | SpecificCall <@ (-) @>(None, [t1; t2; _], [a1; a2]) -> 
                 emitOp2 "op_Subtraction" I_sub t1 t2 a1 a2
             
@@ -13969,6 +14001,60 @@ namespace ProviderImplementation.ProvidedTypes
                     emitExpr ExpectedStackState.Value a1
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
             
+            | SpecificCall <@ (%) @>(None, [t1; t2; _], [a1; a2]) -> 
+                emitOp2 "op_Modulus" I_rem t1 t2 a1 a2
+                
+            | SpecificCall <@ (<<<) @>(None, [t1], [a1; a2]) -> 
+                emitBitOp "op_LeftShift" I_shl t1 a1 a2
+
+            | SpecificCall <@ (>>>) @>(None, [t1], [a1; a2]) -> 
+                emitBitOp "op_RightShift" I_shr t1 a1 a2
+
+            | SpecificCall <@ (&&&) @>(None, [t1], [a1; a2]) -> 
+                emitBitOp "op_And" I_and t1 a1 a2
+                        
+            | SpecificCall <@ (|||) @>(None, [t1], [a1; a2]) -> 
+                emitBitOp "op_Or" I_or t1 a1 a2
+                        
+            | SpecificCall <@ (^^^) @>(None, [t1], [a1; a2]) -> 
+                emitBitOp "op_Xor" I_xor t1 a1 a2
+                
+            | SpecificCall <@ (~~~) @>(None, [t1], [a1]) -> 
+                emitOp1 "op_Not" I_not t1 a1
+                
+            | SpecificCall <@ byte @>(None, [t1], [a1]) -> 
+                emitConv typeof<byte> (I_conv DT_U1) t1 a1
+
+            | SpecificCall <@ sbyte @>(None, [t1], [a1]) -> 
+                emitConv typeof<sbyte> (I_conv DT_I1) t1 a1
+
+            | SpecificCall <@ uint16 @>(None, [t1], [a1]) -> 
+                emitConv typeof<uint16> (I_conv DT_U2) t1 a1
+
+            | SpecificCall <@ int16 @>(None, [t1], [a1]) -> 
+                emitConv typeof<int16> (I_conv DT_I2) t1 a1
+
+            | SpecificCall <@ uint32 @>(None, [t1], [a1]) -> 
+                emitConv typeof<uint32> (I_conv DT_U4) t1 a1
+
+            | SpecificCall <@ int @>(None, [t1], [a1])
+            | SpecificCall <@ int32 @>(None, [t1], [a1]) -> 
+                emitConv typeof<int> (I_conv DT_I4) t1 a1
+
+            | SpecificCall <@ uint64 @>(None, [t1], [a1]) -> 
+                emitConv typeof<uint64> (I_conv DT_U8) t1 a1
+
+            | SpecificCall <@ int64 @>(None, [t1], [a1]) -> 
+                emitConv typeof<int64> (I_conv DT_I8) t1 a1
+
+            | SpecificCall <@ single @>(None, [t1], [a1])
+            | SpecificCall <@ float32 @>(None, [t1], [a1]) -> 
+                emitConv typeof<single> (I_conv DT_R4) t1 a1
+
+            | SpecificCall <@ double @>(None, [t1], [a1])
+            | SpecificCall <@ float @>(None, [t1], [a1]) -> 
+                emitConv typeof<double> (I_conv DT_R8) t1 a1
+
             | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray @> (None, [ty], [arr; index]) ->
                 // observable side-effect - IndexOutOfRangeException
                 emitExpr ExpectedStackState.Value arr

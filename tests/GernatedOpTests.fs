@@ -59,6 +59,15 @@ type GenerativeOpsProvider (config: TypeProviderConfig) as this =
         create "Pos10 decimal" <@ (~+) 10m @>
         create "Pos10 double" <@ (~+) 10.0 @>
         create "Pos10 single" <@ (~+) 10.f @>
+        create "Rem3 int" <@ 15 % 4 @>
+        create "Rem3 decimal" <@ 15m % 4m @>
+        create "Rem3 double" <@ 15.0 % 4.0 @>
+        create "Rem3 single" <@ 15.f % 4.f@>
+        create "Shl2 int" <@ 1 <<< 1 @>
+        create "Shl4 uint" <@ 1u <<< 2 @>
+        create "int1 int" <@ int 1 @>
+        create "int1 double" <@ int 1.0 @>
+        create "int1 string" <@ int "1" @>
         //create "Mul10 TimeSpan" <@ TimeSpan.FromDays(5.0) * 2.0 @>
         //create "Mul20 TimeSpan" <@ 2.0 * TimeSpan.FromDays(10.0) @>
         tempAssembly.AddTypes [container]
@@ -106,8 +115,6 @@ let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false
 
 [<Fact>]
 let ``GenerativeOpsProvider sub execute correctly``() =
-  // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/123 
-  // if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
         let call name = 
             Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
@@ -119,8 +126,6 @@ let ``GenerativeOpsProvider sub execute correctly``() =
         
 [<Fact>]
 let ``GenerativeOpsProvider add execute correctly``() =
-  // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/123 
-  // if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
         let call name = 
             Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
@@ -132,8 +137,6 @@ let ``GenerativeOpsProvider add execute correctly``() =
         
 [<Fact>]
 let ``GenerativeOpsProvider neg execute correctly``() =
-  // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/123 
-  // if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
            let call name = 
                Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
@@ -145,8 +148,6 @@ let ``GenerativeOpsProvider neg execute correctly``() =
 
 [<Fact>]
 let ``GenerativeOpsProvider mul execute correctly``() =
-  // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/123 
-  // if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
            let call name = 
                Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
@@ -154,13 +155,9 @@ let ``GenerativeOpsProvider mul execute correctly``() =
            Assert.Equal(10.0, call "Mul10 double")
            Assert.Equal(10.f, call "Mul10 single")
            Assert.Equal(10m, call "Mul10 decimal")
-           //Assert.Equal(TimeSpan.FromDays 10.0, call "Mul10 TimeSpan")
-           //Assert.Equal(TimeSpan.FromDays 20.0, call "Mul20 TimeSpan")
            
 [<Fact>]
 let ``GenerativeOpsProvider div execute correctly``() =
-  // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/123 
-  // if not runningOnMono then 
     testProvidedAssembly <| fun container -> 
            let call name = 
                Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
@@ -169,13 +166,9 @@ let ``GenerativeOpsProvider div execute correctly``() =
            Assert.Equal(10.f, call "Div10 single")
            Assert.Equal(10m, call "Div10 decimal")
            Assert.Equal(10s, call "Div10 int16")
-           //Assert.Equal(TimeSpan.FromDays 10.0, call "Mul10 TimeSpan")
-           //Assert.Equal(TimeSpan.FromDays 20.0, call "Mul20 TimeSpan")
            
 [<Fact>]
 let ``GenerativeOpsProvider pos execute correctly``() =
-       // // See tracking bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/123 
-       // if not runningOnMono then 
          testProvidedAssembly <| fun container -> 
                 let call name = 
                     Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
@@ -183,7 +176,32 @@ let ``GenerativeOpsProvider pos execute correctly``() =
                 Assert.Equal(10.0, call "Pos10 double")
                 Assert.Equal(10.f, call "Pos10 single")
                 Assert.Equal(10m, call "Pos10 decimal")
-                //Assert.Equal(TimeSpan.FromDays 10.0, call "Mul10 TimeSpan")
-                //Assert.Equal(TimeSpan.FromDays 20.0, call "Mul20 TimeSpan")
+
+[<Fact>]
+let ``GenerativeOpsProvider rem execute correctly``() =
+     testProvidedAssembly <| fun container -> 
+            let call name = 
+                Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
+            Assert.Equal(3, call "Rem3 int")
+            Assert.Equal(3.0, call "Rem3 double")
+            Assert.Equal(3.f, call "Rem3 single")
+            Assert.Equal(3m, call "Rem3 decimal")
+
+[<Fact>]
+let ``GenerativeOpsProvider shl execute correctly``() =
+     testProvidedAssembly <| fun container -> 
+            let call name = 
+                Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
+            Assert.Equal(2, call "Shl2 int")
+            Assert.Equal(4u, call "Shl4 uint")
+
+[<Fact>]
+let ``GenerativeOpsProvider int execute correctly``() =
+     testProvidedAssembly <| fun container -> 
+            let call name = 
+                Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
+            Assert.Equal(1, call "int1 int")
+            Assert.Equal(1, call "int1 double")
+            Assert.Equal(1, call "int1 string")
 
 #endif
