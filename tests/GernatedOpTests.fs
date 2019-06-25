@@ -19,60 +19,6 @@ open Microsoft.FSharp.Quotations
 
 #nowarn "760" // IDisposable needs new
 
-[<TypeProvider>]
-type GenerativeOpsProvider (config: TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces (config)
-
-    let ns = "OpTests"
-    let tempAssembly = ProvidedAssembly()
-    let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
-
-    let create name (expr : Expr<'a>) =  
-        ProvidedMethod(name,[],typeof<'a>,invokeCode = (fun _args -> expr.Raw), isStatic = true)
-        |> container.AddMember
-    do
-        create "Sub20 int" <@ 50 - 30 @>
-        create "Sub20 decimal" <@ 50m - 30m @>
-        create "Sub20 double" <@ 50.0 - 30.0 @>
-        create "Sub20 single" <@ 50.f - 30.f @>
-        create "Sub1 DateTime" <@ DateTime.Today - DateTime.Today.AddDays(-1.0) @>
-        create "Add80 int" <@ 50 + 30 @>
-        create "Add80 decimal" <@ 50m + 30m @>
-        create "Add80 double" <@ 50.0 + 30.0 @>
-        create "Add80 single" <@ 50.f + 30.f @>
-        create "Add20000102 DateTime" <@ DateTime(2000,1,1) + TimeSpan.FromDays(1.0) @>
-        create "Neg80 int" <@ -80 @>
-        create "Neg80 decimal" <@ -80m @>
-        create "Neg80 double" <@ -80.0 @>
-        create "Neg80 single" <@ -80.f @>
-        create "Neg1 TimeSpan" <@ -TimeSpan.FromDays(1.0) @>
-        create "Mul10 int" <@ 5*2 @>
-        create "Mul10 decimal" <@ 5m * 2m @>
-        create "Mul10 double" <@ 5.0 * 2.0 @>
-        create "Mul10 single" <@ 5.f * 2.f @>
-        create "Div10 int" <@ 20 / 2 @>
-        create "Div10 decimal" <@ 20m / 2m @>
-        create "Div10 double" <@ 20.0 / 2.0 @>
-        create "Div10 single" <@ 20.f / 2.f @>
-        create "Div10 int16" <@ 20s / 2s @>
-        create "Pos10 int" <@ (~+) 10 @>
-        create "Pos10 decimal" <@ (~+) 10m @>
-        create "Pos10 double" <@ (~+) 10.0 @>
-        create "Pos10 single" <@ (~+) 10.f @>
-        create "Rem3 int" <@ 15 % 4 @>
-        create "Rem3 decimal" <@ 15m % 4m @>
-        create "Rem3 double" <@ 15.0 % 4.0 @>
-        create "Rem3 single" <@ 15.f % 4.f@>
-        create "Shl2 int" <@ 1 <<< 1 @>
-        create "Shl4 uint" <@ 1u <<< 2 @>
-        create "int1 int" <@ int 1 @>
-        create "int1 double" <@ int 1.0 @>
-        create "int1 string" <@ int "1" @>
-        //create "Mul10 TimeSpan" <@ TimeSpan.FromDays(5.0) * 2.0 @>
-        //create "Mul20 TimeSpan" <@ 2.0 * TimeSpan.FromDays(10.0) @>
-        tempAssembly.AddTypes [container]
-        this.AddNamespace(container.Namespace, [container])
- 
 let testCases() = 
     [("F# 3.1 Portable 259", "3.259.3.1", (fun _ ->  Targets.hasPortable259Assemblies()), Targets.Portable259FSharp31Refs)
      ("F# 4.0 Portable 259", "3.259.4.0", (fun _ ->  Targets.hasPortable259Assemblies() && Targets.supportsFSharp40()), Targets.Portable259FSharp40Refs)
@@ -95,113 +41,390 @@ let hostedTestCases() =
     [("4.4.0.0", (fun _ ->  Targets.supportsFSharp40()), Targets.DotNet45FSharp40Refs) ]
 
 
-let testProvidedAssembly test = 
+let testProvidedAssembly exprs = 
     if Targets.supportsFSharp40() then
         let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs()
         let runtimeAssembly = runtimeAssemblyRefs.[0]
         let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
-        let tp = GenerativeOpsProvider(cfg) :> TypeProviderForNamespaces
+        let tp = TypeProviderForNamespaces(cfg) //:> TypeProviderForNamespaces
+        let ns = "Tests"
+        let tempAssembly = ProvidedAssembly()
+        let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
+        let mutable counter = 0
+        
+        let create (expr : Expr) =  
+            counter <- counter + 1
+            let name = sprintf "F%d" counter
+            ProvidedMethod(name,[],expr.Type,invokeCode = (fun _args -> expr), isStatic = true)
+            |> container.AddMember
+            name
+        let names = exprs |> List.map (fst >> create)
+        do tempAssembly.AddTypes [container]
+        do tp.AddNamespace(container.Namespace, [container])
         let providedNamespace = tp.Namespaces.[0] 
         let providedTypes  = providedNamespace.GetTypes()
         let providedType = providedTypes.[0] 
         let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
         Assert.Equal("Container", providedTypeDefinition.Name)
-
+        let test (container : Type) = 
+            let call name = container.GetMethod(name).Invoke(null,[||])
+            (names, exprs)
+            ||> List.iter2 (fun name (_,f) -> f(call name))
         let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
         let assembly = Assembly.Load assemContents
         assembly.ExportedTypes |> Seq.find (fun ty -> ty.Name = "Container") |> test
 
 let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false 
 
+let check (e : Expr<'a>) expected = 
+    e.Raw, fun o -> 
+        let actual = Assert.IsType<'a>(o)
+        Assert.True((expected = actual), sprintf "Expected %A got %A. (%A)" expected actual e)
+
+let checkExpr (e : Expr<'a>) = 
+    let expected = FSharp.Linq.RuntimeHelpers.LeafExpressionConverter.EvaluateQuotation(e) :?> 'a
+    check e expected
+
+
 [<Fact>]
-let ``GenerativeOpsProvider sub execute correctly``() =
-    testProvidedAssembly <| fun container -> 
-        let call name = 
-            Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
-        Assert.Equal(20, call "Sub20 int")
-        Assert.Equal(20.0, call "Sub20 double")
-        Assert.Equal(20.f, call "Sub20 single")
-        Assert.Equal(20m, call "Sub20 decimal")
-        Assert.Equal(TimeSpan.FromDays 1.0, call "Sub1 DateTime")
+let ``sub execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ 50 - 30 @>
+            checkExpr <@ 50.0 - 30.0 @>
+            checkExpr <@ 50.f - 30.f @>
+            checkExpr <@ 50L - 30L @>
+            checkExpr <@ 50UL - 30UL @>
+            checkExpr <@ 50l - 30l @>
+            checkExpr <@ 50s - 30s @>
+            checkExpr <@ 50us - 30us @>
+            check <@ 50y - 30y @> 20y
+            check <@ 50uy - 30uy @> 20uy
+            checkExpr <@ 50m - 30m @>
+            checkExpr <@ TimeSpan.FromMinutes 50.0 - TimeSpan.FromMinutes 30.0 @>
+        ]
+
+[<Fact>]
+let ``add execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ 50 + 30 @>
+            checkExpr <@ 50.0 + 30.0 @>
+            checkExpr <@ 50.f + 30.f @>
+            checkExpr <@ 50L + 30L @>
+            checkExpr <@ 50UL + 30UL @>
+            checkExpr <@ 50l + 30l @>
+            checkExpr <@ 50s + 30s @>
+            checkExpr <@ 50us + 30us @>
+            check <@ 50y + 30y @> 80y
+            check <@ 50uy + 30uy @> 80uy
+            checkExpr <@ 50m + 30m @>
+            checkExpr <@ TimeSpan.FromMinutes 50.0 + TimeSpan.FromMinutes 30.0 @>
+        ]        
         
 [<Fact>]
-let ``GenerativeOpsProvider add execute correctly``() =
-    testProvidedAssembly <| fun container -> 
-        let call name = 
-            Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
-        Assert.Equal(80, call "Add80 int")
-        Assert.Equal(80.0, call "Add80 double")
-        Assert.Equal(80.f, call "Add80 single")
-        Assert.Equal(80m, call "Add80 decimal")
-        Assert.Equal(DateTime(2000,01,02), call "Add20000102 DateTime")
+let ``mul execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ 50 * 30 @>
+            checkExpr <@ 50.0 * 30.0 @>
+            checkExpr <@ 50.f * 30.f @>
+            checkExpr <@ 50L * 30L @>
+            checkExpr <@ 50UL * 30UL @>
+            checkExpr <@ 50l * 30l @>
+            checkExpr <@ 50s * 30s @>
+            checkExpr <@ 50us * 30us @>
+            check <@ 5y * 3y @> 15y
+            check <@ 5uy * 3uy @> 15uy
+            checkExpr <@ 50m * 30m @>
+            //TODO: mul method test
+        ]         
         
 [<Fact>]
-let ``GenerativeOpsProvider neg execute correctly``() =
-    testProvidedAssembly <| fun container -> 
-           let call name = 
-               Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
-           Assert.Equal(-80, call "Neg80 int")
-           Assert.Equal(-80.0, call "Neg80 double")
-           Assert.Equal(-80.f, call "Neg80 single")
-           Assert.Equal(-80m, call "Neg80 decimal")
-           Assert.Equal(-(TimeSpan.FromDays 1.0), call "Neg1 TimeSpan")
+let ``div execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ 50 / 30 @>
+            checkExpr <@ 50.0 / 30.0 @>
+            checkExpr <@ 50.f / 30.f @>
+            checkExpr <@ 50L / 30L @>
+            checkExpr <@ 50UL / 30UL @>
+            checkExpr <@ 50l / 30l @>
+            checkExpr <@ 50s / 30s @>
+            checkExpr <@ 50us / 30us @>
+            checkExpr <@ 50 / 10 @>
+            checkExpr <@ 50.0 / 10.0 @>
+            checkExpr <@ 50.f / 10.f @>
+            checkExpr <@ 50L / 30L @>
+            checkExpr <@ 50UL / 10UL @>
+            checkExpr <@ 50l / 10l @>
+            checkExpr <@ 50s / 10s @>
+            checkExpr <@ 50us / 10us @>
+            check <@ 50y / 10y @> 5y
+            check <@ 50uy / 10uy @> 5uy
+            checkExpr <@ 50m / 30m @>
+            //TODO: mul method test
+        ]        
 
 [<Fact>]
-let ``GenerativeOpsProvider mul execute correctly``() =
-    testProvidedAssembly <| fun container -> 
-           let call name = 
-               Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
-           Assert.Equal(10, call "Mul10 int")
-           Assert.Equal(10.0, call "Mul10 double")
-           Assert.Equal(10.f, call "Mul10 single")
-           Assert.Equal(10m, call "Mul10 decimal")
-           
-[<Fact>]
-let ``GenerativeOpsProvider div execute correctly``() =
-    testProvidedAssembly <| fun container -> 
-           let call name = 
-               Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
-           Assert.Equal(10, call "Div10 int")
-           Assert.Equal(10.0, call "Div10 double")
-           Assert.Equal(10.f, call "Div10 single")
-           Assert.Equal(10m, call "Div10 decimal")
-           Assert.Equal(10s, call "Div10 int16")
-           
-[<Fact>]
-let ``GenerativeOpsProvider pos execute correctly``() =
-         testProvidedAssembly <| fun container -> 
-                let call name = 
-                    Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
-                Assert.Equal(10, call "Pos10 int")
-                Assert.Equal(10.0, call "Pos10 double")
-                Assert.Equal(10.f, call "Pos10 single")
-                Assert.Equal(10m, call "Pos10 decimal")
+let ``neg execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ (~-) 50 @>
+            checkExpr <@ (~-) 30.0 @>
+            checkExpr <@ (~-) 30.f @>
+            checkExpr <@ (~-) 30L @>
+            checkExpr <@ (~-) 30l @>
+            checkExpr <@ (~-) 30s @>
+            check <@ (~-) 30y @> -30y
+            checkExpr <@ (~-) 30m @>
+            checkExpr <@ (~-) (TimeSpan.FromMinutes 50.0) @>
+        ]     
 
 [<Fact>]
-let ``GenerativeOpsProvider rem execute correctly``() =
-     testProvidedAssembly <| fun container -> 
-            let call name = 
-                Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
-            Assert.Equal(3, call "Rem3 int")
-            Assert.Equal(3.0, call "Rem3 double")
-            Assert.Equal(3.f, call "Rem3 single")
-            Assert.Equal(3m, call "Rem3 decimal")
+let ``pos execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ (~+) 50 @> 50
+            check <@ (~+) 30.0 @> 30.0
+            check <@ (~+) 30.f @> 30.f
+            check <@ (~+) 30L @> 30L
+            check <@ (~+) 30l @> 30l
+            check <@ (~+) 30s @> 30s
+            check <@ (~+) 30y @> 30y
+            check <@ (~+) 30m @> 30m
+            check <@ (~+) (TimeSpan.FromMinutes 50.0) @> (TimeSpan.FromMinutes 50.0)
+        ]     
+
 
 [<Fact>]
-let ``GenerativeOpsProvider shl execute correctly``() =
-     testProvidedAssembly <| fun container -> 
-            let call name = 
-                Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
-            Assert.Equal(2, call "Shl2 int")
-            Assert.Equal(4u, call "Shl4 uint")
+let ``rem execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ 50 % 30 @>
+            checkExpr <@ 50.0 % 30.0 @>
+            checkExpr <@ 50.f % 30.f @>
+            checkExpr <@ 50L % 30L @>
+            checkExpr <@ 50UL % 30UL @>
+            checkExpr <@ 50l % 30l @>
+            checkExpr <@ 50s % 30s @>
+            checkExpr <@ 50us % 30us @>
+            check <@ 50y % 30y @> 20y
+            check <@ 50uy % 30uy @> 20uy
+            checkExpr <@ 50m % 30m @>
+            //TODO: rem method test
+        ]
+
 
 [<Fact>]
-let ``GenerativeOpsProvider int execute correctly``() =
-     testProvidedAssembly <| fun container -> 
-            let call name = 
-                Assert.IsType<'a>(container.GetMethod(name).Invoke(null,[||]))
-            Assert.Equal(1, call "int1 int")
-            Assert.Equal(1, call "int1 double")
-            Assert.Equal(1, call "int1 string")
+let ``shl execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ 2 <<< 3 @>
+            checkExpr <@ 2L <<< 3 @>
+            checkExpr <@ 5UL <<< 3 @>
+            checkExpr <@ 5l <<< 3 @>
+            checkExpr <@ 5s <<< 3 @>
+            checkExpr <@ 5us <<< 3 @>
+            checkExpr <@ 5y <<< 3 @>
+            checkExpr <@ 5uy <<< 3 @>
+            checkExpr <@ 2 <<< 1 @>
+            checkExpr <@ 2L <<< 1 @>
+            checkExpr <@ 5UL <<< 1 @>
+            checkExpr <@ 5l <<< 1 @>
+            checkExpr <@ 5s <<< 1 @>
+            checkExpr <@ 5us <<< 1 @>
+            checkExpr <@ 5y <<< 1 @>
+            checkExpr <@ 5uy <<< 1 @>
+        ]
+
+[<Fact>]
+let ``shr execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ 2 >>> 3 @>
+            checkExpr <@ 2L >>> 3 @>
+            checkExpr <@ 5UL >>> 3 @>
+            checkExpr <@ 5l >>> 3 @>
+            checkExpr <@ 5s >>> 3 @>
+            checkExpr <@ 5us >>> 3 @>
+            checkExpr <@ 5y >>> 3 @>
+            checkExpr <@ 5uy >>> 3 @>
+            checkExpr <@ 2 >>> 1 @>
+            checkExpr <@ 2L >>> 1 @>
+            checkExpr <@ 5UL >>> 1 @>
+            checkExpr <@ 5l >>> 1 @>
+            checkExpr <@ 5s >>> 1 @>
+            checkExpr <@ 5us >>> 1 @>
+            checkExpr <@ 5y >>> 1 @>
+            checkExpr <@ 5uy >>> 1 @>
+        ]
+
+
+[<Fact>]
+let ``int execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ int "50" @> 50
+            checkExpr <@ int 50 @>
+            checkExpr <@ int 50.0 @>
+            checkExpr <@ int 50.f @>
+            checkExpr <@ int 50UL @>
+            checkExpr <@ int 50l @>
+            checkExpr <@ int 50s @>
+            checkExpr <@ int 50us @>
+            checkExpr <@ int 50y @>
+            checkExpr <@ int 50uy @> 
+            checkExpr <@ int 50m @>
+            checkExpr <@ int 50I @>
+        ]
+    
+[<Fact>]
+let ``int32 execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ int32 "50" @> 50
+            checkExpr <@ int32 50 @>
+            checkExpr <@ int32 50.0 @>
+            checkExpr <@ int32 50.f @>
+            checkExpr <@ int32 50UL @>
+            checkExpr <@ int32 50l @>
+            checkExpr <@ int32 50s @>
+            checkExpr <@ int32 50us @>
+            checkExpr <@ int32 50y @>
+            checkExpr <@ int32 50uy @> 
+            checkExpr <@ int32 50m @>
+            checkExpr <@ int32 50I @>
+        ]
+
+
+[<Fact>]
+let ``int64 execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ int64 "50" @> 50L
+            checkExpr <@ int64 50 @>
+            checkExpr <@ int64 50.0 @>
+            checkExpr <@ int64 50.f @>
+            checkExpr <@ int64 50UL @>
+            checkExpr <@ int64 50l @>
+            checkExpr <@ int64 50s @>
+            checkExpr <@ int64 50us @>
+            checkExpr <@ int64 50y @>
+            checkExpr <@ int64 50uy @> 
+            checkExpr <@ int64 50m @>
+            checkExpr <@ int64 50I @>
+        ]
+
+[<Fact>]
+let ``int16 execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ int16 "50" @> 50s
+            checkExpr <@ int16 50 @>
+            checkExpr <@ int16 50.0 @>
+            checkExpr <@ int16 50.f @>
+            checkExpr <@ int16 50UL @>
+            checkExpr <@ int16 50l @>
+            checkExpr <@ int16 50s @>
+            checkExpr <@ int16 50us @>
+            checkExpr <@ int16 50y @>
+            checkExpr <@ int16 50uy @> 
+            checkExpr <@ int16 50m @>
+            checkExpr <@ int16 50I @>
+        ]
+
+
+[<Fact>]
+let ``uint32 execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ uint32 "50" @> 50u
+            checkExpr <@ uint32 50 @>
+            checkExpr <@ uint32 50.0 @>
+            checkExpr <@ uint32 50.f @>
+            checkExpr <@ uint32 50UL @>
+            checkExpr <@ uint32 50l @>
+            checkExpr <@ uint32 50s @>
+            checkExpr <@ uint32 50us @>
+            checkExpr <@ uint32 50y @>
+            checkExpr <@ uint32 50uy @> 
+            checkExpr <@ uint32 50m @>
+            checkExpr <@ uint32 50I @>
+        ]
+
+
+[<Fact>]
+let ``uint64 execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ uint64 "50" @> 50UL
+            checkExpr <@ uint64 50 @>
+            checkExpr <@ uint64 50.0 @>
+            checkExpr <@ uint64 50.f @>
+            checkExpr <@ uint64 50UL @>
+            checkExpr <@ uint64 50l @>
+            checkExpr <@ uint64 50s @>
+            checkExpr <@ uint64 50us @>
+            checkExpr <@ uint64 50y @>
+            checkExpr <@ uint64 50uy @> 
+            checkExpr <@ uint64 50m @>
+            checkExpr <@ uint64 50I @>
+        ]
+
+[<Fact>]
+let ``uint16 execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ uint16 "50" @> 50us
+            checkExpr <@ uint16 50 @>
+            checkExpr <@ uint16 50.0 @>
+            checkExpr <@ uint16 50.f @>
+            checkExpr <@ uint16 50UL @>
+            checkExpr <@ uint16 50l @>
+            checkExpr <@ uint16 50s @>
+            checkExpr <@ uint16 50us @>
+            checkExpr <@ uint16 50y @>
+            checkExpr <@ uint16 50uy @> 
+            checkExpr <@ uint16 50m @>
+            checkExpr <@ uint16 50I @>
+        ]
+
+[<Fact>]
+let ``byte execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ byte "50" @> 50uy
+            checkExpr <@ byte 50 @>
+            checkExpr <@ byte 50.0 @>
+            checkExpr <@ byte 50.f @>
+            checkExpr <@ byte 50UL @>
+            checkExpr <@ byte 50l @>
+            checkExpr <@ byte 50s @>
+            checkExpr <@ byte 50us @>
+            checkExpr <@ byte 50y @>
+            checkExpr <@ byte 50uy @> 
+            checkExpr <@ byte 50m @>
+            checkExpr <@ byte 50I @>
+        ]
+
+
+[<Fact>]
+let ``sbyte execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ sbyte "50" @> 50y
+            checkExpr <@ sbyte 50 @>
+            checkExpr <@ sbyte 50.0 @>
+            checkExpr <@ sbyte 50.f @>
+            checkExpr <@ sbyte 50UL @>
+            checkExpr <@ sbyte 50l @>
+            checkExpr <@ sbyte 50s @>
+            checkExpr <@ sbyte 50us @>
+            checkExpr <@ sbyte 50y @>
+            checkExpr <@ sbyte 50uy @> 
+            checkExpr <@ sbyte 50m @>
+            checkExpr <@ sbyte 50I @>
+        ]
 
 #endif
