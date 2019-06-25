@@ -79,7 +79,7 @@ let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false
 let check (e : Expr<'a>) expected = 
     e.Raw, fun o -> 
         let actual = Assert.IsType<'a>(o)
-        Assert.True((expected = actual), sprintf "Expected %A got %A. (%A)" expected actual e)
+        Assert.True((expected = actual), sprintf "%A Expected %A got %A. (%A)" (expected.GetType(), actual.GetType(), expected = actual) expected actual e)
 
 let checkExpr (e : Expr<'a>) = 
     let expected = FSharp.Linq.RuntimeHelpers.LeafExpressionConverter.EvaluateQuotation(e) :?> 'a
@@ -503,5 +503,271 @@ let ``decimal execute correctly``() =
             checkExpr <@ decimal 50m @>
             checkExpr <@ decimal 50I @>
         ]
+
+
+
+
+[<Fact>]
+let ``eq execute correctly``() =
+    testProvidedAssembly 
+        [
+           checkExpr <@ true = true @>
+           checkExpr <@ true = false @>
+           checkExpr <@ false = false @>
+           checkExpr <@ false = true @>
+           checkExpr <@ 1y = 1y @>
+           checkExpr <@ 2y = 1y @>
+           checkExpr <@ 1y = 2y @>
+           checkExpr <@ 1s = 1s @>
+           checkExpr <@ 2s = 1s @>
+           checkExpr <@ 1s = 2s @>
+           checkExpr <@ 1 = 1 @>
+           checkExpr <@ 2 = 1 @>
+           checkExpr <@ 1 = 2 @>
+           checkExpr <@ 1L = 1L @>
+           checkExpr <@ 2L = 1L @>
+           checkExpr <@ 1L = 2L @>
+           checkExpr <@ 1uy = 1uy @>
+           checkExpr <@ 2uy = 1uy @>
+           checkExpr <@ 1uy = 2uy @>
+           checkExpr <@ 1us = 1us @>
+           checkExpr <@ 2us = 1us @>
+           checkExpr <@ 1us = 2us @>
+           checkExpr <@ 1u = 1u @>
+           checkExpr <@ 2u = 1u @>
+           checkExpr <@ 1u = 2u @>
+           checkExpr <@ 1UL = 1UL @>
+           checkExpr <@ 2UL = 1UL @>
+           checkExpr <@ 1UL = 2UL @>
+           checkExpr <@ 1.0 = 1.0 @>
+           checkExpr <@ 2.0 = 1.0 @>
+           checkExpr <@ 1.0 = 2.0 @>
+           checkExpr <@ 1.f = 1.f @>
+           checkExpr <@ 2.f = 1.f @>
+           checkExpr <@ 1.f = 2.f @>
+           checkExpr <@ '1' = '1' @>
+           checkExpr <@ '2' = '1' @>
+           checkExpr <@ '1' = '2' @>
+           checkExpr <@ 1m = 1m @>
+           checkExpr <@ 2m = 1m @>
+           checkExpr <@ 1m = 2m @>
+           checkExpr <@ "1" = "1" @>
+           checkExpr <@ "2" = "1" @>
+           checkExpr <@ "1" = "2" @>
+           checkExpr <@ DateTime(2000,1,1) = DateTime(2000,1,1) @>
+           checkExpr <@ DateTime(2000,1,1) = DateTime(2000,1,2) @>
+        ]
+
+
+
+[<Fact>]
+let ``lt execute correctly``() =
+    testProvidedAssembly 
+        [
+           check <@ true < true @> (true < true)
+           check <@ true < false @> (true < false)
+           check <@ false < false @> (false < false)
+           check <@ false < true @> (false < true)
+           checkExpr <@ 1y < 1y @>
+           checkExpr <@ 2y < 1y @>
+           checkExpr <@ 1y < 2y @>
+           checkExpr <@ 1s < 1s @>
+           checkExpr <@ 2s < 1s @>
+           checkExpr <@ 1s < 2s @>
+           checkExpr <@ 1 < 1 @>
+           checkExpr <@ 2 < 1 @>
+           checkExpr <@ 1 < 2 @>
+           checkExpr <@ 1L < 1L @>
+           checkExpr <@ 2L < 1L @>
+           checkExpr <@ 1L < 2L @>
+           checkExpr <@ 1uy < 1uy @>
+           checkExpr <@ 2uy < 1uy @>
+           checkExpr <@ 1uy < 2uy @>
+           checkExpr <@ 1us < 1us @>
+           checkExpr <@ 2us < 1us @>
+           checkExpr <@ 1us < 2us @>
+           checkExpr <@ 1u < 1u @>
+           checkExpr <@ 2u < 1u @>
+           checkExpr <@ 1u < 2u @>
+           checkExpr <@ 1UL < 1UL @>
+           checkExpr <@ 2UL < 1UL @>
+           checkExpr <@ 1UL < 2UL @>
+           checkExpr <@ 1.0 < 1.0 @>
+           checkExpr <@ 2.0 < 1.0 @>
+           checkExpr <@ 1.0 < 2.0 @>
+           checkExpr <@ 1.f < 1.f @>
+           checkExpr <@ 2.f < 1.f @>
+           checkExpr <@ 1.f < 2.f @>
+           checkExpr <@ '1' < '1' @>
+           checkExpr <@ '2' < '1' @>
+           checkExpr <@ '1' < '2' @>
+           checkExpr <@ 1m < 1m @>
+           checkExpr <@ 2m < 1m @>
+           checkExpr <@ 1m < 2m @>
+           check <@ "1" < "1" @> ("1" < "1")
+           check <@ "2" < "1" @> ("2" < "1")
+           check <@ "1" < "2" @> ("1" < "2")
+           checkExpr <@ DateTime(2000,1,1) < DateTime(2000,1,1) @>
+           checkExpr <@ DateTime(2000,1,1) < DateTime(2000,1,2) @>
+        ]
+
+
+
+[<Fact>]
+let ``lte execute correctly``() =
+    testProvidedAssembly 
+        [
+           check <@ true <= true @> (true <= true)
+           check <@ true <= false @> (true <= false)
+           check <@ false <= false @> (false <= false)
+           check <@ false <= true @> (false <= true)
+           checkExpr <@ 1y <= 1y @>
+           checkExpr <@ 2y <= 1y @>
+           checkExpr <@ 1y <= 2y @>
+           checkExpr <@ 1s <= 1s @>
+           checkExpr <@ 2s <= 1s @>
+           checkExpr <@ 1s <= 2s @>
+           checkExpr <@ 1 <= 1 @>
+           checkExpr <@ 2 <= 1 @>
+           checkExpr <@ 1 <= 2 @>
+           checkExpr <@ 1L <= 1L @>
+           checkExpr <@ 2L <= 1L @>
+           checkExpr <@ 1L <= 2L @>
+           checkExpr <@ 1uy <= 1uy @>
+           checkExpr <@ 2uy <= 1uy @>
+           checkExpr <@ 1uy <= 2uy @>
+           checkExpr <@ 1us <= 1us @>
+           checkExpr <@ 2us <= 1us @>
+           checkExpr <@ 1us <= 2us @>
+           checkExpr <@ 1u <= 1u @>
+           checkExpr <@ 2u <= 1u @>
+           checkExpr <@ 1u <= 2u @>
+           checkExpr <@ 1UL <= 1UL @>
+           checkExpr <@ 2UL <= 1UL @>
+           checkExpr <@ 1UL <= 2UL @>
+           checkExpr <@ 1.0 <= 1.0 @>
+           checkExpr <@ 2.0 <= 1.0 @>
+           checkExpr <@ 1.0 <= 2.0 @>
+           checkExpr <@ 1.f <= 1.f @>
+           checkExpr <@ 2.f <= 1.f @>
+           checkExpr <@ 1.f <= 2.f @>
+           checkExpr <@ '1' <= '1' @>
+           checkExpr <@ '2' <= '1' @>
+           checkExpr <@ '1' <= '2' @>
+           checkExpr <@ 1m <= 1m @>
+           checkExpr <@ 2m <= 1m @>
+           checkExpr <@ 1m <= 2m @>
+           check <@ "1" <= "1" @> ("1" <= "1")
+           check <@ "2" <= "1" @> ("2" <= "1")
+           check <@ "1" <= "2" @> ("1" <= "2")
+           checkExpr <@ DateTime(2000,1,1) <= DateTime(2000,1,1) @>
+           checkExpr <@ DateTime(2000,1,1) <= DateTime(2000,1,2) @>
+        ]
+
+
+[<Fact>]
+let ``gt execute correctly``() =
+    testProvidedAssembly 
+        [
+           check <@ true > true @> (true > true)
+           check <@ true > false @> (true > false)
+           check <@ false > false @> (false > false)
+           check <@ false > true @> (false > true)
+           checkExpr <@ 1y > 1y @>
+           checkExpr <@ 2y > 1y @>
+           checkExpr <@ 1y > 2y @>
+           checkExpr <@ 1s > 1s @>
+           checkExpr <@ 2s > 1s @>
+           checkExpr <@ 1s > 2s @>
+           checkExpr <@ 1 > 1 @>
+           checkExpr <@ 2 > 1 @>
+           checkExpr <@ 1 > 2 @>
+           checkExpr <@ 1L > 1L @>
+           checkExpr <@ 2L > 1L @>
+           checkExpr <@ 1L > 2L @>
+           checkExpr <@ 1uy > 1uy @>
+           checkExpr <@ 2uy > 1uy @>
+           checkExpr <@ 1uy > 2uy @>
+           checkExpr <@ 1us > 1us @>
+           checkExpr <@ 2us > 1us @>
+           checkExpr <@ 1us > 2us @>
+           checkExpr <@ 1u > 1u @>
+           checkExpr <@ 2u > 1u @>
+           checkExpr <@ 1u > 2u @>
+           checkExpr <@ 1UL > 1UL @>
+           checkExpr <@ 2UL > 1UL @>
+           checkExpr <@ 1UL > 2UL @>
+           checkExpr <@ 1.0 > 1.0 @>
+           checkExpr <@ 2.0 > 1.0 @>
+           checkExpr <@ 1.0 > 2.0 @>
+           checkExpr <@ 1.f > 1.f @>
+           checkExpr <@ 2.f > 1.f @>
+           checkExpr <@ 1.f > 2.f @>
+           checkExpr <@ '1' > '1' @>
+           checkExpr <@ '2' > '1' @>
+           checkExpr <@ '1' > '2' @>
+           checkExpr <@ 1m > 1m @>
+           checkExpr <@ 2m > 1m @>
+           checkExpr <@ 1m > 2m @>
+           check <@ "1" > "1" @> ("1" > "1")
+           check <@ "2" > "1" @> ("2" > "1")
+           check <@ "1" > "2" @> ("1" > "2")
+           checkExpr <@ DateTime(2000,1,1) > DateTime(2000,1,1) @>
+           checkExpr <@ DateTime(2000,1,1) > DateTime(2000,1,2) @>
+        ]
+
+
+[<Fact>]
+let ``gte execute correctly``() =
+    testProvidedAssembly 
+        [
+           check <@ true >= true @> (true >= true)
+           check <@ true >= false @> (true >= false)
+           check <@ false >= false @> (false >= false)
+           check <@ false >= true @> (false >= true)
+           checkExpr <@ 1y >= 1y @>
+           checkExpr <@ 2y >= 1y @>
+           checkExpr <@ 1y >= 2y @>
+           checkExpr <@ 1s >= 1s @>
+           checkExpr <@ 2s >= 1s @>
+           checkExpr <@ 1s >= 2s @>
+           checkExpr <@ 1 >= 1 @>
+           checkExpr <@ 2 >= 1 @>
+           checkExpr <@ 1 >= 2 @>
+           checkExpr <@ 1L >= 1L @>
+           checkExpr <@ 2L >= 1L @>
+           checkExpr <@ 1L >= 2L @>
+           checkExpr <@ 1uy >= 1uy @>
+           checkExpr <@ 2uy >= 1uy @>
+           checkExpr <@ 1uy >= 2uy @>
+           checkExpr <@ 1us >= 1us @>
+           checkExpr <@ 2us >= 1us @>
+           checkExpr <@ 1us >= 2us @>
+           checkExpr <@ 1u >= 1u @>
+           checkExpr <@ 2u >= 1u @>
+           checkExpr <@ 1u >= 2u @>
+           checkExpr <@ 1UL >= 1UL @>
+           checkExpr <@ 2UL >= 1UL @>
+           checkExpr <@ 1UL >= 2UL @>
+           checkExpr <@ 1.0 >= 1.0 @>
+           checkExpr <@ 2.0 >= 1.0 @>
+           checkExpr <@ 1.0 >= 2.0 @>
+           checkExpr <@ 1.f >= 1.f @>
+           checkExpr <@ 2.f >= 1.f @>
+           checkExpr <@ 1.f >= 2.f @>
+           checkExpr <@ '1' >= '1' @>
+           checkExpr <@ '2' >= '1' @>
+           checkExpr <@ '1' >= '2' @>
+           checkExpr <@ 1m >= 1m @>
+           checkExpr <@ 2m >= 1m @>
+           checkExpr <@ 1m >= 2m @>
+           check <@ "1" >= "1" @> ("1" >= "1")
+           check <@ "2" >= "1" @> ("2" >= "1")
+           check <@ "1" >= "2" @> ("1" >= "2")
+           checkExpr <@ DateTime(2000,1,1) >= DateTime(2000,1,1) @>
+           checkExpr <@ DateTime(2000,1,1) >= DateTime(2000,1,2) @>
+        ]
+
+
 
 #endif
