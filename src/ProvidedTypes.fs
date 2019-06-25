@@ -13827,19 +13827,26 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_conv DT_I1)
                 elif t1 = typeof<byte> then
                     ilg.Emit(I_conv DT_U1)
-            let emitConv (rt : Type) opcode (t1 : Type) a1 = 
+            let emitConv (rt : Type) opcode (t1 : Type) a1 =
                 emitExpr ExpectedStackState.Value a1
-                match t1.GetMethod("op_Explicit",[|t1|]) with 
-                | null ->
+                let rtTgt = convTypeToTgt rt 
+                let m = 
+                    t1.GetMethods(BindingFlags.Static ||| BindingFlags.Public) 
+                    |> Array.tryFind 
+                        (fun x -> 
+                            x.Name = "op_Explicit"  
+                                && x.ReturnType = rtTgt 
+                                && (x.GetParameters() |> Array.map (fun i -> i.ParameterType)) = [|t1|])
+                match m with 
+                | None ->
                     if t1 = stringTypeTgt then 
-                        let rtTgt = convTypeToTgt rt
                         let m = rtTgt.GetMethod("Parse",[|stringTypeTgt|])
                         ilg.Emit(I_call(Normalcall, transMeth m, None))
                     else
                         ilg.Emit(opcode)
                         emitConvIfNecessary t1
                         popIfEmptyExpected expectedState
-                | m -> 
+                | Some m -> 
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
             let emitOp1 name opcode (t1 : Type) a1 = 
                 emitExpr ExpectedStackState.Value a1
