@@ -13728,6 +13728,7 @@ namespace ProviderImplementation.ProvidedTypes
         let timeSpanConstructor() = (convTypeToTgt typeof<TimeSpan>).GetConstructor([|typeof<int64>|])
         
         let decimalTypeTgt = convTypeToTgt typeof<decimal>
+        let convertTypeTgt = convTypeToTgt typeof<System.Convert>
         let stringTypeTgt = convTypeToTgt typeof<string>
 
         let (|SpecificCall|_|) templateParameter = 
@@ -14061,7 +14062,30 @@ namespace ProviderImplementation.ProvidedTypes
             | SpecificCall <@ double @>(None, [t1], [a1])
             | SpecificCall <@ float @>(None, [t1], [a1]) -> 
                 emitConv typeof<double> (I_conv DT_R8) t1 a1
-
+            
+            | SpecificCall <@ decimal @>(None, [t1], [a1]) ->
+                emitExpr ExpectedStackState.Value a1
+                let rtTgt = decimalTypeTgt
+                if t1 = stringTypeTgt then 
+                    let m = rtTgt.GetMethod("Parse",[|stringTypeTgt|])
+                    ilg.Emit(I_call(Normalcall, transMeth m, None)) 
+                else
+                    match convertTypeTgt.GetMethod("ToDecimal", [|t1|]) with 
+                    | null -> 
+                        let m = 
+                            t1.GetMethods(BindingFlags.Static ||| BindingFlags.Public) 
+                            |> Array.tryFind 
+                                (fun x -> 
+                                    x.Name = "op_Explicit"  
+                                        && x.ReturnType = rtTgt 
+                                        && (x.GetParameters() |> Array.map (fun i -> i.ParameterType)) = [|t1|])
+                        match m with 
+                        | None -> 
+                            failwithf "decimal operator on %s not supported" (t1.Name)
+                        | Some m -> 
+                            ilg.Emit(I_call(Normalcall, transMeth m, None))
+                    | toDecimal -> ilg.Emit(I_call(Normalcall, transMeth toDecimal, None)) 
+                        
             | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray @> (None, [ty], [arr; index]) ->
                 // observable side-effect - IndexOutOfRangeException
                 emitExpr ExpectedStackState.Value arr
