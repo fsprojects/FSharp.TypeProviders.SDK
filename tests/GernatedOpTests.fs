@@ -427,4 +427,81 @@ let ``sbyte execute correctly``() =
             checkExpr <@ sbyte 50I @>
         ]
 
+        
+
+[<Fact>]
+let ``float32 execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ float32 "50" @> 50.f
+            checkExpr <@ float32 50 @>
+            checkExpr <@ float32 50.0 @>
+            checkExpr <@ float32 50.f @>
+            checkExpr <@ float32 50UL @>
+            checkExpr <@ float32 50l @>
+            checkExpr <@ float32 50s @>
+            checkExpr <@ float32 50us @>
+            checkExpr <@ float32 50y @>
+            checkExpr <@ float32 50uy @> 
+            checkExpr <@ float32 50m @>
+            checkExpr <@ float32 50I @>
+        ]
+
+
+[<Fact>]
+let ``float execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ float "50" @> 50.0
+            checkExpr <@ float 50 @>
+            checkExpr <@ float 50.0 @>
+            checkExpr <@ float 50.f @>
+            checkExpr <@ float 50UL @>
+            checkExpr <@ float 50l @>
+            checkExpr <@ float 50s @>
+            checkExpr <@ float 50us @>
+            checkExpr <@ float 50y @>
+            checkExpr <@ float 50uy @> 
+            checkExpr <@ float 50m @>
+            checkExpr <@ float 50I @>
+        ]
+
+
+[<Fact>]
+let ``double execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ double "50" @> 50.0
+            checkExpr <@ double 50 @>
+            checkExpr <@ double 50.0 @>
+            checkExpr <@ double 50.f @>
+            checkExpr <@ double 50UL @>
+            checkExpr <@ double 50l @>
+            checkExpr <@ double 50s @>
+            checkExpr <@ double 50us @>
+            checkExpr <@ double 50y @>
+            checkExpr <@ double 50uy @> 
+            checkExpr <@ double 50m @>
+            checkExpr <@ double 50I @>
+        ]
+
+
+[<Fact>]
+let ``decimal execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ decimal "50" @> 50m
+            checkExpr <@ decimal 50 @>
+            checkExpr <@ decimal 50.0 @>
+            checkExpr <@ decimal 50.f @>
+            checkExpr <@ decimal 50UL @>
+            checkExpr <@ decimal 50l @>
+            checkExpr <@ decimal 50s @>
+            checkExpr <@ decimal 50us @>
+            checkExpr <@ decimal 50y @>
+            checkExpr <@ decimal 50uy @> 
+            checkExpr <@ decimal 50m @>
+            checkExpr <@ decimal 50I @>
+        ]
+
 #endif
