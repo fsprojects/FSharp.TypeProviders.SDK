@@ -13755,6 +13755,14 @@ namespace ProviderImplementation.ProvidedTypes
             | null -> None
             | m -> Some m
             
+        let (|StaticMethodWithReturnType|_|) name tps returnType (t : Type) =
+            t.GetMethods(BindingFlags.Static ||| BindingFlags.Public) 
+            |> Array.tryFind 
+                (fun x -> 
+                    x.Name = name
+                        && x.ReturnType = returnType 
+                        && (x.GetParameters() |> Array.map (fun i -> i.ParameterType)) = tps)
+            
 
         let (|SpecificCall|_|) templateParameter = 
             // Note: precomputation
@@ -13853,63 +13861,6 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_conv DT_I1)
                 elif t1 = typeof<byte> then
                     ilg.Emit(I_conv DT_U1)
-            let emitConv (rt : Type) opcode (t1 : Type) a1 =
-                emitExpr ExpectedStackState.Value a1
-                let rtTgt = convTypeToTgt rt 
-                let m = 
-                    t1.GetMethods(BindingFlags.Static ||| BindingFlags.Public) 
-                    |> Array.tryFind 
-                        (fun x -> 
-                            x.Name = "op_Explicit"  
-                                && x.ReturnType = rtTgt 
-                                && (x.GetParameters() |> Array.map (fun i -> i.ParameterType)) = [|t1|])
-                match m with 
-                | None ->
-                    if t1 = stringTypeTgt then 
-                        let m = rtTgt.GetMethod("Parse",[|stringTypeTgt|])
-                        ilg.Emit(I_call(Normalcall, transMeth m, None))
-                    else
-                        ilg.Emit(opcode)
-                        emitConvIfNecessary t1
-                        popIfEmptyExpected expectedState
-                | Some m -> 
-                    ilg.Emit(I_call(Normalcall, transMeth m, None))
-            let emitOp1 name opcode (t1 : Type) a1 = 
-                emitExpr ExpectedStackState.Value a1
-                match t1.GetMethod(name,[|t1|]) with 
-                | null ->
-                    ilg.Emit(opcode)
-                    emitConvIfNecessary t1
-                    popIfEmptyExpected expectedState
-                | m -> 
-                    ilg.Emit(I_call(Normalcall, transMeth m, None))
-            let emitOp2 name opcode (t1 : Type) (t2 : Type) a1 a2 = 
-                emitExpr ExpectedStackState.Value a1
-                emitExpr ExpectedStackState.Value a2
-                match t1.GetMethod(name,[|t1;t2|]) with 
-                | null ->
-                    match t2.GetMethod(name,[|t1;t2|]) with 
-                    | null ->
-                        assert(t1 = t2)
-                        ilg.Emit(opcode)
-                        emitConvIfNecessary t1
-                        popIfEmptyExpected expectedState
-                    | m -> 
-                        ilg.Emit(I_call(Normalcall, transMeth m, None))
-                | m -> 
-                    ilg.Emit(I_call(Normalcall, transMeth m, None))
-               
-            let emitBitOp name opcode (t1 : Type) a1 a2 = 
-                emitExpr ExpectedStackState.Value a1
-                emitExpr ExpectedStackState.Value a2
-                match t1.GetMethod(name,[|t1|]) with 
-                | null ->
-                    ilg.Emit(opcode)
-                    emitConvIfNecessary t1
-                    popIfEmptyExpected expectedState
-                | m -> 
-                    ilg.Emit(I_call(Normalcall, transMeth m, None))
-                
             /// emits given expression to corresponding IL
             match expr with
             | ForIntegerRangeLoop(loopVar, first, last, body) ->
@@ -14070,7 +14021,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_ceq)
                 | StaticMethod "op_LessThanOrEqual" [|t1; t1|] m -> 
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
-                | _ -> failwithf "Operator (<) not supported for type %s" t1.Name
+                | _ -> failwithf "Operator (<=) not supported for type %s" t1.Name
            
 
             | SpecificCall <@ (>=) @>(None, [t1], [a1; a2]) -> 
@@ -14096,28 +14047,112 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_ceq)
                 | StaticMethod "op_GreaterThanOrEqual" [|t1; t1|] m -> 
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
-                | _ -> failwithf "Operator (<) not supported for type %s" t1.Name
+                | _ -> failwithf "Operator (>=) not supported for type %s" t1.Name
            
             | SpecificCall <@ (=) @>(None, [t1], [a1; a2]) -> 
-                emitComparison false "op_Equality" I_ceq t1 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1 with 
+                | Bool | SByte | Char
+                | Double | Single
+                | Int16 | Int32 | Int64 
+                | Byte
+                | UInt16 | UInt32 | UInt64 -> ilg.Emit(I_ceq)
+                | String ->
+                    ilg.Emit(I_call(Normalcall, (convTypeToTgt typeof<System.String>).GetMethod("Equals", [|t1; t1|]) |> transMeth, None))
+                | StaticMethod "op_Equality" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (=) not supported for type %s" t1.Name
            
             | SpecificCall <@ (<>) @>(None, [t1], [a1; a2]) -> 
-                emitComparison true "op_Inequality" I_ceq t1 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1 with 
+                | Bool | SByte | Char
+                | Double | Single
+                | Int16 | Int32 | Int64 
+                | Byte
+                | UInt16 | UInt32 | UInt64 -> 
+                    ilg.Emit(I_ceq)
+                    emitExpr ExpectedStackState.Value <@@ false @@>
+                    ilg.Emit(I_ceq)
+                | String ->
+                    ilg.Emit(I_call(Normalcall, (convTypeToTgt typeof<System.String>).GetMethod("Equals", [|t1; t1|]) |> transMeth, None))
+                    emitExpr ExpectedStackState.Value <@@ false @@>
+                    ilg.Emit(I_ceq)
+                | StaticMethod "op_Inequality" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (<>) not supported for type %s" t1.Name
 
-            | SpecificCall <@ (*) @>(None, [t1; t2; _], [a1; a2]) -> 
-                emitOp2 "op_Multiply" I_mul t1 t2 a1 a2
+            | SpecificCall <@ (*) @>(None, [t1; t2; _], [a1; a2]) ->
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1 with 
+                | SByte | Byte
+                | Int16 | Int32 | Int64
+                | UInt16 | UInt32 | UInt64
+                | Double | Single ->
+                    ilg.Emit(I_mul)
+                | StaticMethod "op_Multiply" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (*) not supported for type %s" t1.Name
+                emitConvIfNecessary t1
            
             | SpecificCall <@ (+) @>(None, [t1; t2; _], [a1; a2]) -> 
-                emitOp2 "op_Addition" I_add t1 t2 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1 with 
+                | SByte | Byte
+                | Int16 | Int32 | Int64
+                | UInt16 | UInt32 | UInt64
+                | Double | Single 
+                | Char ->
+                    ilg.Emit(I_add)
+                | String -> 
+                    ilg.Emit(I_call(Normalcall, (convTypeToTgt typeof<System.String>).GetMethod("Concat", [|t1; t1|]) |> transMeth, None))
+                | StaticMethod "op_Addition" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (+) not supported for type %s" t1.Name
+                emitConvIfNecessary t1
             
             | SpecificCall <@ (-) @>(None, [t1; t2; _], [a1; a2]) -> 
-                emitOp2 "op_Subtraction" I_sub t1 t2 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1 with 
+                | SByte | Byte
+                | Int16 | Int32 | Int64
+                | UInt16 | UInt32 | UInt64
+                | Double | Single  ->
+                    ilg.Emit(I_sub)
+                | StaticMethod "op_Subtraction" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (-) not supported for type %s" t1.Name
+                emitConvIfNecessary t1
             
             | SpecificCall <@ (~-) @>(None, [t1], [a1]) -> 
-                emitOp1 "op_UnaryNegation" I_neg t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | SByte 
+                | Int16 | Int32 | Int64
+                | Double | Single  ->
+                    ilg.Emit(I_neg)
+                | StaticMethod "op_UnaryNegation" [|t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (~-) not supported for type %s" t1.Name
                 
             | SpecificCall <@ (/) @>(None, [t1; t2; _], [a1; a2]) -> 
-                emitOp2 "op_Division" I_div t1 t2 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1 with 
+                | Byte | UInt16 | UInt32 | UInt64 -> 
+                    ilg.Emit(I_div_un)
+                | SByte | Int16 | Int32 | Int64
+                | Double | Single  ->
+                    ilg.Emit(I_div)
+                | StaticMethod "op_Division" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (/) not supported for type %s" t1.Name
+                emitConvIfNecessary t1
 
             | SpecificCall <@ (~+) @>(None, [t1], [a1]) -> 
                 match t1.GetMethod("op_UnaryPlus", [|t1|]) with 
@@ -14128,58 +14163,276 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
             
             | SpecificCall <@ (%) @>(None, [t1; t2; _], [a1; a2]) -> 
-                emitOp2 "op_Modulus" I_rem t1 t2 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1 with 
+                | Byte | UInt16 | UInt32 | UInt64 -> 
+                    ilg.Emit(I_rem_un)
+                | SByte | Int16 | Int32 | Int64
+                | Double | Single  ->
+                    ilg.Emit(I_rem)
+                | StaticMethod "op_Modulus" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (%%) not supported for type %s" t1.Name
+                emitConvIfNecessary t1
                 
             | SpecificCall <@ (<<<) @>(None, [t1], [a1; a2]) -> 
-                emitBitOp "op_LeftShift" I_shl t1 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                let maskShift (x : int) =
+                    match a2 with 
+                    | Patterns.Value(:? int as v ,_) -> 
+                        emitExpr ExpectedStackState.Value (Expr.Value (v &&& x))
+                    | _ -> 
+                        emitExpr ExpectedStackState.Value a2
+                        emitExpr ExpectedStackState.Value (Expr.Value x)
+                        ilg.Emit(I_and)
+                    ilg.Emit(I_shl) 
+                match t1 with 
+                | Int32 | UInt32 -> maskShift 31
+                | Int64 | UInt64 -> maskShift 63
+                | Int16 | UInt16 -> maskShift 15
+                | SByte | Byte -> maskShift 7
+                | StaticMethod "op_LeftShift" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (<<<) not supported for type %s" t1.Name
+                emitConvIfNecessary t1
 
             | SpecificCall <@ (>>>) @>(None, [t1], [a1; a2]) -> 
-                emitBitOp "op_RightShift" I_shr t1 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                let maskShift (x : int) =
+                    match a2 with 
+                    | Patterns.Value(:? int as v ,_) -> 
+                        emitExpr ExpectedStackState.Value (Expr.Value (v &&& x))
+                    | _ -> 
+                        emitExpr ExpectedStackState.Value a2
+                        emitExpr ExpectedStackState.Value (Expr.Value x)
+                        ilg.Emit(I_and)
+                    ilg.Emit(I_shr) 
+                match t1 with 
+                | Int32 | UInt32 -> maskShift 31
+                | Int64 | UInt64 -> maskShift 63
+                | Int16 | UInt16 -> maskShift 15
+                | SByte | Byte -> maskShift 7
+                | StaticMethod "op_RightShift" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (>>>) not supported for type %s" t1.Name
+                emitConvIfNecessary t1
 
             | SpecificCall <@ (&&&) @>(None, [t1], [a1; a2]) -> 
-                emitBitOp "op_And" I_and t1 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1 with 
+                | Int32 | UInt32 
+                | Int64 | UInt64 
+                | Int16 | UInt16 
+                | SByte | Byte -> ilg.Emit(I_and)
+                | StaticMethod "op_And" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (&&&) not supported for type %s" t1.Name
                         
             | SpecificCall <@ (|||) @>(None, [t1], [a1; a2]) -> 
-                emitBitOp "op_Or" I_or t1 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1 with 
+                | Int32 | UInt32 
+                | Int64 | UInt64 
+                | Int16 | UInt16 
+                | SByte | Byte -> ilg.Emit(I_and)
+                | StaticMethod "op_Or" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (|||) not supported for type %s" t1.Name
                         
             | SpecificCall <@ (^^^) @>(None, [t1], [a1; a2]) -> 
-                emitBitOp "op_Xor" I_xor t1 a1 a2
+                emitExpr ExpectedStackState.Value a1
+                emitExpr ExpectedStackState.Value a2
+                match t1 with 
+                | Int32 | UInt32 
+                | Int64 | UInt64 
+                | Int16 | UInt16 
+                | SByte | Byte -> ilg.Emit(I_and)
+                | StaticMethod "op_Xor" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (^^^) not supported for type %s" t1.Name
                 
             | SpecificCall <@ (~~~) @>(None, [t1], [a1]) -> 
-                emitOp1 "op_Not" I_not t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Int32 | UInt32 
+                | Int64 | UInt64 
+                | Int16 | UInt16 
+                | SByte | Byte -> ilg.Emit(I_and)
+                | StaticMethod "op_Not" [|t1; t1|] m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator (~~~) not supported for type %s" t1.Name
                 
-            | SpecificCall <@ byte @>(None, [t1], [a1]) -> 
-                emitConv typeof<byte> (I_conv DT_U1) t1 a1
+            | SpecificCall <@ byte @>(None, [t1], [a1]) ->
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Char
+                | Double | Single
+                | Int32 | UInt32 
+                | Int64 | UInt64 
+                | Int16 | UInt16 
+                | SByte | Byte -> ilg.Emit(I_conv DT_U1) 
+                | String -> 
+                    let m = languagePrimitivesType().GetMethod("ParseUInt32")
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                    ilg.Emit(I_conv_ovf DT_U1) 
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator 'byte' not supported for type %s" t1.Name
 
             | SpecificCall <@ sbyte @>(None, [t1], [a1]) -> 
-                emitConv typeof<sbyte> (I_conv DT_I1) t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Char
+                | Double | Single
+                | Int32 | UInt32 
+                | Int64 | UInt64 
+                | Int16 | UInt16 
+                | SByte | Byte -> ilg.Emit(I_conv DT_I1) 
+                | String -> 
+                    let m = languagePrimitivesType().GetMethod("ParseInt32")
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                    ilg.Emit(I_conv_ovf DT_I1) 
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator 'sbyte' not supported for type %s" t1.Name
 
             | SpecificCall <@ uint16 @>(None, [t1], [a1]) -> 
-                emitConv typeof<uint16> (I_conv DT_U2) t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Char
+                | Double | Single
+                | Int32 | UInt32 
+                | Int64 | UInt64 
+                | Int16 | UInt16 
+                | SByte | Byte -> ilg.Emit(I_conv DT_U2) 
+                | String -> 
+                    let m = languagePrimitivesType().GetMethod("ParseUInt32")
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                    ilg.Emit(I_conv_ovf DT_U2) 
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator 'uint16' not supported for type %s" t1.Name
 
             | SpecificCall <@ int16 @>(None, [t1], [a1]) -> 
-                emitConv typeof<int16> (I_conv DT_I2) t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Char
+                | Double | Single
+                | Int32 | UInt32 
+                | Int64 | UInt64 
+                | Int16 | UInt16 
+                | SByte | Byte -> ilg.Emit(I_conv DT_I2) 
+                | String -> 
+                    let m = languagePrimitivesType().GetMethod("ParseInt32")
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                    ilg.Emit(I_conv_ovf DT_I2) 
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator 'int16' not supported for type %s" t1.Name
 
             | SpecificCall <@ uint32 @>(None, [t1], [a1]) -> 
-                emitConv typeof<uint32> (I_conv DT_U4) t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Char
+                | Double | Single
+                | UInt16 | UInt32 
+                | Int64 | UInt64 
+                | Byte -> ilg.Emit(I_conv DT_U4) 
+                | Int32 | Int16 | SByte -> ()
+                | String -> 
+                    let m = languagePrimitivesType().GetMethod("ParseUInt32")
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator 'uint32' not supported for type %s" t1.Name
 
             | SpecificCall <@ int @>(None, [t1], [a1])
             | SpecificCall <@ int32 @>(None, [t1], [a1]) -> 
-                emitConv typeof<int> (I_conv DT_I4) t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Char
+                | Double | Single
+                | UInt16 
+                | Int64 | UInt64 
+                | Byte -> ilg.Emit(I_conv DT_I4) 
+                | UInt32 | Int32 | Int16 | SByte -> ()
+                | String -> 
+                    let m = languagePrimitivesType().GetMethod("ParseInt32")
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator 'int32' not supported for type %s" t1.Name
 
             | SpecificCall <@ uint64 @>(None, [t1], [a1]) -> 
-                emitConv typeof<uint64> (I_conv DT_U8) t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Char
+                | Double | Single
+                | UInt16 | UInt32 
+                | Byte -> ilg.Emit(I_conv DT_U8) 
+                | SByte | Int32 | Int16 -> ilg.Emit(I_conv DT_I8) 
+                | Int64 | UInt64 -> ()
+                | String -> 
+                    let m = languagePrimitivesType().GetMethod("ParseUInt64")
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator 'uint64' not supported for type %s" t1.Name
 
             | SpecificCall <@ int64 @>(None, [t1], [a1]) -> 
-                emitConv typeof<int64> (I_conv DT_I8) t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Double | Single
+                | Int64 | Int32 | Int16 
+                | SByte -> ilg.Emit(I_conv DT_I8) 
+                | Char | Byte | UInt16 | UInt32 -> 
+                    ilg.Emit(I_conv DT_U8) 
+                | UInt64 -> ()
+                | String -> 
+                    let m = languagePrimitivesType().GetMethod("ParseInt64")
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> failwithf "Operator 'int64' not supported for type %s" t1.Name
 
             | SpecificCall <@ single @>(None, [t1], [a1])
             | SpecificCall <@ float32 @>(None, [t1], [a1]) -> 
-                emitConv typeof<single> (I_conv DT_R4) t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Double | Single
+                | Int64 | Int32 | Int16 
+                | SByte -> ilg.Emit(I_conv DT_R4) 
+                | Char | Byte | UInt16 | UInt32 | UInt64 -> 
+                    ilg.Emit(I_conv DT_R) 
+                    ilg.Emit(I_conv DT_R4) 
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> 
+                    match expr.Type with 
+                    | StaticMethodWithReturnType "Parse" [|t1|] expr.Type m -> 
+                        ilg.Emit(I_call(Normalcall, transMeth m, None))
+                    | _ -> failwithf "Operator 'float32' not supported for type %s" t1.Name
 
             | SpecificCall <@ double @>(None, [t1], [a1])
             | SpecificCall <@ float @>(None, [t1], [a1]) -> 
-                emitConv typeof<double> (I_conv DT_R8) t1 a1
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Double | Single
+                | Int64 | Int32 | Int16 
+                | SByte -> ilg.Emit(I_conv DT_R8) 
+                | Char | Byte | UInt16 | UInt32 | UInt64 -> 
+                    ilg.Emit(I_conv DT_R) 
+                    ilg.Emit(I_conv DT_R8) 
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> 
+                    match expr.Type with 
+                    | StaticMethodWithReturnType "Parse" [|t1|] expr.Type m -> 
+                        ilg.Emit(I_call(Normalcall, transMeth m, None))
+                    | _ -> failwithf "Operator 'float' not supported for type %s" t1.Name
             
             | SpecificCall <@ decimal @>(None, [t1], [a1]) ->
                 emitExpr ExpectedStackState.Value a1
@@ -14204,6 +14457,21 @@ namespace ProviderImplementation.ProvidedTypes
                             ilg.Emit(I_call(Normalcall, transMeth m, None))
                     | toDecimal -> ilg.Emit(I_call(Normalcall, transMeth toDecimal, None)) 
                         
+            | SpecificCall <@ char @>(None, [t1], [a1]) -> 
+                emitExpr ExpectedStackState.Value a1
+                match t1 with 
+                | Double | Single
+                | Int64 | Int32 | Int16 
+                | Char | Byte | UInt16 | UInt32 | UInt64
+                | SByte -> ilg.Emit(I_conv DT_U2) 
+                | StaticMethodWithReturnType "op_Explicit" [|t1|] expr.Type m -> 
+                    ilg.Emit(I_call(Normalcall, transMeth m, None))
+                | _ -> 
+                    match expr.Type with 
+                    | StaticMethodWithReturnType "Parse" [|t1|] expr.Type m -> 
+                        ilg.Emit(I_call(Normalcall, transMeth m, None))
+                    | _ -> failwithf "Operator 'char' not supported for type %s" t1.Name
+            
             | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray @> (None, [ty], [arr; index]) ->
                 // observable side-effect - IndexOutOfRangeException
                 emitExpr ExpectedStackState.Value arr

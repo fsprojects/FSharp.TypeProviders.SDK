@@ -119,6 +119,7 @@ let ``add execute correctly``() =
             check <@ 50y + 30y @> 80y
             check <@ 50uy + 30uy @> 80uy
             checkExpr <@ 50m + 30m @>
+            checkExpr <@ "50m" + "30m" @>
             checkExpr <@ TimeSpan.FromMinutes 50.0 + TimeSpan.FromMinutes 30.0 @>
         ]        
         
@@ -504,6 +505,23 @@ let ``decimal execute correctly``() =
             checkExpr <@ decimal 50I @>
         ]
 
+
+[<Fact>]
+let ``char execute correctly``() =
+    testProvidedAssembly 
+        [
+            check <@ char "5" @> '5'
+            checkExpr <@ char 50 @>
+            checkExpr <@ char 50.0 @>
+            checkExpr <@ char 50.f @>
+            checkExpr <@ char 50UL @>
+            checkExpr <@ char 50l @>
+            checkExpr <@ char 50s @>
+            checkExpr <@ char 50us @>
+            checkExpr <@ char 50y @>
+            checkExpr <@ char 50uy @> 
+            checkExpr <@ char 50m @>
+        ]
 
 
 
