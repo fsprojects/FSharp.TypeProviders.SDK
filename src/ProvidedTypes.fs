@@ -14472,6 +14472,8 @@ namespace ProviderImplementation.ProvidedTypes
                         ilg.Emit(I_call(Normalcall, transMeth m, None))
                     | _ -> failwithf "Operator 'char' not supported for type %s" t1.Name
             
+            | SpecificCall <@ ignore @>(None, [t1], [a1]) -> emitExpr expectedState a1
+
             | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray @> (None, [ty], [arr; index]) ->
                 // observable side-effect - IndexOutOfRangeException
                 emitExpr ExpectedStackState.Value arr
