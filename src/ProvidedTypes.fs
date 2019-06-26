@@ -1554,8 +1554,23 @@ namespace ProviderImplementation.ProvidedTypes
                 |> Array.choose (function :? Type as m when memberBinds true bindingFlags false m.IsPublic || m.IsNestedPublic -> Some m | _ -> None)
                 |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || this.BaseType = null then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetNestedTypes(bindingFlags)))))
 
-        override this.GetConstructorImpl(bindingFlags, _binder, _callConventions, _types, _modifiers) = 
-            let xs = this.GetConstructors bindingFlags |> Array.filter (fun m -> m.Name = ".ctor")
+        override this.GetConstructorImpl(bindingFlags, _binder, _callConventions, types, _modifiers) = 
+            let xs = 
+                this.GetConstructors bindingFlags 
+                |> Array.filter (fun m -> m.Name = ".ctor")
+                |> Array.filter 
+                    (fun m -> 
+                        if m.Name = ".ctor" then 
+                            let parameters = m.GetParameters() 
+                            if parameters.Length = types.Length then
+                                parameters 
+                                |> Seq.zip types 
+                                |> Seq.exists (fun (t,p) -> p.ParameterType <> t) 
+                                |> not 
+                            else
+                                false
+                        else
+                            false)
             if xs.Length > 1 then failwith "GetConstructorImpl. not support overloads"
             if xs.Length > 0 then xs.[0] else null
 
