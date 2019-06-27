@@ -14003,12 +14003,12 @@ namespace ProviderImplementation.ProvidedTypes
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
                 | Bool | SByte | Char
-                | Double | Single
                 | Int16 | Int32 | Int64 -> 
                     ilg.Emit(I_cgt)
                     emitExpr ExpectedStackState.Value <@@ false @@>
                     ilg.Emit(I_ceq)
                 | Byte
+                | Double | Single
                 | UInt16 | UInt32 | UInt64 -> 
                     ilg.Emit(I_cgt_un)
                     emitExpr ExpectedStackState.Value <@@ false @@>
@@ -14029,12 +14029,12 @@ namespace ProviderImplementation.ProvidedTypes
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
                 | Bool | SByte | Char
-                | Double | Single
                 | Int16 | Int32 | Int64 -> 
                     ilg.Emit(I_clt)
                     emitExpr ExpectedStackState.Value <@@ false @@>
                     ilg.Emit(I_ceq)
                 | Byte
+                | Double | Single
                 | UInt16 | UInt32 | UInt64 -> 
                     ilg.Emit(I_clt_un)
                     emitExpr ExpectedStackState.Value <@@ false @@>

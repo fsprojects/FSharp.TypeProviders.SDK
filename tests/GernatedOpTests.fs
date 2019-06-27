@@ -560,6 +560,9 @@ let ``eq execute correctly``() =
            checkExpr <@ 1.0 = 1.0 @>
            checkExpr <@ 2.0 = 1.0 @>
            checkExpr <@ 1.0 = 2.0 @>
+           checkExpr <@ 1.0 = nan @>
+           checkExpr <@ nan = nan @>
+           checkExpr <@ nan = 1.0 @>
            checkExpr <@ 1.f = 1.f @>
            checkExpr <@ 2.f = 1.f @>
            checkExpr <@ 1.f = 2.f @>
@@ -613,6 +616,9 @@ let ``lt execute correctly``() =
            checkExpr <@ 1.0 < 1.0 @>
            checkExpr <@ 2.0 < 1.0 @>
            checkExpr <@ 1.0 < 2.0 @>
+           checkExpr <@ 1.0 < nan @>
+           checkExpr <@ nan < nan @>
+           checkExpr <@ nan < 1.0 @>
            checkExpr <@ 1.f < 1.f @>
            checkExpr <@ 2.f < 1.f @>
            checkExpr <@ 1.f < 2.f @>
@@ -666,6 +672,9 @@ let ``lte execute correctly``() =
            checkExpr <@ 1.0 <= 1.0 @>
            checkExpr <@ 2.0 <= 1.0 @>
            checkExpr <@ 1.0 <= 2.0 @>
+           checkExpr <@ 1.0 <= nan @>
+           checkExpr <@ nan <= nan @>
+           checkExpr <@ nan <= 1.0 @>
            checkExpr <@ 1.f <= 1.f @>
            checkExpr <@ 2.f <= 1.f @>
            checkExpr <@ 1.f <= 2.f @>
@@ -718,6 +727,9 @@ let ``gt execute correctly``() =
            checkExpr <@ 1.0 > 1.0 @>
            checkExpr <@ 2.0 > 1.0 @>
            checkExpr <@ 1.0 > 2.0 @>
+           checkExpr <@ 1.0 > nan @>
+           checkExpr <@ nan > nan @>
+           checkExpr <@ nan > 1.0 @>
            checkExpr <@ 1.f > 1.f @>
            checkExpr <@ 2.f > 1.f @>
            checkExpr <@ 1.f > 2.f @>
@@ -770,6 +782,9 @@ let ``gte execute correctly``() =
            checkExpr <@ 1.0 >= 1.0 @>
            checkExpr <@ 2.0 >= 1.0 @>
            checkExpr <@ 1.0 >= 2.0 @>
+           checkExpr <@ 1.0 >= nan @>
+           checkExpr <@ nan >= nan @>
+           checkExpr <@ nan >= 1.0 @>
            checkExpr <@ 1.f >= 1.f @>
            checkExpr <@ 2.f >= 1.f @>
            checkExpr <@ 1.f >= 2.f @>
