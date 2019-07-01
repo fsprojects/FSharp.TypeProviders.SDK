@@ -13797,6 +13797,45 @@ namespace ProviderImplementation.ProvidedTypes
             | _ ->
                  invalidArg "templateParameter" "The parameter is not a recognized method name"
 
+        let (|LessThan|_|) = (|SpecificCall|_|) <@ (<) @>
+        let (|GreaterThan|_|) = (|SpecificCall|_|) <@ (>) @>
+        let (|LessThanOrEqual|_|) = (|SpecificCall|_|) <@ (<=) @>
+        let (|GreaterThanOrEqual|_|) = (|SpecificCall|_|) <@ (>=) @>
+        let (|Equals|_|) = (|SpecificCall|_|) <@ (=) @>
+        let (|NotEquals|_|) = (|SpecificCall|_|) <@ (<>) @>
+        let (|Multiply|_|) = (|SpecificCall|_|) <@ (*) @>
+        let (|Addition|_|) = (|SpecificCall|_|) <@ (+) @>
+        let (|Subtraction|_|) = (|SpecificCall|_|) <@ (-) @>
+        let (|UnaryNegation|_|) = (|SpecificCall|_|) <@ (~-) @>
+        let (|Division|_|) = (|SpecificCall|_|) <@ (/) @>
+        let (|UnaryPlus|_|) = (|SpecificCall|_|) <@ (~+) @>
+        let (|Modulus|_|) = (|SpecificCall|_|) <@ (%) @>
+        let (|LeftShift|_|) = (|SpecificCall|_|) <@ (<<<) @>
+        let (|RightShift|_|) = (|SpecificCall|_|) <@ (>>>) @>
+        let (|And|_|) = (|SpecificCall|_|) <@ (&&&) @>
+        let (|Or|_|) = (|SpecificCall|_|) <@ (|||) @>
+        let (|Xor|_|) = (|SpecificCall|_|) <@ (^^^) @>
+        let (|Not|_|) = (|SpecificCall|_|) <@ (~~~) @>
+        let (|CallByte|_|) = (|SpecificCall|_|) <@ byte @>
+        let (|CallSByte|_|) = (|SpecificCall|_|) <@ sbyte @>
+        let (|CallUInt16|_|) = (|SpecificCall|_|) <@ uint16 @>
+        let (|CallInt16|_|) = (|SpecificCall|_|) <@ int16 @>
+        let (|CallUInt32|_|) = (|SpecificCall|_|) <@ uint32 @>
+        let (|CallInt|_|) = (|SpecificCall|_|) <@ int @>
+        let (|CallInt32|_|) = (|SpecificCall|_|) <@ int32 @>
+        let (|CallUInt64|_|) = (|SpecificCall|_|) <@ uint64 @>
+        let (|CallInt64|_|) = (|SpecificCall|_|) <@ int64 @>
+        let (|CallSingle|_|) = (|SpecificCall|_|) <@ single @>
+        let (|CallFloat32|_|) = (|SpecificCall|_|) <@ float32 @>
+        let (|CallDouble|_|) = (|SpecificCall|_|) <@ double @>
+        let (|CallFloat|_|) = (|SpecificCall|_|) <@ float @>
+        let (|CallDecimal|_|) = (|SpecificCall|_|) <@ decimal @>
+        let (|CallChar|_|) = (|SpecificCall|_|) <@ char @>
+        let (|Ignore|_|) = (|SpecificCall|_|) <@ ignore @>
+        let (|GetArray|_|) = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray @>
+        let (|GetArray2D|_|) = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray2D @>
+        let (|GetArray3D|_|) = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray3D @>
+        let (|GetArray4D|_|) = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray4D @>
 
         let isEmpty s = (s = ExpectedStackState.Empty)
         let isAddress s = (s = ExpectedStackState.Address)
@@ -13962,7 +14001,7 @@ namespace ProviderImplementation.ProvidedTypes
 
                 popIfEmptyExpected expectedState
                 
-            | SpecificCall <@ (<) @>(None, [t1], [a1; a2]) -> 
+            | LessThan(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -13980,7 +14019,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> failwithf "Operator (<) not supported for type %s" t1.Name
 
            
-            | SpecificCall <@ (>) @>(None, [t1], [a1; a2]) -> 
+            | GreaterThan(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -13998,7 +14037,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> failwithf "Operator (>) not supported for type %s" t1.Name
            
            
-            | SpecificCall <@ (<=) @>(None, [t1], [a1; a2]) -> 
+            | LessThanOrEqual(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14024,7 +14063,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> failwithf "Operator (<=) not supported for type %s" t1.Name
            
 
-            | SpecificCall <@ (>=) @>(None, [t1], [a1; a2]) -> 
+            | GreaterThanOrEqual(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14049,7 +14088,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (>=) not supported for type %s" t1.Name
            
-            | SpecificCall <@ (=) @>(None, [t1], [a1; a2]) -> 
+            | Equals(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14064,7 +14103,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (=) not supported for type %s" t1.Name
            
-            | SpecificCall <@ (<>) @>(None, [t1], [a1; a2]) -> 
+            | NotEquals(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14084,7 +14123,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (<>) not supported for type %s" t1.Name
 
-            | SpecificCall <@ (*) @>(None, [t1; t2; _], [a1; a2]) ->
+            | Multiply(None, [t1; t2; _], [a1; a2]) ->
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14098,7 +14137,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> failwithf "Operator (*) not supported for type %s" t1.Name
                 emitConvIfNecessary t1
            
-            | SpecificCall <@ (+) @>(None, [t1; t2; _], [a1; a2]) -> 
+            | Addition(None, [t1; t2; _], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14115,7 +14154,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> failwithf "Operator (+) not supported for type %s" t1.Name
                 emitConvIfNecessary t1
             
-            | SpecificCall <@ (-) @>(None, [t1; t2; _], [a1; a2]) -> 
+            | Subtraction(None, [t1; t2; _], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14129,7 +14168,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> failwithf "Operator (-) not supported for type %s" t1.Name
                 emitConvIfNecessary t1
             
-            | SpecificCall <@ (~-) @>(None, [t1], [a1]) -> 
+            | UnaryNegation(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | SByte 
@@ -14140,7 +14179,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (~-) not supported for type %s" t1.Name
                 
-            | SpecificCall <@ (/) @>(None, [t1; t2; _], [a1; a2]) -> 
+            | Division(None, [t1; t2; _], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14154,7 +14193,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> failwithf "Operator (/) not supported for type %s" t1.Name
                 emitConvIfNecessary t1
 
-            | SpecificCall <@ (~+) @>(None, [t1], [a1]) -> 
+            | UnaryPlus(None, [t1], [a1]) -> 
                 match t1.GetMethod("op_UnaryPlus", [|t1|]) with 
                 | null ->
                     emitExpr expectedState a1
@@ -14162,7 +14201,7 @@ namespace ProviderImplementation.ProvidedTypes
                     emitExpr ExpectedStackState.Value a1
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
             
-            | SpecificCall <@ (%) @>(None, [t1; t2; _], [a1; a2]) -> 
+            | Modulus(None, [t1; t2; _], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14176,7 +14215,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> failwithf "Operator (%%) not supported for type %s" t1.Name
                 emitConvIfNecessary t1
                 
-            | SpecificCall <@ (<<<) @>(None, [t1], [a1; a2]) -> 
+            | LeftShift(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 let maskShift (x : int) =
                     match a2 with 
@@ -14197,7 +14236,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> failwithf "Operator (<<<) not supported for type %s" t1.Name
                 emitConvIfNecessary t1
 
-            | SpecificCall <@ (>>>) @>(None, [t1], [a1; a2]) -> 
+            | RightShift(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 let maskShift (x : int) =
                     match a2 with 
@@ -14218,7 +14257,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> failwithf "Operator (>>>) not supported for type %s" t1.Name
                 emitConvIfNecessary t1
 
-            | SpecificCall <@ (&&&) @>(None, [t1], [a1; a2]) -> 
+            | And(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14230,7 +14269,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (&&&) not supported for type %s" t1.Name
                         
-            | SpecificCall <@ (|||) @>(None, [t1], [a1; a2]) -> 
+            | Or(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14242,7 +14281,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (|||) not supported for type %s" t1.Name
                         
-            | SpecificCall <@ (^^^) @>(None, [t1], [a1; a2]) -> 
+            | Xor(None, [t1], [a1; a2]) -> 
                 emitExpr ExpectedStackState.Value a1
                 emitExpr ExpectedStackState.Value a2
                 match t1 with 
@@ -14254,7 +14293,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (^^^) not supported for type %s" t1.Name
                 
-            | SpecificCall <@ (~~~) @>(None, [t1], [a1]) -> 
+            | Not(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Int32 | UInt32 
@@ -14265,7 +14304,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (~~~) not supported for type %s" t1.Name
                 
-            | SpecificCall <@ byte @>(None, [t1], [a1]) ->
+            | CallByte(None, [t1], [a1]) ->
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Char
@@ -14282,7 +14321,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator 'byte' not supported for type %s" t1.Name
 
-            | SpecificCall <@ sbyte @>(None, [t1], [a1]) -> 
+            | CallSByte(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Char
@@ -14299,7 +14338,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator 'sbyte' not supported for type %s" t1.Name
 
-            | SpecificCall <@ uint16 @>(None, [t1], [a1]) -> 
+            | CallUInt16(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Char
@@ -14316,7 +14355,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator 'uint16' not supported for type %s" t1.Name
 
-            | SpecificCall <@ int16 @>(None, [t1], [a1]) -> 
+            | CallInt16(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Char
@@ -14333,7 +14372,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator 'int16' not supported for type %s" t1.Name
 
-            | SpecificCall <@ uint32 @>(None, [t1], [a1]) -> 
+            | CallUInt32(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Char
@@ -14349,8 +14388,8 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator 'uint32' not supported for type %s" t1.Name
 
-            | SpecificCall <@ int @>(None, [t1], [a1])
-            | SpecificCall <@ int32 @>(None, [t1], [a1]) -> 
+            | CallInt(None, [t1], [a1])
+            | CallInt32(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Char
@@ -14366,7 +14405,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator 'int32' not supported for type %s" t1.Name
 
-            | SpecificCall <@ uint64 @>(None, [t1], [a1]) -> 
+            | CallUInt64(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Char
@@ -14382,7 +14421,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator 'uint64' not supported for type %s" t1.Name
 
-            | SpecificCall <@ int64 @>(None, [t1], [a1]) -> 
+            | CallInt64(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Double | Single
@@ -14398,8 +14437,8 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator 'int64' not supported for type %s" t1.Name
 
-            | SpecificCall <@ single @>(None, [t1], [a1])
-            | SpecificCall <@ float32 @>(None, [t1], [a1]) -> 
+            | CallSingle(None, [t1], [a1])
+            | CallFloat32(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Double | Single
@@ -14416,8 +14455,8 @@ namespace ProviderImplementation.ProvidedTypes
                         ilg.Emit(I_call(Normalcall, transMeth m, None))
                     | _ -> failwithf "Operator 'float32' not supported for type %s" t1.Name
 
-            | SpecificCall <@ double @>(None, [t1], [a1])
-            | SpecificCall <@ float @>(None, [t1], [a1]) -> 
+            | CallDouble(None, [t1], [a1])
+            | CallFloat(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Double | Single
@@ -14434,7 +14473,7 @@ namespace ProviderImplementation.ProvidedTypes
                         ilg.Emit(I_call(Normalcall, transMeth m, None))
                     | _ -> failwithf "Operator 'float' not supported for type %s" t1.Name
             
-            | SpecificCall <@ decimal @>(None, [t1], [a1]) ->
+            | CallDecimal(None, [t1], [a1]) ->
                 emitExpr ExpectedStackState.Value a1
                 let rtTgt = decimalTypeTgt
                 if t1 = stringTypeTgt then 
@@ -14457,7 +14496,7 @@ namespace ProviderImplementation.ProvidedTypes
                             ilg.Emit(I_call(Normalcall, transMeth m, None))
                     | toDecimal -> ilg.Emit(I_call(Normalcall, transMeth toDecimal, None)) 
                         
-            | SpecificCall <@ char @>(None, [t1], [a1]) -> 
+            | CallChar(None, [t1], [a1]) -> 
                 emitExpr ExpectedStackState.Value a1
                 match t1 with 
                 | Double | Single
@@ -14472,9 +14511,9 @@ namespace ProviderImplementation.ProvidedTypes
                         ilg.Emit(I_call(Normalcall, transMeth m, None))
                     | _ -> failwithf "Operator 'char' not supported for type %s" t1.Name
             
-            | SpecificCall <@ ignore @>(None, [t1], [a1]) -> emitExpr expectedState a1
+            | Ignore(None, [t1], [a1]) -> emitExpr expectedState a1
 
-            | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray @> (None, [ty], [arr; index]) ->
+            | GetArray(None, [ty], [arr; index]) ->
                 // observable side-effect - IndexOutOfRangeException
                 emitExpr ExpectedStackState.Value arr
                 emitExpr ExpectedStackState.Value index
@@ -14485,9 +14524,9 @@ namespace ProviderImplementation.ProvidedTypes
 
                 popIfEmptyExpected expectedState
 
-            | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray2D @> (None, _ty, arr::indices)
-            | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray3D @> (None, _ty, arr::indices)
-            | SpecificCall <@ LanguagePrimitives.IntrinsicFunctions.GetArray4D @> (None, _ty, arr::indices) ->
+            | GetArray2D(None, _ty, arr::indices)
+            | GetArray3D(None, _ty, arr::indices)
+            | GetArray4D(None, _ty, arr::indices) ->
 
                 let meth =
                     let name = if isAddress expectedState then "Address" else "Get"
