@@ -8082,9 +8082,12 @@ namespace ProviderImplementation.ProvidedTypes
 
 
 
-    type ProvidedAssembly(isTgt: bool, assemblyName:AssemblyName, assemblyFileName: string) =
+    type ProvidedAssembly(isTgt: bool, assemblyName:AssemblyName, assemblyFileName: string, customAttributesData) =
       
         inherit Assembly()
+        
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
+        
         let theTypes = ResizeArray<ProvidedTypeDefinition[] * string list option>()
         
         let addTypes (ptds:ProvidedTypeDefinition[], enclosingTypeNames: string list option) =
@@ -8095,6 +8098,8 @@ namespace ProviderImplementation.ProvidedTypes
             theTypes.Add (ptds, enclosingTypeNames)
 
         let theTypesArray = lazy (theTypes.ToArray() |> Array.collect (function (ptds, None) -> Array.map (fun ptd -> (ptd :> Type)) ptds | _ -> [| |]))
+        
+        member __.AddCustomAttribute(attribute) = customAttributesImpl.AddCustomAttribute(attribute)
 
         override __.GetReferencedAssemblies() = [| |] //notRequired x "GetReferencedAssemblies" (assemblyName.ToString())
 
@@ -8130,7 +8135,7 @@ namespace ProviderImplementation.ProvidedTypes
             ProvidedAssembly(AssemblyName(simpleName), assemblyFileName)
 
         new (assemblyName, assemblyFileName) = 
-            ProvidedAssembly(false, assemblyName, assemblyFileName)
+            ProvidedAssembly(false, assemblyName, assemblyFileName, K [||])
 
         member __.BelongsToTargetModel = isTgt
 
@@ -8144,6 +8149,8 @@ namespace ProviderImplementation.ProvidedTypes
             addTypes (types, enclosingGeneratedTypeNames)
 
         member __.GetTheTypes () = theTypes.ToArray()
+        
+        override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
 //====================================================================================================
 // ProvidedTypesContext
@@ -9238,9 +9245,9 @@ namespace ProviderImplementation.ProvidedTypes
           match assemblyTableFwd.TryGetValue(assembly) with
           | true, newT -> newT
           | false, _ ->
-            let tgtAssembly = ProvidedAssembly(true, assembly.GetName(), assembly.Location) 
+            let tgtAssembly = ProvidedAssembly(true, assembly.GetName(), assembly.Location, K(convCustomAttributesDataToTgt(assembly.GetCustomAttributesData())))
 
-            for (types, enclosingGeneratedTypeNames) in assembly.GetTheTypes() do 
+            for (types, enclosingGeneratedTypeNames) in assembly.GetTheTypes() do
                 let typesT = Array.map convProvidedTypeDefToTgt types
                 tgtAssembly.AddTheTypes (typesT, enclosingGeneratedTypeNames) 
 
@@ -13675,14 +13682,15 @@ namespace ProviderImplementation.ProvidedTypes
             } 
         override __.ToString() = "builder for " + moduleName
 
-    type ILAssemblyBuilder(assemblyName: AssemblyName, fileName, ilg) =
+    type ILAssemblyBuilder(assemblyName: AssemblyName, fileName, ilg, attrs : ILCustomAttribute seq) =
+        let cattrs = ResizeArray<ILCustomAttribute>(attrs)
         let manifest = 
             { Name = assemblyName.Name
               AuxModuleHashAlgorithm = 0x8004 // SHA1
               PublicKey = UNone
               Version = UNone
               Locale = UNone
-              CustomAttrs = emptyILCustomAttrs
+              CustomAttrs = { new ILCustomAttrs with member __.Entries = cattrs.ToArray() }
               //AssemblyLongevity=ILAssemblyLongevity.Unspecified
               DisableJitOptimizations = false
               JitTracking = true
@@ -14909,7 +14917,11 @@ namespace ProviderImplementation.ProvidedTypes
             let ilg = context.ILGlobals
             let assemblyName = targetAssembly.GetName()
             let assemblyFileName = targetAssembly.Location
-            let assemblyBuilder = ILAssemblyBuilder(assemblyName, assemblyFileName, ilg)
+            let assemblyBuilder = 
+                let attrs = targetAssembly.GetCustomAttributesData()
+                let cattrs = ResizeArray()
+                defineCustomAttrs cattrs.Add attrs
+                ILAssemblyBuilder(assemblyName, assemblyFileName, ilg, cattrs)
             let assemblyMainModule = assemblyBuilder.MainModule
 
             // Set the Assembly on the type definitions
