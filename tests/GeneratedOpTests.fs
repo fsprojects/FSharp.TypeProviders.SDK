@@ -563,6 +563,9 @@ let ``eq execute correctly``() =
            checkExpr <@ 1.0 = nan @>
            checkExpr <@ nan = nan @>
            checkExpr <@ nan = 1.0 @>
+           checkExpr <@ 1.0f = nanf @>
+           checkExpr <@ nanf = nanf @>
+           checkExpr <@ nanf = 1.0f @>
            checkExpr <@ 1.f = 1.f @>
            checkExpr <@ 2.f = 1.f @>
            checkExpr <@ 1.f = 2.f @>
@@ -619,6 +622,9 @@ let ``lt execute correctly``() =
            checkExpr <@ 1.0 < nan @>
            checkExpr <@ nan < nan @>
            checkExpr <@ nan < 1.0 @>
+           checkExpr <@ 1.0f < nanf @>
+           checkExpr <@ nanf < nanf @>
+           checkExpr <@ nanf < 1.0f @>
            checkExpr <@ 1.f < 1.f @>
            checkExpr <@ 2.f < 1.f @>
            checkExpr <@ 1.f < 2.f @>
@@ -675,6 +681,9 @@ let ``lte execute correctly``() =
            checkExpr <@ 1.0 <= nan @>
            checkExpr <@ nan <= nan @>
            checkExpr <@ nan <= 1.0 @>
+           checkExpr <@ 1.0f <= nanf @>
+           checkExpr <@ nanf <= nanf @>
+           checkExpr <@ nanf <= 1.0f @>
            checkExpr <@ 1.f <= 1.f @>
            checkExpr <@ 2.f <= 1.f @>
            checkExpr <@ 1.f <= 2.f @>
@@ -730,6 +739,9 @@ let ``gt execute correctly``() =
            checkExpr <@ 1.0 > nan @>
            checkExpr <@ nan > nan @>
            checkExpr <@ nan > 1.0 @>
+           checkExpr <@ 1.0f > nanf @>
+           checkExpr <@ nanf > nanf @>
+           checkExpr <@ nanf > 1.0f @>
            checkExpr <@ 1.f > 1.f @>
            checkExpr <@ 2.f > 1.f @>
            checkExpr <@ 1.f > 2.f @>
@@ -785,6 +797,9 @@ let ``gte execute correctly``() =
            checkExpr <@ 1.0 >= nan @>
            checkExpr <@ nan >= nan @>
            checkExpr <@ nan >= 1.0 @>
+           checkExpr <@ 1.0f >= nanf @>
+           checkExpr <@ nanf >= nanf @>
+           checkExpr <@ nanf >= 1.0f @>
            checkExpr <@ 1.f >= 1.f @>
            checkExpr <@ 2.f >= 1.f @>
            checkExpr <@ 1.f >= 2.f @>
@@ -802,5 +817,271 @@ let ``gte execute correctly``() =
         ]
 
 
+[<Fact>]
+let ``abs execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ abs 50 @>
+            checkExpr <@ abs 50.0 @>
+            checkExpr <@ abs 50.f @>
+            checkExpr <@ abs 50l @>
+            checkExpr <@ abs 50s @>
+            checkExpr <@ abs 50y @>
+            checkExpr <@ abs 50m @>
+            checkExpr <@ abs 50I @>
+            checkExpr <@ abs -50 @>
+            checkExpr <@ abs -50.0 @>
+            checkExpr <@ abs -50.f @>
+            checkExpr <@ abs -50l @>
+            checkExpr <@ abs -50s @>
+            checkExpr <@ abs -50y @>
+            checkExpr <@ abs -50m @>
+            checkExpr <@ abs -50I @>
+        ]
 
+[<Fact>]
+let ``acos execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ acos 0.1 @>
+            checkExpr <@ acos 0.1f @>
+            checkExpr <@ acos -0.1 @>
+            checkExpr <@ acos -0.1f @>
+        ]
+
+[<Fact>]
+let ``asin execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ asin 0.1 @>
+            checkExpr <@ asin 0.1f @>
+            checkExpr <@ asin -0.1 @>
+            checkExpr <@ asin -0.1f @>
+        ]
+
+[<Fact>]
+let ``atan execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ atan 0.1 @>
+            checkExpr <@ atan 0.1f @>
+            checkExpr <@ atan -0.1 @>
+            checkExpr <@ atan -0.1f @>
+        ]
+
+[<Fact>]
+let ``atan2 execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ atan2 0.1 0.3 @>
+            checkExpr <@ atan2 0.1f 0.3f @>
+            checkExpr <@ atan2 -0.1 0.3 @>
+            checkExpr <@ atan2 -0.1f 0.3f @>
+        ]
+
+[<Fact>]
+let ``ceil execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ ceil 0.1 @>
+            checkExpr <@ ceil 0.1f @>
+            checkExpr <@ ceil -0.1 @>
+            checkExpr <@ ceil -0.1f @>
+        ]
+
+[<Fact>]
+let ``exp execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ exp 0.1 @>
+            checkExpr <@ exp 0.1f @>
+            checkExpr <@ exp -0.1 @>
+            checkExpr <@ exp -0.1f @>
+        ]
+
+[<Fact>]
+let ``floor execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ floor 0.1 @>
+            checkExpr <@ floor 0.1f @>
+            checkExpr <@ floor -0.1 @>
+            checkExpr <@ floor -0.1f @>
+        ]
+
+[<Fact>]
+let ``truncate execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ truncate 0.1 @>
+            checkExpr <@ truncate 0.1f @>
+            checkExpr <@ truncate -0.1 @>
+            checkExpr <@ truncate -0.1f @>
+        ]
+
+[<Fact>]
+let ``round execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ round 0.1 @>
+            checkExpr <@ round 0.1f @>
+            checkExpr <@ round -0.1 @>
+            checkExpr <@ round -0.1f @>
+        ]
+
+[<Fact>]
+let ``sign execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ sign 0.1 @>
+            checkExpr <@ sign 0.1f @>
+            checkExpr <@ sign -0.1 @>
+            checkExpr <@ sign -0.1f @>
+        ]
+
+[<Fact>]
+let ``log execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ log 0.1 @>
+            checkExpr <@ log 0.1f @>
+        ]
+
+[<Fact>]
+let ``log10 execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ log10 0.1 @>
+            checkExpr <@ log10 0.1f @>
+        ]
+
+[<Fact>]
+let ``sqrt execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ sqrt 0.1 @>
+            checkExpr <@ sqrt 0.1f @>
+        ]
+
+[<Fact>]
+let ``cos execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ cos 0.1 @>
+            checkExpr <@ cos 0.1f @>
+            checkExpr <@ cos -0.1 @>
+            checkExpr <@ cos -0.1f @>
+        ]
+
+[<Fact>]
+let ``cosh execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ cosh 0.1 @>
+            checkExpr <@ cosh 0.1f @>
+            checkExpr <@ cosh -0.1 @>
+            checkExpr <@ cosh -0.1f @>
+        ]
+
+
+[<Fact>]
+let ``sin execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ sin 0.1 @>
+            checkExpr <@ sin 0.1f @>
+            checkExpr <@ sin -0.1 @>
+            checkExpr <@ sin -0.1f @>
+        ]
+
+
+[<Fact>]
+let ``sinh execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ sinh 0.1 @>
+            checkExpr <@ sinh 0.1f @>
+            checkExpr <@ sinh -0.1 @>
+            checkExpr <@ sinh -0.1f @>
+        ]
+
+
+[<Fact>]
+let ``tan execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ tan 0.1 @>
+            checkExpr <@ tan 0.1f @>
+            checkExpr <@ tan -0.1 @>
+            checkExpr <@ tan -0.1f @>
+        ]
+
+
+[<Fact>]
+let ``tanh execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ tanh 0.1 @>
+            checkExpr <@ tanh 0.1f @>
+            checkExpr <@ tanh -0.1 @>
+            checkExpr <@ tanh -0.1f @>
+        ]
+
+
+[<Fact>]
+let ``pow execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ 0.1**2.5 @>
+            checkExpr <@ 0.1f**2.5f @>
+        ]
+
+
+[<Fact>]
+let ``max execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ max 0.1 2.5 @>
+            checkExpr <@ max 2.5 0.1 @>
+            checkExpr <@ max 1 2 @>
+            checkExpr <@ max 2 1 @>
+            checkExpr <@ max 0.1f 2.5f @>
+            checkExpr <@ max 2.5f 0.1f @>
+            checkExpr <@ max 10I 20I @>
+            check
+                <@ 
+                    let mutable a = 2
+                    let mx = max (a <- a + 1; 2) (a <- a*7; 5) 
+                    (mx,a)
+                @>
+                (
+                    let mutable a = 2
+                    let mx = max (a <- a + 1; 2) (a <- a*7; 5) 
+                    (mx,a)
+                )
+        ]
+
+[<Fact>]
+let ``min execute correctly``() =
+    testProvidedAssembly 
+        [
+            checkExpr <@ min 0.1 2.5 @>
+            checkExpr <@ min 2.5 0.1 @>
+            checkExpr <@ min 1 2 @>
+            checkExpr <@ min 2 1 @>
+            checkExpr <@ min 0.1f 2.5f @>
+            checkExpr <@ min 2.5f 0.1f @>
+            checkExpr <@ min 10I 20I @>
+            check
+                <@ 
+                    let mutable a = 2
+                    let mn = min (a <- a + 1; 2) (a <- a*7; 5) 
+                    (mn,a)
+                @>
+                (
+                    let mutable a = 2
+                    let mn = min (a <- a + 1; 2) (a <- a*7; 5) 
+                    (mn,a)
+                )
+        ]
 #endif
