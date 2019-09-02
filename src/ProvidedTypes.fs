@@ -14387,7 +14387,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | Int32 | UInt32 
                 | Int64 | UInt64 
                 | Int16 | UInt16 
-                | SByte | Byte -> ilg.Emit(I_and)
+                | SByte | Byte -> ilg.Emit(I_or)
                 | StaticMethod "op_Or" [|t1; t1|] m -> 
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (|||) not supported for type %s" t1.Name
@@ -14399,7 +14399,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | Int32 | UInt32 
                 | Int64 | UInt64 
                 | Int16 | UInt16 
-                | SByte | Byte -> ilg.Emit(I_and)
+                | SByte | Byte -> ilg.Emit(I_xor)
                 | StaticMethod "op_Xor" [|t1; t1|] m -> 
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (^^^) not supported for type %s" t1.Name
@@ -14410,7 +14410,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | Int32 | UInt32 
                 | Int64 | UInt64 
                 | Int16 | UInt16 
-                | SByte | Byte -> ilg.Emit(I_and)
+                | SByte | Byte -> ilg.Emit(I_not)
                 | StaticMethod "op_Not" [|t1; t1|] m -> 
                     ilg.Emit(I_call(Normalcall, transMeth m, None))
                 | _ -> failwithf "Operator (~~~) not supported for type %s" t1.Name
