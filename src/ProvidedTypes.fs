@@ -13989,10 +13989,13 @@ namespace ProviderImplementation.ProvidedTypes
                 ilg.Emit(I_stloc l.LocalIndex)
                 lambdaLocals.[v] <- l
 
-            let expectedState = if (retType = ILType.Void) then ExpectedStackState.Empty else ExpectedStackState.Value
+            let unitType = transType (convTypeToTgt (typeof<unit>))
+            let expectedState = if (retType = ILType.Void || retType.QualifiedName = unitType.QualifiedName) then ExpectedStackState.Empty else ExpectedStackState.Value
             let lambadParamVars = [| Var("this", typeof<obj>); v|]
             let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, lambdaLocals, lambadParamVars)
             codeGen.EmitExpr (expectedState, body)
+            if retType.QualifiedName = unitType.QualifiedName then 
+                ilg.Emit(I_ldnull)
             ilg.Emit(I_ret)
 
             callSiteIlg.Emit(I_newobj (ctor.FormalMethodSpec, None))
