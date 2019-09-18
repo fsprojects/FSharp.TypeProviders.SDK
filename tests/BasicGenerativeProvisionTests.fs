@@ -208,8 +208,8 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             for desc2 in possibleVersions do 
                 let contains = res.Contains("FSharp.Core, Version="+desc2)
                 if contains = (desc = desc2) then ()
-                elif contains then failwith ("FAILED: unexpected reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs)
-                else failwith ("FAILED: failed to find reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs)
+                elif contains then failwith ("FAILED: unexpected reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
+                else failwith ("FAILED: failed to find reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
                 
 [<Fact>]
 let ``GenerativePropertyProviderWithStaticParams attributes are read correctly``() : unit  = 
@@ -341,8 +341,8 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correc
             for desc2 in possibleVersions do 
                 let contains = res.Contains("FSharp.Core, Version="+desc2)
                 if contains = (desc = desc2) then ()
-                elif contains then failwith ("FAILED: unexpected reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs)
-                else failwith ("FAILED: failed to find reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs)
+                elif contains then failwith ("FAILED: unexpected reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
+                else failwith ("FAILED: failed to find reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
 
 #if !NETSTANDARD && !NETCOREAPP2_0
 [<Fact>]
