@@ -3,8 +3,6 @@ dist: trusty
 
 matrix:
   include:
-    - mono: 5.16.0
-      os: linux
     - mono: latest
       os: osx
       
@@ -13,6 +11,8 @@ sudo: true  # use the new container-based Travis infrastructure
 script:
   - ./build.sh All
 
+#    - mono: 5.16.0
+#      os: linux
 #allow_failures:
 #    - mono: weekly
 #      os: linux
