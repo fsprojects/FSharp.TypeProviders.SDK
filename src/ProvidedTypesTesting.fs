@@ -721,13 +721,13 @@ module internal Targets =
         | _ -> failwith (sprintf "unimplemented profile '%s'" profile)
 
     let FSharpCoreRef fsharp profile = 
+        let restoredFSharpCore  = fsharpRestoredAssembliesPath fsharp profile
+        match restoredFSharpCore  with 
+        | path when File.Exists restoredFSharpCore -> path
+        | _ -> 
         let installedFSharpCore = fsharpCoreFromInstalledAssemblies fsharp profile
         match installedFSharpCore with 
         | Some path when File.Exists path -> path
-        | _ -> 
-        let restoredFSharpCore  = fsharpRestoredAssembliesPath fsharp profile
-        match restoredFSharpCore  with 
-        | path when File.Exists(restoredFSharpCore) -> path
         | _ -> 
         match installedFSharpCore with 
         | Some path -> failwith ("couldn't find FSharp.Core.dll at either '" + path + "' or '" + restoredFSharpCore + "'")

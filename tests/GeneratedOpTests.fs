@@ -79,7 +79,12 @@ let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false
 let check (e : Expr<'a>) expected = 
     e.Raw, fun o -> 
         let actual = Assert.IsType<'a>(o)
-        Assert.True((expected = actual), sprintf "%A Expected %A got %A. (%A)" (expected.GetType(), actual.GetType(), expected = actual) expected actual e)
+        let tolerate = 
+            match typeof<'a> with 
+            | ty when ty.FullName = "System.Single" -> abs ((box expected :?> single) - (box actual :?> single)) < 0.00001f
+            | ty when ty.FullName = "System.Double" -> abs ((box expected :?> double) - (box actual :?> double)) < 0.00001
+            | _ -> (expected = actual)
+        Assert.True(tolerate, sprintf "%A Expected %A got %A. (%A)" (expected.GetType(), actual.GetType(), expected = actual) expected actual e)
 
 let checkExpr (e : Expr<'a>) = 
     let expected = FSharp.Linq.RuntimeHelpers.LeafExpressionConverter.EvaluateQuotation(e) :?> 'a
