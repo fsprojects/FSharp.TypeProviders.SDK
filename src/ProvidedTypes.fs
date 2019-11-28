@@ -868,6 +868,7 @@ namespace ProviderImplementation.ProvidedTypes
             let mutable xmlDocAlwaysRecomputed = None
             let mutable hasParamArray = false
             let mutable hasReflectedDefinition = false
+            let mutable hasStaticParams = false
 
             // XML doc text that we only compute once, if any. This must _not_ be forced until the ConstructorArguments
             // property of the custom attribute is foced.
@@ -879,10 +880,11 @@ namespace ProviderImplementation.ProvidedTypes
             let customAttributesOnce =
                 lazy
                    [| if not isTgt then
-                          if hideObjectMethods then yield mkEditorHideMethodsCustomAttributeData()
-                          if nonNullable then yield mkAllowNullLiteralCustomAttributeData false
-                          match xmlDocDelayed with None -> () | Some _ -> customAttributes.Add(mkXmlDocCustomAttributeDataLazy xmlDocDelayedText)
-                          match xmlDocAlwaysRecomputed with None -> () | Some f -> yield mkXmlDocCustomAttributeData (f())
+                          if not hasStaticParams then
+                              if hideObjectMethods then yield mkEditorHideMethodsCustomAttributeData()
+                              if nonNullable then yield mkAllowNullLiteralCustomAttributeData false
+                              match xmlDocDelayed with None -> () | Some _ -> customAttributes.Add(mkXmlDocCustomAttributeDataLazy xmlDocDelayedText)
+                              match xmlDocAlwaysRecomputed with None -> () | Some f -> yield mkXmlDocCustomAttributeData (f())
                           match obsoleteMessage with None -> () | Some s -> customAttributes.Add(mkObsoleteAttributeCustomAttributeData s)
                           if hasParamArray then yield mkParamArrayCustomAttributeData()
                           if hasReflectedDefinition then yield mkReflectedDefinitionCustomAttributeData()
@@ -893,6 +895,7 @@ namespace ProviderImplementation.ProvidedTypes
             member __.AddObsolete(message: string, isError) = obsoleteMessage <- Some (message, isError)
             member __.HasParamArray with get() = hasParamArray and set(v) = hasParamArray <- v
             member __.HasReflectedDefinition with get() = hasReflectedDefinition and set(v) = hasReflectedDefinition <- v
+            member __.HasStaticParams with set(v) = hasStaticParams <- v
             member __.AddXmlDocComputed xmlDocFunction = xmlDocAlwaysRecomputed <- Some xmlDocFunction
             member __.AddXmlDocDelayed xmlDocFunction = xmlDocDelayed <- Some xmlDocFunction
             member __.AddXmlDoc xmlDoc =  xmlDocDelayed <- Some (K xmlDoc)
@@ -1027,13 +1030,13 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetCustomAttributes(attributeType, _inherit) = Attributes.CreateEmpty attributeType
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
-    and ProvidedMethod(isTgt: bool, methodName: string, attrs: MethodAttributes, parameters: ProvidedParameter[], returnType: Type, invokeCode: (Expr list -> Expr) option, staticParams, staticParamsApply, customAttributesData) =
+    and ProvidedMethod(isTgt: bool, methodName: string, attrs: MethodAttributes, parameters: ProvidedParameter[], returnType: Type, invokeCode: (Expr list -> Expr) option, getStaticParams, staticParamsApply, customAttributesData) =
         inherit MethodInfo()
         let parameterInfos = parameters |> Array.map (fun p -> p :> ParameterInfo)
 
         let mutable declaringType : ProvidedTypeDefinition option = None 
         let mutable attrs = attrs
-        let mutable staticParams = staticParams
+        let mutable staticParams = lazy getStaticParams()
         let mutable staticParamsApply = staticParamsApply
         let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
         let mutable returnTypeFixCache = None
@@ -1042,7 +1045,7 @@ namespace ProviderImplementation.ProvidedTypes
         new (methodName, parameters, returnType, ?invokeCode, ?isStatic) =
             let isStatic = defaultArg isStatic false
             let attrs = if isStatic then MethodAttributes.Public ||| MethodAttributes.Static else MethodAttributes.Public
-            ProvidedMethod(false, methodName, attrs, Array.ofList parameters, returnType, invokeCode, [], None, K [| |])
+            ProvidedMethod(false, methodName, attrs, Array.ofList parameters, returnType, invokeCode, K [], None, K [| |])
 
         member __.AddXmlDocComputed xmlDocFunction = customAttributesImpl.AddXmlDocComputed xmlDocFunction
         member __.AddXmlDocDelayed xmlDocFunction = customAttributesImpl.AddXmlDocDelayed xmlDocFunction
@@ -1057,14 +1060,15 @@ namespace ProviderImplementation.ProvidedTypes
 
         /// Abstract a type to a parametric-type. Requires "formal parameters" and "instantiation function".
         member __.DefineStaticParameters(parameters: ProvidedStaticParameter list, instantiationFunction: (string -> obj[] -> ProvidedMethod)) =
-            staticParams      <- parameters
+            staticParams      <- lazy parameters
             staticParamsApply <- Some instantiationFunction
 
         /// Get ParameterInfo[] for the parametric type parameters
-        member __.GetStaticParametersInternal() = [| for p in staticParams -> p :> ParameterInfo |]
+        member __.GetStaticParametersInternal() = [| for p in staticParams.Force() -> p :> ParameterInfo |]
 
         /// Instantiate parametric method
         member this.ApplyStaticArguments(mangledName:string, args:obj[]) =
+            let staticParams = staticParams.Force()
             if staticParams.Length <> args.Length then
                 failwithf "ProvidedMethod: expecting %d static parameters but given %d for method %s" staticParams.Length args.Length methodName
             if staticParams.Length > 0 then
@@ -1076,7 +1080,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.Parameters = parameters
         member __.GetInvokeCode = invokeCode
-        member __.StaticParams = staticParams
+        member __.StaticParams = staticParams.Force()
         member __.StaticParamsApply = staticParamsApply
         member __.BelongsToTargetModel = isTgt
         member __.DeclaringProvidedType = declaringType
@@ -1150,8 +1154,8 @@ namespace ProviderImplementation.ProvidedTypes
             let isStatic = defaultArg isStatic false
             let indexParameters = defaultArg indexParameters []
             let pattrs = (if isStatic then MethodAttributes.Static else enum<MethodAttributes>(0)) ||| MethodAttributes.Public ||| MethodAttributes.SpecialName
-            let getter = getterCode |> Option.map (fun _ -> ProvidedMethod(false, "get_" + propertyName, pattrs, Array.ofList indexParameters, propertyType, getterCode, [], None, K [| |]) :> MethodInfo)
-            let setter = setterCode |> Option.map (fun _ -> ProvidedMethod(false, "set_" + propertyName, pattrs, [| yield! indexParameters; yield ProvidedParameter(false, "value", propertyType, isOut=Some false, optionalValue=None) |], typeof<Void>, setterCode, [], None, K [| |]) :> MethodInfo)
+            let getter = getterCode |> Option.map (fun _ -> ProvidedMethod(false, "get_" + propertyName, pattrs, Array.ofList indexParameters, propertyType, getterCode, K [], None, K [| |]) :> MethodInfo)
+            let setter = setterCode |> Option.map (fun _ -> ProvidedMethod(false, "set_" + propertyName, pattrs, [| yield! indexParameters; yield ProvidedParameter(false, "value", propertyType, isOut=Some false, optionalValue=None) |], typeof<Void>, setterCode, K [], None, K [| |]) :> MethodInfo)
             ProvidedProperty(false, propertyName, PropertyAttributes.None, propertyType, isStatic, Option.map K getter, Option.map K setter, Array.ofList indexParameters, K [| |])
 
         member __.AddXmlDocComputed xmlDocFunction = customAttributesImpl.AddXmlDocComputed xmlDocFunction
@@ -1203,8 +1207,8 @@ namespace ProviderImplementation.ProvidedTypes
         new (eventName, eventHandlerType, adderCode, removerCode, ?isStatic) = 
             let isStatic = defaultArg isStatic false
             let pattrs = (if isStatic then MethodAttributes.Static else enum<MethodAttributes>(0)) ||| MethodAttributes.Public ||| MethodAttributes.SpecialName
-            let adder = ProvidedMethod(false, "add_" + eventName, pattrs, [| ProvidedParameter(false, "handler", eventHandlerType, isOut=Some false, optionalValue=None) |], typeof<Void>, Some adderCode, [], None, K [| |])  :> MethodInfo
-            let remover = ProvidedMethod(false, "remove_" + eventName, pattrs, [| ProvidedParameter(false, "handler", eventHandlerType, isOut=Some false, optionalValue=None) |], typeof<Void>, Some removerCode, [], None, K [| |])  :> MethodInfo
+            let adder = ProvidedMethod(false, "add_" + eventName, pattrs, [| ProvidedParameter(false, "handler", eventHandlerType, isOut=Some false, optionalValue=None) |], typeof<Void>, Some adderCode, K [], None, K [| |])  :> MethodInfo
+            let remover = ProvidedMethod(false, "remove_" + eventName, pattrs, [| ProvidedParameter(false, "handler", eventHandlerType, isOut=Some false, optionalValue=None) |], typeof<Void>, Some removerCode, K [], None, K [| |])  :> MethodInfo
             ProvidedEvent(false, eventName, EventAttributes.None, eventHandlerType, isStatic, K adder, K remover, K [| |])
 
         member __.AddXmlDocComputed xmlDocFunction = customAttributesImpl.AddXmlDocComputed xmlDocFunction
@@ -1333,7 +1337,7 @@ namespace ProviderImplementation.ProvidedTypes
     /// backingDataSource is a set of functions to fetch backing data for the ProvidedTypeDefinition, 
     /// and allows us to reuse this type for both target and source models, even when the
     /// source model is being incrementally updates by further .AddMember calls
-    and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, getBaseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, backingDataSource, customAttributesData, nonNullable, hideObjectMethods) as this =
+    and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, getBaseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, hasStaticParams, getStaticParams, staticParamsApply, backingDataSource, customAttributesData, nonNullable, hideObjectMethods) as this =
         inherit TypeDelegator()
 
         do match container, !ProvidedTypeDefinition.Logger with
@@ -1358,7 +1362,7 @@ namespace ProviderImplementation.ProvidedTypes
         let membersQueue = ResizeArray<(unit -> MemberInfo[])>()
 
         let mutable staticParamsDefined = false
-        let mutable staticParams = staticParams
+        let mutable staticParams = lazy getStaticParams()
         let mutable staticParamsApply = staticParamsApply
         let mutable container = container
         let interfaceImpls = ResizeArray<Type>()
@@ -1459,7 +1463,7 @@ namespace ProviderImplementation.ProvidedTypes
             evalMethodOverrides ()
             methodOverrides.ToArray()
 
-        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
+        let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData, HasStaticParams = hasStaticParams)
 
         do if nonNullable then customAttributesImpl.NonNullable <- true
         do if hideObjectMethods then customAttributesImpl.HideObjectMethods <- true
@@ -1475,7 +1479,7 @@ namespace ProviderImplementation.ProvidedTypes
             let hideObjectMethods = defaultArg hideObjectMethods false
             let attrs = defaultAttributes (isErased, isSealed, isInterface)
             //if not isErased && assembly.GetType().Name <> "ProvidedAssembly" then failwithf "a non-erased (i.e. generative) ProvidedTypeDefinition '%s.%s' was placed in an assembly '%s' that is not a ProvidedAssembly" namespaceName className (assembly.GetName().Name)
-            ProvidedTypeDefinition(false, TypeContainer.Namespace (K assembly, namespaceName), className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
+            ProvidedTypeDefinition(false, TypeContainer.Namespace (K assembly, namespaceName), className, K baseType, attrs, K None, false, K [], None, None, K [| |], nonNullable, hideObjectMethods)
 
         new (className:string, baseType, ?hideObjectMethods, ?nonNullable, ?isErased, ?isSealed, ?isInterface) = 
             let isErased = defaultArg isErased true
@@ -1484,7 +1488,7 @@ namespace ProviderImplementation.ProvidedTypes
             let nonNullable = defaultArg nonNullable false
             let hideObjectMethods = defaultArg hideObjectMethods false
             let attrs = defaultAttributes (isErased, isSealed, isInterface)
-            ProvidedTypeDefinition(false, TypeContainer.TypeToBeDecided, className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
+            ProvidedTypeDefinition(false, TypeContainer.TypeToBeDecided, className, K baseType, attrs, K None, false, K [], None, None, K [| |], nonNullable, hideObjectMethods)
 
         // state ops
 
@@ -1700,7 +1704,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.EnumUnderlyingTypeRaw() = enumUnderlyingType.Force()
         member __.Container = container
         member __.BaseTypeRaw() = baseType.Force()
-        member __.StaticParams = staticParams
+        member __.StaticParams = staticParams.Force()
         member __.StaticParamsApply = staticParamsApply
         
         // Count the members declared since the indicated position in the members list.  This allows the target model to observe 
@@ -1794,14 +1798,16 @@ namespace ProviderImplementation.ProvidedTypes
         member __.DefineStaticParameters(parameters: ProvidedStaticParameter list, instantiationFunction: (string -> obj[] -> ProvidedTypeDefinition)) =
             if staticParamsDefined then failwithf "Static parameters have already been defined for this type. stacktrace = %A" Environment.StackTrace
             staticParamsDefined <- true
-            staticParams      <- parameters
+            staticParams      <- lazy parameters
             staticParamsApply <- Some instantiationFunction
+            customAttributesImpl.HasStaticParams <- (parameters.Length <> 0)
 
         /// Get ParameterInfo[] for the parametric type parameters 
-        member __.GetStaticParametersInternal() = [| for p in staticParams -> p :> ParameterInfo |]
+        member __.GetStaticParametersInternal() = [| for p in staticParams.Force() -> p :> ParameterInfo |]
 
         /// Instantiate parametric type
         member this.ApplyStaticArguments(name:string, args:obj[]) =
+            let staticParams = staticParams.Force()
             if staticParams.Length <> args.Length then
                 failwithf "ProvidedTypeDefinition: expecting %d static parameters but given %d for type %s" staticParams.Length args.Length this.FullName
             if staticParams.Length > 0 then
@@ -8747,38 +8753,59 @@ namespace ProviderImplementation.ProvidedTypes
                | Some r -> r
 
         let ilGlobals = 
-            lazy mkILGlobals (systemRuntimeScopeRef.Force())
+            lazy
+                mkILGlobals (systemRuntimeScopeRef.Force())
 
         let mkReader ref =
-            try let reader = ILModuleReaderAfterReadingAllBytes(ref, ilGlobals.Force())
+            try
+                let reader = ILModuleReaderAfterReadingAllBytes(ref, ilGlobals.Force())
                 Choice1Of2(TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRefToTgt, Some reader, ref) :> Assembly)
-            with err -> Choice2Of2 err
+            with err ->
+                Choice2Of2 err
 
-        let targetAssembliesTable_ =  ConcurrentDictionary<string, Choice<Assembly, _>>()
-        let targetAssemblies_ = ResizeArray<Assembly>()
+        // Maintain a string-indexed table of delayed thunks of assemblies incrementally
+        let targetAssembliesTable_ =  ConcurrentDictionary<string, Lazy<Choice<Assembly, exn>>>()
+
+        // Maintain an in-order collection of delayed thunks of assemblies incrementally
+        let targetAssembliesThunks_ = ResizeArray<Lazy<Choice<Assembly, exn>>>()
+
+        // Maintain a fixed collection of these incrementally
+        let mutable targetAssemblies_ : ResizeArray<Assembly> = null
+
         let targetAssembliesQueue = ResizeArray<_>()
         do targetAssembliesQueue.Add (fun () -> 
               for ref in referencedAssemblyPaths do
-                  let reader = mkReader ref 
+                  let readerThunk = lazy mkReader ref  
                   let simpleName = Path.GetFileNameWithoutExtension ref 
-                  targetAssembliesTable_.[simpleName] <- reader
-                  match reader with 
-                  | Choice2Of2 _ -> () 
-                  | Choice1Of2 asm -> targetAssemblies_.Add asm)
+                  targetAssembliesTable_.[simpleName] <- readerThunk
+                  targetAssembliesThunks_.Add readerThunk)
         let flush() = 
             let qs = targetAssembliesQueue.ToArray()
+            if qs.Length > 0 then
+                targetAssemblies_ <- null
             targetAssembliesQueue.Clear()
             for q in qs do q() 
-        let getTargetAssemblies() =  flush(); targetAssemblies_
-        let getTargetAssembliesTable() = flush(); targetAssembliesTable_
+        let getTargetAssemblies() =
+            flush()
+            match targetAssemblies_ with
+            | null -> 
+                targetAssemblies_ <-
+                    ResizeArray(
+                        targetAssembliesThunks_ 
+                        |> Seq.choose (fun v -> match v.Force() with Choice1Of2 asm -> Some asm | Choice2Of2 _ -> None))
+            | _ -> ()
+            targetAssemblies_
+        let getTargetAssembliesTable() =
+            flush()
+            targetAssembliesTable_
 
         let tryBindTargetAssemblySimple(simpleName:string): Choice<Assembly, exn> =
             let table = getTargetAssembliesTable()
-            if table.ContainsKey(simpleName) then table.[simpleName]
+            if table.ContainsKey(simpleName) then table.[simpleName].Force()
             else Choice2Of2 (Exception(sprintf "assembly %s not found" simpleName))
 
         let sourceAssembliesTable_ =  ConcurrentDictionary<string, Assembly>()
-        let sourceAssemblies_ = ResizeArray<_>()
+        let sourceAssemblies_ = ResizeArray<Assembly>()
         let sourceAssembliesQueue = ResizeArray<_>()
 
         let enqueueReferencedAssemblies(asm: Assembly) = 
@@ -9192,7 +9219,8 @@ namespace ProviderImplementation.ProvidedTypes
                                         (x.BaseTypeRaw >> Option.map convTypeToTgt), 
                                         x.AttributesRaw, 
                                         (x.EnumUnderlyingTypeRaw >> Option.map convTypeToTgt), 
-                                        x.StaticParams |> List.map convStaticParameterDefToTgt, 
+                                        (x.StaticParams.Length <> 0),
+                                        (fun () -> x.StaticParams |> List.map convStaticParameterDefToTgt), 
                                         x.StaticParamsApply |> Option.map (fun f s p ->  
                                             let t = f s p 
                                             let tT = convProvidedTypeDefToTgt t
@@ -9265,7 +9293,7 @@ namespace ProviderImplementation.ProvidedTypes
                                     x.Parameters |> Array.map convParameterDefToTgt, 
                                     x.ReturnType |> convTypeToTgt, 
                                     x.GetInvokeCode |> Option.map (fun invokeCode -> convCodeToTgt (invokeCode, x.IsStatic, false, x.Parameters, not x.IsErased)), 
-                                    x.StaticParams |> List.map convStaticParameterDefToTgt, 
+                                    (fun () -> x.StaticParams |> List.map convStaticParameterDefToTgt), 
                                     x.StaticParamsApply |> Option.map (fun f s p -> f s p |> convProvidedMethodDefToTgt declTyT), 
                                     (x.GetCustomAttributesData >> convCustomAttributesDataToTgt)) :> _
                 | :? ProvidedTypeDefinition as x -> convTypeDefToTgt x :> _
@@ -9354,8 +9382,10 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.AddTargetAssembly(asmName: AssemblyName, asm: Assembly) = 
             targetAssembliesQueue.Add (fun () -> 
-                targetAssembliesTable_.[asmName.Name] <- Choice1Of2 asm
-                targetAssemblies_.Add asm)
+                let asmThunk = Lazy<_>.CreateFromValue (Choice1Of2 asm)
+                targetAssembliesTable_.[asmName.Name] <- asmThunk
+                targetAssembliesThunks_.Add asmThunk
+                targetAssemblies_ <- null)
 
         static member Create (config: TypeProviderConfig, assemblyReplacementMap, sourceAssemblies) =
 

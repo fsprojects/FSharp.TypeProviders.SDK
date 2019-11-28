@@ -428,7 +428,7 @@ namespace ProviderImplementation.ProvidedTypes
         member TryBindSimpleAssemblyNameToTarget: assemblyName: string  -> Choice<Assembly, exn> 
 
         /// Get the list of referenced assemblies determined by the type provider configuration
-        member ReferencedAssemblyPaths: string list
+        member ReferencedAssemblyPaths: string[]
 
         /// Get the resolved referenced assemblies determined by the type provider configuration
         member GetTargetAssemblies : unit -> Assembly[]
