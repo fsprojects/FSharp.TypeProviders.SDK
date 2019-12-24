@@ -136,24 +136,28 @@ Target "Pack" (fun _ ->
     NuGetHelper.NuGetPack (fun p -> { p with WorkingDir = "templates"; OutputPath = outputPath; Version = release.NugetVersion; ReleaseNotes = toLines release.Notes}) @"templates/FSharp.TypeProviders.Templates.nuspec"
 )
 
-Target "TestTemplatesNuGet" (fun _ ->
+let dotnetSdkVersion3 = "3.1.100"
+let sdkPath3 = lazy DotNetCli.InstallDotNetSDK dotnetSdkVersion3
+let getSdkPath3() = sdkPath3.Value
 
+Target "TestTemplatesNuGet" (fun _ ->
+    let wd = Path.Combine(__SOURCE_DIRECTORY__, "temp")
     // Globally install the templates from the template nuget package we just built
-    DotNetCli.RunCommand (fun p -> { p with ToolPath =  getSdkPath() }) ("new -i " + outputPath + "/FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg")
+    DotNetCli.RunCommand (fun p -> { p with ToolPath =  getSdkPath3(); WorkingDir=wd }) ("new -i " + outputPath + "/FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg")
 
     // Instantiate the template into a randomly generated name
     let testAppName = "tp2" + string (abs (hash System.DateTime.Now.Ticks) % 100)
-    CleanDir testAppName
-    DotNetCli.RunCommand (fun p -> { p with ToolPath =  getSdkPath() }) (sprintf "new typeprovider -n %s -lang F#" testAppName)
+    let testAppDir = Path.Combine(wd, testAppName)
+    CleanDir testAppDir
+    DotNetCli.RunCommand (fun p -> { p with ToolPath =  getSdkPath3(); WorkingDir=wd }) (sprintf "new typeprovider -n %s -lang F#" testAppName)
 
     let pkgs = Path.GetFullPath(outputPath)
 
-    // NOTE: when restoring this won't use the local version of TPSDK but the one in github.  Perhaps we can use
-    // this local repo as a source for the paket update, or remove the use of paket in the template
-    execIn testAppName ".paket/paket.exe" "restore"
-    
-    DotNetCli.RunCommand (fun p -> { p with  ToolPath =  getSdkPath(); WorkingDir=testAppName }) (sprintf "build -c debug")
-    DotNetCli.RunCommand (fun p -> { p with ToolPath =  getSdkPath();  WorkingDir=testAppName }) (sprintf "test -c debug")
+    let setCommandParams (p:DotNetCli.CommandParams) = { p with  ToolPath =  getSdkPath3(); WorkingDir=testAppDir }
+    DotNetCli.RunCommand setCommandParams "tool restore"
+    DotNetCli.RunCommand setCommandParams "paket restore"
+    DotNetCli.RunCommand setCommandParams "build -c debug"
+    DotNetCli.RunCommand setCommandParams "test -c debug"
 
     (* Manual steps without building nupkg
         dotnet pack src\FSharp.TypeProviders.SDK.fsproj /p:PackageVersion=0.0.0.99 --output bin -c release
