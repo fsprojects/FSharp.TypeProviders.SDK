@@ -1,3 +1,4 @@
+STORAGE: PACKAGES
 RESTRICTION: || (== net45) (== netcoreapp3.1) (== netstandard2.0)
 NUGET
   remote: https://www.nuget.org/api/v2

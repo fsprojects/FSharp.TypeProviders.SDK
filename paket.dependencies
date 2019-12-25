@@ -1,4 +1,5 @@
 framework: >=net45
+storage: packages
 source https://api.nuget.org/v3/index.json
 
 nuget Nuget.CommandLine 4.6.2

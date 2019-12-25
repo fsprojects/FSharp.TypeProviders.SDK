@@ -1,3 +1,4 @@
+storage: packages
 source https://nuget.org/api/v2
 
 frameworks: net45, netcoreapp3.1, netstandard2.0

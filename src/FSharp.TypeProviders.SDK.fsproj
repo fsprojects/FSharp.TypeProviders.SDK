@@ -12,7 +12,7 @@
     <PackageIconUrl>https://raw.githubusercontent.com/fsprojects/FSharp.TypeProviders.SDK/master/docs/files/img/logo.png</PackageIconUrl>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description>The core implementation of an F# type provider</Description>
-    <Copyright>Copyright 2017 FSharp.TypeProviders.SDK contributors</Copyright>
+    <Copyright>Copyright 2020 FSharp.TypeProviders.SDK contributors</Copyright>
     <tags>F# fsharp typeprovider</tags>
   </PropertyGroup>
   <ItemGroup>
