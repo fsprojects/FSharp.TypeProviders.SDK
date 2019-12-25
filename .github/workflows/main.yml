@@ -32,6 +32,7 @@ jobs:
 
     # Workaround for multiple version installation https://github.com/actions/setup-dotnet/issues/25#issuecomment-557570168
     - name: .net SxS
+      if: matrix.os != 'windows-latest'
       run: |
         rsync -a ${DOTNET_ROOT/3.1.100/2.1.403}/* $DOTNET_ROOT/
 
