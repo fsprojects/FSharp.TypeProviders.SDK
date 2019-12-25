@@ -22,6 +22,7 @@ open Fake.IO
 open Fake.DotNet
 open System
 open System.IO
+open System.Runtime.InteropServices
 
 Target.initEnvironment()
 
@@ -33,11 +34,6 @@ let outputPath = __SOURCE_DIRECTORY__ + "/bin"
 // Read release notes & version info from RELEASE_NOTES.md
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 let release = ReleaseNotes.load "RELEASE_NOTES.md"
-
-let exec p args = 
-    printfn "Executing %s %s" p args 
-    Shell.Exec(p, args) |> function 0 -> () | d -> failwithf "%s %s exited with error %d" p args d
-
 
 Target.create "Clean" (fun _ ->
     Shell.cleanDirs ["temp"]
@@ -56,40 +52,50 @@ Target.create "Examples" (fun _ ->
 )
 
 Target.create "RunTests" (fun _ ->
-#if MONO
-    // Run the netcoreapp2.0 tests with "dotnet test"
-    DotNetCli.Test  (fun p -> { p with Configuration = config; Project = "tests/FSharp.TypeProviders.SDK.Tests.fsproj"; ToolPath =  getSdkPath(); AdditionalArgs=["-f"; "netcoreapp2.0"] })
 
-    // We don't use "dotnet test" for Mono testing the test runner doesn't know how to run with Mono
-    // This is a bit of a hack to find the output test DLL and run xunit using Mono directly
-    let dir = "tests/bin/" + config + "/net461"
-    let file = 
-        (Array.append [| dir |] (System.IO.Directory.GetDirectories(dir)))
-        |> Array.pick (fun subdir -> 
-            let file = subdir + "/FSharp.TypeProviders.SDK.Tests.dll"
-            if System.IO.File.Exists file then Some file else None)
+    let runXUnitRunner (fsproj:string) =
+        // We don't use "dotnet test" for Mono testing the test runner doesn't know how to run with Mono
+        // This is a bit of a hack to find the output test DLL and run xunit using Mono directly
+        let mode = if config = DotNet.BuildConfiguration.Release then "Release" else "Debug"
+        let pos = fsproj.LastIndexOf('/')
+        let file = fsproj.Substring(0,pos) + "/bin/" + mode + "/net461" + fsproj.Substring(pos).Replace(".fsproj",".dll")
+        // let file = 
+        //     (Array.append [| dir |] (System.IO.Directory.GetDirectories(dir)))
+        //     |> Array.pick (fun subdir -> 
+        //         let file = subdir + "/FSharp.TypeProviders.SDK.Tests.dll"
+        //         if System.IO.File.Exists file then Some file else None)
 
-    exec "packages/xunit.runner.console/tools/net452/xunit.console.exe" (file + " -parallel none")
+        let exec p args = 
+            printfn "Executing %s %s" p args 
+            Shell.Exec(p, args) |> function 0 -> () | d -> failwithf "%s %s exited with error %d" p args d
+
+        "packages/xunit.runner.console/tools/net452/xunit.console.exe " + file + " -parallel none"
+        |> exec "mono"
             
-    // This can also be used on Mono to give console output:
-    // msbuild tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=Debug && mono packages/xunit.runner.console/tools/net452/xunit.console.exe tests/bin/Debug/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none
-#else
+        // This can also be used on Mono to give console output:
+        // msbuild tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=Debug && mono packages/xunit.runner.console/tools/net452/xunit.console.exe tests/bin/Debug/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none
+
     let setTestOptions framework (p:DotNet.TestOptions) =
         { p with Configuration = config; Framework= Some framework }
-    DotNet.test (setTestOptions "net461") "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
-    DotNet.test (setTestOptions "net461") "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"
-    DotNet.test (setTestOptions "net461") "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"
-    DotNet.test (setTestOptions "net461") "examples/StressProvider.Tests/StressProvider.Tests.fsproj"
-    
-    DotNet.test (setTestOptions "netcoreapp2.0") "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
-    DotNet.test (setTestOptions "netcoreapp2.0") "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"
-    // TODO: Where is ComboProvider?
-    DotNet.test (setTestOptions "netcoreapp2.0") "examples/StressProvider.Tests/StressProvider.Tests.fsproj"
+
+    [
+        "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
+        "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"
+        "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"
+        "examples/StressProvider.Tests/StressProvider.Tests.fsproj"
+    ]
+    |> List.iter (fun fsproj ->
+        if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
+        then DotNet.test (setTestOptions "net461") fsproj
+        else 
+            DotNet.build (fun p -> {setParams p with Framework=Some "net461"}) fsproj
+            runXUnitRunner fsproj
+
+        DotNet.test (setTestOptions "netcoreapp2.0") fsproj
+    )
     
     // This can also be used to give console output:
     // dotnet build tests\FSharp.TypeProviders.SDK.Tests.fsproj -c Debug -f net461 && packages\xunit.runner.console\tools\net452\xunit.console.exe tests\bin\Debug\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
-
-#endif
 )
 
 Target.create "Pack" (fun _ ->

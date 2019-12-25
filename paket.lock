@@ -2,7 +2,6 @@ STORAGE: PACKAGES
 RESTRICTION: >= net45
 NUGET
   remote: https://api.nuget.org/v3/index.json
-    FAKE (4.64.13)
     FSharp.Core (4.2.3)
     Microsoft.NETCore.App (2.0.7)
     Microsoft.NETCore.Platforms (2.2.3) - restriction: >= net461
