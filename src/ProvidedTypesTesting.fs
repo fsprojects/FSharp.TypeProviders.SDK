@@ -658,6 +658,7 @@ module internal Targets =
          | "4.1", "netstandard1.6" -> None
          | "4.1", "netstandard2.0" -> None
          | "4.1", "netcoreapp2.0" -> None
+         | "4.1", "netcoreapp3.1" -> None
          | _ -> failwith (sprintf "unimplemented  profile, fsharpVersion = %s, profile = %s" fsharp profile)
 
 
@@ -685,6 +686,7 @@ module internal Targets =
             | "netstandard2.1"    -> [ "netstandard2.1"; "netstandard2.0"; "netstandard1.6" ]
             | "netcoreapp2.0"    -> [ "netcoreapp2.0"; "netstandard2.0"; "netstandard1.6" ]
             | "netcoreapp2.1"    -> [ "netcoreapp2.1"; "netcoreapp2.0"; "netstandard2.0"; "netstandard1.6" ]
+            | "netcoreapp3.1"    -> [ "netcoreapp3.1"; "netcoreapp2.1"; "netcoreapp2.0"; "netstandard2.0"; "netstandard1.6" ]
             | "portable47"    -> ["portable-net45+sl5+netcore45"]
             | "portable7"     -> ["portable-net45+netcore45"]
             | "portable78"    -> ["portable-net45+netcore45+wp8"]

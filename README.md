@@ -133,7 +133,7 @@ Here is a guide to the steps to perform:
 
    * If the compile-time computations performed by your TPDTC **fundamentally** depend on .NET Framework, then your type provider will not be usable with the .NET SDK toolchain without using [the workaround](https://github.com/Microsoft/visualfsharp/issues/3303))
    
-   * If the TPDTC **partially** depends on .NET Framework, then multi-target the TPDTC to `net45;netcoreapp2.0` and use `#if NETCOREAPP2_0`
+   * If the TPDTC **partially** depends on .NET Framework, then multi-target the TPDTC to `net45;netcoreapp2.0` and use `#if NETCOREAPP3_1`
    
    * If the TPDTC **doesn't** depend on .NET Framework, then target the TPDTC to `netstandard2.0`
    

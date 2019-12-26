@@ -344,7 +344,7 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correc
                 elif contains then failwith ("FAILED: unexpected reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
                 else failwith ("FAILED: failed to find reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
 
-#if !NETSTANDARD && !NETCOREAPP2_0
+#if !NETSTANDARD && !NETCOREAPP3_1
 [<Fact>]
 let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for hosted execution correctly``() : unit  = 
     for (desc, supports, refs) in hostedTestCases() do

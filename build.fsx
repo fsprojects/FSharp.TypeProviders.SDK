@@ -91,7 +91,7 @@ Target.create "RunTests" (fun _ ->
             DotNet.build (fun p -> {setParams p with Framework=Some "net461"}) fsproj
             runXUnitRunner fsproj
 
-        DotNet.test (setTestOptions "netcoreapp2.0") fsproj
+        DotNet.test (setTestOptions "netcoreapp3.1") fsproj
     )
     
     // This can also be used to give console output:
