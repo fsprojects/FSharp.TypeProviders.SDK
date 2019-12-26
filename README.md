@@ -7,7 +7,8 @@ The F# Type Provider SDK is two things:
 
 2. Documentation and samples on type provider creation
 
-[![Build status (Windows)](https://ci.appveyor.com/api/projects/status/y1c6gs2r0ihog1re)](https://ci.appveyor.com/project/mavnn/fsharp-typeproviders-sdk)  [![Build Status (MacOS, mono)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.SDK.svg?branch=master)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.SDK)
+[![Build Status](https://github.com/fsprojects/FSharp.TypeProviders.SDK/workflows/Build%20and%20Test/badge.svg?branch=master)](https://github.com/fsprojects/FSharp.TypeProviders.SDK/actions?query=branch%3Amaster)
+
 
 ## Getting Started
 
