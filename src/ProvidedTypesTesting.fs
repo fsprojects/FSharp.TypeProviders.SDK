@@ -658,6 +658,7 @@ module internal Targets =
          | "4.1", "netstandard1.6" -> None
          | "4.1", "netstandard2.0" -> None
          | "4.1", "netcoreapp2.0" -> None
+         | "4.1", "netcoreapp3.1" -> None
          | _ -> failwith (sprintf "unimplemented  profile, fsharpVersion = %s, profile = %s" fsharp profile)
 
 
@@ -666,7 +667,7 @@ module internal Targets =
         if Directory.Exists (pd ++ packageName) then 
             pd ++ packageName
         else 
-            failwithf "couldn't find %s/NETStandard.Library, whcih is needed for testing .NET Standard 2.0 code generation of a type provider using these utilities" pd
+            failwithf "couldn't find %s/NETStandard.Library, which is needed for testing .NET Standard 2.0 code generation of a type provider using these utilities" pd
 
     /// Compute a path to an FSharp.Core suitable for the target profile
     let private fsharpRestoredAssembliesPath fsharp profile =
@@ -685,6 +686,7 @@ module internal Targets =
             | "netstandard2.1"    -> [ "netstandard2.1"; "netstandard2.0"; "netstandard1.6" ]
             | "netcoreapp2.0"    -> [ "netcoreapp2.0"; "netstandard2.0"; "netstandard1.6" ]
             | "netcoreapp2.1"    -> [ "netcoreapp2.1"; "netcoreapp2.0"; "netstandard2.0"; "netstandard1.6" ]
+            | "netcoreapp3.1"    -> [ "netcoreapp3.1"; "netcoreapp2.1"; "netcoreapp2.0"; "netstandard2.0"; "netstandard1.6" ]
             | "portable47"    -> ["portable-net45+sl5+netcore45"]
             | "portable7"     -> ["portable-net45+netcore45"]
             | "portable78"    -> ["portable-net45+netcore45+wp8"]
@@ -713,7 +715,10 @@ module internal Targets =
             packageDir ++ "build" ++ "netstandard2.0" ++ "ref"
         | "netcoreapp2.0"->
             let packageDir = paketPackageFromMainPaketGroup "Microsoft.NETCore.App" 
-            packageDir ++ "ref" ++ "netcoreapp2.0"
+            packageDir ++ "ref" ++ "netcoreapp2.2"
+        | "netcoreapp3.1"->
+            let packageDir = paketPackageFromMainPaketGroup "Microsoft.NETCore.App" 
+            packageDir ++ "ref" ++ "netcoreapp2.2"
         | "portable47" -> installedPortableAssembliesRoot() ++ "v4.0" ++ "Profile" ++ "Profile47"
         | "portable7" -> installedPortableAssembliesRoot() ++ "v4.5" ++ "Profile" ++ "Profile7"
         | "portable78" -> installedPortableAssembliesRoot() ++ "v4.5" ++ "Profile" ++ "Profile78"

@@ -39,7 +39,7 @@ type ErasingProvider (config : TypeProviderConfig, hasBigInt: bool) as this =
         // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
 #if NETCOREAPP
         let genTy = typedefof<list<_>>
-        // The next line loops on netcoreapp2.0 when the ProvidedTypes.fs is compiled as netstandard2.0 (without NETCOREAPP defined)
+        // The next line loops on netcoreapp3.1 when the ProvidedTypes.fs is compiled as netstandard2.0 (without NETCOREAPP defined)
         let instTy = genTy.MakeGenericType(myType)
         let fails = instTy.FullName
 #endif
@@ -459,7 +459,7 @@ let ``test basic binding context portable259``() =
        printfn "-=======================" 
    | Choice2Of2 err -> raise err
 
-#if !NETCOREAPP2_0
+#if !NETCOREAPP3_1
 [<Fact>]
 let ``test trasitive closure of source assemblies net45``() =
    let pf = Targets.DotNet45Ref "PresentationFramework.dll"

@@ -24,7 +24,7 @@ files
     bin/Release/net45/MyProvider.Runtime.* ==> lib/net45
     bin/Release/netstandard2.0/MyProvider.Runtime.* ==> lib/netstandard2.0
     bin/Release/typeproviders/fsharp41/netstandard2.0/*.dll ==> typeproviders/fsharp41/netstandard2.0
-    bin/Release/typeproviders/fsharp41/netcoreapp2.0/*.dll ==> typeproviders/fsharp41/netcoreapp2.0
+    bin/Release/typeproviders/fsharp41/netcoreapp3.1/*.dll ==> typeproviders/fsharp41/netcoreapp3.1
     bin/Release/typeproviders/fsharp41/net45/*.dll ==> typeproviders/fsharp41/net45
 references
     MyProvider.Runtime.dll
@@ -33,7 +33,7 @@ dependencies
 
 # put any package references here
 #  Some.Package
-#  framework: netcoreapp2.0
+#  framework: netcoreapp3.1
 #    System.Text.Encoding.CodePages >= LOCKEDVERSION
 #  framework: netstandard2.0
 #    System.Text.Encoding.CodePages >= LOCKEDVERSION
