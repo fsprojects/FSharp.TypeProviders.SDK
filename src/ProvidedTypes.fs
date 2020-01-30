@@ -1342,7 +1342,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         static let defaultAttributes (isErased, isSealed, isInterface) = 
             TypeAttributes.Public ||| 
-            (if isInterface then TypeAttributes.Interface else TypeAttributes.Class) |||
+            (if isInterface then TypeAttributes.Interface ||| TypeAttributes.Abstract else TypeAttributes.Class) |||
             (if isSealed then TypeAttributes.Sealed else enum 0) |||
             enum (if isErased then int32 TypeProviderTypeAttributes.IsErased else 0)
 
@@ -15360,7 +15360,13 @@ namespace ProviderImplementation.ProvidedTypes
                     for minfo in ptdT.GetMethods(bindAll) do
                         match minfo with
                         | :? ProvidedMethod as pminfo when not (methMap.ContainsKey pminfo)  ->
-                            let mb = tb.DefineMethod(minfo.Name, minfo.Attributes, transType minfo.ReturnType, [| for p in minfo.GetParameters() -> transType p.ParameterType |])
+                            let fixedMethodAttributes =
+                                if ptdT.IsInterface || ptdT.IsAbstract then
+                                    minfo.Attributes ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot
+                                else
+                                    minfo.Attributes
+
+                            let mb = tb.DefineMethod(minfo.Name, fixedMethodAttributes, transType minfo.ReturnType, [| for p in minfo.GetParameters() -> transType p.ParameterType |])
 
                             for (i, p) in minfo.GetParameters() |> Seq.mapi (fun i x -> (i, x :?> ProvidedParameter)) do
 
@@ -15476,7 +15482,6 @@ namespace ProviderImplementation.ProvidedTypes
                       | :? ProvidedMethod as pminfo   ->
                         if not pminfo.BelongsToTargetModel then failwithf "expected '%O' to be a target ProvidedMethod. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" pminfo
                         let mb = methMap.[pminfo]
-                        let ilg = mb.GetILGenerator()
                         defineCustomAttrs mb.SetCustomAttribute (pminfo.GetCustomAttributesData())
 
                         let parameterVars =
@@ -15492,10 +15497,16 @@ namespace ProviderImplementation.ProvidedTypes
                             failwith "The provided type definition is an interface; therefore, it should not define an implementation for its members."
                         | Some _ when pminfo.IsAbstract ->
                             failwith "The provided method is marked as an abstract method; therefore, it should not define an implementation."
-                        | None when not pminfo.IsAbstract ->
+                        | None when not (pminfo.IsAbstract || ptdT.IsAbstract ||ptdT.IsInterface)  ->
                             failwith "The provided method is not marked as an abstract method; therefore, it should define an implementation."
-                        | None -> ()
+                        | None when pminfo.IsAbstract || ptdT.IsInterface ->
+                            // abstract and interface methods have no body at all
+                            ()
+                        | None -> 
+                            let ilg = mb.GetILGenerator()
+                            ilg.Emit I_ret
                         | Some invokeCode ->
+                            let ilg = mb.GetILGenerator()
                             let expr = invokeCode parameters
 
                             let methLocals = Dictionary<Var, ILLocalBuilder>()
@@ -15503,7 +15514,7 @@ namespace ProviderImplementation.ProvidedTypes
                             let expectedState = if (transType minfo.ReturnType = ILType.Void) then ExpectedStackState.Empty else ExpectedStackState.Value
                             let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, methLocals, parameterVars)
                             codeGen.EmitExpr (expectedState, expr)
-                        ilg.Emit I_ret
+                            ilg.Emit I_ret
                       | _ -> ()
 
                     for (bodyMethInfo, declMethInfo) in ptdT.GetMethodOverrides() do
