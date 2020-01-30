@@ -1085,7 +1085,12 @@ namespace ProviderImplementation.ProvidedTypes
        // Implement overloads
         override __.GetParameters() = parameterInfos 
 
-        override __.Attributes = attrs
+        override this.Attributes = 
+            match this.DeclaringProvidedType with
+            | Some pt when pt.IsInterface || pt.IsAbstract -> 
+                    attrs ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot
+            | _ -> attrs
+
 
         override __.Name = methodName
 
@@ -1343,7 +1348,7 @@ namespace ProviderImplementation.ProvidedTypes
         static let defaultAttributes (isErased, isSealed, isInterface) = 
             TypeAttributes.Public ||| 
             (if isInterface then TypeAttributes.Interface ||| TypeAttributes.Abstract else TypeAttributes.Class) |||
-            (if isSealed then TypeAttributes.Sealed else enum 0) |||
+            (if isSealed && not isInterface then TypeAttributes.Sealed else enum 0) |||
             enum (if isErased then int32 TypeProviderTypeAttributes.IsErased else 0)
 
         // state
@@ -15360,13 +15365,7 @@ namespace ProviderImplementation.ProvidedTypes
                     for minfo in ptdT.GetMethods(bindAll) do
                         match minfo with
                         | :? ProvidedMethod as pminfo when not (methMap.ContainsKey pminfo)  ->
-                            let fixedMethodAttributes =
-                                if ptdT.IsInterface || ptdT.IsAbstract then
-                                    minfo.Attributes ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot
-                                else
-                                    minfo.Attributes
-
-                            let mb = tb.DefineMethod(minfo.Name, fixedMethodAttributes, transType minfo.ReturnType, [| for p in minfo.GetParameters() -> transType p.ParameterType |])
+                            let mb = tb.DefineMethod(minfo.Name, minfo.Attributes, transType minfo.ReturnType, [| for p in minfo.GetParameters() -> transType p.ParameterType |])
 
                             for (i, p) in minfo.GetParameters() |> Seq.mapi (fun i x -> (i, x :?> ProvidedParameter)) do
 
