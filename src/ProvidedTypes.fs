@@ -1345,10 +1345,12 @@ namespace ProviderImplementation.ProvidedTypes
            | TypeContainer.Namespace _, Some logger when not isTgt -> logger (sprintf "Creating ProvidedTypeDefinition %s [%d]" className (System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode this))
            | _ -> ()
 
-        static let defaultAttributes (isErased, isSealed, isInterface) = 
+        static let defaultAttributes (isErased, isSealed, isInterface, isAbstract) =
             TypeAttributes.Public ||| 
-            (if isInterface then TypeAttributes.Interface ||| TypeAttributes.Abstract else TypeAttributes.Class) |||
-            (if isSealed && not isInterface then TypeAttributes.Sealed else enum 0) |||
+            (if isInterface then TypeAttributes.Interface ||| TypeAttributes.Abstract
+             elif isAbstract then TypeAttributes.Abstract
+             else TypeAttributes.Class) |||
+            (if isSealed && not isInterface && not isAbstract then TypeAttributes.Sealed else enum 0) |||
             enum (if isErased then int32 TypeProviderTypeAttributes.IsErased else 0)
 
         // state
@@ -1472,23 +1474,25 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
-        new (assembly:Assembly, namespaceName, className, baseType, ?hideObjectMethods, ?nonNullable, ?isErased, ?isSealed, ?isInterface) = 
+        new (assembly:Assembly, namespaceName, className, baseType, ?hideObjectMethods, ?nonNullable, ?isErased, ?isSealed, ?isInterface, ?isAbstract) = 
             let isErased = defaultArg isErased true
             let isSealed = defaultArg isSealed true
             let isInterface = defaultArg isInterface false
+            let isAbstract = defaultArg isAbstract false
             let nonNullable = defaultArg nonNullable false
             let hideObjectMethods = defaultArg hideObjectMethods false
-            let attrs = defaultAttributes (isErased, isSealed, isInterface)
+            let attrs = defaultAttributes (isErased, isSealed, isInterface, isAbstract)
             //if not isErased && assembly.GetType().Name <> "ProvidedAssembly" then failwithf "a non-erased (i.e. generative) ProvidedTypeDefinition '%s.%s' was placed in an assembly '%s' that is not a ProvidedAssembly" namespaceName className (assembly.GetName().Name)
             ProvidedTypeDefinition(false, TypeContainer.Namespace (K assembly, namespaceName), className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
 
-        new (className:string, baseType, ?hideObjectMethods, ?nonNullable, ?isErased, ?isSealed, ?isInterface) = 
+        new (className:string, baseType, ?hideObjectMethods, ?nonNullable, ?isErased, ?isSealed, ?isInterface, ?isAbstract) = 
             let isErased = defaultArg isErased true
             let isSealed = defaultArg isSealed true
             let isInterface = defaultArg isInterface false
+            let isAbstract = defaultArg isAbstract false
             let nonNullable = defaultArg nonNullable false
             let hideObjectMethods = defaultArg hideObjectMethods false
-            let attrs = defaultAttributes (isErased, isSealed, isInterface)
+            let attrs = defaultAttributes (isErased, isSealed, isInterface, isAbstract)
             ProvidedTypeDefinition(false, TypeContainer.TypeToBeDecided, className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
 
         // state ops
@@ -1743,6 +1747,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.SetBaseTypeDelayed baseTypeFunction = 
             if baseType.IsValueCreated then failwithf "The base type has already been evaluated for this type. Please call SetBaseType before any operations which traverse the type hierarchy. stacktrace = %A" Environment.StackTrace
             baseType <- lazy (Some (baseTypeFunction()))
+        member __.AddAttributes x = attrs <- attrs ||| x
         member __.SetAttributes x = attrs <- x
 
         member this.AddMembers(memberInfos:list<#MemberInfo>) = 
@@ -15759,10 +15764,12 @@ namespace ProviderImplementation.ProvidedTypes
                     match mT.GetInvokeCode with
                     | Some _ when methodBaseT.DeclaringType.IsInterface ->
                         failwith "The provided type definition is an interface; therefore, it should not define an implementation for its members."
+                    (* NOTE: These checks appear to fail for generative abstract and virtual methods.
                     | Some _ when mT.IsAbstract ->
                         failwith "The provided method is defined as abstract; therefore, it should not define an implementation."
                     | None when not mT.IsAbstract ->
                         failwith "The provided method is not defined as abstract; therefore it should define an implementation."
+                    *)
                     | Some invokeCode ->
                         let exprT = invokeCode(Array.toList parametersT)
                         check exprT
