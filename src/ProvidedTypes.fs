@@ -1075,11 +1075,15 @@ namespace ProviderImplementation.ProvidedTypes
                 this
 
         member __.Parameters = parameters
-        member __.GetInvokeCode = invokeCode
+        member __.DeclaringProvidedType = declaringType
+        member this.GetInvokeCode = 
+            match this.DeclaringProvidedType with
+            | Some dt when dt.IsInterface -> None
+            | _ when this.IsAbstract -> None 
+            | _ -> invokeCode
         member __.StaticParams = staticParams
         member __.StaticParamsApply = staticParamsApply
         member __.BelongsToTargetModel = isTgt
-        member __.DeclaringProvidedType = declaringType
         member this.IsErased = (nonNone "DeclaringType" this.DeclaringProvidedType).IsErased
 
        // Implement overloads
@@ -1087,7 +1091,10 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.Attributes = 
             match this.DeclaringProvidedType with
-            | Some pt when pt.IsInterface || pt.IsAbstract -> 
+            | Some pt when 
+                pt.IsInterface 
+                || (attrs &&& MethodAttributes.Abstract <> enum 0)
+                || Option.isNone invokeCode  -> 
                     attrs ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot
             | _ -> attrs
 
