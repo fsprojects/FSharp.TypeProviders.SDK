@@ -7,7 +7,8 @@ The F# Type Provider SDK is two things:
 
 2. Documentation and samples on type provider creation
 
-[![Build status (Windows)](https://ci.appveyor.com/api/projects/status/y1c6gs2r0ihog1re)](https://ci.appveyor.com/project/mavnn/fsharp-typeproviders-sdk)  [![Build Status (MacOS, mono)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.SDK.svg?branch=master)](https://travis-ci.org/fsprojects/FSharp.TypeProviders.SDK)
+[![Build Status](https://github.com/fsprojects/FSharp.TypeProviders.SDK/workflows/Build%20and%20Test/badge.svg?branch=master)](https://github.com/fsprojects/FSharp.TypeProviders.SDK/actions?query=branch%3Amaster)
+
 
 ## Getting Started
 
@@ -20,17 +21,15 @@ The template uses paket to acquire the files of the latest published type provid
 
     cd LemonadeProvider
 
-    .paket\paket.exe update
-
+    dotnet tool restore
+    dotnet paket update
     dotnet build -c release
 
     dotnet test -c release
 
 The type provider also contains the logic necessary to package the type provider:
 
-    .paket\paket.exe pack src\LemonadeProvider.Runtime --version 0.0.1
-
-If you want you can remove the use of paket for the last stage and switch to `dotnet pack` though you'll have to work out how to do that yourself at the moment (it shouldn't be too hard).
+    dotnet paket pack nuget --version 0.0.1
 
 ## The ProvidedTypes API - A Basic Type Provider
 
@@ -135,7 +134,7 @@ Here is a guide to the steps to perform:
 
    * If the compile-time computations performed by your TPDTC **fundamentally** depend on .NET Framework, then your type provider will not be usable with the .NET SDK toolchain without using [the workaround](https://github.com/Microsoft/visualfsharp/issues/3303))
    
-   * If the TPDTC **partially** depends on .NET Framework, then multi-target the TPDTC to `net45;netcoreapp2.0` and use `#if NETCOREAPP2_0`
+   * If the TPDTC **partially** depends on .NET Framework, then multi-target the TPDTC to `net45;netcoreapp2.0` and use `#if NETCOREAPP3_1`
    
    * If the TPDTC **doesn't** depend on .NET Framework, then target the TPDTC to `netstandard2.0`
    

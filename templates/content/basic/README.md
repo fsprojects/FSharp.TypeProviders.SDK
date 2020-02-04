@@ -5,8 +5,8 @@ Paket is used to acquire the type provider SDK and build the nuget package (you 
 
 Building:
 
-    .paket\paket.exe update
-
+    dotnet tool restore
+    dotnet paket update
     dotnet build -c release
 
-    .paket\paket.exe pack src\MyProvider.Runtime\paket.template --version 0.0.1
+    dotnet paket pack nuget --version 0.0.1

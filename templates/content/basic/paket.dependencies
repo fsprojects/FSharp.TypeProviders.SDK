@@ -1,6 +1,7 @@
+storage: packages
 source https://nuget.org/api/v2
 
-frameworks: net45, netcoreapp2.0, netstandard2.0
+frameworks: net45, netcoreapp3.1, netstandard2.0
 
 # Add the nuget packages you use here
 nuget FSharp.Core 4.3.4
@@ -14,9 +15,9 @@ github fsprojects/FSharp.TypeProviders.SDK src/ProvidedTypes.fs
 
 group Test
   source https://nuget.org/api/v2
-  frameworks: net461, netcoreapp2.0
+  frameworks: net461, netcoreapp3.1
 
-  nuget NUnit 3.6.1
-  nuget NUnit.Console 3.6.1
-  nuget NUnit3TestAdapter 3.7.0 version_in_path: true
-  nuget FSharp.Core 4.3.4
+  nuget NUnit
+  nuget NUnit.Console
+  nuget NUnit3TestAdapter version_in_path: true
+  nuget FSharp.Core

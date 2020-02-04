@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\netfx.props" />
   <PropertyGroup>
-     <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
+     <TargetFrameworks>netcoreapp3.1;net461</TargetFrameworks>
      <IsPackable>false</IsPackable>
     <DefineConstants>$(DefineConstants);INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS</DefineConstants>
   </PropertyGroup>
@@ -23,9 +23,9 @@
     <Compile Include="AssemblyReaderTests.fs" />
     <Compile Include="GeneratedOpTests.fs" />
     <Compile Include="GenerativeEnumsProvisionTests.fs" />
-    <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp2.0' " />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170517-02" />
-    <PackageReference Include="xunit" Version="2.2.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
+    <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp3.1' " />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+    <PackageReference Include="xunit" Version="2.4.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1" />
   </ItemGroup>
 </Project>
