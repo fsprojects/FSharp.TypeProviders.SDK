@@ -7,7 +7,7 @@
         <authors>https://github.com/fsprojects/FSharp.TypeProviders.SDK contributors</authors>
         <description>Templates for building F# Type Providers.</description>
         <projectUrl>https://github.com/fsprojects/FSharp.TypeProviders.SDK/</projectUrl>
-        <copyright>Copyright 2018</copyright>
+        <copyright>Copyright 2020</copyright>
         <packageTypes>
             <packageType name="Template" />
         </packageTypes>

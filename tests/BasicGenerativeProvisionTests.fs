@@ -205,11 +205,11 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             printfn "----- %s ------- " text 
             printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" text res
-            for (desc2) in possibleVersions do 
+            for desc2 in possibleVersions do 
                 let contains = res.Contains("FSharp.Core, Version="+desc2)
                 if contains = (desc = desc2) then ()
-                elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+" in output for "+ text)
-                else failwith ("failed to find reference to FSharp.Core, Version="+desc2+" in output for "+ text )
+                elif contains then failwith ("FAILED: unexpected reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
+                else failwith ("FAILED: failed to find reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
                 
 [<Fact>]
 let ``GenerativePropertyProviderWithStaticParams attributes are read correctly``() : unit  = 
@@ -335,15 +335,16 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correc
             // re-read the assembly with the more complete reader to allow us to look at generated references
             let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
             let res = [| for r in assem.GetReferencedAssemblies() -> r.ToString() |] |> String.concat ","
+            printfn "----- %s ------- " text 
             printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" text res
             for desc2 in possibleVersions do 
                 let contains = res.Contains("FSharp.Core, Version="+desc2)
                 if contains = (desc = desc2) then ()
-                elif contains then failwith ("unexpected reference to FSharp.Core, Version="+desc+" in output for "+text)
-                else failwith ("failed to find reference to FSharp.Core, Version="+desc2+" in output for " + text)
+                elif contains then failwith ("FAILED: unexpected reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
+                else failwith ("FAILED: failed to find reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
 
-#if !NETSTANDARD && !NETCOREAPP2_0
+#if !NETSTANDARD && !NETCOREAPP3_1
 [<Fact>]
 let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for hosted execution correctly``() : unit  = 
     for (desc, supports, refs) in hostedTestCases() do
