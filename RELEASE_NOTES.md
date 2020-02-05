@@ -1,4 +1,7 @@
-#### 5.0.0
+#### 6.0.0 - December 24, 2019
+* Template migrated to .NET Core 3.1 
+
+#### 5.0.0 - September 17, 2018
 * Addition of template pack
 * Many bug fixes
 

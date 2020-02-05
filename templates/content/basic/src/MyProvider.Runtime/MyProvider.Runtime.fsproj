@@ -28,15 +28,15 @@
   </ItemGroup>
   <Target Name="BeforeBuild">
     <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Restore" />
-    <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=netcoreapp2.0" />
+    <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=netcoreapp3.1" />
     <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0" />
     <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=net45" />
   </Target>
   <Target Name="AfterBuild">
-    <CreateItem Include="..\MyProvider.DesignTime\bin\$(Configuration)\netcoreapp2.0\*.dll;..\MyProvider.DesignTime\bin\$(Configuration)\netcoreapp2.0\*.pdb">
+    <CreateItem Include="..\MyProvider.DesignTime\bin\$(Configuration)\netcoreapp3.1\*.dll;..\MyProvider.DesignTime\bin\$(Configuration)\netcoreapp3.1\*.pdb">
       <Output TaskParameter="Include" ItemName="DesignTimeBinaries1" />
     </CreateItem>
-    <Copy SourceFiles="@(DesignTimeBinaries1)" DestinationFolder="$(OutputPath)/../typeproviders/fsharp41/netcoreapp2.0" />
+    <Copy SourceFiles="@(DesignTimeBinaries1)" DestinationFolder="$(OutputPath)/../typeproviders/fsharp41/netcoreapp3.1" />
     <CreateItem Include="..\MyProvider.DesignTime\bin\$(Configuration)\net45\*.dll;..\MyProvider.DesignTime\bin\$(Configuration)\net45\*.pdb">
       <Output TaskParameter="Include" ItemName="DesignTimeBinaries2" />
     </CreateItem>
