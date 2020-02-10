@@ -158,7 +158,10 @@ namespace ProviderImplementation.ProvidedTypes
         type Attributes = 
             static member CreateEmpty (typ : Type) =
                 let gtype = typedefof<Attributes<_>>.MakeGenericType([| typ |])
-                let gmethod = gtype.GetMethod("Empty", BindingFlags.Static ||| BindingFlags.NonPublic )
+                // the Empty member is private due to the presence of the fsi file
+                // but when getting rid of the fsi for diagnostic purpose, it becomes public
+                // this is the reason for having both Public and NonPublic flag bellow
+                let gmethod = gtype.GetMethod("Empty", BindingFlags.Static ||| BindingFlags.Public ||| BindingFlags.NonPublic)
                 gmethod.Invoke(null, [||]) :?> obj array
 
         let nonNull str x = if isNull x then failwithf "Null in '%s', stacktrace = '%s'" str Environment.StackTrace else x
@@ -210,8 +213,8 @@ namespace ProviderImplementation.ProvidedTypes
                 else
                     m
 
-            member p.IsStatic = p.CanRead && p.GetGetMethod().IsStatic || p.CanWrite && p.GetSetMethod().IsStatic
-            member p.IsPublic = p.CanRead && p.GetGetMethod().IsPublic || p.CanWrite && p.GetSetMethod().IsPublic
+            member p.IsStatic = p.CanRead && p.GetGetMethod(true).IsStatic || p.CanWrite && p.GetSetMethod(true).IsStatic
+            member p.IsPublic = p.CanRead && p.GetGetMethod(true).IsPublic || p.CanWrite && p.GetSetMethod(true).IsPublic
 
         type EventInfo  with
             member m.GetDefinition() = 
@@ -982,7 +985,7 @@ namespace ProviderImplementation.ProvidedTypes
         let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
         new (parameters, invokeCode) =
-            ProvidedConstructor(false, MethodAttributes.Public ||| MethodAttributes.RTSpecialName, Array.ofList parameters, invokeCode, None, false, K [| |])
+            ProvidedConstructor(false, MethodAttributes.Public ||| MethodAttributes.RTSpecialName ||| MethodAttributes.HideBySig, Array.ofList parameters, invokeCode, None, false, K [| |])
 
         member __.IsTypeInitializer
             with get() = isStatic() && hasFlag attrs MethodAttributes.Private
@@ -1075,26 +1078,19 @@ namespace ProviderImplementation.ProvidedTypes
                 this
 
         member __.Parameters = parameters
-        member __.DeclaringProvidedType = declaringType
-        member this.GetInvokeCode = 
-            match this.DeclaringProvidedType with
-            | Some dt when dt.IsInterface -> None
-            | _ when this.IsAbstract -> None 
-            | _ -> invokeCode
+        member __.GetInvokeCode = invokeCode
         member __.StaticParams = staticParams
         member __.StaticParamsApply = staticParamsApply
         member __.BelongsToTargetModel = isTgt
+        member __.DeclaringProvidedType = declaringType
         member this.IsErased = (nonNone "DeclaringType" this.DeclaringProvidedType).IsErased
 
        // Implement overloads
         override __.GetParameters() = parameterInfos 
 
         override this.Attributes = 
-            match this.DeclaringProvidedType with
-            | Some pt when 
-                pt.IsInterface 
-                || (attrs &&& MethodAttributes.Abstract <> enum 0)
-                || Option.isNone invokeCode  -> 
+            match invokeCode, this.DeclaringProvidedType with
+            | None, Some pt when pt.IsInterface || pt.IsAbstract -> 
                     attrs ||| MethodAttributes.Abstract ||| MethodAttributes.Virtual ||| MethodAttributes.HideBySig ||| MethodAttributes.NewSlot
             | _ -> attrs
 
@@ -2139,12 +2135,44 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             b.ToString()
         override x.ToString() = x.QualifiedName
 
+        override __.GetHashCode() =
+            
+            name.GetHashCode() +
+            137 * (hash.GetHashCode() +
+                137 * (publicKey.GetHashCode() +
+                    137 * ( retargetable.GetHashCode() +
+                        137 * ( version.GetHashCode() +
+                                137 * locale.GetHashCode()))))
+
+            override __.Equals(obj: obj) =
+                match obj with
+                | :? ILAssemblyRef as y ->
+                    name = y.Name
+                    && hash = y.Hash 
+                    && publicKey = y.PublicKey 
+                    && retargetable = y.Retargetable
+                    && version = y.Version
+                    && locale = y.Locale
+                | _ -> false
 
     type ILModuleRef(name:string, hasMetadata: bool, hash: byte[] uoption) =
         member __.Name=name
         member __.HasMetadata=hasMetadata
         member __.Hash=hash
         override __.ToString() = "module " + name
+
+        override __.GetHashCode() =
+            name.GetHashCode()
+            + 137 * (hasMetadata.GetHashCode()
+                + 137 * hash.GetHashCode())
+
+        override __.Equals(obj: obj) =
+            match obj with
+            | :? ILModuleRef as y ->
+                name = y.Name
+                && hasMetadata = y.HasMetadata
+                && hash = y.Hash
+            | _ -> false
 
 
     [<RequireQualifiedAccess>]
@@ -2235,6 +2263,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
     // IL type references have a pre-computed hash code to enable quick lookup tables during binary generation.
     and ILTypeRef(enc: ILTypeRefScope, nsp: string uoption, name: string) =
+        let hashCode = hash enc + 137 *( 137 *(hash name) + hash nsp)
 
         member __.Scope = enc
         member __.Name = name
@@ -2256,8 +2285,20 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
 
         override x.ToString() = x.FullName
 
+        override __.GetHashCode() = hashCode
+
+        override __.Equals(obj: obj) =
+            match obj with
+            | :? ILTypeRef as y ->
+                enc = y.Scope
+                && name = y.Name
+                && nsp = y.Namespace
+            | _ -> false
+
 
     and ILTypeSpec(typeRef: ILTypeRef, inst: ILGenericArgs) =
+        let hashCode = hash typeRef + 137 * (hash inst)
+
         member __.TypeRef = typeRef
         member x.Scope = x.TypeRef.Scope
         member x.Name = x.TypeRef.Name
@@ -2276,6 +2317,14 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
         member x.FullName = x.TypeRef.FullName
 
         override x.ToString() = x.TypeRef.ToString() + (if x.GenericArgs.Length = 0 then "" else "<...>")
+
+        override __.GetHashCode() = hashCode
+        override __.Equals(obj: obj) =
+            match obj with
+            | :? ILTypeSpec as y ->
+                typeRef = y.TypeRef
+                && inst = y.GenericArgs
+            | _ -> false  
 
     and [<RequireQualifiedAccess>]
         ILType =
@@ -7123,8 +7172,8 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetGetMethod(nonPublic) = inp.GetGetMethod(nonPublic) |> Option.ofObj |> Option.map (MethodSymbol.Make declTy) |> Option.toObj
         override __.GetSetMethod(nonPublic) = inp.GetSetMethod(nonPublic) |> Option.ofObj |> Option.map (MethodSymbol.Make declTy) |> Option.toObj
         override __.GetIndexParameters() = inp.GetIndexParameters() |> Array.map (instParameterInfo gps)
-        override __.CanRead = inp.GetGetMethod(false) |> isNull |> not
-        override __.CanWrite = inp.GetSetMethod(false) |> isNull |> not
+        override __.CanRead = inp.GetGetMethod(true) |> isNull |> not
+        override __.CanWrite = inp.GetSetMethod(true) |> isNull |> not
         override __.GetCustomAttributesData() = inp.GetCustomAttributesData()
         override __.MetadataToken = inp.MetadataToken
 
@@ -7372,7 +7421,7 @@ namespace ProviderImplementation.ProvidedTypes
             | _ -> notRequired this "GetNestedTypes" this.Name
 
         override this.GetConstructorImpl(bindingFlags, _binderBinder, _callConvention, types, _modifiers) =
-            let ctors = this.GetConstructors(bindingFlags) |> Array.filter (fun c -> match types with null -> true | t -> c.GetParameters().Length = t.Length)
+            let ctors = this.GetConstructors(bindingFlags) |> Array.filter (fun c -> match types with null -> true | t -> let ps = c.GetParameters() in ps.Length = t.Length && (ps, t) ||> Seq.forall2 (fun p ty -> p.ParameterType = ty ) )
             match ctors with
             | [| |] -> null
             | [| ci |] -> ci
@@ -8366,14 +8415,14 @@ namespace ProviderImplementation.ProvidedTypes
             // Eliminate F# property gets to method calls
             | PropertyGet(obj, propInfo, args) ->
                 match obj with
-                | None -> simplifyExpr (Expr.CallUnchecked(propInfo.GetGetMethod(), args))
-                | Some o -> simplifyExpr (Expr.CallUnchecked(simplifyExpr o, propInfo.GetGetMethod(), args))
+                | None -> simplifyExpr (Expr.CallUnchecked(propInfo.GetGetMethod(true), args))
+                | Some o -> simplifyExpr (Expr.CallUnchecked(simplifyExpr o, propInfo.GetGetMethod(true), args))
 
             // Eliminate F# property sets to method calls
             | PropertySet(obj, propInfo, args, v) ->
                     match obj with
-                    | None -> simplifyExpr (Expr.CallUnchecked(propInfo.GetSetMethod(), args@[v]))
-                    | Some o -> simplifyExpr (Expr.CallUnchecked(simplifyExpr o, propInfo.GetSetMethod(), args@[v]))
+                    | None -> simplifyExpr (Expr.CallUnchecked(propInfo.GetSetMethod(true), args@[v]))
+                    | Some o -> simplifyExpr (Expr.CallUnchecked(simplifyExpr o, propInfo.GetSetMethod(true), args@[v]))
 
             // Eliminate F# function applications to FSharpFunc<_, _>.Invoke calls
             | Application(f, e) ->
@@ -8973,7 +9022,10 @@ namespace ProviderImplementation.ProvidedTypes
             Debug.Assert((match cons with :? ProvidedConstructor as x -> not x.BelongsToTargetModel | _ -> true), "unexpected target ProvidedConstructor")
             let declTyT = convTypeToTgt cons.DeclaringType
             let parameterTypesT = cons.GetParameters() |> Array.map (fun p -> convTypeToTgt p.ParameterType)
-            let consT = declTyT.GetConstructor(parameterTypesT)
+            let flags = 
+                (if cons.IsStatic then BindingFlags.Static else BindingFlags.Instance) 
+                ||| (if cons.IsPublic then BindingFlags.Public else BindingFlags.NonPublic )
+            let consT = declTyT.GetConstructor(flags, null,parameterTypesT, null )
             match consT with
             | null -> Choice1Of2 (sprintf "Constructor '%O' not found in type '%O'. This constructor may be missing in the types available in the target assemblies." cons declTyT)
             | _ -> 
