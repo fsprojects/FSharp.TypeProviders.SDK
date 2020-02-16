@@ -14092,7 +14092,21 @@ namespace ProviderImplementation.ProvidedTypes
         let isAddress s = (s = ExpectedStackState.Address)
         let rec emitLambda(callSiteIlg: ILGenerator, v: Var, body: Expr, freeVars: seq<Var>, lambdaLocals: Dictionary<_, ILLocalBuilder>, parameters) =
             let lambda: ILTypeBuilder = assemblyMainModule.DefineType(UNone, genUniqueTypeName(), TypeAttributes.Class)
-            let baseType = convTypeToTgt (typedefof<FSharpFunc<_, _>>.MakeGenericType(v.Type, body.Type))
+
+            let fsharpFuncType = convTypeToTgt (typedefof<FSharpFunc<_, _>>)
+            let voidType = convTypeToTgt typeof<System.Void>
+            let rec lambdaType (t : Type) = 
+                if t.IsGenericType then 
+                    let args = t.GetGenericArguments()
+                    let gdef = t.GetGenericTypeDefinition()
+                    if args.Length = 2 && gdef.FullName = fsharpFuncType.FullName && args.[1] = voidType then 
+                        gdef.MakeGenericType(lambdaType args.[0], typeof<unit>)
+                    else
+                        gdef.MakeGenericType(args |> Array.map lambdaType)
+                else
+                    t
+
+            let baseType = convTypeToTgt (lambdaType (typedefof<FSharpFunc<_, _>>.MakeGenericType(v.Type, body.Type)))
             lambda.SetParent(transType baseType)
             let baseCtor = baseType.GetConstructor(bindAll, null, [| |], null)
             if isNull baseCtor then failwithf "Couldn't find default constructor on %O" baseType
@@ -14122,10 +14136,13 @@ namespace ProviderImplementation.ProvidedTypes
                 ilg.Emit(I_stloc l.LocalIndex)
                 lambdaLocals.[v] <- l
 
-            let expectedState = if (retType = ILType.Void) then ExpectedStackState.Empty else ExpectedStackState.Value
+            let unitType = transType (convTypeToTgt (typeof<unit>))
+            let expectedState = if (retType = ILType.Void || retType.QualifiedName = unitType.QualifiedName) then ExpectedStackState.Empty else ExpectedStackState.Value
             let lambadParamVars = [| Var("this", typeof<obj>); v|]
             let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, lambdaLocals, lambadParamVars)
             codeGen.EmitExpr (expectedState, body)
+            if retType.QualifiedName = unitType.QualifiedName then 
+                ilg.Emit(I_ldnull)
             ilg.Emit(I_ret)
 
             callSiteIlg.Emit(I_newobj (ctor.FormalMethodSpec, None))

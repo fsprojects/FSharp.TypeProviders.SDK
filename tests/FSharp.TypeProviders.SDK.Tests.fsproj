@@ -22,6 +22,7 @@
     <Compile Include="BasicErasedProvisionTests.fs" />
     <Compile Include="BasicGenerativeProvisionTests.fs" />
     <Compile Include="AssemblyReaderTests.fs" />
+    <Compile Include="GeneratedCodeTests.fs" />
     <Compile Include="GeneratedOpTests.fs" />
     <Compile Include="GenerativeEnumsProvisionTests.fs" />
     <Compile Include="GenerativeInterfacesTests.fs" />
