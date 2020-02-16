@@ -1089,4 +1089,65 @@ let ``min execute correctly``() =
                     (mn,a)
                 )
         ]
+
+
+[<Fact>]
+let ``bitwise and execute correctly``() =
+    testProvidedAssembly 
+        [
+        
+            checkExpr <@ 123441 &&& 4125211 @>
+            checkExpr <@ 123441L &&& 4125211L @>
+            checkExpr <@ 1234s &&& 4125s @>
+            checkExpr <@ 12y &&& 41y @>
+            checkExpr <@ 123441u &&& 4125211u @>
+            checkExpr <@ 123441UL &&& 4125211UL @>
+            checkExpr <@ 1234us &&& 4125us @>
+            checkExpr <@ 12uy &&& 41uy @>
+        ]
+        
+[<Fact>]
+let ``bitwise or execute correctly``() =
+    testProvidedAssembly 
+        [
+        
+            checkExpr <@ 123441 ||| 4125211 @>
+            checkExpr <@ 123441L ||| 4125211L @>
+            checkExpr <@ 1234s ||| 4125s @>
+            checkExpr <@ 12y ||| 41y @>
+            checkExpr <@ 123441u ||| 4125211u @>
+            checkExpr <@ 123441UL ||| 4125211UL @>
+            checkExpr <@ 1234us ||| 4125us @>
+            checkExpr <@ 12uy ||| 41uy @>
+        ]
+
+[<Fact>]
+let ``bitwise xor execute correctly``() =
+   testProvidedAssembly 
+       [
+       
+           checkExpr <@ 123441 ^^^ 4125211 @>
+           checkExpr <@ 123441L ^^^ 4125211L @>
+           checkExpr <@ 1234s ^^^ 4125s @>
+           checkExpr <@ 12y ^^^ 41y @>
+           checkExpr <@ 123441u ^^^ 4125211u @>
+           checkExpr <@ 123441UL ^^^ 4125211UL @>
+           checkExpr <@ 1234us ^^^ 4125us @>
+           checkExpr <@ 12uy ^^^ 41uy @>
+       ]
+
+[<Fact>]
+let ``bitwise not execute correctly``() =
+   testProvidedAssembly 
+       [
+       
+           checkExpr <@ ~~~123441 @>
+           checkExpr <@ ~~~123441L @>
+           checkExpr <@ ~~~1234s @>
+           checkExpr <@ ~~~12y @>
+           checkExpr <@ ~~~123441u @>
+           checkExpr <@ ~~~123441UL @>
+           checkExpr <@ ~~~1234us @>
+           checkExpr <@ ~~~12uy @>
+       ]
 #endif
