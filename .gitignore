@@ -19,4 +19,5 @@ ProvidedTypes.exe
 .vs/
 .paket/
 test
-packages
+packages/
+paket-files/
