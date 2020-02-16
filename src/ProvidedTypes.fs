@@ -123,19 +123,35 @@ namespace ProviderImplementation.ProvidedTypes
             (isType || hasFlag bindingFlags (if isStatic then BindingFlags.Static else BindingFlags.Instance)) &&
             ((hasFlag bindingFlags BindingFlags.Public && isPublic) || (hasFlag bindingFlags BindingFlags.NonPublic && not isPublic))
 
-        let rec instType inst (ty:Type) =
+        [<Interface>]
+        type ITypeBuilder =
+            abstract MakeGenericType: Type * Type[] -> Type
+            abstract MakeArrayType: Type -> Type
+            abstract MakeRankedArrayType: Type*int -> Type
+            abstract MakeByRefType: Type -> Type
+            abstract MakePointerType: Type -> Type
+
+        let defaultTypeBuilder =
+            { new ITypeBuilder with
+                member __.MakeGenericType(typeDef, args) = typeDef.MakeGenericType(args)
+                member __.MakeArrayType(typ) = typ.MakeArrayType()
+                member __.MakeRankedArrayType(typ, rank) = typ.MakeArrayType(rank)
+                member __.MakeByRefType(typ) = typ.MakeByRefType()
+                member __.MakePointerType(typ) = typ.MakePointerType() }
+
+        let rec instType (typeBuilder: ITypeBuilder) inst (ty:Type) =
             if isNull ty then null
             elif ty.IsGenericType then
-                let typeArgs = Array.map (instType inst) (ty.GetGenericArguments())
-                ty.GetGenericTypeDefinition().MakeGenericType(typeArgs)
+                let typeArgs = Array.map (instType typeBuilder inst) (ty.GetGenericArguments())
+                typeBuilder.MakeGenericType(ty.GetGenericTypeDefinition(), typeArgs)
             elif ty.HasElementType then
-                let ety = instType inst (ty.GetElementType())
+                let ety : Type = instType typeBuilder inst (ty.GetElementType())
                 if ty.IsArray then
                     let rank = ty.GetArrayRank()
-                    if rank = 1 then ety.MakeArrayType()
-                    else ety.MakeArrayType(rank)
-                elif ty.IsPointer then ety.MakePointerType()
-                elif ty.IsByRef then ety.MakeByRefType()
+                    if rank = 1 then typeBuilder.MakeArrayType(ety)
+                    else typeBuilder.MakeRankedArrayType(ety,rank)
+                elif ty.IsPointer then typeBuilder.MakePointerType(ety)
+                elif ty.IsByRef then typeBuilder.MakeByRefType(ety)
                 else ty
             elif ty.IsGenericParameter then
                 let pos = ty.GenericParameterPosition
@@ -562,7 +578,7 @@ namespace ProviderImplementation.ProvidedTypes
     /// Represents an array or other symbolic type involving a provided type as the argument.
     /// See the type provider spec for the methods that must be implemented.
     /// Note that the type provider specification does not require us to implement pointer-equality for provided types.
-    type ProvidedTypeSymbol(kind: ProvidedTypeSymbolKind, typeArgs: Type list) as this =
+    type ProvidedTypeSymbol(kind: ProvidedTypeSymbolKind, typeArgs: Type list, typeBuilder: ITypeBuilder) as this =
         inherit TypeDelegator()
         let typeArgs = Array.ofList typeArgs
 
@@ -608,7 +624,7 @@ namespace ProviderImplementation.ProvidedTypes
             | ProvidedTypeSymbolKind.ByRef -> typeof<ValueType>
             | ProvidedTypeSymbolKind.Generic gty  ->
                 if isNull gty.BaseType then null else
-                instType (typeArgs, [| |]) gty.BaseType
+                instType typeBuilder (typeArgs, [| |]) gty.BaseType
             | ProvidedTypeSymbolKind.FSharpTypeAbbreviation _ -> typeof<obj>
 
         override __.GetArrayRank() = (match kind with ProvidedTypeSymbolKind.Array n -> n | ProvidedTypeSymbolKind.SDArray -> 1 | _ -> failwithf "non-array type '%O'" this)
@@ -738,9 +754,9 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.IsDefined(_attributeType, _inherit) = false
 
-        override this.MakeArrayType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.SDArray, [this]) :> Type
+        override this.MakeArrayType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.SDArray, [this], typeBuilder) :> Type
 
-        override this.MakeArrayType arg = ProvidedTypeSymbol(ProvidedTypeSymbolKind.Array arg, [this]) :> Type
+        override this.MakeArrayType arg = ProvidedTypeSymbol(ProvidedTypeSymbolKind.Array arg, [this], typeBuilder) :> Type
 
 #if NETCOREAPP
         // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
@@ -763,13 +779,13 @@ namespace ProviderImplementation.ProvidedTypes
 
         override this.ToString() = this.FullName
 
-    type ProvidedSymbolMethod(genericMethodDefinition: MethodInfo, parameters: Type[]) =
+    type ProvidedSymbolMethod(genericMethodDefinition: MethodInfo, parameters: Type[], typeBuilder: ITypeBuilder) =
         inherit MethodInfo()
 
         let convParam (p:ParameterInfo) =
             { new ParameterInfo() with
                   override __.Name = p.Name
-                  override __.ParameterType = instType (parameters, [| |]) p.ParameterType
+                  override __.ParameterType = instType typeBuilder (parameters, [| |]) p.ParameterType
                   override __.Attributes = p.Attributes
                   override __.RawDefaultValue = p.RawDefaultValue
                   override __.GetCustomAttributesData() = p.GetCustomAttributesData()
@@ -783,7 +799,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetGenericMethodDefinition() = genericMethodDefinition
 
-        override __.DeclaringType = instType (parameters, [| |]) genericMethodDefinition.DeclaringType
+        override __.DeclaringType = instType typeBuilder (parameters, [| |]) genericMethodDefinition.DeclaringType
         override __.ToString() = "Method " + genericMethodDefinition.Name
         override __.Name = genericMethodDefinition.Name
         override __.MetadataToken = genericMethodDefinition.MetadataToken
@@ -792,7 +808,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MemberType = genericMethodDefinition.MemberType
 
         override this.IsDefined(_attributeType, _inherit): bool = notRequired this "IsDefined" genericMethodDefinition.Name
-        override __.ReturnType = instType (parameters, [| |]) genericMethodDefinition.ReturnType
+        override __.ReturnType = instType typeBuilder (parameters, [| |]) genericMethodDefinition.ReturnType
         override __.GetParameters() = genericMethodDefinition.GetParameters() |> Array.map convParam
         override __.ReturnParameter = genericMethodDefinition.ReturnParameter |> convParam
         override this.ReturnTypeCustomAttributes = notRequired this "ReturnTypeCustomAttributes" genericMethodDefinition.Name
@@ -1325,11 +1341,11 @@ namespace ProviderImplementation.ProvidedTypes
                     None
             match abbreviation with
             | Some (ns, unitName) ->
-                ProvidedTypeSymbol(ProvidedTypeSymbolKind.FSharpTypeAbbreviation(typeof<Core.CompilerServices.MeasureOne>.Assembly, ns, [| unitName |]), []) :> Type
+                ProvidedTypeSymbol(ProvidedTypeSymbolKind.FSharpTypeAbbreviation(typeof<Core.CompilerServices.MeasureOne>.Assembly, ns, [| unitName |]), [], defaultTypeBuilder) :> Type
             | None ->
                 typedefof<list<int>>.Assembly.GetType("Microsoft.FSharp.Data.UnitSystems.SI.UnitNames." + mLowerCase)
 
-        static member AnnotateType (basic, argument) = ProvidedTypeSymbol(Generic basic, argument) :> Type
+        static member AnnotateType (basic, argument) = ProvidedTypeSymbol(Generic basic, argument, defaultTypeBuilder) :> Type
 
     and 
       [<RequireQualifiedAccess; NoComparison>] 
@@ -1341,7 +1357,7 @@ namespace ProviderImplementation.ProvidedTypes
     /// backingDataSource is a set of functions to fetch backing data for the ProvidedTypeDefinition, 
     /// and allows us to reuse this type for both target and source models, even when the
     /// source model is being incrementally updates by further .AddMember calls
-    and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, getBaseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, backingDataSource, customAttributesData, nonNullable, hideObjectMethods) as this =
+    and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, getBaseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, backingDataSource, customAttributesData, nonNullable, hideObjectMethods, typeBuilder: ITypeBuilder) as this =
         inherit TypeDelegator()
 
         do match container, !ProvidedTypeDefinition.Logger with
@@ -1486,7 +1502,7 @@ namespace ProviderImplementation.ProvidedTypes
             let hideObjectMethods = defaultArg hideObjectMethods false
             let attrs = defaultAttributes (isErased, isSealed, isInterface, isAbstract)
             //if not isErased && assembly.GetType().Name <> "ProvidedAssembly" then failwithf "a non-erased (i.e. generative) ProvidedTypeDefinition '%s.%s' was placed in an assembly '%s' that is not a ProvidedAssembly" namespaceName className (assembly.GetName().Name)
-            ProvidedTypeDefinition(false, TypeContainer.Namespace (K assembly, namespaceName), className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
+            ProvidedTypeDefinition(false, TypeContainer.Namespace (K assembly, namespaceName), className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods, defaultTypeBuilder)
 
         new (className:string, baseType, ?hideObjectMethods, ?nonNullable, ?isErased, ?isSealed, ?isInterface, ?isAbstract) = 
             let isErased = defaultArg isErased true
@@ -1496,7 +1512,7 @@ namespace ProviderImplementation.ProvidedTypes
             let nonNullable = defaultArg nonNullable false
             let hideObjectMethods = defaultArg hideObjectMethods false
             let attrs = defaultAttributes (isErased, isSealed, isInterface, isAbstract)
-            ProvidedTypeDefinition(false, TypeContainer.TypeToBeDecided, className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods)
+            ProvidedTypeDefinition(false, TypeContainer.TypeToBeDecided, className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods, defaultTypeBuilder)
 
         // state ops
 
@@ -1615,13 +1631,13 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetInterfaces() = getInterfaces()  
 
 
-        override __.MakeArrayType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.SDArray, [this]) :> Type
+        override __.MakeArrayType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.SDArray, [this], typeBuilder) :> Type
 
-        override __.MakeArrayType arg = ProvidedTypeSymbol(ProvidedTypeSymbolKind.Array arg, [this]) :> Type
+        override __.MakeArrayType arg = ProvidedTypeSymbol(ProvidedTypeSymbolKind.Array arg, [this], typeBuilder) :> Type
 
-        override __.MakePointerType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.Pointer, [this]) :> Type
+        override __.MakePointerType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.Pointer, [this], typeBuilder) :> Type
 
-        override __.MakeByRefType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.ByRef, [this]) :> Type
+        override __.MakeByRefType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.ByRef, [this], typeBuilder) :> Type
 
         // The binding attributes are always set to DeclaredOnly ||| Static ||| Instance ||| Public when GetMembers is called directly by the F# compiler
         // However, it's possible for the framework to generate other sets of flags in some corner cases (e.g. via use of `enum` with a provided type as the target)
@@ -6955,10 +6971,10 @@ namespace ProviderImplementation.ProvidedTypes
             member __.ContainsKey inp = tab.ContainsKey inp
 
 
-        let instParameterInfo inst (inp: ParameterInfo) =
+        let instParameterInfo typeBuilder inst (inp: ParameterInfo) =
             { new ParameterInfo() with
                 override __.Name = inp.Name
-                override __.ParameterType = inp.ParameterType |> instType inst
+                override __.ParameterType = inp.ParameterType |> instType typeBuilder inst
                 override __.Attributes = inp.Attributes
                 override __.RawDefaultValue = inp.RawDefaultValue
                 override __.GetCustomAttributesData() = inp.GetCustomAttributesData()
@@ -7039,7 +7055,7 @@ namespace ProviderImplementation.ProvidedTypes
             lengthsEqAndForall2 ps1 ps2 (fun p1 p2 -> eqTypeAndILTypeWithInst inst2 p1.ParameterType p2.ParameterType)
 
 
-    type MethodSymbol2(gmd: MethodInfo, gargs: Type[]) =
+    type MethodSymbol2(gmd: MethodInfo, gargs: Type[], typeBuilder: ITypeBuilder) =
         inherit MethodInfo()
         let dty = gmd.DeclaringType
         let dinst = (if dty.IsGenericType then dty.GetGenericArguments() else [| |])
@@ -7049,16 +7065,16 @@ namespace ProviderImplementation.ProvidedTypes
         override __.DeclaringType = dty
         override __.MemberType = gmd.MemberType
 
-        override __.GetParameters() = gmd.GetParameters() |> Array.map (instParameterInfo (dinst, gargs))
+        override __.GetParameters() = gmd.GetParameters() |> Array.map (instParameterInfo typeBuilder (dinst, gargs))
         override __.CallingConvention = gmd.CallingConvention
-        override __.ReturnType = gmd.ReturnType |> instType (dinst, gargs)
+        override __.ReturnType = gmd.ReturnType |> instType typeBuilder (dinst, gargs)
         override __.GetGenericMethodDefinition() = gmd
         override __.IsGenericMethod = gmd.IsGenericMethod
         override __.GetGenericArguments() = gargs
         override __.MetadataToken = gmd.MetadataToken
 
         override __.GetCustomAttributesData() = gmd.GetCustomAttributesData()
-        override __.MakeGenericMethod(typeArgs) = MethodSymbol2(gmd, typeArgs) :> MethodInfo
+        override __.MakeGenericMethod(typeArgs) = MethodSymbol2(gmd, typeArgs, typeBuilder) :> MethodInfo
         override __.GetHashCode() = gmd.MetadataToken
         override this.Equals(that:obj) =
             match that with
@@ -7083,7 +7099,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 
      /// Represents a constructor in an instantiated type
-    type ConstructorSymbol (declTy: Type, inp: ConstructorInfo) =
+    type ConstructorSymbol (declTy: Type, inp: ConstructorInfo, typeBuilder: ITypeBuilder) =
         inherit ConstructorInfo() 
         let gps = ((if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]), [| |])
 
@@ -7092,7 +7108,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MemberType = MemberTypes.Constructor
         override __.DeclaringType = declTy
 
-        override __.GetParameters() = inp.GetParameters() |> Array.map (instParameterInfo gps)
+        override __.GetParameters() = inp.GetParameters() |> Array.map (instParameterInfo typeBuilder gps)
         override __.GetCustomAttributesData() = inp.GetCustomAttributesData()
         override __.MetadataToken = inp.MetadataToken
 
@@ -7112,10 +7128,10 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetCustomAttributes(attributeType, inherited) = inp.GetCustomAttributes(attributeType, inherited)
 
         override __.ToString() = sprintf "tgt constructor(...) in type %s" declTy.FullName 
-        static member Make (declTy: Type) md = ConstructorSymbol (declTy, md) :> ConstructorInfo
+        static member Make (typeBuilder: ITypeBuilder) (declTy: Type) md = ConstructorSymbol (declTy, md, typeBuilder) :> ConstructorInfo
 
      /// Represents a method in an instantiated type
-    type MethodSymbol (declTy: Type, inp: MethodInfo) =
+    type MethodSymbol (declTy: Type, inp: MethodInfo, typeBuilder: ITypeBuilder) =
         inherit MethodInfo() 
         let gps1 = (if declTy.IsGenericType then declTy.GetGenericArguments() else [| |])
         let gps2 = inp.GetGenericArguments()
@@ -7125,9 +7141,9 @@ namespace ProviderImplementation.ProvidedTypes
         override __.DeclaringType = declTy
         override __.MemberType = inp.MemberType
         override __.Attributes = inp.Attributes
-        override __.GetParameters() = inp.GetParameters() |> Array.map (instParameterInfo gps)
+        override __.GetParameters() = inp.GetParameters() |> Array.map (instParameterInfo typeBuilder gps)
         override __.CallingConvention = inp.CallingConvention
-        override __.ReturnType = inp.ReturnType |> instType gps
+        override __.ReturnType = inp.ReturnType |> instType typeBuilder gps
         override __.GetCustomAttributesData() = inp.GetCustomAttributesData()
         override __.GetGenericArguments() = gps2
         override __.IsGenericMethod = (gps2.Length <> 0)
@@ -7139,7 +7155,7 @@ namespace ProviderImplementation.ProvidedTypes
             | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes this.DeclaringType that.DeclaringType 
             | _ -> false
 
-        override this.MakeGenericMethod(args) = MethodSymbol2(this, args) :> MethodInfo
+        override this.MakeGenericMethod(args) = MethodSymbol2(this, args, typeBuilder) :> MethodInfo
 
         override __.MetadataToken = inp.MetadataToken
 
@@ -7156,10 +7172,10 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.ToString() = sprintf "tgt method %s(...) in type %s" inp.Name declTy.FullName  
 
-        static member Make (declTy: Type) md = MethodSymbol (declTy, md) :> MethodInfo
+        static member Make (typeBuilder: ITypeBuilder) (declTy: Type) md = MethodSymbol (declTy, md, typeBuilder) :> MethodInfo
 
      /// Represents a property in an instantiated type
-    type PropertySymbol (declTy: Type, inp: PropertyInfo) =
+    type PropertySymbol (declTy: Type, inp: PropertyInfo, typeBuilder: ITypeBuilder) =
         inherit PropertyInfo() 
         let gps = ((if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]), [| |])
 
@@ -7168,10 +7184,10 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MemberType = MemberTypes.Property
         override __.DeclaringType = declTy
 
-        override __.PropertyType = inp.PropertyType |> instType gps
-        override __.GetGetMethod(nonPublic) = inp.GetGetMethod(nonPublic) |> Option.ofObj |> Option.map (MethodSymbol.Make declTy) |> Option.toObj
-        override __.GetSetMethod(nonPublic) = inp.GetSetMethod(nonPublic) |> Option.ofObj |> Option.map (MethodSymbol.Make declTy) |> Option.toObj
-        override __.GetIndexParameters() = inp.GetIndexParameters() |> Array.map (instParameterInfo gps)
+        override __.PropertyType = inp.PropertyType |> instType typeBuilder gps
+        override __.GetGetMethod(nonPublic) = inp.GetGetMethod(nonPublic) |> Option.ofObj |> Option.map (MethodSymbol.Make typeBuilder declTy) |> Option.toObj
+        override __.GetSetMethod(nonPublic) = inp.GetSetMethod(nonPublic) |> Option.ofObj |> Option.map (MethodSymbol.Make typeBuilder declTy) |> Option.toObj
+        override __.GetIndexParameters() = inp.GetIndexParameters() |> Array.map (instParameterInfo typeBuilder gps)
         override __.CanRead = inp.GetGetMethod(true) |> isNull |> not
         override __.CanWrite = inp.GetSetMethod(true) |> isNull |> not
         override __.GetCustomAttributesData() = inp.GetCustomAttributesData()
@@ -7193,10 +7209,10 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.ToString() = sprintf "tgt property %s(...) in type %s" inp.Name declTy.Name 
 
-        static member Make (declTy: Type) md = PropertySymbol (declTy, md) :> PropertyInfo
+        static member Make (typeBuilder: ITypeBuilder) (declTy: Type) md = PropertySymbol (declTy, md, typeBuilder) :> PropertyInfo
 
      /// Represents an event in an instantiated type
-    type EventSymbol (declTy: Type, inp: EventInfo) =
+    type EventSymbol (declTy: Type, inp: EventInfo, typeBuilder: ITypeBuilder) =
         inherit EventInfo()
         let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
 
@@ -7205,9 +7221,9 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MemberType = MemberTypes.Event
         override __.DeclaringType = declTy
 
-        override __.EventHandlerType = inp.EventHandlerType |> instType (gps, [| |])
-        override __.GetAddMethod(nonPublic) = inp.GetAddMethod(nonPublic) |> Option.ofObj |> Option.map (MethodSymbol.Make declTy) |> Option.toObj
-        override __.GetRemoveMethod(nonPublic) = inp.GetRemoveMethod(nonPublic) |> Option.ofObj |> Option.map (MethodSymbol.Make declTy) |> Option.toObj
+        override __.EventHandlerType = inp.EventHandlerType |> instType typeBuilder (gps, [| |])
+        override __.GetAddMethod(nonPublic) = inp.GetAddMethod(nonPublic) |> Option.ofObj |> Option.map (MethodSymbol.Make typeBuilder declTy) |> Option.toObj
+        override __.GetRemoveMethod(nonPublic) = inp.GetRemoveMethod(nonPublic) |> Option.ofObj |> Option.map (MethodSymbol.Make typeBuilder declTy) |> Option.toObj
         override __.GetCustomAttributesData() = inp.GetCustomAttributesData()
         override __.MetadataToken = inp.MetadataToken
 
@@ -7225,10 +7241,10 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.ToString() = sprintf "tgt event %s(...) in type %s" inp.Name declTy.FullName 
 
-        static member Make (declTy: Type) md = EventSymbol (declTy, md) :> EventInfo
+        static member Make (typeBuilder: ITypeBuilder) (declTy: Type) md = EventSymbol (declTy, md, typeBuilder) :> EventInfo
 
      /// Represents a field in an instantiated type
-    type FieldSymbol (declTy: Type, inp: FieldInfo) =
+    type FieldSymbol (declTy: Type, inp: FieldInfo, typeBuilder: ITypeBuilder) =
         inherit FieldInfo() 
         let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
 
@@ -7237,7 +7253,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MemberType = MemberTypes.Field
         override __.DeclaringType = declTy
 
-        override __.FieldType = inp.FieldType |> instType (gps, [| |])
+        override __.FieldType = inp.FieldType |> instType typeBuilder (gps, [| |])
         override __.GetRawConstantValue() = inp.GetRawConstantValue()
         override __.GetCustomAttributesData() = inp.GetCustomAttributesData()
         override __.MetadataToken = inp.MetadataToken
@@ -7258,7 +7274,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.ToString() = sprintf "tgt literal field %s(...) in type %s" inp.Name declTy.FullName 
 
-        static member Make (declTy: Type) md = FieldSymbol (declTy, md) :> FieldInfo
+        static member Make (typeBuilder: ITypeBuilder) (declTy: Type) md = FieldSymbol (declTy, md, typeBuilder) :> FieldInfo
 
     /// Represents the type constructor in a provided symbol type.
     [<RequireQualifiedAccess>]
@@ -7274,7 +7290,7 @@ namespace ProviderImplementation.ProvidedTypes
     /// Represents an array or other symbolic type involving a provided type as the argument.
     /// See the type provider spec for the methods that must be implemented.
     /// Note that the type provider specification does not require us to implement pointer-equality for provided types.
-    and TypeSymbol(kind: TypeSymbolKind, typeArgs: Type[]) as this =
+    and TypeSymbol(kind: TypeSymbolKind, typeArgs: Type[], typeBuilder: ITypeBuilder) as this =
         inherit TypeDelegator()
         do this.typeImpl <- this
 
@@ -7301,7 +7317,7 @@ namespace ProviderImplementation.ProvidedTypes
             if this.IsArray then typeof<System.Array>
             elif this.IsPointer  then typeof<System.ValueType>
             elif this.IsByRef   then typeof<System.ValueType>
-            elif this.IsGenericType then instType (this.GetGenericArguments(), [| |])  (this.GetGenericTypeDefinition().BaseType)
+            elif this.IsGenericType then instType typeBuilder (this.GetGenericArguments(), [| |])  (this.GetGenericTypeDefinition().BaseType)
             else failwithf "unreachable, stack trace = %A" Environment.StackTrace
 
         override this.MetadataToken =
@@ -7362,7 +7378,7 @@ namespace ProviderImplementation.ProvidedTypes
                 |> Array.filter (canBindConstructor bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetConstructors(bindingFlags) 
-                |> Array.map (ConstructorSymbol.Make this) 
+                |> Array.map (ConstructorSymbol.Make typeBuilder this) 
             | _ -> notRequired this "GetConstructors" this.Name
 
         override this.GetMethods bindingFlags = 
@@ -7374,7 +7390,7 @@ namespace ProviderImplementation.ProvidedTypes
                 |> Array.filter (canBindMethod bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetMethods(bindingFlags) 
-                |> Array.map (MethodSymbol.Make this) 
+                |> Array.map (MethodSymbol.Make typeBuilder this) 
             | _ -> notRequired this "GetMethods" this.Name
 
         override this.GetFields bindingFlags = 
@@ -7385,7 +7401,7 @@ namespace ProviderImplementation.ProvidedTypes
                 |> Array.filter (canBindField bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetFields(bindingFlags) 
-                |> Array.map (FieldSymbol.Make this) 
+                |> Array.map (FieldSymbol.Make typeBuilder this) 
             | _ -> notRequired this "GetFields" this.Name
 
         override this.GetProperties bindingFlags = 
@@ -7396,7 +7412,7 @@ namespace ProviderImplementation.ProvidedTypes
                 |> Array.filter (canBindProperty bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetProperties(bindingFlags) 
-                |> Array.map (PropertySymbol.Make this) 
+                |> Array.map (PropertySymbol.Make typeBuilder this) 
             | _ -> notRequired this "GetProperties" this.Name
 
         override this.GetEvents bindingFlags = 
@@ -7407,7 +7423,7 @@ namespace ProviderImplementation.ProvidedTypes
                 |> Array.filter (canBindEvent bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetEvents(bindingFlags) 
-                |> Array.map (EventSymbol.Make this) 
+                |> Array.map (EventSymbol.Make typeBuilder this) 
             | _ -> notRequired this "GetEvents" this.Name
 
         override this.GetNestedTypes bindingFlags = 
@@ -7456,7 +7472,7 @@ namespace ProviderImplementation.ProvidedTypes
             | TypeSymbolKind.OtherGeneric gtd ->
                 gtd.GetFields(bindingFlags) 
                 |> Array.tryFind (fun md -> md.Name = name)
-                |> Option.map (FieldSymbol.Make this) 
+                |> Option.map (FieldSymbol.Make typeBuilder this) 
                 |> Option.toObj
 
             | _ -> notRequired this "GetField" this.Name
@@ -7471,7 +7487,7 @@ namespace ProviderImplementation.ProvidedTypes
             | TypeSymbolKind.OtherGeneric gtd ->
                 gtd.GetProperties(bindingFlags) 
                 |> Array.tryFind (fun md -> md.Name = name)
-                |> Option.map (PropertySymbol.Make this) 
+                |> Option.map (PropertySymbol.Make typeBuilder this) 
                 |> Option.toObj
 
             | _ -> notRequired this "GetPropertyImpl" this.Name
@@ -7486,7 +7502,7 @@ namespace ProviderImplementation.ProvidedTypes
             | TypeSymbolKind.OtherGeneric gtd ->
                 gtd.GetEvents(bindingFlags) 
                 |> Array.tryFind (fun md -> md.Name = name)
-                |> Option.map (EventSymbol.Make this) 
+                |> Option.map (EventSymbol.Make typeBuilder this) 
                 |> Option.toObj
             | _ -> notRequired this "GetEvent" this.Name
 
@@ -7522,17 +7538,17 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetMember(_name, _mt, _bindingFlags) = notRequired this "GetMember" this.Name
         override this.GUID = notRequired this "GUID" this.Name
         override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" this.Name
-        override this.MakeArrayType() = TypeSymbol(TypeSymbolKind.SDArray, [| this |]) :> Type
-        override this.MakeArrayType arg = TypeSymbol(TypeSymbolKind.Array arg, [| this |]) :> Type
-        override this.MakePointerType() = TypeSymbol(TypeSymbolKind.Pointer, [| this |]) :> Type
-        override this.MakeByRefType() = TypeSymbol(TypeSymbolKind.ByRef, [| this |]) :> Type
+        override this.MakeArrayType() = TypeSymbol(TypeSymbolKind.SDArray, [| this |], typeBuilder) :> Type
+        override this.MakeArrayType arg = TypeSymbol(TypeSymbolKind.Array arg, [| this |], typeBuilder) :> Type
+        override this.MakePointerType() = TypeSymbol(TypeSymbolKind.Pointer, [| this |], typeBuilder) :> Type
+        override this.MakeByRefType() = TypeSymbol(TypeSymbolKind.ByRef, [| this |], typeBuilder) :> Type
 
         override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
         override this.ToString() = this.FullName
 
 
         /// Convert an ILGenericParameterDef read from a binary to a System.Type.
-    and TargetGenericParam (asm, gpsf, pos, inp: ILGenericParameterDef, txILType, txCustomAttributesData) as this =
+    and TargetGenericParam (asm, gpsf, pos, inp: ILGenericParameterDef, txILType, txCustomAttributesData, typeBuilder: ITypeBuilder) as this =
         inherit TypeDelegator() 
         do this.typeImpl <- this
         override __.Name = inp.Name
@@ -7566,10 +7582,10 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetMembers(_bindingFlags) = notRequired this "GetMembers" this.Name
         override this.MakeGenericType(_args) = notRequired this "MakeGenericType" this.Name
 
-        override this.MakeArrayType() = TypeSymbol(TypeSymbolKind.SDArray, [| this |]) :> Type
-        override this.MakeArrayType arg = TypeSymbol(TypeSymbolKind.Array arg, [| this |]) :> Type
-        override this.MakePointerType() = TypeSymbol(TypeSymbolKind.Pointer, [| this |]) :> Type
-        override this.MakeByRefType() = TypeSymbol(TypeSymbolKind.ByRef, [| this |]) :> Type
+        override this.MakeArrayType() = TypeSymbol(TypeSymbolKind.SDArray, [| this |], typeBuilder) :> Type
+        override this.MakeArrayType arg = TypeSymbol(TypeSymbolKind.Array arg, [| this |], typeBuilder) :> Type
+        override this.MakePointerType() = TypeSymbol(TypeSymbolKind.Pointer, [| this |], typeBuilder) :> Type
+        override this.MakeByRefType() = TypeSymbol(TypeSymbolKind.ByRef, [| this |], typeBuilder) :> Type
 
         override __.GetAttributeFlagsImpl() = TypeAttributes.Public ||| TypeAttributes.Class ||| TypeAttributes.Sealed
 
@@ -7609,7 +7625,7 @@ namespace ProviderImplementation.ProvidedTypes
     /// Clones namespaces, type providers, types and members provided by tp, renaming namespace nsp1 into namespace nsp2.
 
     /// Makes a type definition read from a binary available as a System.Type. Not all methods are implemented.
-    and TargetTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly: ILAssemblyRef -> Choice<Assembly, exn>, asm: TargetAssembly, declTyOpt: Type option, inp: ILTypeDef) as this =
+    and TargetTypeDefinition(ilGlobals: ILGlobals, tryBindAssembly: ILAssemblyRef -> Choice<Assembly, exn>, asm: TargetAssembly, declTyOpt: Type option, inp: ILTypeDef, typeBuilder: ITypeBuilder) as this =
         inherit TypeDelegator()
 
         // Note: For F# type providers we never need to view the custom attributes
@@ -7706,7 +7722,7 @@ namespace ProviderImplementation.ProvidedTypes
                         returnTypeFix
 
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
-                override __.GetGenericArguments() = gps2
+                override __.GetGenericArguments() = gps2 
                 override __.IsGenericMethod = (gps2.Length <> 0)
                 override __.IsGenericMethodDefinition = __.IsGenericMethod
 
@@ -7717,7 +7733,7 @@ namespace ProviderImplementation.ProvidedTypes
                     | :? MethodInfo as that -> this.MetadataToken = that.MetadataToken && eqTypes this.DeclaringType that.DeclaringType 
                     | _ -> false
 
-                override this.MakeGenericMethod(args) = MethodSymbol2(this, args) :> MethodInfo
+                override this.MakeGenericMethod(args) = MethodSymbol2(this, args, typeBuilder) :> MethodInfo
 
                 override __.MetadataToken = inp.Token
 
@@ -7891,7 +7907,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         /// Convert an ILGenericParameterDef read from a binary to a System.Type.
         and txILGenericParam gpsf pos (inp: ILGenericParameterDef) =
-            TargetGenericParam (asm, gpsf, pos, inp, txILType, txCustomAttributesData) :> Type
+            TargetGenericParam (asm, gpsf, pos, inp, txILType, txCustomAttributesData, typeBuilder) :> Type
 
         let rec gps = inp.GenericParams |> Array.mapi (fun i gp -> txILGenericParam (fun () -> gps, [| |]) i gp)
 
@@ -7996,11 +8012,11 @@ namespace ProviderImplementation.ProvidedTypes
                for x in this.GetEvents(bindingFlags) do yield (x :> MemberInfo)
                for x in this.GetNestedTypes(bindingFlags) do yield (x :> MemberInfo) |]
 
-        override this.MakeGenericType(args) = TypeSymbol(TypeSymbolKind.TargetGeneric this, args) :> Type
-        override this.MakeArrayType() = TypeSymbol(TypeSymbolKind.SDArray, [| this |]) :> Type
-        override this.MakeArrayType arg = TypeSymbol(TypeSymbolKind.Array arg, [| this |]) :> Type
-        override this.MakePointerType() = TypeSymbol(TypeSymbolKind.Pointer, [| this |]) :> Type
-        override this.MakeByRefType() = TypeSymbol(TypeSymbolKind.ByRef, [| this |]) :> Type
+        override this.MakeGenericType(args) = TypeSymbol(TypeSymbolKind.TargetGeneric this, args, typeBuilder) :> Type
+        override this.MakeArrayType() = TypeSymbol(TypeSymbolKind.SDArray, [| this |], typeBuilder) :> Type
+        override this.MakeArrayType arg = TypeSymbol(TypeSymbolKind.Array arg, [| this |], typeBuilder) :> Type
+        override this.MakePointerType() = TypeSymbol(TypeSymbolKind.Pointer, [| this |], typeBuilder) :> Type
+        override this.MakeByRefType() = TypeSymbol(TypeSymbolKind.ByRef, [| this |], typeBuilder) :> Type
 
         override __.GetAttributeFlagsImpl() =
             let attr = TypeAttributes.Public ||| TypeAttributes.Class
@@ -8077,7 +8093,7 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MetadataToken = hash location
 
     /// Implements System.Reflection.Assembly backed by .NET metadata provided by an ILModuleReader
-    and TargetAssembly(ilGlobals, tryBindAssembly: ILAssemblyRef -> Choice<Assembly, exn>, reader: ILModuleReader option, location: string) as asm =
+    and TargetAssembly(ilGlobals, tryBindAssembly: ILAssemblyRef -> Choice<Assembly, exn>, reader: ILModuleReader option, location: string, typeBuilder: ITypeBuilder) as asm =
         inherit Assembly()
 
         // A table tracking how type definition objects are translated.
@@ -8114,7 +8130,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | USome "System", "Char" ->  typeof<char> 
                 *)
                 | _ -> 
-                TargetTypeDefinition(ilGlobals, tryBindAssembly, asm, declTyOpt, inp) :> System.Type)
+                TargetTypeDefinition(ilGlobals, tryBindAssembly, asm, declTyOpt, inp, typeBuilder) :> System.Type)
 
         let types = lazy [| for td in getReader().ILModuleDef.TypeDefs.Entries -> txILTypeDef None td  |]
 
@@ -8183,8 +8199,6 @@ namespace ProviderImplementation.ProvidedTypes
             | Some res -> res
 
         override x.ToString() = "tgt assembly " + x.FullName
-
-
 
     type ProvidedAssembly(isTgt: bool, assemblyName:AssemblyName, assemblyFileName: string, customAttributesData) =
       
@@ -8327,12 +8341,12 @@ namespace ProviderImplementation.ProvidedTypes
             match genericTypeDefinition with 
             | :? TargetTypeDefinition -> failwithf "unexpected target model in ProvidedTypeBuilder.MakeGenericType, stacktrace = %s " Environment.StackTrace
             | :? ProvidedTypeDefinition as ptd when ptd.BelongsToTargetModel -> failwithf "unexpected target model ptd in MakeGenericType, stacktrace = %s " Environment.StackTrace
-            | :? ProvidedTypeDefinition -> ProvidedTypeSymbol(ProvidedTypeSymbolKind.Generic genericTypeDefinition, genericArguments) :> Type
-            | _ -> TypeSymbol(TypeSymbolKind.OtherGeneric genericTypeDefinition, List.toArray genericArguments) :> Type
+            | :? ProvidedTypeDefinition -> ProvidedTypeSymbol(ProvidedTypeSymbolKind.Generic genericTypeDefinition, genericArguments, ProvidedTypeBuilder.typeBuilder) :> Type
+            | _ -> TypeSymbol(TypeSymbolKind.OtherGeneric genericTypeDefinition, List.toArray genericArguments, ProvidedTypeBuilder.typeBuilder) :> Type
 
         static member MakeGenericMethod(genericMethodDefinition, genericArguments: Type list) = 
             if genericArguments.Length = 0 then genericMethodDefinition else
-            MethodSymbol2(genericMethodDefinition, Array.ofList genericArguments) :> MethodInfo
+            MethodSymbol2(genericMethodDefinition, Array.ofList genericArguments, ProvidedTypeBuilder.typeBuilder) :> MethodInfo
 
         static member MakeTupleType(types) =
             let rec mkTupleType isStruct (asm:Assembly) (tys:Type list) =
@@ -8349,6 +8363,18 @@ namespace ProviderImplementation.ProvidedTypes
                 else
                     ProvidedTypeBuilder.MakeGenericType(ty, tys)
             mkTupleType false (typeof<System.Tuple>.Assembly) types
+
+        static member typeBuilder = 
+            { new ITypeBuilder with
+                member this.MakeGenericType(typeDef: Type, args)= 
+                    match typeDef with
+                    | :? ProvidedTypeDefinition -> ProvidedTypeSymbol(ProvidedTypeSymbolKind.Generic typeDef, Array.toList args, this) :> Type
+                    | _ -> TypeSymbol(TypeSymbolKind.OtherGeneric typeDef, args, this) :> Type
+                member this.MakeArrayType(typ) = TypeSymbol(TypeSymbolKind.SDArray, [| typ |], this) :> Type
+                member this.MakeRankedArrayType(typ,rank) = TypeSymbol(TypeSymbolKind.Array rank, [| typ |], this) :> Type
+                member this.MakePointerType(typ) = TypeSymbol(TypeSymbolKind.Pointer, [| typ |], this) :> Type
+                member this.MakeByRefType(typ) = TypeSymbol(TypeSymbolKind.ByRef, [| typ |], this) :> Type
+                }
 
     //--------------------------------------------------------------------------------
     // The quotation simplifier
@@ -8817,7 +8843,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let mkReader ref =
             try let reader = ILModuleReaderAfterReadingAllBytes(ref, ilGlobals.Force())
-                Choice1Of2(TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRefToTgt, Some reader, ref) :> Assembly)
+                Choice1Of2(TargetAssembly(ilGlobals.Force(), this.TryBindILAssemblyRefToTgt, Some reader, ref, ProvidedTypeBuilder.typeBuilder) :> Assembly)
             with err -> Choice2Of2 err
 
         let targetAssembliesTable_ =  ConcurrentDictionary<string, Choice<Assembly, _>>()
@@ -8914,7 +8940,7 @@ namespace ProviderImplementation.ProvidedTypes
             else
                 asm.GetType fullName |> function null -> None | x -> Some (x, true)
 
-
+        let typeBuilder = ProvidedTypeBuilder.typeBuilder
         let rec convTypeRef toTgt (t:Type) =
             let table = (if toTgt then typeTableFwd else typeTableBwd)
             match table.TryGetValue(t) with
@@ -8958,21 +8984,21 @@ namespace ProviderImplementation.ProvidedTypes
                     let genericType = t.GetGenericTypeDefinition()
                     let newT = convTypeRef toTgt genericType
                     let typeArguments = t.GetGenericArguments() |> Array.map (convType toTgt) |> Array.toList
-                    ProvidedMeasureBuilder.AnnotateType(newT, typeArguments)
+                    ProvidedMeasureBuilder.AnnotateType (newT, typeArguments)
                 elif t.IsGenericType && not t.IsGenericTypeDefinition then
                     let genericType = t.GetGenericTypeDefinition()
                     let newT = convTypeRef toTgt genericType
                     let typeArguments = t.GetGenericArguments() |> Array.map (convType toTgt)
-                    newT.MakeGenericType(typeArguments)
+                    typeBuilder.MakeGenericType(newT,typeArguments)
                 elif t.IsGenericParameter then t
                 elif t.IsArray || t.IsByRef || t.IsPointer then
                     let elemType = t.GetElementType()
                     let elemTypeT = convType toTgt elemType
                     if t.IsArray then
                         let rank = t.GetArrayRank()
-                        if rank = 1 then elemTypeT.MakeArrayType() else elemTypeT.MakeArrayType(t.GetArrayRank())
-                    elif t.IsByRef then elemTypeT.MakeByRefType()
-                    else elemTypeT.MakePointerType()
+                        if rank = 1 then typeBuilder.MakeArrayType(elemTypeT) else typeBuilder.MakeRankedArrayType(elemTypeT,t.GetArrayRank())
+                    elif t.IsByRef then typeBuilder.MakeByRefType(elemTypeT)
+                    else typeBuilder.MakePointerType(elemTypeT)
 
                 else
                     convTypeRef toTgt t
@@ -9269,7 +9295,7 @@ namespace ProviderImplementation.ProvidedTypes
                                         backingDataSource, 
                                         (x.GetCustomAttributesData >> convCustomAttributesDataToTgt), 
                                         x.NonNullable, 
-                                        x.HideObjectMethods) 
+                                        x.HideObjectMethods, ProvidedTypeBuilder.typeBuilder) 
 
             Debug.Assert(not (typeTableFwd.ContainsKey(x)))
             typeTableFwd.[x] <- xT
@@ -9406,7 +9432,7 @@ namespace ProviderImplementation.ProvidedTypes
         member this.ReadRelatedAssembly(fileName) = 
             let ilg = ilGlobals.Force()
             let reader = ILModuleReaderAfterReadingAllBytes(fileName, ilg) 
-            TargetAssembly(ilg, this.TryBindILAssemblyRefToTgt, Some reader, fileName) :> Assembly
+            TargetAssembly(ilg, this.TryBindILAssemblyRefToTgt, Some reader, fileName, ProvidedTypeBuilder.typeBuilder) :> Assembly
 
         member this.ReadRelatedAssembly(bytes:byte[]) = 
             let fileName = "file.dll"
@@ -9416,7 +9442,7 @@ namespace ProviderImplementation.ProvidedTypes
             let mdchunk = bytes.[pe.MetadataPhysLoc .. pe.MetadataPhysLoc + pe.MetadataSize - 1]
             let mdfile = ByteFile(mdchunk)
             let reader = ILModuleReader(fileName, mdfile, ilg, true)
-            TargetAssembly(ilg, this.TryBindILAssemblyRefToTgt, Some reader, fileName) :> Assembly
+            TargetAssembly(ilg, this.TryBindILAssemblyRefToTgt, Some reader, fileName, ProvidedTypeBuilder.typeBuilder) :> Assembly
 
         member __.AddSourceAssembly(asm: Assembly) = 
             sourceAssembliesQueue.Add (fun () -> [| asm |])
