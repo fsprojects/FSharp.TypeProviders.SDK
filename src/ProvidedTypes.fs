@@ -8423,12 +8423,26 @@ namespace ProviderImplementation.ProvidedTypes
 
             // convert TupleGet to the chain of PropertyGet calls (only for generated types)
             | TupleGet(e, i) when isGenerated ->
-                let rec mkGet ty i (e: Expr)  =
-                    let pi, restOpt = Reflection.FSharpValue.PreComputeTuplePropertyInfo(ty, i)
-                    let propGet = Expr.PropertyGetUnchecked(e, pi)
-                    match restOpt with
-                    | None -> propGet
-                    | Some (restTy, restI) -> mkGet restTy restI propGet
+                let rec mkGet (ty : Type) i (e: Expr)  =
+                    if ty.IsValueType then 
+                        let get index =
+                                let fields = ty.GetFields() |> Array.sortBy (fun fi -> fi.Name) 
+                                if index >= fields.Length then
+                                    invalidArg "index" (sprintf "The tuple index '%d' was out of range for tuple type %s" index ty.Name)
+                                fields.[index]
+                        let tupleEncField = 7
+                        let fget = Expr.FieldGetUnchecked(e, get i)
+                        if i < tupleEncField then
+                            fget
+                        else
+                            let etys = ty.GetGenericArguments()
+                            mkGet etys.[tupleEncField] (i - tupleEncField) fget
+                    else
+                        let pi, restOpt = Reflection.FSharpValue.PreComputeTuplePropertyInfo(ty, i)
+                        let propGet = Expr.PropertyGetUnchecked(e, pi)
+                        match restOpt with
+                        | None -> propGet
+                        | Some (restTy, restI) -> mkGet restTy restI propGet
                 simplifyExpr (mkGet e.Type i (simplifyExpr e))
 #endif
 
