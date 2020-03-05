@@ -1277,12 +1277,12 @@ namespace ProviderImplementation.ProvidedTypes
         member __.AddXmlDoc xmlDoc = customAttributesImpl.AddXmlDoc xmlDoc
         member __.AddObsoleteAttribute (message, ?isError) = customAttributesImpl.AddObsolete (message, defaultArg isError false)
         member __.AddDefinitionLocation(line, column, filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
-
         member __.SetFieldAttributes attributes = attrs <- attributes
         member __.BelongsToTargetModel = isTgt
 
         member __.PatchDeclaringType x = patchOption declaringType (fun () -> declaringType <- Some x)
 
+        member __.AddCustomAttribute attribute = customAttributesImpl.AddCustomAttribute attribute
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
         // Implement overloads

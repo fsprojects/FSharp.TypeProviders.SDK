@@ -18,7 +18,6 @@ open Xunit
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 
-
 [<TypeProvider>]
 type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces (config)
@@ -32,7 +31,15 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
         enumType.SetEnumUnderlyingType(typeof<int>)
         
         values
-        |> List.map (fun (name, value) -> ProvidedField.Literal(name, enumType, value))
+        |> List.map (fun (name, value) -> 
+            
+            let field = ProvidedField.Literal(name, enumType, value)
+            field.AddCustomAttribute({ new CustomAttributeData() with 
+                                        member _.Constructor = typeof<System.Xml.Serialization.XmlEnumAttribute>.GetConstructor([|typeof<string>|])
+                                        member _.ConstructorArguments = upcast [| CustomAttributeTypedArgument(typeof<string>, box (string value))|]
+                                        member _.NamedArguments = upcast [||] } )
+            field
+            )
         |> enumType.AddMembers
         
         enumType
@@ -84,8 +91,12 @@ let ``Enums are generated correctly``() =
         Assert.NotNull nestedEnumField
         Assert.Equal(nestedEnum, nestedEnumField.FieldType)
 
+
         let enumValues = Enum.GetValues(nestedEnum) |> Seq.cast<int> |> Seq.zip (Enum.GetNames(nestedEnum))  |> Seq.toList
         Assert.True(["Foo", 1; "Bar", 2] = enumValues)
+
+        let attrValues = nestedEnum.GetFields() |> Seq.choose (fun f -> f.GetCustomAttribute<System.Xml.Serialization.XmlEnumAttribute>() |> Option.ofObj |> Option.map (fun a -> a.Name) ) |> Seq.toList
+        Assert.True(["1"; "2"] = attrValues)
 
         let topLevelEnum = container.GetNestedType "TopLevelEnum"
         Assert.NotNull topLevelEnum
@@ -93,5 +104,6 @@ let ``Enums are generated correctly``() =
         let topLevelEnumField = enumContainer.GetField("topLevelEnumField", BindingFlags.Instance ||| BindingFlags.NonPublic)
         Assert.NotNull topLevelEnumField
         Assert.Equal(topLevelEnum, topLevelEnumField.FieldType)
+
 
 #endif
