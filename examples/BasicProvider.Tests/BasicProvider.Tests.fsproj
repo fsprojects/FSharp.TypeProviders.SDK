@@ -16,14 +16,10 @@
     <None Include="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
-    <PackageReference Include="xunit" Version="2.4.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1" />
-
     <!-- When using the type provider, the reference is to the appropriate runtime DLL -->
     <ProjectReference Include="..\BasicProvider\BasicProvider.fsproj" />
 
   </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 
 </Project>

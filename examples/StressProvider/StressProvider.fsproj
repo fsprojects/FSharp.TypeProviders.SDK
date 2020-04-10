@@ -14,5 +14,6 @@
     <Compile Include="..\..\src\ProvidedTypes.fs" />
     <Compile Include="StressProvider.fs" />
   </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 
 </Project>

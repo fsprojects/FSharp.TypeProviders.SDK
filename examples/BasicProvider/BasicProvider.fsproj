@@ -15,11 +15,6 @@
     <Compile Include="BasicProvider.Runtime.fs" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- Be explicit about the version of FSharp.Core since we mention it in the manual nuget package spec -->
-    <PackageReference Update="FSharp.Core" Version="4.5.2" />
-  </ItemGroup>
-
   <Target Name="AfterBuild">  
     <!-- Note: BasicProvider.DesignTime.fsproj must have been built before this project -->
 
@@ -27,5 +22,5 @@
     <!-- This enables any runtime DLL to be used with any host tooling running in either netcoreapp3.1+ or net45+ -->
     <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />
   </Target>  
-  
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
