@@ -2083,11 +2083,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             match x.Version with 
             | USome v -> asmName.Version <- v
             | UNone -> ()
-    #if NETSTANDARD
             asmName.CultureName <- System.Globalization.CultureInfo.InvariantCulture.Name
-    #else
-            asmName.CultureInfo <- System.Globalization.CultureInfo.InvariantCulture
-    #endif
             asmName
 
         static member FromAssemblyName (aname:AssemblyName) =
@@ -3159,11 +3155,7 @@ namespace ProviderImplementation.ProvidedTypes.AssemblyReader
             match x.Version with 
             | USome v -> asmName.Version <- v
             | UNone -> ()
-    #if NETSTANDARD
             asmName.CultureName <- System.Globalization.CultureInfo.InvariantCulture.Name
-    #else
-            asmName.CultureInfo <- System.Globalization.CultureInfo.InvariantCulture
-    #endif
             asmName
 
         override x.ToString() = "manifest " + x.Name

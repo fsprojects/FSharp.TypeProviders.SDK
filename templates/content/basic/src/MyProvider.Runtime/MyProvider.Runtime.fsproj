@@ -2,17 +2,11 @@
 <Project>
   <!-- See https://stackoverflow.com/questions/43921992/how-can-i-use-beforebuild-and-afterbuild-targets-with-visual-studio-2017 -->
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
-  <Import Project="..\..\netfx.props" />
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>netstandard2.0; net45</TargetFrameworks>
-    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <Optimize>true</Optimize>
-    <Tailcalls>true</Tailcalls>
-  </PropertyGroup>
-  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
   <ItemGroup>
     <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.SDK\src\ProvidedTypes.fsi">
       <Paket>True</Paket>
@@ -26,17 +20,15 @@
     <Compile Include="MyProvider.Runtime.fs" />
     <None Include="paket.references" />
   </ItemGroup>
-  <ItemGroup>
-    <!-- Be explicit about the version of FSharp.Core since we mention it in the manual nuget package spec -->
-    <PackageReference Include="FSharp.Core" Version="4.3.4" />
-  </ItemGroup>
   <Target Name="BeforeBuild">
     <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Restore" />
-    <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=netcoreapp3.1" />
     <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0" />
-    <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=net45" />
   </Target>
   <Target Name="AfterBuild">
+    <CreateItem Include="..\MyProvider.DesignTime\bin\$(Configuration)\netstandard2.0\*.dll;..\MyProvider.DesignTime\bin\$(Configuration)\netstandard2.0\*.pdb">
+      <Output TaskParameter="Include" ItemName="DesignTimeBinaries3" />
+    </CreateItem>
+    <Copy SourceFiles="@(DesignTimeBinaries3)" DestinationFolder="$(OutputPath)/../typeproviders/fsharp41/netstandard2.0" />
   </Target>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

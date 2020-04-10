@@ -1,23 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\netfx.props" />
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net461</TargetFrameworks>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="app.config" />
     <Compile Include="MyProvider.Tests.fs" />
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.15.1"/>
-    <ProjectReference Include="..\..\src\MyProvider.Runtime\MyProvider.Runtime.fsproj">
-      <Name>MyProvider.Runtime</Name>
-      <Project>{7e90d6ce-a10b-4858-a5bc-41df7250cbca}</Project>
-      <Private>True</Private>
-    </ProjectReference>
+    <ProjectReference Include="..\..\src\MyProvider.Runtime\MyProvider.Runtime.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

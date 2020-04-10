@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\netfx.props" />
+
   <PropertyGroup>
-     <TargetFrameworks>netstandard2.0;netcoreapp3.1;net45</TargetFrameworks>
+     <TargetFramework>netstandard2.0</TargetFramework>
      <DefineConstants>NO_GENERATIVE</DefineConstants>
      <DefineConstants>IS_DESIGNTIME</DefineConstants>
      <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
+
   <ItemGroup>
      <!-- It is normal to include a copy of the runtime helpers in the design-time DLL, to help build the code model which gets mapped to target files -->
     <Compile Include="..\BasicProvider\BasicProvider.Runtime.fs">
@@ -20,4 +21,5 @@
     </Compile>
     <Compile Include="BasicProvider.Provider.fs" />
   </ItemGroup>
+
 </Project>

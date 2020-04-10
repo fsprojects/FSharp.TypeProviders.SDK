@@ -1,7 +1,7 @@
 STORAGE: NONE
 RESTRICTION: == netstandard2.0
 NUGET
-  remote: https://www.nuget.org/api/v2
+  remote: https://api.nuget.org/v3/index.json
     BlackFox.VsWhere (1.0)
       FSharp.Core (>= 4.2.3)
     Fake.Core.CommandLineParsing (5.20)

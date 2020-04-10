@@ -20,7 +20,7 @@
     <!-- These are the dependencies of the type provider runtime component --> 
     <dependencies>
       <group targetFramework="netstandard2.0">
-        <dependency id="FSharp.Core" version="4.3.4" />
+        <dependency id="FSharp.Core" version="4.5.2" />
       </group>
     </dependencies>
     <!-- Control which references are added explicitly --> 
@@ -34,11 +34,6 @@
     <file src="..\ComboProvider\bin\Release\netstandard2.0\ComboProvider.dll" target="lib/netstandard2.0" />
     <file src="..\ComboProvider\bin\Release\netstandard2.0\ComboProvider.pdb" target="lib/netstandard2.0" />
     <file src="..\ComboProvider\bin\Release\netstandard2.0\ComboProvider.xml" target="lib/netstandard2.0" />
-
-    <!-- Add these facades to allow .NET 4.6.x-based tooling to load the component, see docs at https://github.com/fsprojects/FSharp.TypeProviders.SDK/ -->
-    <file src="..\ComboProvider\bin\Release\netstandard2.0\netstandard.dll" target="lib/netstandard2.0" />
-    <file src="..\ComboProvider\bin\Release\netstandard2.0\System.Reflection.dll" target="lib/netstandard2.0" />
-    <file src="..\ComboProvider\bin\Release\netstandard2.0\System.Runtime.dll" target="lib/netstandard2.0" />
 
   </files>
 </package>
