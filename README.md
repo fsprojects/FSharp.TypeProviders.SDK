@@ -85,41 +85,9 @@ Correctly updated type providers can be used with either the `dotnet` toolchain 
 
 ### Updating a Type Provider to be suitable for use with the .NET SDK
 
-This short guide assumes:
+It is not feasible to update a non-.NET SDK-style type provider in-place. Instead, you should use the provided template above and port code over until things work.
 
-1. You have a type provider with separate TPDTC and TPRTC components (see below if you don't know what those are)
-1. Some of your code might have dependencies on .NET Framework functionality
-1. You want your type provider to be usable with both the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain.
-1. You want your type provider to be usable for all of .NET Standard, .NET Core and .NET Framework programming (if possible)
-
-Here is a guide to the steps to perform:
-
-1. Use the latest .NET SDK.
-
-1. If using Visual Studio, then use the latest Visual Studio.
-
-1. Use .NET SDK-style projects. You cannot use old-style, long-form projects.
-
-1. Update to the latest ProvidedTypes.fs/fsi from this project
-
-   * If making a generative type provider, check your `isErased` flags and use of `ProvidedAssembly` fragments, see [this example](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L68)
-   
-   * If your TPDTC contains a copy of your TPRTC implementation then use [`assemblyReplacementMap`](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L12)
-
-1. Only target .NET Standard 2.0.
-
-   * If your TPRTC **fundamentally** depends on .NET Framework, then you should not create a type provider. .NET Framework is now in perpetual servicing mode and will not be evolving.
-   
-   * If your TPRTC **partially** depends on .NET Framework, then multi-target the TPRTC to `netXX;netstandard2.0` and use `#if NETSTANDARD2_0` for portable APIs.
-
-1. Modify your project to copy the design-time DLLs into the right place, e.g. see [this example](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider/BasicProvider.fsproj#L16)
-
-1. Use  `dotnet build` to build instead of `msbuild`
-
-   * If any of your projects targeting .NET 4.x so they will compile with `dotnet` on Linux/OSX when Mono is installed, then include [netfx.props](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider/BasicProvider.fsproj#L4) in the project and project file
-
-1. Modify your nuget package layout as described below.
-
+If you require .NET Framework due to an API or third-party dependency, use multi-targeting. It is not recommended to target anything lower than `net472`, since this is the lowest version of .NET Framework that can reliably work with .NET Standard. It is also the base .NET Framework version that Visual Studio uses.
 
 ### Nuget package layouts you should use
 
