@@ -167,14 +167,14 @@ The typical nuget package layout for a provider that has separate design-time an
         MyProvider.dll // TPRTC
         MyProvider.DesignTime.dll // .NET 4.x TPDTC alongside TPRTC (only needed for legacy loading: VS2015, Mono 5.12, VS2017 before 15.6)
     
-    lib/typeproviders/fsharp41/
+    typeproviders/fsharp41/
         net45/
             MyProvider.DesignTime.dll // .NET 4.x TPDTC
     
         netcoreapp2.0/
             MyProvider.DesignTime.dll // .NET Core App 2.0 TPDTC
 
-It is important that the design-time assemblies you use (if any) are not loaded at runtime. To ensure this does not happen, when you distribute a Nuget package for your Type Provider you _must_ provide an explicit list of project references for consumers to include. If you do not, every assembly you publish in the package will be included, which can lead to design-type only references being loaded at runtime.  To reference only a subset of assemblies, see the [Nuget documetation](https://docs.microsoft.com/en-us/nuget/reference/nuspec#explicit-assembly-references) or the [Paket documentation](https://fsprojects.github.io/Paket/template-files.html#References).
+It is important that the design-time assemblies you use (if any) are not loaded at runtime. To ensure this does not happen, when you distribute a Nuget package for your Type Provider you _must_ provide an explicit list of project references for consumers to include. If you do not, every assembly you publish in the package will be included, which can lead to design-type only references being loaded at runtime.  To reference only a subset of assemblies, see the [Nuget documentation](https://docs.microsoft.com/en-us/nuget/reference/nuspec#explicit-assembly-references) or the [Paket documentation](https://fsprojects.github.io/Paket/template-files.html#References).
 
 That is, an explicit `.nuspec` file will be needed with an explicit `<references>` node (so that only the TPRTC gets added as a reference), see [this example](https://github.com/baronfel/FSharp.Data/blob/e0f133e6e79b4a41365776da51332227dccff9ab/nuget/FSharp.Data.nuspec).
 
@@ -237,7 +237,7 @@ One approach:
 
 ### Some Type Provider terminology
 
-* TPRTC - Type Provider Referenced Component, e.g. ``FSharp.Data.dll``. 
+* TPRTC - Type Provider Run Time Component, e.g. ``FSharp.Data.dll``. 
 
   * This is the component referenced by ``#r`` or ``-r:`` on the command line or other configration of a host tool
   
