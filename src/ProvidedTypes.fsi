@@ -227,6 +227,9 @@ namespace ProviderImplementation.ProvidedTypes
 
         member SetFieldAttributes: attributes: FieldAttributes -> unit
 
+        /// Add a custom attribute to the provided property definition.
+        member AddCustomAttribute: CustomAttributeData -> unit
+
         /// Create a new provided literal field. It is not initially associated with any specific provided type definition.
         static member Literal : fieldName: string * fieldType: Type * literalValue:obj -> ProvidedField
 

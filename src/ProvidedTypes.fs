@@ -1277,12 +1277,12 @@ namespace ProviderImplementation.ProvidedTypes
         member __.AddXmlDoc xmlDoc = customAttributesImpl.AddXmlDoc xmlDoc
         member __.AddObsoleteAttribute (message, ?isError) = customAttributesImpl.AddObsolete (message, defaultArg isError false)
         member __.AddDefinitionLocation(line, column, filePath) = customAttributesImpl.AddDefinitionLocation(line, column, filePath)
-
         member __.SetFieldAttributes attributes = attrs <- attributes
         member __.BelongsToTargetModel = isTgt
 
         member __.PatchDeclaringType x = patchOption declaringType (fun () -> declaringType <- Some x)
 
+        member __.AddCustomAttribute attribute = customAttributesImpl.AddCustomAttribute attribute
         override __.GetCustomAttributesData() = customAttributesImpl.GetCustomAttributesData()
 
         // Implement overloads
@@ -8369,12 +8369,31 @@ namespace ProviderImplementation.ProvidedTypes
                 member this.MakeGenericType(typeDef: Type, args)= 
                     match typeDef with
                     | :? ProvidedTypeDefinition -> ProvidedTypeSymbol(ProvidedTypeSymbolKind.Generic typeDef, Array.toList args, this) :> Type
-                    | _ -> TypeSymbol(TypeSymbolKind.OtherGeneric typeDef, args, this) :> Type
-                member this.MakeArrayType(typ) = TypeSymbol(TypeSymbolKind.SDArray, [| typ |], this) :> Type
-                member this.MakeRankedArrayType(typ,rank) = TypeSymbol(TypeSymbolKind.Array rank, [| typ |], this) :> Type
-                member this.MakePointerType(typ) = TypeSymbol(TypeSymbolKind.Pointer, [| typ |], this) :> Type
-                member this.MakeByRefType(typ) = TypeSymbol(TypeSymbolKind.ByRef, [| typ |], this) :> Type
-                }
+                    | _ -> 
+                        if args |> Array.exists (function :? ProvidedTypeDefinition -> true | _ -> false) then
+                            TypeSymbol(TypeSymbolKind.OtherGeneric typeDef, args, this) :> Type
+                        else
+                            typeDef.MakeGenericType(args)
+                member this.MakeArrayType(typ) = 
+                    match typ with
+                    | :? ProvidedTypeDefinition ->
+                        TypeSymbol(TypeSymbolKind.SDArray, [| typ |], this) :> Type
+                    | _ -> typ.MakeArrayType()
+                member this.MakeRankedArrayType(typ,rank) = 
+                    match typ with
+                    | :? ProvidedTypeDefinition ->
+                        TypeSymbol(TypeSymbolKind.Array rank, [| typ |], this) :> Type
+                    | _ -> typ.MakeArrayType(rank)
+                member this.MakePointerType(typ) = 
+                    match typ with
+                    | :? ProvidedTypeDefinition ->
+                        TypeSymbol(TypeSymbolKind.Pointer, [| typ |], this) :> Type
+                    | _ -> typ.MakePointerType()
+                member this.MakeByRefType(typ) = 
+                    match typ with
+                    | :? ProvidedTypeDefinition ->
+                        TypeSymbol(TypeSymbolKind.ByRef, [| typ |], this) :> Type
+                    | _ -> typ.MakeByRefType()                }
 
     //--------------------------------------------------------------------------------
     // The quotation simplifier
