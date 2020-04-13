@@ -3,6 +3,7 @@
      <TargetFramework>netcoreapp3.1</TargetFramework>
      <IsPackable>false</IsPackable>
      <DefineConstants>NO_GENERATIVE</DefineConstants>
+     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="File1.fs" />
@@ -11,6 +12,8 @@
     <None Include="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\StressProvider\StressProvider.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

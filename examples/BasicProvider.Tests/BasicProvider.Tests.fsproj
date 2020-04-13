@@ -4,6 +4,7 @@
      <TargetFramework>netcoreapp3.1</TargetFramework>
      <IsPackable>false</IsPackable>
      <DefineConstants>NO_GENERATIVE</DefineConstants>
+     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,9 +17,11 @@
     <None Include="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <!-- When using the type provider, the reference is to the appropriate runtime DLL -->
-    <ProjectReference Include="..\BasicProvider\BasicProvider.fsproj" />
+  
+  </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\BasicProvider\BasicProvider.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 

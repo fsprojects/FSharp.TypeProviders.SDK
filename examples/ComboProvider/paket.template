@@ -1,0 +1,30 @@
+type file
+id
+    ComboProvider
+title
+    ComboProvider sample
+version
+    0.1
+authors
+    The authors
+owners
+    The owners
+# projectUrl
+#     http://github.com/fsprojects/MyProvider
+# iconUrl
+#     https://raw.githubusercontent.com/fsprojects/MyProvider/master/docs/files/img/logo.png
+# licenseUrl
+#     http://github.com/fsprojects/MyProvider/blob/master/LICENSE.txt
+# requireLicenseAcceptance
+#    false
+tags
+    tag1 tag2
+summary
+    The package summary
+description
+    The package description
+files
+    bin/Release/netstandard2.0/ComboProvider.* ==> lib/netstandard2.0
+    bin/Release/typeproviders/fsharp41/netstandard2.0/*.dll ==> typeproviders/fsharp41/netstandard2.0
+dependencies
+    FSharp.Core >= LOCKEDVERSION

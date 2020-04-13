@@ -4,8 +4,6 @@
 
   <PropertyGroup>
      <TargetFramework>netstandard2.0</TargetFramework>
-     <!-- Use an explicit nuspec to allow us to specify "references", the metadata properties at https://docs.microsoft.com/en-us/dotnet/core/tools/csproj#nuget-metadata-properties don't allow this --> 
-     <NuspecFile>BasicProvider.nuspec</NuspecFile>
      <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
@@ -13,6 +11,10 @@
 
   <ItemGroup>
     <Compile Include="BasicProvider.Runtime.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectRefeference Include="../BasicProvider.DesignTime.fsproj" />
   </ItemGroup>
 
   <Target Name="AfterBuild">  
