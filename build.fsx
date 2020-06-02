@@ -76,7 +76,7 @@ Target.create "RunTests" (fun _ ->
         // msbuild tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=Debug && mono packages/xunit.runner.console/tools/net452/xunit.console.exe tests/bin/Debug/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none
 
     let setTestOptions framework (p:DotNet.TestOptions) =
-        { p with Configuration = config; Framework= Some framework }
+        { p with Configuration = config; Framework= Some framework}
 
     [
         "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
@@ -101,7 +101,7 @@ Target.create "RunTests" (fun _ ->
 Target.create "Pack" (fun _ ->
     let releaseNotes = String.toLines release.Notes
     // TODO: This is using an awkward mix of Paket and dotnet to do packaging. We should just use paket.
-    let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config }
+    let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config}
     DotNet.pack  (fun p -> { 
         setParams p with 
             MSBuildParams= { 
