@@ -27,11 +27,7 @@ open System.Runtime.InteropServices
 Target.initEnvironment()
 
 let config = DotNet.BuildConfiguration.Release
-let msBuildParam = { 
-        MSBuild.CliArguments.Create() with
-            DisableInternalBinLog = true // Unsupported log file format. Latest supported version is 8, the log file has version 9. error when using the MSBuild.build
-    } 
-let setParams (p:DotNet.BuildOptions) = {p with Configuration = config; MSBuildParams = msBuildParam}
+let setParams (p:DotNet.BuildOptions) = {p with Configuration = config}
 
 let outputPath = __SOURCE_DIRECTORY__ + "/bin"
 
@@ -80,7 +76,7 @@ Target.create "RunTests" (fun _ ->
         // msbuild tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=Debug && mono packages/xunit.runner.console/tools/net452/xunit.console.exe tests/bin/Debug/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none
 
     let setTestOptions framework (p:DotNet.TestOptions) =
-        { p with Configuration = config; Framework= Some framework; MSBuildParams = msBuildParam }
+        { p with Configuration = config; Framework= Some framework}
 
     [
         "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
@@ -105,11 +101,11 @@ Target.create "RunTests" (fun _ ->
 Target.create "Pack" (fun _ ->
     let releaseNotes = String.toLines release.Notes
     // TODO: This is using an awkward mix of Paket and dotnet to do packaging. We should just use paket.
-    let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config; MSBuildParams = msBuildParam }
+    let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config}
     DotNet.pack  (fun p -> { 
         setParams p with 
             MSBuildParams= { 
-                msBuildParam with
+                MSBuild.CliArguments.Create() with
                     Properties = [
                         "PackageVersion", release.NugetVersion
                         "ReleaseNotes", releaseNotes
