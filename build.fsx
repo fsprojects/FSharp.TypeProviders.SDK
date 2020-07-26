@@ -86,13 +86,14 @@ Target.create "Pack" (fun _ ->
     DotNet.pack setParams "examples/BasicProvider/BasicProvider.fsproj"
     DotNet.pack setParams "examples/StressProvider/StressProvider.fsproj"
 
-    NuGet.NuGet.NuGetPack (fun p -> {
-        p with 
-            WorkingDir = "templates"
-            OutputPath = outputPath
-            Version = release.NugetVersion
-            ReleaseNotes = releaseNotes
-    }) "templates/FSharp.TypeProviders.Templates.nuspec"
+    // TODO - get the bottom of why FAKE keeps creating a new .nuspec no matter the version
+    // NuGet.NuGet.NuGetPack (fun p -> {
+    //     p with 
+    //         WorkingDir = "templates"
+    //         OutputPath = outputPath
+    //         Version = release.NugetVersion
+    //         ReleaseNotes = releaseNotes
+    // }) "templates/FSharp.TypeProviders.Templates.nuspec"
 )
 
 Target.create "TestTemplatesNuGet" (fun _ ->
