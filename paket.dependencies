@@ -5,5 +5,5 @@ nuget FSharp.Core >= 4.5.2
 group Test
     source https://api.nuget.org/v3/index.json
     nuget xunit
-    nuget xunit.runner.console
+    nuget xunit.runner.visualstudio
     nuget Microsoft.NET.Test.Sdk

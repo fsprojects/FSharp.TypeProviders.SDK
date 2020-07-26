@@ -254,4 +254,4 @@ NUGET
     xunit.extensibility.execution (2.4.1)
       NETStandard.Library (>= 1.6.1) - restriction: && (< net452) (>= netstandard1.1)
       xunit.extensibility.core (2.4.1) - restriction: >= netstandard1.1
-    xunit.runner.console (2.4.1)
+    xunit.runner.visualstudio (2.4.2)

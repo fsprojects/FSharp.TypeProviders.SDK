@@ -75,7 +75,7 @@ Target.create "Pack" (fun _ ->
     let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config}
     DotNet.pack  (fun p -> { 
         setParams p with 
-            MSBuildParams= { 
+            MSBuildParams = { 
                 MSBuild.CliArguments.Create() with
                     Properties = [
                         "PackageVersion", release.NugetVersion
@@ -83,8 +83,21 @@ Target.create "Pack" (fun _ ->
                     ] 
             } 
         }) "src/FSharp.TypeProviders.SDK.fsproj"
+    DotNet.pack setParams "src/FSharp.TypeProvider.SDK.fsproj"
     DotNet.pack setParams "examples/BasicProvider/BasicProvider.fsproj"
     DotNet.pack setParams "examples/StressProvider/StressProvider.fsproj"
+
+    
+    DotNet.pack  (fun p -> { 
+        setParams p with
+            MSBuildParams = { 
+                MSBuild.CliArguments.Create() with
+                    Properties = [
+                        "PackageVersion", release.NugetVersion
+                        "ReleaseNotes", releaseNotes
+                    ] 
+            } 
+        }) "templates/FSharp.TypeProviders.Templates.nuspec"
 
     // TODO - get the bottom of why FAKE keeps creating a new .nuspec no matter the version
     // NuGet.NuGet.NuGetPack (fun p -> {
@@ -125,7 +138,12 @@ Target.create "TestTemplatesNuGet" (fun _ ->
 
 Target.create "All" ignore
 
-"Clean" ==> "Pack"
-"Build" ==> "Examples" ==> "RunTests" ==> "Pack" ==> "TestTemplatesNuGet" ==> "All"
+"Clean"
+  ==> "Build"
+  ==> "Examples"
+  ==> "RunTests"
+  ==> "Pack"
+  ==> "TestTemplatesNuGet"
+  ==> "All"
 
 Target.runOrDefault "All"

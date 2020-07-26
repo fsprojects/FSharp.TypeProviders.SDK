@@ -579,7 +579,7 @@ type internal Testing() =
 
         sb.ToString()
 
-module internal Targets =
+module internal Targets = 
 
     let private (++) a b = System.IO.Path.Combine(a,b)
 
