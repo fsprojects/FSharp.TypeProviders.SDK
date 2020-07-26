@@ -49,7 +49,6 @@ Target.create "Build" (fun _ ->
 Target.create "Examples" (fun _ ->
     DotNet.build setParams "examples/BasicProvider.DesignTime/BasicProvider.DesignTime.fsproj"
     DotNet.build setParams "examples/BasicProvider/BasicProvider.fsproj"
-    DotNet.build setParams "examples/ComboProvider/ComboProvider.fsproj"
     DotNet.build setParams "examples/StressProvider/StressProvider.fsproj"
 )
 
@@ -60,7 +59,6 @@ Target.create "RunTests" (fun _ ->
     [
         "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
         "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"
-        "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"
         "examples/StressProvider.Tests/StressProvider.Tests.fsproj"
     ]
     |> List.iter (fun fsproj ->
@@ -86,14 +84,13 @@ Target.create "Pack" (fun _ ->
             } 
         }) "src/FSharp.TypeProviders.SDK.fsproj"
     DotNet.pack setParams "examples/BasicProvider/BasicProvider.fsproj"
-    DotNet.pack setParams "examples/ComboProvider/ComboProvider.fsproj"
     DotNet.pack setParams "examples/StressProvider/StressProvider.fsproj"
 
     NuGet.NuGet.NuGetPack (fun p -> {
         p with 
-            WorkingDir="templates"
-            OutputPath=outputPath
-            Version=release.NugetVersion
+            WorkingDir = "templates"
+            OutputPath = outputPath
+            Version = release.NugetVersion
             ReleaseNotes = releaseNotes
     }) "templates/FSharp.TypeProviders.Templates.nuspec"
 )

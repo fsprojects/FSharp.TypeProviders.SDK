@@ -17,7 +17,7 @@
     <ProjectRefeference Include="../BasicProvider.DesignTime.fsproj" />
   </ItemGroup>
 
-  <Target Name="AfterBuild">  
+  <Target Name="MoveDesignTimeAssembliesToTypeProviderFolder" AfterTargets="AfterBuild">  
     <!-- Note: BasicProvider.DesignTime.fsproj must have been built before this project -->
 
     <!-- We place EACH of the net45, netcoreapp3.1 and netstandard2.0 design-time DLLs in well-known locations with resepct to the runtime DLL -->

@@ -24,7 +24,7 @@
     <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Restore" />
     <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0" />
   </Target>
-  <Target Name="AfterBuild">
+  <Target Name="MoveDesignTimeAssembliesToTypeProviderFolder" AfterTargets="AfterBuild">
     <CreateItem Include="..\MyProvider.DesignTime\bin\$(Configuration)\netstandard2.0\*.dll;..\MyProvider.DesignTime\bin\$(Configuration)\netstandard2.0\*.pdb">
       <Output TaskParameter="Include" ItemName="DesignTimeBinaries3" />
     </CreateItem>

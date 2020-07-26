@@ -266,5 +266,6 @@ The library is available under the MIT License. For more information see the [Li
 - [@mavnn](https://github.com/mavnn)
 - [@ovatsus](https://github.com/ovatsus)
 - [@dsyme](https://github.com/dsyme)
+- [@cartermp](https://github.com/cartermp)
 
 The default maintainer account for projects under "fsprojects" is [@fsprojectsgit](https://github.com/fsprojectsgit) - F# Community Project Incubation Space (repo management)
