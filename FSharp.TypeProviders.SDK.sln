@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2024
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30324.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FSharp.TypeProviders.SDK", "src\FSharp.TypeProviders.SDK.fsproj", "{6EBFDE55-9687-40A9-8C1A-6E204ECB117F}"
 EndProject
@@ -15,10 +15,11 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "BasicProvider.DesignTime", 
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "StressProvider", "examples\StressProvider\StressProvider.fsproj", "{D9D3ED64-F4E3-4DCC-BD34-368BD9170F89}"
 EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "BasicProvider.Tests", "examples\BasicProvider.Tests\BasicProvider.Tests.fsproj", "{6054908A-3573-42F9-848A-8427DF96EA88}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "StressProvider.Tests", "examples\StressProvider.Tests\StressProvider.Tests.fsproj", "{3DD32B07-C084-4D96-8DB2-1BDC75A569A7}"
+EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -44,6 +45,14 @@ Global
 		{D9D3ED64-F4E3-4DCC-BD34-368BD9170F89}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D9D3ED64-F4E3-4DCC-BD34-368BD9170F89}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D9D3ED64-F4E3-4DCC-BD34-368BD9170F89}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6054908A-3573-42F9-848A-8427DF96EA88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6054908A-3573-42F9-848A-8427DF96EA88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6054908A-3573-42F9-848A-8427DF96EA88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6054908A-3573-42F9-848A-8427DF96EA88}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3DD32B07-C084-4D96-8DB2-1BDC75A569A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3DD32B07-C084-4D96-8DB2-1BDC75A569A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3DD32B07-C084-4D96-8DB2-1BDC75A569A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3DD32B07-C084-4D96-8DB2-1BDC75A569A7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -52,8 +61,13 @@ Global
 		{5EF9FF95-1C75-458A-983A-168E43945914} = {E5E5268B-0B72-41FE-9747-5CEBEE3EB161}
 		{8A9470AA-303A-40D3-813C-1B6563EDB573} = {E5E5268B-0B72-41FE-9747-5CEBEE3EB161}
 		{D9D3ED64-F4E3-4DCC-BD34-368BD9170F89} = {E5E5268B-0B72-41FE-9747-5CEBEE3EB161}
+		{6054908A-3573-42F9-848A-8427DF96EA88} = {E5E5268B-0B72-41FE-9747-5CEBEE3EB161}
+		{3DD32B07-C084-4D96-8DB2-1BDC75A569A7} = {E5E5268B-0B72-41FE-9747-5CEBEE3EB161}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {469ECCE5-A55C-473A-B332-1D90D3977EFD}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

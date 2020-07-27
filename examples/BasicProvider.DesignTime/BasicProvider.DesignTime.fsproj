@@ -21,5 +21,13 @@
     </Compile>
     <Compile Include="BasicProvider.Provider.fs" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+
+  <!--<ItemGroup>
+    <ProjectReference Include="..\..\src\FSharp.TypeProviders.SDK.fsproj" />
+  </ItemGroup>-->
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.5.2" />
+  </ItemGroup>
+
 </Project>

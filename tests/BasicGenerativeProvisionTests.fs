@@ -7,9 +7,7 @@ module TPSDK.Tests.BasicGenerativeTests
 #endif
 
 open System
-open System.IO
 open System.Reflection
-open System.Reflection.Emit
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Quotations
