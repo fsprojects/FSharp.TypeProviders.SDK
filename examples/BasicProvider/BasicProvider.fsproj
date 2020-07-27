@@ -1,26 +1,20 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-     <TargetFramework>netstandard2.0</TargetFramework>
-     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Include="BasicProvider.Runtime.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectRefeference Include="../BasicProvider.DesignTime.fsproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="4.5.2" />
-  </ItemGroup>
-
-  <Target Name="MoveDesignTimeAssembliesToTypeProviderFolder" AfterTargets="AfterBuild">  
+  <Target Name="MoveDesignTimeAssembliesToTypeProviderFolder" AfterTargets="AfterBuild">
     <!-- Note: BasicProvider.DesignTime.fsproj must have been built before this project -->
-
     <!-- We place EACH of the net45, netcoreapp3.1 and netstandard2.0 design-time DLLs in well-known locations with resepct to the runtime DLL -->
     <!-- This enables any runtime DLL to be used with any host tooling running in either netcoreapp3.1+ or net45+ -->
     <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />
   </Target>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

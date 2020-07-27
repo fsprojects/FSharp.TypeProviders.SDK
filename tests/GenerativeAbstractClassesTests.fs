@@ -64,9 +64,8 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
         tempAssembly.AddTypes [container]
         this.AddNamespace(container.Namespace, [container])
 
-let testProvidedAssembly test = 
-    if Targets.supportsFSharp40() then
-        let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs()
+let testProvidedAssembly test =
+        let runtimeAssemblyRefs = Targets.DotNetStandard20FSharp45Refs()
         let runtimeAssembly = runtimeAssemblyRefs.[0]
         let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
         let tp = GenerativeAbstractClassesProvider(cfg) :> TypeProviderForNamespaces

@@ -1,33 +1,20 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-     <TargetFramework>netstandard2.0</TargetFramework>
-     <DefineConstants>NO_GENERATIVE</DefineConstants>
-     <DefineConstants>IS_DESIGNTIME</DefineConstants>
-     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <DefineConstants>NO_GENERATIVE</DefineConstants>
+    <DefineConstants>IS_DESIGNTIME</DefineConstants>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
-
   <ItemGroup>
-     <!-- It is normal to include a copy of the runtime helpers in the design-time DLL, to help build the code model which gets mapped to target files -->
+    <!-- It is normal to include a copy of the runtime helpers in the design-time DLL, to help build the code model which gets mapped to target files -->
     <Compile Include="..\BasicProvider\BasicProvider.Runtime.fs">
       <Link>BasicProvider.Runtime.fs</Link>
     </Compile>
-     <!-- The design-time component contains a copy of the TPSDK core files -->
-    <Compile Include="..\..\src\ProvidedTypes.fsi">
-      <Link>ProvidedTypes.fsi</Link>
-    </Compile>
-    <Compile Include="..\..\src\ProvidedTypes.fs">
-      <Link>ProvidedTypes.fs</Link>
-    </Compile>
     <Compile Include="BasicProvider.Provider.fs" />
   </ItemGroup>
-
-  <!--<ItemGroup>
-    <ProjectReference Include="..\..\src\FSharp.TypeProviders.SDK.fsproj" />
-  </ItemGroup>-->
-
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="4.5.2" />
+    <ProjectReference Include="..\..\src\FSharp.TypeProviders.SDK.fsproj" />
   </ItemGroup>
-
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

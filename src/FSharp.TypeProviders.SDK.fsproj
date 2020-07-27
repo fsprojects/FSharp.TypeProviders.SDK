@@ -1,9 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <OutputType>Library</OutputType>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    
     <PackageId>FSharp.TypeProviders.SDK</PackageId>
     <Version>1.0.0</Version>
     <Authors>FSharp.TypeProviders.SDK contributors</Authors>
@@ -17,17 +17,12 @@
     <Copyright>Copyright 2020 FSharp.TypeProviders.SDK contributors</Copyright>
     <Tags>F# fsharp typeprovider</Tags>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="4.5.2" />
-  </ItemGroup>
-
   <ItemGroup>
     <None Include="../docs/files/img/logo.png" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup>
+  <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>
