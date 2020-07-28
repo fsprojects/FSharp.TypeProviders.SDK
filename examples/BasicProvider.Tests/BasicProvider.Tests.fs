@@ -5,6 +5,8 @@ open BasicProvider.Provided
 
 open Xunit
 
+// TODO - re-enable
+
 //[<Fact>]
 //let ``Default constructor should create instance`` () =
 //    Assert.Equal("My internal state", MyType().InnerState)

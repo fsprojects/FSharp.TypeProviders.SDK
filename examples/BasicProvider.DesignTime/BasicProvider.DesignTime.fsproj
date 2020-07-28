@@ -1,12 +1,12 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <DefineConstants>NO_GENERATIVE</DefineConstants>
     <DefineConstants>IS_DESIGNTIME</DefineConstants>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
   </PropertyGroup>
+
   <ItemGroup>
     <!-- It is normal to include a copy of the runtime helpers in the design-time DLL, to help build the code model which gets mapped to target files -->
     <Compile Include="..\BasicProvider.Runtime\BasicProvider.Runtime.fs">
@@ -21,5 +21,9 @@
     </Compile>
     <Compile Include="BasicProvider.Provider.fs" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.5.2" />
+  </ItemGroup>
+
 </Project>
