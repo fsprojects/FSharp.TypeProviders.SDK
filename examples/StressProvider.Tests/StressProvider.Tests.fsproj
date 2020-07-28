@@ -7,6 +7,7 @@
     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="paket.references" />
     <Compile Include="File1.fs" />
     <Compile Include="StressProvider.Tests.fs" />
     <Compile Include="Program.fs" />

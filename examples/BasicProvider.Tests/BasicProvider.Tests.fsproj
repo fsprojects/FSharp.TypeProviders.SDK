@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="paket.references" />
     <Compile Include="BasicProvider.Tests.fs" />
     <Compile Include="Program.fs" />
     <None Include="xunit.runner.json">
@@ -17,5 +18,5 @@
   <ItemGroup>
     <ProjectReference Include="..\BasicProvider.Runtime\BasicProvider.Runtime.fsproj" />
   </ItemGroup>
-
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
