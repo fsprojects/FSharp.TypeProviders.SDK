@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>`dotnet new` template for building F# Type Providers.</Description>
+    <Authors>https://github.com/fsprojects/FSharp.TypeProviders.SDK contributors</Authors>
+    <PackageProjectUrl>https://github.com/fsprojects/FSharp.TypeProviders.SDK</PackageProjectUrl>
+    <License>MIT</License>
+    <RepositoryUrl>https://github.com/fsprojects/FSharp.TypeProviders.SDK/</RepositoryUrl>
+    <!-- <PackageIconUrl>https://avatars0.githubusercontent.com/u/35305523?s=200</PackageIconUrl> -->
+    <PackageTags>F#;type provider</PackageTags>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <PackageType>Template</PackageType>
+    <NoBuild>true</NoBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ExcludeFromPackage>
+        Content/node_modules/**/*;
+        Content/packages/**/*;
+        Content/paket-files/**/*;
+        **/obj/**/*;
+        **/bin/**/*;
+        **/.fake/**/*;
+        **/.ionide/**/*;
+    </ExcludeFromPackage>
+</PropertyGroup>
+  <ItemGroup>
+    <Content Include="content/**/*" Exclude="$(ExcludeFromPackage)" >
+        <PackagePath>content\</PackagePath>
+    </Content>
+  </ItemGroup>
+</Project>
