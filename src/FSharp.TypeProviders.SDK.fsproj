@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <OutputType>Library</OutputType>
@@ -17,12 +17,18 @@
     <Copyright>Copyright 2020 FSharp.TypeProviders.SDK contributors</Copyright>
     <Tags>F# fsharp typeprovider</Tags>
   </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
   </ItemGroup>
+
   <ItemGroup>
     <None Include="../docs/files/img/logo.png" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup>
-  <Import Project="..\.paket\Paket.Restore.targets" />
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.5.2" />
+  </ItemGroup>
+
 </Project>
