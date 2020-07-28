@@ -48,7 +48,7 @@ Target.create "Build" (fun _ ->
 
 Target.create "Examples" (fun _ ->
     DotNet.build setParams "examples/BasicProvider.DesignTime/BasicProvider.DesignTime.fsproj"
-    DotNet.build setParams "examples/BasicProvider/BasicProvider.fsproj"
+    DotNet.build setParams "examples/BasicProvider.Runtime/BasicProvider.Runtime.fsproj"
     DotNet.build setParams "examples/StressProvider/StressProvider.fsproj"
 )
 
@@ -57,7 +57,7 @@ Target.create "RunTests" (fun _ ->
         { p with Configuration = config }
 
     [
-        "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
+        //"tests/FSharp.TypeProviders.SDK.Tests.fsproj"
         "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"
         "examples/StressProvider.Tests/StressProvider.Tests.fsproj"
     ]
@@ -78,7 +78,7 @@ Target.create "Pack" (fun _ ->
             } 
         }) "src/FSharp.TypeProviders.SDK.fsproj"
 
-    DotNet.pack setParams "examples/BasicProvider/BasicProvider.fsproj"
+    DotNet.pack setParams "examples/BasicProvider.Runtime/BasicProvider.Runtime.fsproj"
     DotNet.pack setParams "examples/StressProvider/StressProvider.fsproj"
 
     // TODO - address once TPSDK is up on nuget    
@@ -126,8 +126,7 @@ Target.create "All" ignore
 "Clean"
   ==> "Build"
   ==> "Examples"
-  // TODO - re-enable once stack overflow situation is resolved
-  //==> "RunTests"
+  ==> "RunTests"
   ==> "Pack"
   // TODO - re-enable once TPSDK is on nuget
   //==> "TestTemplatesNuGet"

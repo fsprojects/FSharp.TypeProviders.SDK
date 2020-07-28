@@ -6,9 +6,6 @@
     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\src\ProvidedTypesTesting.fs">
-      <Link>ProvidedTypesTesting.fs</Link>
-    </Compile>
     <Compile Include="BasicProvider.Tests.fs" />
     <Compile Include="Program.fs" />
     <None Include="xunit.runner.json">
@@ -16,7 +13,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BasicProvider\BasicProvider.fsproj" />
+    <ProjectReference Include="..\BasicProvider.Runtime\BasicProvider.Runtime.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

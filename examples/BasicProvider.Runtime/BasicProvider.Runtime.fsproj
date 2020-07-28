@@ -2,15 +2,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    <NuspecFile>BasicProvider.nuspec</NuspecFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="StressProvider.fs" />
+    <Compile Include="BasicProvider.Runtime.fs" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\FSharp.TypeProviders.SDK.fsproj" />
-  </ItemGroup>
+  <Target Name="MoveDesignTimeAssembliesToTypeProviderFolder" AfterTargets="AfterBuild">
+    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\$(TargetFramework)\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\$(TargetFramework)" />
+  </Target>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
