@@ -57,7 +57,7 @@ Target.create "RunTests" (fun _ ->
         { p with Configuration = config }
 
     [
-        //"tests/FSharp.TypeProviders.SDK.Tests.fsproj"
+        "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
         "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"
         "examples/StressProvider.Tests/StressProvider.Tests.fsproj"
     ]

@@ -2,5 +2,5 @@
 cls
 
 dotnet tool restore
-dotent paket restore
+dotnet paket restore
 dotnet fake run build.fsx %*
