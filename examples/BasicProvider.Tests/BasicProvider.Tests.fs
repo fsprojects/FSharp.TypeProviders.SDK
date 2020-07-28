@@ -1,24 +1,25 @@
-
 module BasicProvider.Tests
 
+open BasicProvider
 open BasicProvider.Provided
+
 open Xunit
 
-[<Fact>]
-let ``Default constructor should create instance`` () =
-    Assert.Equal("My internal state", MyType().InnerState)
+//[<Fact>]
+//let ``Default constructor should create instance`` () =
+//    Assert.Equal("My internal state", MyType().InnerState)
 
-[<Fact>]
-let ``Constructor with parameter should create instance`` () =
-    Assert.Equal("override", MyType("override").InnerState)
+//[<Fact>]
+//let ``Constructor with parameter should create instance`` () =
+//    Assert.Equal("override", MyType("override").InnerState)
 
-[<Fact>]
-let ``Method with ReflectedDefinition parameter should get its name`` () =
-    let myValue = 2
-    Assert.Equal("myValue", MyType.NameOf(myValue))
+//[<Fact>]
+//let ``Method with ReflectedDefinition parameter should get its name`` () =
+//    let myValue = 2
+//    Assert.Equal("myValue", MyType.NameOf(myValue))
 
-type Generative2 = BasicProvider.GenerativeProvider<2>
-type Generative4 = BasicProvider.GenerativeProvider<4>
+type Generative2 = GenerativeProvider<2>
+type Generative4 = GenerativeProvider<4>
 
 [<Fact>]
 let ``Can access properties of generative provider 2`` () =

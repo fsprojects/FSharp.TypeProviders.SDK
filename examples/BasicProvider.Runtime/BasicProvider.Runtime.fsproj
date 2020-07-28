@@ -9,7 +9,8 @@
   <ItemGroup>
     <Compile Include="BasicProvider.Runtime.fs" />
   </ItemGroup>
-  <Target Name="MoveDesignTimeAssembliesToTypeProviderFolder" AfterTargets="AfterBuild">
+  <!--<Target Name="MoveDesignTimeAssembliesToTypeProviderFolder" AfterTargets="AfterBuild">-->
+  <Target Name="AfterBuild">
     <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\$(TargetFramework)\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\$(TargetFramework)" />
   </Target>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
