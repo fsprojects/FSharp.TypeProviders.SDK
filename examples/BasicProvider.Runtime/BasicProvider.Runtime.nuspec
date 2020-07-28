@@ -23,15 +23,15 @@
       </group>
     </dependencies>
     <references>
-      <reference file="BasicProvider.dll" />
+      <reference file="BasicProvider.Runtime.dll" />
     </references>
   </metadata>
   <files>
 
     <!-- Place the TPRTCs in the usual locations --> 
-    <file src="..\BasicProvider\bin\Release\netstandard2.0\BasicProvider.dll" target="lib/netstandard2.0" />
-    <file src="..\BasicProvider\bin\Release\netstandard2.0\BasicProvider.pdb" target="lib/netstandard2.0" />
-    <file src="..\BasicProvider\bin\Release\netstandard2.0\BasicProvider.xml" target="lib/netstandard2.0" />
+    <file src="..\BasicProvider.Runtime\bin\Release\netstandard2.0\BasicProvider.Runtime.dll" target="lib/netstandard2.0" />
+    <file src="..\BasicProvider.Runtime\bin\Release\netstandard2.0\BasicProvider.Runtime.pdb" target="lib/netstandard2.0" />
+    <file src="..\BasicProvider.Runtime\bin\Release\netstandard2.0\BasicProvider.Runtime.xml" target="lib/netstandard2.0" />
 
     <!-- Place the TPDTC in the future-proof location -->
     <file src="..\BasicProvider.DesignTime\bin\Release\netstandard2.0\BasicProvider.DesignTime.dll" target="typeproviders/fsharp41/netstandard2.0" />
