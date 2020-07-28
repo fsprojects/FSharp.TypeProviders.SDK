@@ -3,6 +3,9 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <FSharpToolsDirectory>typeproviders</FSharpToolsDirectory>
+    <PackagePath>typeproviders</PackagePath>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.SDK\src\ProvidedTypes.fsi">
@@ -17,15 +20,11 @@
     <Compile Include="MyProvider.Runtime.fs" />
     <None Include="paket.references" />
   </ItemGroup>
-  <Target Name="BuildDesignTimeProject" BeforeTargets="BeforeBuild">
-    <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Restore" />
-    <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0" />
-  </Target>
-  <Target Name="MoveDesignTimeAssembliesToTypeProviderFolder" AfterTargets="AfterBuild">
-    <CreateItem Include="..\MyProvider.DesignTime\bin\$(Configuration)\netstandard2.0\*.dll;..\MyProvider.DesignTime\bin\$(Configuration)\netstandard2.0\*.pdb">
-      <Output TaskParameter="Include" ItemName="DesignTimeBinaries3" />
-    </CreateItem>
-    <Copy SourceFiles="@(DesignTimeBinaries3)" DestinationFolder="$(OutputPath)/../typeproviders/fsharp41/netstandard2.0" />
-  </Target>
+  <ItemGroup>
+    <ProjectReference Include="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj">
+      <IsFSharpDesignTimeProvider>true</IsFSharpDesignTimeProvider>
+      <PrivateAssets>all</PrivateAssets>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

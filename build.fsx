@@ -81,17 +81,14 @@ Target.create "Pack" (fun _ ->
     DotNet.pack setParams "examples/BasicProvider.Runtime/BasicProvider.Runtime.fsproj"
     DotNet.pack setParams "examples/StressProvider/StressProvider.fsproj"
 
-    // TODO - address once TPSDK is up on nuget    
-    // DotNet.pack  (fun p -> { 
-    //     setParams p with
-    //         MSBuildParams = { 
-    //             MSBuild.CliArguments.Create() with
-    //                 Properties = [
-    //                     "PackageVersion", release.NugetVersion
-    //                     "ReleaseNotes", releaseNotes
-    //                 ] 
-    //         } 
-    //     }) "templates/FSharp.TypeProviders.Templates.nuspec"
+    // TODO - address once TPSDK is up on nuget?
+    NuGet.NuGet.NuGetPack (fun p -> {
+        p with 
+            WorkingDir="templates"
+            OutputPath=outputPath
+            Version=release.NugetVersion
+            ReleaseNotes = releaseNotes
+    }) "templates/FSharp.TypeProviders.Templates.nuspec"
 )
 
 Target.create "TestTemplatesNuGet" (fun _ ->
