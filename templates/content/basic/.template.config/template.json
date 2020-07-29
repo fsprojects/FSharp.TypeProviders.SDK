@@ -12,17 +12,7 @@
         "type": "project"
     },
     "sourceName": "MyProvider",
-    "primaryOutputs": [
-        {
-            "path": "src\\MyProvider.DesignTime\\MyProvider.DesignTime.fs"
-        },
-        {
-            "path": "src\\MyProvider.DesignTime\\MyProvider.DesignTime.fsproj"
-        },
-        {
-            "path": "src\\MyProvider.Runtime\\MyProvider.Runtime.fsproj"
-        }
-    ],
+
     "defaultName": "MyProvider",
     "preferNameDirectory": "true",
     "guids": [

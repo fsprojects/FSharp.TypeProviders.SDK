@@ -66,9 +66,6 @@ Target.create "RunTests" (fun _ ->
 
 Target.create "Pack" (fun _ ->
     let releaseNotes = String.toLines release.Notes
-    Environment.setEnvironVar "Version" release.NugetVersion
-    Environment.setEnvironVar "PackageVersion" release.NugetVersion
-    Environment.setEnvironVar "PackageReleaseNotes" releaseNotes
 
     // TODO use above?
     let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config}
@@ -86,8 +83,16 @@ Target.create "Pack" (fun _ ->
     DotNet.pack setParams "examples/BasicProvider.Runtime/BasicProvider.Runtime.fsproj"
     DotNet.pack setParams "examples/StressProvider/StressProvider.fsproj"
 
-    // TODO - address once TPSDK is up on nuget?
-    DotNet.pack  setParams "templates/FSharp.TypeProviders.Templates.proj"
+    DotNet.pack (fun p -> { 
+        setParams p with 
+            MSBuildParams = { 
+                MSBuild.CliArguments.Create() with
+                    Properties = [
+                        "PackageVersion", release.NugetVersion
+                        "ReleaseNotes", releaseNotes
+                    ]
+            } 
+        }) "templates/FSharp.TypeProviders.Templates.proj"
 )
 
 Target.create "TestTemplatesNuGet" (fun _ ->
