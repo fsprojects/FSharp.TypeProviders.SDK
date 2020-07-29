@@ -99,7 +99,9 @@ Target.create "TestTemplatesNuGet" (fun _ ->
     let wd = Path.Combine(__SOURCE_DIRECTORY__, "temp")
     let runInTempDir (p:DotNet.Options) = { p with WorkingDirectory = wd }
     // Globally install the templates from the template nuget package we just built
-    DotNet.exec runInTempDir "new" ("-i " + outputPath + "/FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg") |> ignore
+    DotNet.exec runInTempDir "new" "-u FSharp.TypeProviders.Templates" |> ignore
+
+    DotNet.exec runInTempDir "new" ("-i " + Path.Combine(outputPath, "FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg")) |> ignore
 
     // Instantiate the template into a randomly generated name
     let ticks = DateTime.Now.Ticks
@@ -113,6 +115,8 @@ Target.create "TestTemplatesNuGet" (fun _ ->
     DotNet.exec runInTestAppDir "paket" "restore" |> ignore
     DotNet.exec runInTestAppDir "build" "-c debug" |> ignore
     DotNet.exec runInTestAppDir "test" "-c debug" |> ignore
+
+    DotNet.exec runInTempDir "new" "-u FSharp.TypeProviders.Templates" |> ignore
 
     (* Manual steps without building nupkg
         dotnet pack src\FSharp.TypeProviders.SDK.fsproj /p:PackageVersion=0.0.0.99 --output bin -c release
