@@ -66,9 +66,8 @@ Target.create "RunTests" (fun _ ->
 
 Target.create "Pack" (fun _ ->
     let releaseNotes = String.toLines release.Notes
-
-    // TODO use above?
     let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config}
+
     DotNet.pack  (fun p -> { 
         setParams p with 
             MSBuildParams = { 
@@ -98,9 +97,8 @@ Target.create "Pack" (fun _ ->
 Target.create "TestTemplatesNuGet" (fun _ ->
     let wd = Path.Combine(__SOURCE_DIRECTORY__, "temp")
     let runInTempDir (p:DotNet.Options) = { p with WorkingDirectory = wd }
-    // Globally install the templates from the template nuget package we just built
-    DotNet.exec runInTempDir "new" "-u FSharp.TypeProviders.Templates" |> ignore
 
+    DotNet.exec runInTempDir "new" "-u FSharp.TypeProviders.Templates" |> ignore
     DotNet.exec runInTempDir "new" ("-i " + Path.Combine(outputPath, "FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg")) |> ignore
 
     // Instantiate the template into a randomly generated name
@@ -131,9 +129,8 @@ Target.create "All" ignore
 "Clean"
   ==> "Build"
   ==> "Examples"
-  //==> "RunTests"
+  ==> "RunTests"
   ==> "Pack"
-  // TODO - re-enable once TPSDK is on nuget
   ==> "TestTemplatesNuGet"
   ==> "All"
 

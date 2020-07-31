@@ -127,10 +127,6 @@ let nonPrimitives =
       "System.TimeSpan", typeof<TimeSpan>, box TimeSpan.Zero
       "System.DayOfWeek", typeof<DayOfWeek>, box DayOfWeek.Friday ]
 
-#if INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS
-
-open ProviderImplementation.ProvidedTypes.AssemblyReader
-
 let stressTestCore() = 
     let refs = Targets.DotNetStandard20FSharp45Refs()
     let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
@@ -195,7 +191,6 @@ let ``test reader cache actually caches``() =
         for (KeyValue(key, (_, wh))) in weakDict do
             let alive = fst(wh.TryGetTarget())
             Assert.False(alive, sprintf "Weak handle for %A should no longer be populated as latest TP no longer alive" key)
-#endif
 
 [<TypeProvider>]
 type public SampleTypeProvider(config : TypeProviderConfig) as this = 
@@ -278,3 +273,170 @@ type ErasingProviderWithCustomAttributes (config : TypeProviderConfig) as this =
 
     do
         this.AddNamespace(ns, createTypes())
+
+[<Fact>]
+let ``Check target enum types gives right values``() : unit  = 
+    let refs = Targets.DotNetStandard20FSharp45Refs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    let dayOfWeekType = typeof<System.DayOfWeek>
+    let dayOfWeekTypeT = tp.TargetContext.ConvertSourceTypeToTarget dayOfWeekType
+    printfn "Enums #1"
+    Assert.True(dayOfWeekType.IsEnum)
+    printfn "Enums #2"
+    Assert.Equal(dayOfWeekType.GetEnumUnderlyingType().FullName, "System.Int32")
+    printfn "Enums #3"
+    Assert.True(dayOfWeekTypeT.IsEnum)
+    printfn "Enums #4"
+    Assert.Equal(dayOfWeekTypeT.GetEnumUnderlyingType().FullName, "System.Int32")
+    printfn "Done Enums"
+
+[<Fact>]
+let ``Check target delegate types gives right values``() : unit  = 
+    let refs = Targets.DotNetStandard20FSharp45Refs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    for delegateType in [ typeof<Func<int,int>>; typeof<System.Converter<int,int>>; typeof<System.Action> ] do
+        let delegateTypeT = tp.TargetContext.ConvertSourceTypeToTarget delegateType
+        printfn "Delegates #1, delegateType = %A" delegateType
+        Assert.True(delegateType.IsSubclassOf(typeof<System.Delegate>))
+        printfn "Delegates #2, delegateType = %A" delegateType
+        Assert.True(delegateTypeT.IsSubclassOf(typeof<System.Delegate>))
+
+[<Fact>]
+let ``test basic symbol type ops``() =
+   let refs = Targets.DotNetStandard20FSharp45Refs()
+   let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+   use tp = new TypeProviderForNamespaces(config)
+   let ctxt = tp.TargetContext
+
+   //let fscore =  ctxt1.TryBindAssemblyNameToTarget(AssemblyName("FSharp.Core")) 
+   let decimalT = typeof<decimal>
+   let kg = ProvidedMeasureBuilder.SI "kg"
+   let t1 = ProvidedMeasureBuilder.AnnotateType(decimalT, [ kg ])
+
+   match kg with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol"
+   match t1 with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#2"
+
+   let t1T = ctxt.ConvertSourceTypeToTarget t1
+   let kgT = ctxt.ConvertSourceTypeToTarget kg
+   match kgT with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol#3"
+   match t1T with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#4"
+
+   let t2 = ProvidedTypeBuilder.MakeTupleType([ t1; t1 ])
+
+   Assert.True(not t2.IsGenericTypeDefinition) 
+   Assert.True(t2.IsGenericType) 
+   Assert.True(t2.GetGenericTypeDefinition().IsGenericType) 
+   Assert.True(t2.GetGenericTypeDefinition().IsGenericTypeDefinition) 
+
+   Assert.True(t2.GetType().Name = "TypeSymbol") // TypeSymbol is an internal type but we test it here anyway for double-check
+
+   // We test that we can call GetProperties on tuple type symbols produced by ProvidedTypeBuilder because these get 
+   // handed off to FSharpValue.PreComputeTupleConstructorInfo and so on by the SDK or by F# quotations
+   Assert.True(t2.GetProperties().Length <> 0) 
+   // We check these others just to make sure they have some implementation on symbols produced by ProvidedTypeBuilder 
+   Assert.True(t2.GetEvents(BindingFlags.Public ||| BindingFlags.Instance).Length = 0) 
+   Assert.True(t2.GetEvents(BindingFlags.NonPublic ||| BindingFlags.Instance).Length = 0) 
+   Assert.True(t2.GetEvents().Length = 0) 
+   t2.GetMethods() |> ignore
+   t2.GetFields() |> ignore
+   t2.GetConstructors() |> ignore
+   t2.GetMethod("get_Item1") |> ignore
+
+
+   let t2T = ctxt.ConvertSourceTypeToTarget t2
+
+   Assert.True(t2T.GetType().Name = "TypeSymbol")// TypeSymbol is an internal type but we test it here anyway for double-check
+   Assert.True(not t2T.IsGenericTypeDefinition) 
+   Assert.True(t2T.GetGenericTypeDefinition().IsGenericType) 
+   Assert.True(t2T.GetGenericTypeDefinition().IsGenericTypeDefinition) 
+   Assert.True(t2T.IsGenericType) 
+   Assert.True(t2T.GetProperties().Length <> 0) 
+   Assert.True(t2T.GetEvents().Length = 0) 
+   t2T.GetMethods() |> ignore
+   t2T.GetFields() |> ignore
+   t2T.GetConstructors() |> ignore
+   t2T.GetMethod("get_Item1") |> ignore
+
+[<Fact>]
+let ``ErasingConstructorProvider generates for .NET Standard 2.0 F# 4.7 correctly``() : unit  = 
+    printfn "--------- Generating code for .NET Standard 2.0 F# 4.1 ------"
+    let res = testCrossTargeting (Targets.DotNetStandard20FSharp45Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
+    Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
+    Assert.True(res.Contains "[FSharp.Core, Version=4.7.0.0")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
+
+
+[<Fact>]
+let ``check custom attributes``() = 
+    let refs = Targets.DotNetStandard20FSharp45Refs()
+    let tp, t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, ErasingProviderWithCustomAttributes, [| |]  )
+    Assert.True(t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name))
+    Assert.Equal(1, t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name) |> Seq.length)
+
+[<Fact>]
+let ``check on-demand production of members``() = 
+    let refs = Targets.DotNetStandard20FSharp45Refs()
+    let tp,t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, SampleTypeProvider, [| box "Arg" |]  )
+
+    let domainTy = t.GetNestedType("Domain")
+
+    Assert.Null(domainTy.GetNestedType("DomainTypeForA")) // DomainTypeForA type not yet created
+
+    let containersType  = domainTy.GetNestedType("Containers")
+    Assert.NotNull(containersType)
+
+    Assert.Equal(domainTy.GetMembers().Length, 1) // DomainTypeForA type not yet created
+    Assert.Null(domainTy.GetNestedType("DomainTypeForA")) // DomainTypeForA type not yet created.  
+
+    let containersPropA  = containersType.GetProperty("A") // this call also creates DomainTypeForA
+    Assert.NotNull(containersPropA)
+    Assert.True(containersPropA.Name = "A")
+
+    // Check there is no AllowNullLiteralAttribute
+    Assert.True (domainTy.GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name) |> not)
+
+    // Fetching this type was failing becuase the call to expand domainType when getting property A for the first time was only applying to the source model,
+    // not the translated target model
+    let domainTyForA  = domainTy.GetNestedType("DomainTypeForA")
+
+    let bindAll = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static  ||| BindingFlags.Instance
+    Assert.NotNull(domainTyForA)
+    Assert.True(domainTyForA.Name = "DomainTypeForA")
+    Assert.Equal(1 + 5, domainTy.GetMembers(bindAll).Length) // one for Containers, 5 properties, 5 getters for properties, 5 nested types
+    Assert.Equal(0, domainTy.GetMethods(bindAll).Length) 
+    Assert.Equal(1 + 5, domainTy.GetNestedTypes(bindAll).Length) 
+    Assert.Equal(5, containersType.GetMethods(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(5, containersType.GetProperties(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(5 + 5, containersType.GetMembers(bindAll).Length) // 5 properties, 5 getters for properties
+
+
+    Assert.NotNull(domainTy.GetNestedType("DomainTypeForA")) // type is still there
+    Assert.NotNull(domainTy.GetNestedType("DomainTypeForB")) // type is created because A, B, C, D, E all get created together
+
+    let containersPropB  = containersType.GetProperty("B") // this should not re-create B!
+    Assert.True(containersPropB.Name = "B")
+
+    let domainTyForB  = domainTy.GetNestedType("DomainTypeForB")
+    Assert.NotNull(domainTyForB)
+
+    //Assert.True((domainTyForB :?> ProvidedTypeDefinition).NonNullable)
+
+    Assert.True (domainTyForB.GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name))
+    Assert.Equal (1, domainTyForB.GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name) |> Seq.length)
+
+    Assert.True(domainTyForB.Name = "DomainTypeForB")
+
+    // check we didn't create twice
+    Assert.Equal(1 + 5, domainTy.GetMembers(bindAll).Length) // one for Containers, 5 properties, 5 getters for properties, 5 nested types
+    Assert.Equal(0, domainTy.GetMethods(bindAll).Length) 
+    Assert.Equal(1 + 5, domainTy.GetNestedTypes(bindAll).Length) 
+    Assert.Equal(5 + 5, containersType.GetMembers(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(5, containersType.GetMethods(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(5, containersType.GetProperties(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
