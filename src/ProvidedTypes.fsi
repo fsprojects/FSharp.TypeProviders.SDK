@@ -260,6 +260,8 @@ namespace ProviderImplementation.ProvidedTypes
         /// Like FsharpType.MakeTupleType, but will also work with unit-annotated types and provided types
         static member MakeTupleType: args: Type list -> Type
 
+        /// Like FsharpType.MakeTupleType, but will also work with unit-annotated types and provided types
+        static member MakeTupleType: args: Type list*bool -> Type
 
     /// Helps create erased provided unit-of-measure annotations.
     [<Class>]
