@@ -19,62 +19,38 @@ open Microsoft.FSharp.Quotations
 
 #nowarn "760" // IDisposable needs new
 
-let testCases() = 
-    [("F# 3.1 Portable 259", "3.259.3.1", (fun _ ->  Targets.hasPortable259Assemblies()), Targets.Portable259FSharp31Refs)
-     ("F# 4.0 Portable 259", "3.259.4.0", (fun _ ->  Targets.hasPortable259Assemblies() && Targets.supportsFSharp40()), Targets.Portable259FSharp40Refs)
-     ("F# 3.1 .NET 4.5", "4.3.1.0", (fun _ ->  Targets.supportsFSharp31()), Targets.DotNet45FSharp31Refs)
-     ("F# 4.0 .NET 4.5", "4.4.0.0", (fun _ ->  Targets.supportsFSharp40()), Targets.DotNet45FSharp40Refs)
-     ("F# 4.1 .NET 4.5", "4.4.1.0", (fun _ ->  true), Targets.DotNet45FSharp41Refs)
-     ("F# 4.1 .NET Standard 2.0", "4.4.1.0", (fun _ ->  true), Targets.DotNetStandard20FSharp41Refs)
-     ("F# 4.1 .NET CoreApp 2.0", "4.4.1.0", (fun _ ->  true), Targets.DotNetCoreApp20FSharp41Refs) ]
-
-let possibleVersions = 
-    [ "3.259.3.1"
-      "3.259.4.0"
-      "4.3.1.0"
-      "4.4.0.0"
-      "4.4.1.0"
-      "4.4.3.0"
-      (typeof<list<int>>.Assembly.GetName().Version.ToString()) ]
-
-let hostedTestCases() = 
-    [("4.4.0.0", (fun _ ->  Targets.supportsFSharp40()), Targets.DotNet45FSharp40Refs) ]
-
-
 let testProvidedAssembly exprs = 
-    if Targets.supportsFSharp40() then
-        let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs()
-        let runtimeAssembly = runtimeAssemblyRefs.[0]
-        let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
-        let tp = TypeProviderForNamespaces(cfg) //:> TypeProviderForNamespaces
-        let ns = "Tests"
-        let tempAssembly = ProvidedAssembly()
-        let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
-        let mutable counter = 0
-        
-        let create (expr : Expr) =  
-            counter <- counter + 1
-            let name = sprintf "F%d" counter
-            ProvidedMethod(name,[],expr.Type,invokeCode = (fun _args -> expr), isStatic = true)
-            |> container.AddMember
-            name
-        let names = exprs |> List.map (fst >> create)
-        do tempAssembly.AddTypes [container]
-        do tp.AddNamespace(container.Namespace, [container])
-        let providedNamespace = tp.Namespaces.[0] 
-        let providedTypes  = providedNamespace.GetTypes()
-        let providedType = providedTypes.[0] 
-        let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
-        Assert.Equal("Container", providedTypeDefinition.Name)
-        let test (container : Type) = 
-            let call name = container.GetMethod(name).Invoke(null,[||])
-            (names, exprs)
-            ||> List.iter2 (fun name (_,f) -> f(call name))
-        let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
-        let assembly = Assembly.Load assemContents
-        assembly.ExportedTypes |> Seq.find (fun ty -> ty.Name = "Container") |> test
-
-let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false 
+    let asms = AppDomain.CurrentDomain.GetAssemblies() |> Array.filter (fun x -> not x.IsDynamic) |> Array.map (fun x -> x.Location) 
+    let runtimeAssemblyRefs = Array.toList asms
+    let runtimeAssembly = asms |> Array.find (fun x -> match IO.Path.GetFileNameWithoutExtension(x).ToLower() with "mscorlib" | "system.runtime" -> true | _ -> false)
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
+    let tp = TypeProviderForNamespaces(cfg) //:> TypeProviderForNamespaces
+    let ns = "Tests"
+    let tempAssembly = ProvidedAssembly()
+    let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
+    let mutable counter = 0
+    
+    let create (expr : Expr) =  
+        counter <- counter + 1
+        let name = sprintf "F%d" counter
+        ProvidedMethod(name,[],expr.Type,invokeCode = (fun _args -> expr), isStatic = true)
+        |> container.AddMember
+        name
+    let names = exprs |> List.map (fst >> create)
+    do tempAssembly.AddTypes [container]
+    do tp.AddNamespace(container.Namespace, [container])
+    let providedNamespace = tp.Namespaces.[0] 
+    let providedTypes  = providedNamespace.GetTypes()
+    let providedType = providedTypes.[0] 
+    let providedTypeDefinition = providedType :?> ProvidedTypeDefinition
+    Assert.Equal("Container", providedTypeDefinition.Name)
+    let test (container : Type) = 
+        let call name = container.GetMethod(name).Invoke(null,[||])
+        (names, exprs)
+        ||> List.iter2 (fun name (_,f) -> f(call name))
+    let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
+    let assembly = Assembly.Load assemContents
+    assembly.ExportedTypes |> Seq.find (fun ty -> ty.Name = "Container") |> test
 
 let check (e : Expr<'a>) expected = 
     e.Raw, fun o -> 
