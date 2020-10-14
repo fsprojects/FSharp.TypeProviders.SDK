@@ -95,88 +95,38 @@ Here are some examples of existing type providers that aren't too bad (they are 
 
 Correctly updated type providers can be used with either the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain. 
 
-* For .NET SDK 2.1.4 and before, see [How to enable type providers with new-style .NET SDK project files, ``dotnet build``, .NET Standard and .NET Core programming](https://github.com/Microsoft/visualfsharp/issues/3303)
-
-* For .NET SDK 2.1.100 and above, you can either use type providers specifically updated to work with the .NET SDK, or use the same [workaround](https://github.com/Microsoft/visualfsharp/issues/3303).
-
-### Updating a Type Provider to be suitable for use with the .NET SDK
-
-This short guide assumes 
-1. You have a type provider with separate TPDTC and TPRTC components (see below if you don't know what those are)
-2. Some of your code might have dependencies on .NET Framework functionality
-3. You want your type provider to be usable with both the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain.
-4. You want your type provider to be usable for all of .NET Standard, .NET Core and .NET Framework programming (if possible)
-
-
-Here is a guide to the steps to perform:
-
-1. Use .NET SDK 2.1.100-preview-007363 or above.  Forget .NET SDK 2.1.4 and before.
-
-1. If using Visual Studio, then use Visual Studio 2017 15.6 and above.  Your type provider will still be usable with previous versionss, we'll get to that, but for now assume 15.6
-
-2. First switch to use .NET SDK project files, compiling them with `msbuild` 
-
-3. Update to the latest ProvidedTypes.fs/fsi from this project
-
-   * If making a generative type provider, check your `isErased` flags and use of `ProvidedAssembly` fragments, see [this example](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L68)
-   
-   * If your TPDTC contains a copy of your TPRTC implementation then use [`assemblyReplacementMap`](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider.DesignTime/BasicProvider.Provider.fs#L12)
-
-4. Work out how much your TPRTC (runtime component) depends on .NET Framework by trying to target `netstandard2.0`.  You may need to use different package references to try this.
-
-   * If your TPRTC **fundamentally** depends on .NET Framework, then you will not be able to use your type provider within projects targeting .NET Core or .NET Standard. Keep targeting your TPRTC at .NET Framework.
-   
-   * If your TPRTC **partially** depends on .NET Framework, then multi-target the TPRTC to `net45;netstandard2.0` and use `#if NETSTANDARD2_0`
-   
-   * If your TPRTC **doesn't** depend on .NET Framework, then target the TPRTC to `netstandard2.0`
-
-5. Work out how much of a dependency your TPDTC has on .NET Framework:
-
-   * If the compile-time computations performed by your TPDTC **fundamentally** depend on .NET Framework, then your type provider will not be usable with the .NET SDK toolchain without using [the workaround](https://github.com/Microsoft/visualfsharp/issues/3303))
-   
-   * If the TPDTC **partially** depends on .NET Framework, then multi-target the TPDTC to `net45;netcoreapp2.0` and use `#if NETCOREAPP3_1`
-   
-   * If the TPDTC **doesn't** depend on .NET Framework, then target the TPDTC to `netstandard2.0`
-   
-   Beware that your TPDTC might have a **false** dependency induced by including a copy of the TPRTC source code into the TPDTC (which is generally a good technique). It is likely such a dependency can be removed by selectively stubbing out runtime code using a `IS_DESIGNTIME` define.  The TPDTC only needs access to an "API" that has the same logical shape as the TPRTC in order to generate code and types.  That "API" is then translated to match the target references assemblies in an actual compilation.
-
-7. Modify your project to copy the design-time DLLs into the right place, e.g. see [this example](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider/BasicProvider.fsproj#L16)
-
-8. Have your test projects multi-target to `netcoreapp2.0; net471`
-
-9. Use  `dotnet build` to build instead of `msbuild`
-
-   * If any of your projects targeting .NET 4.x so they will compile with `dotnet` on Linux/OSX when Mono is installed, then include [netfx.props](https://github.com/dsyme/FSharp.TypeProviders.SDK/blob/36b9f59c8f25d93adc11851affbcf71fcf671ef1/examples/BasicProvider/BasicProvider.fsproj#L4) in the project and project file
-
-10. Modify your nuget package layout as described below.
-
-
 ### Nuget package layouts you should use
 
-The typical nuget package layout for a provider that has **combined** design-time and runtime components is:
+The typical nuget package layout for a very simple provider that has **combined** design-time and runtime components and **no dependencies** is:
 
     lib/netstandard2.0
-        MyProvider.dll // TPRTC and TPDTC
-        netstandard.dll // Extra facade, see below
-        System.Runtime.dll // Extra facade, see below
-        System.Reflection.dll // Extra facade, see below
+        MyProvider.dll // acts as both TPRTC and TPDTC
 
-The typical nuget package layout for a provider that has separate design-time and runtime components is:
+The typical nuget package layout for a provider that has separate design-time and runtime components is like this.  You should also likely use this if your type provider has any extra dependencies.
 
-    lib/net45/
+    lib/netstandard2.0
         MyProvider.dll // TPRTC
-        MyProvider.DesignTime.dll // .NET 4.x TPDTC alongside TPRTC (only needed for legacy loading: VS2015, Mono 5.12, VS2017 before 15.6)
     
     typeproviders/fsharp41/
-        net45/
-            MyProvider.DesignTime.dll // .NET 4.x TPDTC
-    
-        netcoreapp2.0/
-            MyProvider.DesignTime.dll // .NET Core App 2.0 TPDTC
+        netstandard2.0/
+            MyProvider.DesignTime.dll // TPDTC
+            MyDesignTimeDependency.dll // bundled dependencies of TPDTC
 
-It is important that the design-time assemblies you use (if any) are not loaded at runtime. To ensure this does not happen, when you distribute a Nuget package for your Type Provider you _must_ provide an explicit list of project references for consumers to include. If you do not, every assembly you publish in the package will be included, which can lead to design-type only references being loaded at runtime.  To reference only a subset of assemblies, see the [Nuget documentation](https://docs.microsoft.com/en-us/nuget/reference/nuspec#explicit-assembly-references) or the [Paket documentation](https://fsprojects.github.io/Paket/template-files.html#References).
+Runtime dependencies are often the same as design time dependencies for simple type providers.  For more complex providers these can be different
 
-That is, an explicit `.nuspec` file will be needed with an explicit `<references>` node (so that only the TPRTC gets added as a reference), see [this example](https://github.com/baronfel/FSharp.Data/blob/e0f133e6e79b4a41365776da51332227dccff9ab/nuget/FSharp.Data.nuspec).
+* The runtime dependencies are the dependencies of everything in your quotations in your type provider implementation.
+
+* The design dependencies are the dependencies of everything outside the quotations to decide and generate the provided types.
+
+These dependencies are packaged and managed differently 
+
+* The runtime dependencies are normal nuget package dependencies just like any normal .NET library. FOr example, if your type provider has Newtonsoft.Json as a runtime
+  dependency then your nuget package should list this a normal nuget dependency.
+
+* The design dependencies must all be bundled alongside your design-time DLL.  The design-time component is a component loaded into a tool like Ionide or
+  Visual Studio and must be loadable without referencing any other packages.
+ 
+
 
 ### Lifetime of type provider instantiations
 
@@ -274,23 +224,6 @@ See [Type provider design-time DLLs should be chosen more appropriately](https:/
 ### Making a .NET Standard 2.0 TPDTC
 
 It will be increasingly common to make type providers where the TPDTC is a .NET Standard 2.0 component. In the very simplest case,  there will just be one  happy .NET Standard 2.0 component ``MyTypeProvider.dll`` acting as both the TPDTC and TPRTC.  Such a type provider will eventually be loadable into all F# tooling.
-
-However, today, for a TPDTC to be .NET Standard 2.0, it must be loadable into host tools using .NET Framework 4.6.1 or Mono 5.x, the most common platforms for execution of F# tooling. Because .NET Framework 4.6.1 doesn't _fully_ support .NET Standard 2.0, this can only be done if the TPDTC ships alongside some facade DLLs.  Currently the following facade DLLs are needed alongside the TPDTC:
-
-```
-    <!-- These files are the facades necessary to run .NET Standard 2.0 components on .NET Framework 4.6.1 (.NET Framework 4.7 will -->
-    <!-- come with these facades included). Because the type provider is a .NET Standard 2.0 component, the deployment of the type -->
-    <!--  provider must include these facade DLLs if it is to run hosted inside an F# compiler executing using  .NET Framework 4.6.1 or Mono 5.0. -->
-    <None Include="..\..\packages\NETStandard.Library.NETFramework\build\net461\lib\netstandard.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\packages\NETStandard.Library.NETFramework\build\net461\lib\System.Reflection.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\packages\NETStandard.Library.NETFramework\build\net461\lib\System.Runtime.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-```
 
 ### Explicit construction of code: MakeGenericType, MakeGenericMethod and UncheckedQuotations
 
