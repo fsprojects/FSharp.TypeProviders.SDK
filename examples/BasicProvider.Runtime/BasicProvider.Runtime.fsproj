@@ -1,4 +1,6 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -22,5 +24,15 @@
       <PrivateAssets>all</PrivateAssets>
     </ProjectReference>
   </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <Target Name="AfterBuild">
+    <!-- We place the TPDTC DLLs and its dependencies in a well-known locations with respect to the runtime DLL -->
+    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />
+    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\BasicProvider.DesignTime.pdb" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />
+    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\FSharp.TypeProviders.SDK.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />
+    <Copy SourceFiles="..\BasicProvider.DesignTime\bin\$(Configuration)\netstandard2.0\FSharp.TypeProviders.SDK.pdb" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />
+  </Target>
 
 </Project>
