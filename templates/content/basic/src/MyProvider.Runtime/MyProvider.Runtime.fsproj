@@ -24,10 +24,6 @@
   <Import Project="..\..\.paket\Paket.Restore.targets" />
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 
-  <Target Name="BeforeBuild">
-    <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Restore" />
-    <MSBuild Projects="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj" Targets="Build" Properties="Configuration=$(Configuration)" />
-  </Target>
   <Target Name="AfterBuild">
     <!-- We place the TPDTC DLLs in a well-known locations with respect to the runtime DLL -->
     <Copy SourceFiles="..\MyProvider.DesignTime\bin\$(Configuration)\netstandard2.0\MyProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />
