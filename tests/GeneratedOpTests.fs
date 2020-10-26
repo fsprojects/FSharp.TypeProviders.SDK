@@ -24,15 +24,16 @@ let testCases() =
     [ (sprintf "FSharp.Core %s .NET Standard 2.0" fsCoreVersion, fsCoreVersion, (fun _ ->  true), Targets.DotNetStandard20FSharpRefs) ]
 
 let testProvidedAssembly exprs =
-    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
-    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    let asms = AppDomain.CurrentDomain.GetAssemblies() |> Array.filter (fun x -> not x.IsDynamic) |> Array.map (fun x -> x.Location) 
+    let runtimeAssemblyRefs = Array.toList asms
+    let runtimeAssembly = asms |> Array.find (fun x -> match IO.Path.GetFileNameWithoutExtension(x).ToLower() with "mscorlib" | "system.runtime" -> true | _ -> false)
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
     let tp = TypeProviderForNamespaces(cfg) //:> TypeProviderForNamespaces
     let ns = "Tests"
     let tempAssembly = ProvidedAssembly()
     let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
     let mutable counter = 0
-        
+
     let create (expr : Expr) =  
         counter <- counter + 1
         let name = sprintf "F%d" counter
@@ -54,8 +55,6 @@ let testProvidedAssembly exprs =
     let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
     let assembly = Assembly.Load assemContents
     assembly.ExportedTypes |> Seq.find (fun ty -> ty.Name = "Container") |> test
-
-let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false 
 
 let check (e : Expr<'a>) expected = 
     e.Raw, fun o -> 

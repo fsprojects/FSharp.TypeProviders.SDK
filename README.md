@@ -83,38 +83,37 @@ Here are some examples of existing type providers that aren't too bad (they are 
 
 Correctly updated type providers can be used with either the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain.
 
-### Updating a Type Provider to be suitable for use with the .NET SDK
-
-It is not feasible to update a non-.NET SDK-style type provider in-place. Instead, you should use the provided template above and port code over until things work.
-
-If you require .NET Framework due to an API or third-party dependency, use multi-targeting. It is not recommended to target anything lower than `net472`, since this is the lowest version of .NET Framework that can reliably work with .NET Standard. It is also the base .NET Framework version that Visual Studio uses.
-
 ### Nuget package layouts you should use
 
-The typical nuget package layout for a provider that has **combined** design-time and runtime components is:
+The typical nuget package layout for a very simple provider that has **combined** design-time and runtime components and **no dependencies** is:
 
     lib/netstandard2.0
-        MyProvider.dll // TPRTC and TPDTC
-        netstandard.dll // Extra facade, see below
-        System.Runtime.dll // Extra facade, see below
-        System.Reflection.dll // Extra facade, see below
+        MyProvider.dll // acts as both TPRTC and TPDTC
 
-The typical nuget package layout for a provider that has separate design-time and runtime components is:
+The typical nuget package layout for a provider that has separate design-time and runtime components is like this.  You should also likely use this if your type provider has any extra dependencies.
 
-    lib/net45/
+    lib/netstandard2.0
         MyProvider.dll // TPRTC
-        MyProvider.DesignTime.dll // .NET 4.x TPDTC alongside TPRTC (only needed for legacy loading: VS2015, Mono 5.12, VS2017 before 15.6)
     
     typeproviders/fsharp41/
-        net45/
-            MyProvider.DesignTime.dll // .NET 4.x TPDTC
-    
-        netcoreapp2.0/
-            MyProvider.DesignTime.dll // .NET Core App 2.0 TPDTC
+        netstandard2.0/
+            MyProvider.DesignTime.dll // TPDTC
+            MyDesignTimeDependency.dll // bundled dependencies of TPDTC
 
-It is important that the design-time assemblies you use (if any) are not loaded at runtime. To ensure this does not happen, when you distribute a Nuget package for your Type Provider you _must_ provide an explicit list of project references for consumers to include. If you do not, every assembly you publish in the package will be included, which can lead to design-time only references being loaded at runtime.  To reference only a subset of assemblies, see the [Nuget documentation](https://docs.microsoft.com/en-us/nuget/reference/nuspec#explicit-assembly-references) or the [Paket documentation](https://fsprojects.github.io/Paket/template-files.html#References).
+Runtime dependencies are often the same as design time dependencies for simple type providers.  For more complex providers these can be different
 
-That is, an explicit `.nuspec` file will be needed with an explicit `<references>` node (so that only the TPRTC gets added as a reference), see [this example](https://github.com/baronfel/FSharp.Data/blob/e0f133e6e79b4a41365776da51332227dccff9ab/nuget/FSharp.Data.nuspec).
+* The runtime dependencies are the dependencies of everything in your quotations in your type provider implementation.
+
+* The design dependencies are the dependencies of everything outside the quotations to decide and generate the provided types.
+
+These dependencies are packaged and managed differently 
+
+* The runtime dependencies are normal nuget package dependencies just like any normal .NET library. FOr example, if your type provider has Newtonsoft.Json as a runtime
+  dependency then your nuget package should list this a normal nuget dependency.
+
+* The design dependencies must all be bundled alongside your design-time DLL.  The design-time component is a component loaded into a tool like Ionide or
+  Visual Studio and must be loadable without referencing any other packages.
+ 
 
 ### Lifetime of type provider instantiations
 
@@ -151,6 +150,38 @@ The lifetime of TAST structures is as long as they are held in the IncrementalBu
    If your failures only happen in the IDE then use `devenv /debugexe devenv.exe MyProj.fsproj`, set debug type to  ".NET Framework 4.0" and launch F5. Likewise if your failures only happen in F# Interactive then use `devenv /debugexe fsi.exe MyProj.fsproj`.
 
    Set first-catch exception handling (Ctrl-Alt-E, select all CLR exceptions) and set Just My Code off
+
+#### A dependency of my type provider is not loading, what do I do?
+
+For example, let's say you have this error in your test project:
+
+```
+2>E:\GitHub\admin\joe-provider\test\Joe.Test\ProviderTests.fs(8,10): error FS3033: The type provider 'Joe.Provider.JoeProvider' reported an error: Could not load file or assembly 'Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed'. The system cannot find the file specified. [E:\GitHub\dsyme\joe-provider\test\Joe.Test\Joe.Test.fsproj]
+```
+
+Here your test project is referencing your provider project, and your type provider has a dependency on `Newtonsoft.Json.dll`. To see what's going on, run
+
+    dotnet build -v:n
+    
+In the compilation of your test project you will see something like this:
+
+         C:\Program Files\dotnet\dotnet.exe "C:\Program Files\dotnet\sdk\3.1.401\FSharp\fsc.exe"
+             -o:obj\Debug\netcoreapp3.1\Joe.Test.dll
+             ...
+             -r:E:\GitHub\admin\joe-provider\src\Joe.Provider\bin\Debug\netstandard2.0\Joe.Provider.dll
+             ...
+
+1. The tool `fsc.exe` is trying to load the type provider but a dependency is not found.  As mentioned above, all dependencies must be packaged
+   alongside your design time component.  For example, adding
+
+       <Content Include="..\..\packages\Newtonsoft.Json\lib\netstandard2.0\Newtonsoft.Json.dll" CopyToOutputDirectory="PreserveNewest" />
+
+   will include the component and unblock you.  However, you will need to be careful to make sure this component is laid down in the right place in your nuget
+   package, see the instructions above for what the final layout of the nuget package should be.
+
+2. When making type providers whose design-time components have dependencies, you should always use a "split" type provider that separates the design-time and runtime components.
+
+TODO: give exact .fsproj/nuget instructions to get the dependency into the `typeproviders\fsharp41\netstandard2.0` directory alongside the design-time component.
 
 #### How do I debug execution of a type provider when using .NET Core tools on Windows?
 

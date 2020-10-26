@@ -19,6 +19,7 @@ open Microsoft.FSharp.Quotations
 
 #nowarn "760" // IDisposable needs new
 
+<<<<<<< HEAD
 let testCases() = 
     let fsCoreVersion = typeof<list<int>>.Assembly.GetName().Version.ToString()
     [ (sprintf "FSharp.Core %s .NET Standard 2.0" fsCoreVersion, fsCoreVersion, (fun _ ->  true), Targets.DotNetStandard20FSharpRefs) ]
@@ -26,13 +27,23 @@ let testCases() =
 let testProvidedAssembly exprs =
     let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
     let runtimeAssembly = runtimeAssemblyRefs.[0]
+=======
+let testProvidedAssembly exprs = 
+    let asms = AppDomain.CurrentDomain.GetAssemblies() |> Array.filter (fun x -> not x.IsDynamic) |> Array.map (fun x -> x.Location) 
+    let runtimeAssemblyRefs = Array.toList asms
+    let runtimeAssembly = asms |> Array.find (fun x -> match IO.Path.GetFileNameWithoutExtension(x).ToLower() with "mscorlib" | "system.runtime" -> true | _ -> false)
+>>>>>>> 0584fd73e280f4765a667f455deaf247f12853fe
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
     let tp = TypeProviderForNamespaces(cfg) //:> TypeProviderForNamespaces
     let ns = "Tests"
     let tempAssembly = ProvidedAssembly()
     let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
     let mutable counter = 0
+<<<<<<< HEAD
         
+=======
+    
+>>>>>>> 0584fd73e280f4765a667f455deaf247f12853fe
     let create (expr : Expr) =  
         counter <- counter + 1
         let name = sprintf "F%d" counter
@@ -54,14 +65,21 @@ let testProvidedAssembly exprs =
     let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedTypeDefinition.Assembly)
     let assembly = Assembly.Load assemContents
     assembly.ExportedTypes |> Seq.find (fun ty -> ty.Name = "Container") |> test
+<<<<<<< HEAD
 
 let runningOnMono = try Type.GetType("Mono.Runtime") <> null with _ -> false 
+=======
+>>>>>>> 0584fd73e280f4765a667f455deaf247f12853fe
 
 let check (e : Expr<'a>) expected = 
     e.Raw, fun o -> 
         let actual = Assert.IsType<'a>(o)
         Assert.True((expected = actual), sprintf "%A Expected %A got %A. (%A)" (expected.GetType(), actual.GetType(), expected = actual) expected actual e)
 
+let checkWith (comp : _ -> _ -> bool)(e : Expr<'a>) expected = 
+    e.Raw, fun o -> 
+        let actual = Assert.IsType<'a>(o)
+        Assert.True((comp expected actual), sprintf "%A Expected %A got %A. (%A)" (expected.GetType(), actual.GetType(), (comp expected actual)) expected actual e)
 let checkExpr (e : Expr<'a>) = 
     let expected = FSharp.Linq.RuntimeHelpers.LeafExpressionConverter.EvaluateQuotation(e) :?> 'a
     check e expected
@@ -137,6 +155,47 @@ let ``lambdas - failing``() =
                     x0, x1, x
                 @> (1,3,6)
         ]
-    
 
+[<Fact>]
+let ``value tuple``() =
+    testProvidedAssembly 
+        [
+            check 
+                <@ 
+                    let a = struct(2,3)
+                    let struct(b,c) = a
+                    b + c
+                @> 5
+            check 
+                <@ 
+                    struct(1.0,2,3L)
+                @> struct(1.0,2,3L)
+        ]
+
+[<Fact>]
+let ``struct``() =
+    testProvidedAssembly 
+        [
+            check <@ %%(Expr.DefaultValue(typeof<DateTime>)) @> DateTime.MinValue
+            checkWith (fun (a : System.Security.Cryptography.DSAParameters) (b : System.Security.Cryptography.DSAParameters) -> a.J = b.J)
+                <@
+                    let mutable a = System.Security.Cryptography.DSAParameters()
+                    a.J <- [|23uy; 60uy|]
+                    a
+                @> 
+                (
+                    let mutable a = System.Security.Cryptography.DSAParameters()
+                    a.J <- [|23uy; 60uy|]
+                    a
+                )
+            check 
+                <@
+                    let mutable a = System.Security.Cryptography.DSAParameters()
+                    a.J <- [|23uy; 60uy|]
+                    a.J
+                @> [|23uy; 60uy|]
+            
+        ]
+    
+    
 #endif

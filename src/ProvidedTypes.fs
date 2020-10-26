@@ -8346,7 +8346,7 @@ namespace ProviderImplementation.ProvidedTypes
             if genericArguments.Length = 0 then genericMethodDefinition else
             MethodSymbol2(genericMethodDefinition, Array.ofList genericArguments, ProvidedTypeBuilder.typeBuilder) :> MethodInfo
 
-        static member MakeTupleType(types) =
+        static member MakeTupleType(types, isStruct) =
             let rec mkTupleType isStruct (asm:Assembly) (tys:Type list) =
                 let maxTuple = 8
 
@@ -8360,7 +8360,9 @@ namespace ProviderImplementation.ProvidedTypes
                     ProvidedTypeBuilder.MakeGenericType(ty, List.append  tysA [ tyB ])
                 else
                     ProvidedTypeBuilder.MakeGenericType(ty, tys)
-            mkTupleType false (typeof<System.Tuple>.Assembly) types
+            mkTupleType isStruct (typeof<System.Tuple>.Assembly) types
+
+        static member MakeTupleType(types) = ProvidedTypeBuilder.MakeTupleType(types, false)
 
         static member typeBuilder = 
             { new ITypeBuilder with
@@ -8435,7 +8437,7 @@ namespace ProviderImplementation.ProvidedTypes
                         let rest = List.ofSeq (Seq.skip 7 args)
                         Expr.NewObjectUnchecked(ctor, curr @ [mkCtor rest restTy])
                 let tys = [ for e in items -> e.Type ]
-                let tupleTy = ProvidedTypeBuilder.MakeTupleType(tys)
+                let tupleTy = ProvidedTypeBuilder.MakeTupleType(tys, q.Type.IsValueType)
                 simplifyExpr (mkCtor items tupleTy)
 
             // convert TupleGet to the chain of PropertyGet calls (only for generated types)
@@ -9145,6 +9147,8 @@ namespace ProviderImplementation.ProvidedTypes
             | NewObject (c, exprs) ->
                 let exprsR = List.map convExprToTgt exprs
                 Expr.NewObjectUnchecked (convConstructorRefToTgt c, exprsR)
+            | DefaultValue (t) -> 
+                Expr.DefaultValue (convTypeToTgt t)
             | Coerce (expr, t) ->
                 Expr.Coerce (convExprToTgt expr, convTypeToTgt t)
             | TypeTest (expr, t) ->
@@ -15098,6 +15102,13 @@ namespace ProviderImplementation.ProvidedTypes
                 ilg.Emit(I_newobj (transCtorSpec ctor, None))
 
                 popIfEmptyExpected expectedState
+                
+            | DefaultValue (t) ->
+                let ilt = transType t
+                let lb = ilg.DeclareLocal ilt
+                ilg.Emit(I_ldloca lb.LocalIndex)
+                ilg.Emit(I_initobj ilt)
+                ilg.Emit(I_ldloc lb.LocalIndex)
 
             | Value (obj, _ty) ->
                 let rec emitC (v:obj) =
@@ -15244,6 +15255,7 @@ namespace ProviderImplementation.ProvidedTypes
                 let lambdaLocals = Dictionary()
                 emitLambda(ilg, v, body, expr.GetFreeVars(), lambdaLocals, parameterVars)
                 popIfEmptyExpected expectedState
+
             | n ->
                 failwithf "unknown expression '%A' in generated method" n
         

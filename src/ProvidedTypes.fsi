@@ -232,7 +232,7 @@ type ProvidedTypeBuilder =
     static member MakeGenericMethod: genericMethodDefinition: MethodInfo * genericArguments: Type list -> MethodInfo
 
     /// Like FsharpType.MakeTupleType, but will also work with unit-annotated types and provided types
-    static member MakeTupleType: args: Type list -> Type
+    static member MakeTupleType: args: Type list*bool -> Type
 
 /// Helps create erased provided unit-of-measure annotations.
 [<Class>]
