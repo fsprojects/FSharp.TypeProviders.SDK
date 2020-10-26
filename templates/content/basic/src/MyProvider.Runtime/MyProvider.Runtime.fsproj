@@ -1,7 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project>
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -22,11 +20,5 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
-  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 
-  <Target Name="AfterBuild">
-    <!-- We place the TPDTC DLLs in a well-known locations with respect to the runtime DLL -->
-    <Copy SourceFiles="..\MyProvider.DesignTime\bin\$(Configuration)\netstandard2.0\MyProvider.DesignTime.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />
-    <Copy SourceFiles="..\MyProvider.DesignTime\bin\$(Configuration)\netstandard2.0\FSharp.TypeProviders.SDK.dll" DestinationFolder="$(OutputPath)\typeproviders\fsharp41\netstandard2.0" />
-  </Target>
 </Project>
