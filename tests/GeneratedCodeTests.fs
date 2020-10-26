@@ -20,10 +20,11 @@ open Microsoft.FSharp.Quotations
 #nowarn "760" // IDisposable needs new
 
 let testCases() = 
-    [ ("F# 4.5 .NET Standard 2.0", "4.5.2", (fun _ ->  true), Targets.DotNetStandard20FSharp45Refs) ]
+    let fsCoreVersion = typeof<list<int>>.Assembly.GetName().Version.ToString()
+    [ (sprintf "FSharp.Core %s .NET Standard 2.0" fsCoreVersion, fsCoreVersion, (fun _ ->  true), Targets.DotNetStandard20FSharpRefs) ]
 
 let testProvidedAssembly exprs =
-    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharp45Refs()
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
     let runtimeAssembly = runtimeAssemblyRefs.[0]
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
     let tp = TypeProviderForNamespaces(cfg) //:> TypeProviderForNamespaces

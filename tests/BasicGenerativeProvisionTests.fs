@@ -135,7 +135,8 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 
 
 let testCases() = 
-    [("F# 4.5.2 .NET Standard 2.0", typeof<list<int>>.Assembly.GetName().Version.ToString(), (fun _ ->  true), Targets.DotNetStandard20FSharp45Refs) ]
+    let fsCoreVersion = typeof<list<int>>.Assembly.GetName().Version.ToString()
+    [ (sprintf "FSharp.Core %s .NET Standard 2.0" fsCoreVersion, fsCoreVersion, (fun _ ->  true), Targets.DotNetStandard20FSharpRefs) ]
 
 [<Fact>]
 let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : unit  = 

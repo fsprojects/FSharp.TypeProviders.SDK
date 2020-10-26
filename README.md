@@ -42,7 +42,7 @@ The SDK includes a file
 which is sometimes incorporated into a type provider to help enable unit testing. For examples of how this is used, see uses of the helpers in the FSharp.Data library such as:
 
 * [``Testing.GenerateProvidedTypeInstantiation``](https://github.com/fsharp/FSharp.Data/blob/f5df4554938138c60af2ec886d5a132883633351/src/TypeProviderInstantiation.fs#L127)
-* ``Targets.DotNet45FSharp40Refs()`` to get a suitable set of references for .NET 4.5, F# 4.0 target on a typical Mono/.NET Framework installation 
+* ``Targets.DotNetStandard20FSharpRefs`` to get a suitable set of references for .NET Standard plus the running FSharp.Core
 * [``Testing.FormatProvidedType``](https://github.com/fsharp/FSharp.Data/blob/f5df4554938138c60af2ec886d5a132883633351/src/TypeProviderInstantiation.fs#L171) to get a textual representation of a provided type, used to "snapshot" the full description of expected type generation
 
 Sometimes unit test DLLs incorporate the entire type provider implementation, and sometimes they use InternalsVisibleTo.

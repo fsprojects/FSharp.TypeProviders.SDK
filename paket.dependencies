@@ -1,6 +1,6 @@
 source https://api.nuget.org/v3/index.json
 
-nuget FSharp.Core >= 4.5.2
+nuget FSharp.Core 4.7.2
 
 group Test
     source https://api.nuget.org/v3/index.json

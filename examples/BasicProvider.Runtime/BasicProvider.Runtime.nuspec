@@ -18,7 +18,7 @@
     <copyright>Copyright 2018</copyright>
     <tags>Tag1, Tag2</tags>
     <dependencies>
-      <dependency id="FSharp.Core" version="4.5.2" />
+      <dependency id="FSharp.Core" version="4.7.2" />
     </dependencies>
     <references>
       <reference file="BasicProvider.Runtime.dll" />

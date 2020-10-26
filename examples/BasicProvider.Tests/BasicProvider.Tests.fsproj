@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <DefineConstants>NO_GENERATIVE</DefineConstants>
     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
 

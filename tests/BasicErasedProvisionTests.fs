@@ -128,7 +128,7 @@ let nonPrimitives =
       "System.DayOfWeek", typeof<DayOfWeek>, box DayOfWeek.Friday ]
 
 let stressTestCore() = 
-    let refs = Targets.DotNetStandard20FSharp45Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
     use tp = new TypeProviderForNamespaces(config)
     let ctxt = tp.TargetContext
@@ -276,7 +276,7 @@ type ErasingProviderWithCustomAttributes (config : TypeProviderConfig) as this =
 
 [<Fact>]
 let ``Check target enum types gives right values``() : unit  = 
-    let refs = Targets.DotNetStandard20FSharp45Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
     let dayOfWeekType = typeof<System.DayOfWeek>
@@ -293,7 +293,7 @@ let ``Check target enum types gives right values``() : unit  =
 
 [<Fact>]
 let ``Check target delegate types gives right values``() : unit  = 
-    let refs = Targets.DotNetStandard20FSharp45Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
     for delegateType in [ typeof<Func<int,int>>; typeof<System.Converter<int,int>>; typeof<System.Action> ] do
@@ -305,7 +305,7 @@ let ``Check target delegate types gives right values``() : unit  =
 
 [<Fact>]
 let ``test basic symbol type ops``() =
-   let refs = Targets.DotNetStandard20FSharp45Refs()
+   let refs = Targets.DotNetStandard20FSharpRefs()
    let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
    use tp = new TypeProviderForNamespaces(config)
    let ctxt = tp.TargetContext
@@ -362,7 +362,7 @@ let ``test basic symbol type ops``() =
 [<Fact>]
 let ``ErasingConstructorProvider generates for .NET Standard 2.0 F# 4.7 correctly``() : unit  = 
     printfn "--------- Generating code for .NET Standard 2.0 F# 4.1 ------"
-    let res = testCrossTargeting (Targets.DotNetStandard20FSharp45Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
+    let res = testCrossTargeting (Targets.DotNetStandard20FSharpRefs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
     Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
     Assert.True(res.Contains "[FSharp.Core, Version=4.7.0.0")
     Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
@@ -371,14 +371,14 @@ let ``ErasingConstructorProvider generates for .NET Standard 2.0 F# 4.7 correctl
 
 [<Fact>]
 let ``check custom attributes``() = 
-    let refs = Targets.DotNetStandard20FSharp45Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let tp, t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, ErasingProviderWithCustomAttributes, [| |]  )
     Assert.True(t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name))
     Assert.Equal(1, t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name) |> Seq.length)
 
 [<Fact>]
 let ``check on-demand production of members``() = 
-    let refs = Targets.DotNetStandard20FSharp45Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let tp,t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, SampleTypeProvider, [| box "Arg" |]  )
 
     let domainTy = t.GetNestedType("Domain")

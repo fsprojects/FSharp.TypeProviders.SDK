@@ -620,16 +620,12 @@ module internal Targets =
             failwithf "couldn't find %s/NETStandard.Library, which is needed for testing .NET Standard 2.0 code generation of a type provider using these utilities" pd
 
     /// Compute a path to an FSharp.Core suitable for the target profile
-    let private fsharpRestoredAssembliesPath fsharp profile =
-        let paketGroup =
-           match fsharp with
-           | "4.5" -> "fs45"
-           | _ -> failwith ("unimplemented F# version" + fsharp)
+    let private fsharpRestoredAssembliesPath profile =
         let compatProfile = "netstandard2.0"
         let groupDirectory =
             match paketPackageDirectoryForFSharpCore() with 
             | None -> 
-                 printfn "couldn't find paket packages group %s.  Assuming %s/FSharp.Core is for F# version %s" paketGroup (packagesDirectory false) fsharp
+                 printfn "couldn't find paket package for FSHarp.Core.  Assuming %s/FSharp.Core is suitable" (packagesDirectory false)
                  packagesDirectory false
             | Some dir -> dir
 
@@ -649,14 +645,14 @@ module internal Targets =
             packageDir ++ "ref" ++ "netcoreapp2.2"
         | _ -> failwith (sprintf "unimplemented profile '%s'" profile)
 
-    let FSharpCoreRef fsharp profile = 
-        let restoredFSharpCore  = fsharpRestoredAssembliesPath fsharp profile
+    let FSharpCoreRef profile = 
+        let restoredFSharpCore  = fsharpRestoredAssembliesPath  profile
         match restoredFSharpCore  with 
         | Some path when File.Exists path -> path
         | _ ->
             failwithf "Couldn't find FSharp.Core at %s" (packagesDirectory false)
 
-    let FSharpRefs fsharp profile =
+    let FSharpRefs profile =
         [ match profile with
           | "netstandard2.0" ->
              // See typical command line in https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/190#issuecomment-356564344
@@ -921,9 +917,9 @@ module internal Targets =
              yield sysPath ++ "WindowsBase.dll"
              yield sysPath ++ "Microsoft.Win32.Primitives.dll"
           | _ -> 
-             failwith (sprintf "unimplemented profile, fsharpVersion = %s, profile = %s" fsharp profile)
+             failwith (sprintf "unimplemented profile = %s" profile)
 
-          yield FSharpCoreRef fsharp profile
+          yield FSharpCoreRef  profile
         ]
 
-    let DotNetStandard20FSharp45Refs() = FSharpRefs "4.5" "netstandard2.0"
+    let DotNetStandard20FSharpRefs() = FSharpRefs "netstandard2.0"
