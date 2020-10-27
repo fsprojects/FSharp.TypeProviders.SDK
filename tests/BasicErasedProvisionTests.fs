@@ -8,7 +8,6 @@ module TPSDK.BasicErasedTests
 #endif
 
 open System
-open System.IO
 open System.Reflection
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
@@ -105,161 +104,6 @@ let testCrossTargeting (refs: string list) provider args =
     let fmt = Testing.FormatProvidedType(tp, t, useQualifiedNames=true)
     fmt.Trim().Replace("\r\n","\n")
 
-[<Fact>]
-let ``ErasingProvider generates for .NET 4.5 F# 3.1 correctly``() : unit  = 
-    let res = testCrossTargeting (Targets.DotNet45FSharp31Refs()) (fun args -> new ErasingProvider(args, true)) [| |]
-    Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
-    Assert.True(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
-
-[<Fact>]
-let ``ErasingProvider generates for .NET 4.5 F# 4.0 correctly``() : unit  = 
-  if (try File.Exists (Targets.FSharpCore40Ref()) with _ -> false) then
-    let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingProvider(args, true)) [| |]
-    Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.True(res.Contains "[FSharp.Core, Version=4.4.0.0")
-
-
-
-[<Fact>]
-let ``ErasingProvider generates for Portable Profile 259 F# 3.1 correctly``() : unit = 
-  if Targets.hasPortable259Assemblies() then 
-    let res = testCrossTargeting (Targets.Portable259FSharp31Refs()) (fun args -> new ErasingProvider(args, false)) [| |]
-    Assert.True(res.Contains "[FSharp.Core, Version=3.259.3.1")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
-
-[<Fact>]
-let ``ErasingProvider generates for Portable Profile 259 F# 4.0 correctly``() : unit = 
-  if Targets.hasPortable259Assemblies() then 
-    let res = testCrossTargeting (Targets.Portable259FSharp40Refs()) (fun args -> new ErasingProvider(args, false)) [| |]
-    Assert.True(res.Contains "[FSharp.Core, Version=3.259.4.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
-
-
-[<Fact>]
-let ``ErasingProvider generates for Portable Profile 7 F# 4.0 correctly``() : unit = 
-  if Targets.hasPortable7Assemblies() then 
-    let res = testCrossTargeting (Targets.Portable7FSharp40Refs()) (fun args -> new ErasingProvider(args, false)) [| |]
-    Assert.True(res.Contains "[FSharp.Core, Version=3.7.4.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
-
-[<Fact>]
-let ``ErasingProviderWithStaticParams generates for .NET 4.5 F# 4.0 correctly``() : unit = 
-  if Targets.supportsFSharp40() then 
-    let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingProviderWithStaticParams(args)) [| box 3; box 4 |]
-    printfn "res = %s" res
-    Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.True(res.Contains "[FSharp.Core, Version=4.4.0.0")
-    Assert.True(res.Contains "MyGetterProperty")
-    Assert.True(res.Contains "MyDelayedGetterProperty")
-
-[<Fact>]
-let ``ErasingProviderWithStaticParams generates for Portable Profile 7 F# 4.0 correctly``() : unit = 
-  if Targets.hasPortable7Assemblies() then 
-    let res = testCrossTargeting (Targets.Portable7FSharp40Refs()) (fun args -> new ErasingProviderWithStaticParams(args)) [| box 3; box 4 |]
-    printfn "res = %s" res
-    Assert.True(res.Contains "[FSharp.Core, Version=3.7.4.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
-    Assert.True(res.Contains "MyGetterProperty")
-    Assert.True(res.Contains "MyDelayedGetterProperty")
-
-[<Fact>]
-let ``ErasingConstructorProvider generates for .NET 4.5 F# 3.1 correctly``() : unit  = 
-    let res = testCrossTargeting (Targets.DotNet45FSharp31Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
-    Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
-    Assert.True(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
-
-[<Fact>]
-let ``ErasingConstructorProvider generates for .NET 4.5 F# 4.1 correctly``() : unit  = 
-    printfn "--------- Generating code for 4.5 F# 4.1 ------"
-    let refs = Targets.DotNet45FSharp41Refs()
-    //printfn "refs = %A" refs
-    let res = testCrossTargeting refs (fun args -> new ErasingConstructorProvider(args)) [| |]
-    Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
-    Assert.True(res.Contains "[FSharp.Core, Version=4.4.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
-
-[<Fact>]
-let ``ErasingConstructorProvider generates for .NET Standard 2.0 F# 4.1 correctly``() : unit  = 
-    printfn "--------- Generating code for .NET Standard 2.0 F# 4.1 ------"
-    let res = testCrossTargeting (Targets.DotNetStandard20FSharp41Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
-    Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
-    Assert.True(res.Contains "[FSharp.Core, Version=4.4.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
-
-[<Fact>]
-let ``ErasingConstructorProvider generates for .NET CoreApp 2.0 F# 4.1 correctly``() : unit  = 
-    printfn "--------- Generating code for .NET CoreApp 2.0 F# 4.1 ------"
-    let refs = Targets.DotNetCoreApp20FSharp41Refs()
-    //printfn "refs = %A" refs
-    let res = testCrossTargeting refs (fun args -> new ErasingConstructorProvider(args)) [| |]
-    Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
-    Assert.True(res.Contains "[FSharp.Core, Version=4.4.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
-
-[<Fact>]
-let ``ErasingConstructorProvider generates for .NET 4.5 F# 4.0 correctly``() : unit  = 
-  if Targets.supportsFSharp40() then
-    printfn "--------- Generating code for 4.5 F# 4.0 ------"
-    let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
-    Assert.False(res.Contains "[FSharp.Core, Version=3.259.3.1")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.True(res.Contains "[FSharp.Core, Version=4.4.0.0")
-
-
-[<Fact>]
-let ``ErasingConstructorProvider generates expected code for .NET 4.5 F# 4.0``() : unit  = 
-  if Targets.supportsFSharp40() then
-    printfn "--------- Generating code for 4.5 F# 4.0 ------"
-    let res = testCrossTargeting (Targets.DotNet45FSharp40Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
-    //File.WriteAllText(@"c:\misc\out.1", res)
-    Assert.True(res.Replace("\r\n","\n") =
-        """class MyType : obj
-    new : () -> MyType
-    (FSharpList<_>.Cons("My internal state", FSharpList<_>.get_Empty()) :> obj)
-
-    new : InnerState:[FSharp.Core, Version=4.4.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a]Microsoft.FSharp.Collections.FSharpList<string> -> MyType
-    (InnerState :> obj)
-
-    member InnerState: [FSharp.Core, Version=4.4.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a]Microsoft.FSharp.Collections.FSharpList<string> with get
-    LanguagePrimitives+IntrinsicFunctions.UnboxGeneric(this)""".Replace("\r\n","\n"))
-
-[<Fact>]
-let ``ErasingConstructorProvider generates for Portable Profile 259 F# 3.1 correctly``() : unit = 
-  if Targets.hasPortable259Assemblies() then 
-    let res = testCrossTargeting (Targets.Portable259FSharp31Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
-    Assert.True(res.Contains "[FSharp.Core, Version=3.259.3.1")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
-
-[<Fact>]
-let ``ErasingConstructorProvider generates for Portable Profile 259 F# 4.0 correctly``() : unit = 
-  if Targets.hasPortable259Assemblies() then 
-    let res = testCrossTargeting (Targets.Portable259FSharp40Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
-    Assert.True(res.Contains "[FSharp.Core, Version=3.259.4.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
-
-
-[<Fact>]
-let ``ErasingConstructorProvider generates for Portable Profile 7 F# 4.0 correctly``() : unit = 
-  if Targets.hasPortable7Assemblies() then 
-    let res = testCrossTargeting (Targets.Portable7FSharp40Refs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
-    Assert.True(res.Contains "[FSharp.Core, Version=3.7.4.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
-    Assert.False(res.Contains "[FSharp.Core, Version=4.4.4.0")
-
-
 let primitives = 
     [ "System.Boolean", typeof<bool>, box true
       "System.String", typeof<string>, box ""
@@ -285,7 +129,7 @@ let nonPrimitives =
 
 [<Fact>]
 let ``Check target primitive types are not identical to design-time types``() : unit  = 
-    let refs = Targets.DotNet45FSharp31Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
     let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
@@ -299,7 +143,7 @@ let ``Check target primitive types are not identical to design-time types``() : 
 
 [<Fact>]
 let ``Check target non-primitive types are different to design-time types``() : unit  = 
-    let refs = Targets.DotNet45FSharp31Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
     let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
@@ -311,7 +155,7 @@ let ``Check target non-primitive types are different to design-time types``() : 
 
 [<Fact>]
 let ``Check target enum types gives right values``() : unit  = 
-    let refs = Targets.DotNet45FSharp31Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
     let dayOfWeekType = typeof<System.DayOfWeek>
@@ -328,7 +172,7 @@ let ``Check target enum types gives right values``() : unit  =
 
 [<Fact>]
 let ``Check target delegate types gives right values``() : unit  = 
-    let refs = Targets.DotNet45FSharp31Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
     for delegateType in [ typeof<Func<int,int>>; typeof<System.Converter<int,int>>; typeof<System.Action> ] do
@@ -340,7 +184,7 @@ let ``Check target delegate types gives right values``() : unit  =
 
 [<Fact>]
 let ``Check type remapping functions work for primitives``() : unit  = 
-    let refs = Targets.DotNet45FSharp31Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
     let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
@@ -354,7 +198,7 @@ let ``Check type remapping functions work for primitives``() : unit  =
 
 [<Fact>]
 let ``Check type remapping functions work for nonPrimtives``() : unit  = 
-    let refs = Targets.DotNet45FSharp31Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
     let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
@@ -367,7 +211,7 @@ let ``Check type remapping functions work for nonPrimtives``() : unit  =
 [<Fact>]
 
 let ``Check can create Expr Value nodes for primitive types``() : unit  = 
-    let refs = Targets.DotNet45FSharp31Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
     let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
@@ -382,7 +226,7 @@ let ``Check can create Expr Value nodes for primitive types``() : unit  =
 
 [<Fact>]
 let ``Check can't create Expr Value nodes for non-primitive types``() : unit  = 
-    let refs = Targets.DotNet45FSharp31Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
     let tp = TypeProviderForNamespaces(cfg)
     let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
@@ -392,12 +236,10 @@ let ``Check can't create Expr Value nodes for non-primitive types``() : unit  =
            let targetType = mscorlib31.GetType(tname)
            Quotations.Expr.Value(sampleValue, targetType) |> ignore
         with _ -> () // ok
-          
-
 
 [<Fact>]
-let ``test basic binding context net45``() =
-   let refs = Targets.DotNet45FSharp40Refs()
+let ``test basic binding context netstandard20``() =
+   let refs = Targets.DotNetStandard20FSharpRefs()
    let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
    use tp1 = new TypeProviderForNamespaces(config)
    let ctxt1 = tp1.TargetContext
@@ -405,91 +247,10 @@ let ``test basic binding context net45``() =
    match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
    | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d,"System.Object"))
    | Choice2Of2 err -> raise err
-
-[<Fact>]
-let ``test basic binding context portable7``() =
- if Targets.hasPortable7Assemblies() then
-   let refs = Targets.Portable7FSharp40Refs()
-   let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
-   use tp1 = new TypeProviderForNamespaces(config)
-   let ctxt1 = tp1.TargetContext
-
-   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("System.Runtime")) with
-   | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d,"System.Object"))
-   | Choice2Of2 err -> raise err
-   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
-   | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d, "System.Object"))
-   | Choice2Of2 err -> raise err
-
-[<Fact>]
-let ``test basic binding context portable259``() =
- if Targets.hasPortable259Assemblies() then
-   let refs = Targets.Portable259FSharp40Refs()
-   let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
-   use tp1 = new TypeProviderForNamespaces(config)
-   let ctxt1 = tp1.TargetContext
-
-   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("System.Runtime")) with
-   | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d, "System.Object"))
-   | Choice2Of2 err -> raise err
-
-   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
-   | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d, "System.Object"))
-   | Choice2Of2 err -> raise err
-
-   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("System.Runtime")) with
-   | Choice1Of2 asm -> asm.GetType("System.DateTimeOffset").FullName |> (fun d -> Assert.Equal(d, "System.DateTimeOffset"))
-   | Choice2Of2 err -> raise err
-
-   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
-   | Choice1Of2 asm -> asm.GetType("System.DateTimeOffset").FullName |> (fun d -> Assert.Equal(d, "System.DateTimeOffset"))
-   | Choice2Of2 err -> raise err
-
-   // On this profile there is s forwarder for DateTimeOffset in mscorlib.dll
-   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
-   | Choice1Of2 asm -> 
-       printfn "-=======================" 
-       printfn "asm.Location = '%s'" asm.Location
-       //printfn "refs = %A" refs
-       let ty = asm.GetType("System.DateTimeOffset")
-       printfn "ty = %A" ty
-       printfn "ty.Assembly = %A" ty.Assembly
-       printfn "ty.Assembly.Location = %s" ty.Assembly.Location
-       ty.Assembly.GetName().Name |> (fun d -> Assert.Equal("System.Runtime", d))
-       printfn "-=======================" 
-   | Choice2Of2 err -> raise err
-
-#if !NETCOREAPP3_1
-[<Fact>]
-let ``test trasitive closure of source assemblies net45``() =
-   let pf = Targets.DotNet45Ref "PresentationFramework.dll"
-   let pc = Targets.DotNet45Ref "PresentationCore.dll"
-   if File.Exists pf && File.Exists pc  then 
-       let refs = Targets.DotNet45FSharp40Refs() @ [ pf; pc ] 
-       let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
-       use tp1 = new TypeProviderForNamespaces(config)
-       let ctxt1 = tp1.TargetContext
-
-       printfn "finding PresentationFramework in targets..."
-       Assert.True(ctxt1.GetTargetAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationFramework"))
-
-       printfn "finding PresentationCore in targets..."
-       Assert.True(ctxt1.GetTargetAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationCore"))
-
-       ctxt1.AddSourceAssembly(Assembly.Load(AssemblyName.GetAssemblyName(pf)))
-
-       printfn "finding PresentationFramework in source assemblies..."
-       Assert.True(ctxt1.GetSourceAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationFramework"))
-
-       // Note we only have PresentationFramework in the source assemblies - that also implies PresentationCore because
-       // we use the transitive closure of assemblies.
-       printfn "finding PresentationCore in source assemblies..."
-       Assert.True(ctxt1.GetSourceAssemblies() |> Array.exists (fun a -> a.GetName().Name = "PresentationCore"))
-#endif
 
 [<Fact>]
 let ``test basic symbol type ops``() =
-   let refs = Targets.DotNet45FSharp40Refs()
+   let refs = Targets.DotNetStandard20FSharpRefs()
    let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
    use tp = new TypeProviderForNamespaces(config)
    let ctxt = tp.TargetContext
@@ -543,29 +304,27 @@ let ``test basic symbol type ops``() =
    t2T.GetConstructors() |> ignore
    t2T.GetMethod("get_Item1") |> ignore
 
-#if INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS
-
 let stressTestCore() = 
-        let refs = Targets.DotNet45FSharp40Refs()
-        let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
-        use tp = new TypeProviderForNamespaces(config)
-        let ctxt = tp.TargetContext
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+    use tp = new TypeProviderForNamespaces(config)
+    let ctxt = tp.TargetContext
 
-        //let fscore =  ctxt1.TryBindAssemblyNameToTarget(AssemblyName("FSharp.Core")) 
-        let decimalT = typeof<decimal>
-        let kg = ProvidedMeasureBuilder.SI "kg"
-        let t1 = ProvidedMeasureBuilder.AnnotateType(decimalT, [ kg ])
+    //let fscore =  ctxt1.TryBindAssemblyNameToTarget(AssemblyName("FSharp.Core")) 
+    let decimalT = typeof<decimal>
+    let kg = ProvidedMeasureBuilder.SI "kg"
+    let t1 = ProvidedMeasureBuilder.AnnotateType(decimalT, [ kg ])
 
-        match kg with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol"
-        match t1 with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#2"
+    match kg with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol"
+    match t1 with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#2"
 
-        let t1T = ctxt.ConvertSourceTypeToTarget t1
-        let kgT = ctxt.ConvertSourceTypeToTarget kg
-        match kgT with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol#3"
-        match t1T with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#4"
+    let t1T = ctxt.ConvertSourceTypeToTarget t1
+    let kgT = ctxt.ConvertSourceTypeToTarget kg
+    match kgT with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol#3"
+    match t1T with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#4"
 
-        let _ = ProvidedTypeBuilder.MakeTupleType([ t1; t1 ])
-        tp
+    let _ = ProvidedTypeBuilder.MakeTupleType([ t1; t1 ])
+    tp
 
 let stressTestLoop() = 
     let mutable latestTp = None
@@ -609,7 +368,6 @@ let ``test reader cache actually caches``() =
         for (KeyValue(key, (_, wh))) in weakDict do
             let alive = fst(wh.TryGetTarget())
             Assert.False(alive, sprintf "Weak handle for %A should no longer be populated as latest TP no longer alive" key)
-#endif
 
 [<TypeProvider>]
 type public SampleTypeProvider(config : TypeProviderConfig) as this = 
@@ -662,10 +420,57 @@ type public SampleTypeProvider(config : TypeProviderConfig) as this =
         sampleTpType.DefineStaticParameters(parameters, buildTypes)
         this.AddNamespace(namespaceName, [ sampleTpType ])
 
+[<TypeProvider>]
+type ErasingProviderWithCustomAttributes (config : TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces (config)
+
+    let ns = "CustomAttributes.Provided"
+    let asm = Assembly.GetExecutingAssembly()
+
+    let createTypes () =
+        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+
+        let nameOf =
+            let param = ProvidedParameter("p", typeof<Microsoft.FSharp.Quotations.Expr<int>>)
+            param.AddCustomAttribute {
+                new CustomAttributeData() with
+                    member __.Constructor = typeof<ReflectedDefinitionAttribute>.GetConstructor([||])
+                    member __.ConstructorArguments = [||] :> _
+                    member __.NamedArguments = [||] :> _
+            }
+            ProvidedMethod("NameOf", [ param ], typeof<string>, isStatic = true, invokeCode = fun args ->
+                <@@
+                    match (%%args.[0]) : Microsoft.FSharp.Quotations.Expr<int> with
+                    | Microsoft.FSharp.Quotations.Patterns.ValueWithName (_, _, n) -> n
+                    | e -> failwithf "Invalid quotation argument (expected ValueWithName): %A" e
+                @@>)
+        myType.AddMember(nameOf)
+
+        [myType]
+
+    do
+        this.AddNamespace(ns, createTypes())
+
+[<Fact>]
+let ``ErasingConstructorProvider generates for .NET Standard 2.0 correctly``() : unit  = 
+    printfn "--------- Generating code for .NET Standard 2.0  ------"
+    let res = testCrossTargeting (Targets.DotNetStandard20FSharpRefs()) (fun args -> new ErasingConstructorProvider(args)) [| |]
+    Assert.False(res.Contains "[FSharp.Core, Version=3.259.4.1")
+    Assert.True(res.Contains "[FSharp.Core, Version=4.7.0.0")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.3.1.0")
+    Assert.False(res.Contains "[FSharp.Core, Version=4.4.0.0")
+
+
+[<Fact>]
+let ``check custom attributes``() = 
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let tp, t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, ErasingProviderWithCustomAttributes, [| |]  )
+    Assert.True(t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name))
+    Assert.Equal(1, t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name) |> Seq.length)
 
 [<Fact>]
 let ``check on-demand production of members``() = 
-    let refs = Targets.DotNet45FSharp41Refs()
+    let refs = Targets.DotNetStandard20FSharpRefs()
     let tp,t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, SampleTypeProvider, [| box "Arg" |]  )
 
     let domainTy = t.GetNestedType("Domain")
@@ -700,7 +505,7 @@ let ``check on-demand production of members``() =
     Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
     Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
     Assert.Equal(5 + 5, containersType.GetMembers(bindAll).Length) // 5 properties, 5 getters for properties
-    
+
 
     Assert.NotNull(domainTy.GetNestedType("DomainTypeForA")) // type is still there
     Assert.NotNull(domainTy.GetNestedType("DomainTypeForB")) // type is created because A, B, C, D, E all get created together
@@ -727,42 +532,3 @@ let ``check on-demand production of members``() =
     Assert.Equal(5, containersType.GetProperties(bindAll).Length) // 5 properties, 5 getters for properties
     Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
     Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
-
-
-[<TypeProvider>]
-type ErasingProviderWithCustomAttributes (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces (config)
-
-    let ns = "CustomAttributes.Provided"
-    let asm = Assembly.GetExecutingAssembly()
-
-    let createTypes () =
-        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-
-        let nameOf =
-            let param = ProvidedParameter("p", typeof<Microsoft.FSharp.Quotations.Expr<int>>)
-            param.AddCustomAttribute {
-                new CustomAttributeData() with
-                    member __.Constructor = typeof<ReflectedDefinitionAttribute>.GetConstructor([||])
-                    member __.ConstructorArguments = [||] :> _
-                    member __.NamedArguments = [||] :> _
-            }
-            ProvidedMethod("NameOf", [ param ], typeof<string>, isStatic = true, invokeCode = fun args ->
-                <@@
-                    match (%%args.[0]) : Microsoft.FSharp.Quotations.Expr<int> with
-                    | Microsoft.FSharp.Quotations.Patterns.ValueWithName (_, _, n) -> n
-                    | e -> failwithf "Invalid quotation argument (expected ValueWithName): %A" e
-                @@>)
-        myType.AddMember(nameOf)
-
-        [myType]
-
-    do
-        this.AddNamespace(ns, createTypes())
-
-[<Fact>]
-let ``check custom attributes``() = 
-    let refs = Targets.DotNet45FSharp31Refs()
-    let tp, t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, ErasingProviderWithCustomAttributes, [| |]  )
-    Assert.True(t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name))
-    Assert.Equal(1, t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name) |> Seq.length)

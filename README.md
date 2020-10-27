@@ -1,4 +1,3 @@
-
 # The F# Type Provider SDK
 
 The F# Type Provider SDK is two things:
@@ -8,7 +7,6 @@ The F# Type Provider SDK is two things:
 2. Documentation and samples on type provider creation
 
 [![Build Status](https://github.com/fsprojects/FSharp.TypeProviders.SDK/workflows/Build%20and%20Test/badge.svg?branch=master)](https://github.com/fsprojects/FSharp.TypeProviders.SDK/actions?query=branch%3Amaster)
-
 
 ## Getting Started
 
@@ -41,23 +39,19 @@ The SDK includes a file
 
 * ProvidedTypesTesting.fs
 
-which is sometimes incorporated into a type provider to help enable unit testing. For examples of how this is used, see uses of the helpers in the FSharp.Data library such as  
+which is sometimes incorporated into a type provider to help enable unit testing. For examples of how this is used, see uses of the helpers in the FSharp.Data library such as:
+
 * [``Testing.GenerateProvidedTypeInstantiation``](https://github.com/fsharp/FSharp.Data/blob/f5df4554938138c60af2ec886d5a132883633351/src/TypeProviderInstantiation.fs#L127)
-* ``Targets.DotNet45FSharp40Refs()`` to get a suitable set of references for .NET 4.5, F# 4.0 target on a typical Mono/.NET Framework installation 
+* ``Targets.DotNetStandard20FSharpRefs`` to get a suitable set of references for .NET Standard plus the running FSharp.Core
 * [``Testing.FormatProvidedType``](https://github.com/fsharp/FSharp.Data/blob/f5df4554938138c60af2ec886d5a132883633351/src/TypeProviderInstantiation.fs#L171) to get a textual representation of a provided type, used to "snapshot" the full description of expected type generation
 
 Sometimes unit test DLLs incorporate the entire type provider implementation, and sometimes they use InternalsVisibleTo.
 
 The unit testing helpers aren't really an official, documented part of the DK - caveat emptor.
 
-
 ## Examples
 
 See examples the [`examples`](examples) directory.
-
-* ComboProvider: the TPDTC and TPRTC are combined together in one assembly which is a single `netstandard2.0` component 
-* BasicProvider: the TPDTC and TPRTC are each available as both `netstandard2.0` and `.NET 4.x` components
-
 
 ## Type Provider Naming Conventions
 
@@ -68,7 +62,6 @@ A type provider is simultaneously a tool and a library.  The existing guidance i
 Good type provider naming examples:
 
 * `FSharp.Text.RegexProvider`
-
 * `FSharp.Azure.StorageTypeProvider`
 
 Existing type providers that don't quite follow the guidelines but which are ok:
@@ -78,22 +71,17 @@ Existing type providers that don't quite follow the guidelines but which are ok:
 Here are some examples of existing type providers that aren't too bad (they are clear) but could be renamed to follow the guidelines:
 
 * `ExcelProvider` (better would be `FSharp.Interop.ExcelProvider`)
-
 * `RProvider` (better would be `FSharp.Interop.RProvider`)
-
 * `ApiaryProvider` (better would be `FSharp.Data.ApiaryProvider`)
-
 * `SQLProvider`  (better would be `FSharp.Data.SQLProvider`)
-
 * `DynamicsNAVProvider`  (better would be `FSharp.Interop.DynamicsNAVProvider`)
-
 * `DynamicsCRMProvider`  (better would be `FSharp.Interop.DynamicsCRMProvider`)
 
 ## Technical Notes
 
 ### Using Type Providers with ``dotnet build``
 
-Correctly updated type providers can be used with either the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain. 
+Correctly updated type providers can be used with either the `dotnet` toolchain (.NET SDK tools which executes using .NET Core) or `msbuild` (traditional .NET Framework/Mono) toolchain.
 
 ### Nuget package layouts you should use
 
@@ -127,7 +115,6 @@ These dependencies are packaged and managed differently
   Visual Studio and must be loadable without referencing any other packages.
  
 
-
 ### Lifetime of type provider instantiations
 
 F# type providers are hosted by applications using FSharp.Compiler.Service.
@@ -145,9 +132,6 @@ Each time the host application (e.g. devenv.exe) checks a file using type provid
 * The natural (i.e. minimal) lifetime of a TP Instantiation and its related objects (ProvidedType ProvidedMethodInfo etc. etc. ) is the same as the TAST structures which refer these things (TProvidedTypeInfo, MethInfo, FieldInfo from infos.fs).
 
 The lifetime of TAST structures is as long as they are held in the IncrementalBuilder, or you hold on to FSharpCheckFileResults, or FSharpCheckProjectResults, or FSharpAssemblyContents.  
-
-
-
 
 ### FAQ
 
@@ -246,16 +230,11 @@ One approach:
 
 * Host tool - Either ``fsc.exe``, ``fsi.exe`` or some tool hosting ``FSharp.Compiler.Service.dll`` such as ``devenv.exe`` or ``FsAutoComplete.exe``
 
-
 ### How the TPDTC is found and loaded
 
 Currently, host tools look for TPDTC DLLs alongside the TPRTC DLL. For simple type providers, these DLLs are the same. When executing using .NET Framework, the host tool uses ``Assembly.LoadFrom`` to load this component.
 
 See [Type provider design-time DLLs should be chosen more appropriately](https://github.com/Microsoft/visualfsharp/issues/3736) for a proposal to change the rules to allow TPDTC components to be found more usefully, and in particular for different TPDTC components to be loaded depending on the execution environment of the host tooling.
-
-### Making a .NET Standard 2.0 TPDTC
-
-It will be increasingly common to make type providers where the TPDTC is a .NET Standard 2.0 component. In the very simplest case,  there will just be one  happy .NET Standard 2.0 component ``MyTypeProvider.dll`` acting as both the TPDTC and TPRTC.  Such a type provider will eventually be loadable into all F# tooling.
 
 ### Explicit construction of code: MakeGenericType, MakeGenericMethod and UncheckedQuotations
 
@@ -318,5 +297,6 @@ The library is available under the MIT License. For more information see the [Li
 - [@mavnn](https://github.com/mavnn)
 - [@ovatsus](https://github.com/ovatsus)
 - [@dsyme](https://github.com/dsyme)
+- [@cartermp](https://github.com/cartermp)
 
 The default maintainer account for projects under "fsprojects" is [@fsprojectsgit](https://github.com/fsprojectsgit) - F# Community Project Incubation Space (repo management)

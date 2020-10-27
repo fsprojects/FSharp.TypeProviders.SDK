@@ -1,15 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\netfx.props" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>netstandard2.0;netcoreapp3.1;net45</TargetFrameworks>
-    <Optimize>true</Optimize>
-    <Tailcalls>true</Tailcalls>
-    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
-    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <OutputPath>..\MyProvider.Runtime\bin\$(Configuration)\typeproviders\fsharp41\</OutputPath>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <DefineConstants>IS_DESIGNTIME</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.SDK\src\ProvidedTypes.fsi">
@@ -24,9 +17,6 @@
     <Compile Include="..\MyProvider.Runtime\MyProvider.Runtime.fs" />
     <Compile Include="MyProvider.DesignTime.fs" />
     <None Include="paket.references" />
-    <None Include="..\..\packages\NETStandard.Library.NETFramework\build\net461\lib\netstandard.dll" Condition="'$(TargetFramework)' == 'net45'">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

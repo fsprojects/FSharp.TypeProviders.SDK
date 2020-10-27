@@ -34,11 +34,5 @@
     <file src="..\StressProvider\bin\Release\netstandard2.0\StressProvider.dll" target="lib/netstandard2.0" />
     <file src="..\StressProvider\bin\Release\netstandard2.0\StressProvider.pdb" target="lib/netstandard2.0" />
     <file src="..\StressProvider\bin\Release\netstandard2.0\StressProvider.xml" target="lib/netstandard2.0" />
-
-    <!-- Add these facades to allow .NET 4.6.x-based tooling to load the component, see docs at https://github.com/fsprojects/FSharp.TypeProviders.SDK/ -->
-    <file src="..\StressProvider\bin\Release\netstandard2.0\netstandard.dll" target="lib/netstandard2.0" />
-    <file src="..\StressProvider\bin\Release\netstandard2.0\System.Reflection.dll" target="lib/netstandard2.0" />
-    <file src="..\StressProvider\bin\Release\netstandard2.0\System.Runtime.dll" target="lib/netstandard2.0" />
-
   </files>
 </package>

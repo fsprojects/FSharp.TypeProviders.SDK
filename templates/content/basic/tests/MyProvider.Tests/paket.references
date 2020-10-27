@@ -1,3 +1,5 @@
-group Test
-NUnit
 FSharp.Core
+
+group Test
+    NUnit
+    NUnit3TestAdapter version_in_path: true

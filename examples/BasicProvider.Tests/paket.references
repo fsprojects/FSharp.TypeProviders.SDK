@@ -1,9 +1,7 @@
-source https://api.nuget.org/v3/index.json
-
-nuget FSharp.Core 4.7.2
+FSharp.Core
 
 group Test
-    source https://api.nuget.org/v3/index.json
+
     nuget xunit
     nuget xunit.runner.visualstudio
     nuget coverlet.collector

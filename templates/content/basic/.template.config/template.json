@@ -1,60 +1,60 @@
 ﻿{
-    "author": "fsprojects",
-    "classifications": [
-        "TypeProviders"
-    ],
-    "name": "Basic F# Type Provider",
-    "groupIdentity": "FSharp.TypeProviders.Templates",
-    "identity": "FSharp.TypeProviders.Templates",
-    "shortName": "typeprovider",
-    "tags": {
-        "language": "F#",
-        "type": "project"
-    },
-    "sourceName": "MyProvider",
-    "primaryOutputs": [
-        {
-            "path": "src\\MyProvider.DesignTime\\MyProvider.DesignTime.fs"
-        },
-        {
-            "path": "src\\MyProvider.DesignTime\\MyProvider.DesignTime.fsproj"
-        },
-        {
-            "path": "src\\MyProvider.Runtime\\MyProvider.Runtime.fsproj"
-        }
-    ],
-    "defaultName": "MyProvider",
-    "preferNameDirectory": "true",
-    "guids": [
-        "99E19497-29A6-4B77-B773-BEC55F9B55DC", // DesignTime project identity
-        "8D9F8CF0-E178-402D-8D40-A88B7B5F3D42", // Runtime project identity
-        "91D74A40-E440-42AD-B51F-C2D641C49384" // Tests project identity
-    ],
-    "symbols": {
-        "kind": {
-            "type": "parameter",
-            "datatype": "choice",
-            "defaultValue": "blank",
-            "choices": [
-                {
-                    "choice": "blank",
-                    "description": "An empty F# type provider"
-                }
-            ]
-        }
-    },
-    "postActions": [
-    ],
-    "sources": [
-        {
-            "modifiers": [
-            ]
-        },
-        {
-            "source": "./",
-            "condition": "(kind == \"blank\")",
-            "modifiers": [
-            ]
-        }
-    ]
+  "author": "fsprojects",
+  "classifications": [
+      "TypeProviders"
+  ],
+  "name": "Basic F# Type Provider",
+  "groupIdentity": "FSharp.TypeProviders.Templates",
+  "identity": "FSharp.TypeProviders.Templates",
+  "shortName": "typeprovider",
+  "tags": {
+      "language": "F#",
+      "type": "project"
+  },
+  "sourceName": "MyProvider",
+  "primaryOutputs": [
+      {
+          "path": "src\\MyProvider.DesignTime\\MyProvider.DesignTime.fs"
+      },
+      {
+          "path": "src\\MyProvider.DesignTime\\MyProvider.DesignTime.fsproj"
+      },
+      {
+          "path": "src\\MyProvider.Runtime\\MyProvider.Runtime.fsproj"
+      }
+  ],
+  "defaultName": "MyProvider",
+  "preferNameDirectory": "true",
+  "guids": [
+      "99E19497-29A6-4B77-B773-BEC55F9B55DC", // DesignTime project identity
+      "8D9F8CF0-E178-402D-8D40-A88B7B5F3D42", // Runtime project identity
+      "91D74A40-E440-42AD-B51F-C2D641C49384" // Tests project identity
+  ],
+  "symbols": {
+      "kind": {
+          "type": "parameter",
+          "datatype": "choice",
+          "defaultValue": "blank",
+          "choices": [
+              {
+                  "choice": "blank",
+                  "description": "An empty F# type provider"
+              }
+          ]
+      }
+  },
+  "postActions": [
+  ],
+  "sources": [
+      {
+          "modifiers": [
+          ]
+      },
+      {
+          "source": "./",
+          "condition": "(kind == \"blank\")",
+          "modifiers": [
+          ]
+      }
+  ]
 }

@@ -7,9 +7,9 @@
       "commands": [
         "paket"
       ]
-    },
+  },
     "fake-cli": {
-      "version": "5.20.0",
+      "version": "5.20.2",
       "commands": [
         "fake"
       ]

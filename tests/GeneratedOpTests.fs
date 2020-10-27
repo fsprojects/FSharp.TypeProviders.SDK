@@ -7,8 +7,6 @@
 module TPSDK.GeneratedOpTests
 #endif
 
-#if !NO_GENERATIVE
-
 open System
 open System.Reflection
 open Microsoft.FSharp.Core.CompilerServices
@@ -19,7 +17,11 @@ open Microsoft.FSharp.Quotations
 
 #nowarn "760" // IDisposable needs new
 
-let testProvidedAssembly exprs = 
+let testCases() = 
+    let fsCoreVersion = typeof<list<int>>.Assembly.GetName().Version.ToString()
+    [ (sprintf "FSharp.Core %s .NET Standard 2.0" fsCoreVersion, fsCoreVersion, (fun _ ->  true), Targets.DotNetStandard20FSharpRefs) ]
+
+let testProvidedAssembly exprs =
     let asms = AppDomain.CurrentDomain.GetAssemblies() |> Array.filter (fun x -> not x.IsDynamic) |> Array.map (fun x -> x.Location) 
     let runtimeAssemblyRefs = Array.toList asms
     let runtimeAssembly = asms |> Array.find (fun x -> match IO.Path.GetFileNameWithoutExtension(x).ToLower() with "mscorlib" | "system.runtime" -> true | _ -> false)
@@ -29,7 +31,7 @@ let testProvidedAssembly exprs =
     let tempAssembly = ProvidedAssembly()
     let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
     let mutable counter = 0
-    
+
     let create (expr : Expr) =  
         counter <- counter + 1
         let name = sprintf "F%d" counter
@@ -1126,4 +1128,3 @@ let ``bitwise not execute correctly``() =
            checkExpr <@ ~~~1234us @>
            checkExpr <@ ~~~12uy @>
        ]
-#endif

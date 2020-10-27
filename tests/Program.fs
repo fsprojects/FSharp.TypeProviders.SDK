@@ -1,4 +1,1 @@
-module Program 
-let [<EntryPoint>] main _ = 
-   //TPSDK.BasicErasedTests.``test reader cache actually caches``()
-   0
+module Program = let [<EntryPoint>] main _ = 0

@@ -137,25 +137,8 @@ type GenerativePropertyProviderWithStaticParams (config : TypeProviderConfig) as
 
 
 let testCases() = 
-    [("F# 3.1 Portable 259", "3.259.3.1", (fun _ ->  Targets.hasPortable259Assemblies()), Targets.Portable259FSharp31Refs)
-     ("F# 4.0 Portable 259", "3.259.4.0", (fun _ ->  Targets.hasPortable259Assemblies() && Targets.supportsFSharp40()), Targets.Portable259FSharp40Refs)
-     ("F# 3.1 .NET 4.5", "4.3.1.0", (fun _ ->  Targets.supportsFSharp31()), Targets.DotNet45FSharp31Refs)
-     ("F# 4.0 .NET 4.5", "4.4.0.0", (fun _ ->  Targets.supportsFSharp40()), Targets.DotNet45FSharp40Refs)
-     ("F# 4.1 .NET 4.5", "4.4.1.0", (fun _ ->  true), Targets.DotNet45FSharp41Refs)
-     ("F# 4.1 .NET Standard 2.0", "4.4.1.0", (fun _ ->  true), Targets.DotNetStandard20FSharp41Refs)
-     ("F# 4.1 .NET CoreApp 2.0", "4.4.1.0", (fun _ ->  true), Targets.DotNetCoreApp20FSharp41Refs) ]
-
-let possibleVersions = 
-    [ "3.259.3.1"
-      "3.259.4.0"
-      "4.3.1.0"
-      "4.4.0.0"
-      "4.4.1.0"
-      "4.4.3.0"
-      (typeof<list<int>>.Assembly.GetName().Version.ToString()) ]
-
-let hostedTestCases() = 
-    [("4.4.0.0", (fun _ ->  Targets.supportsFSharp40()), Targets.DotNet45FSharp40Refs) ]
+    let fsCoreVersion = typeof<list<int>>.Assembly.GetName().Version.ToString()
+    [ (sprintf "FSharp.Core %s .NET Standard 2.0" fsCoreVersion, fsCoreVersion, (fun _ ->  true), Targets.DotNetStandard20FSharpRefs) ]
 
 [<Fact>]
 let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : unit  = 
@@ -205,11 +188,7 @@ let ``GenerativePropertyProviderWithStaticParams generates for correctly``() : u
             printfn "----- %s ------- " text 
             printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" text res
-            for desc2 in possibleVersions do 
-                let contains = res.Contains("FSharp.Core, Version="+desc2)
-                if contains = (desc = desc2) then ()
-                elif contains then failwith ("FAILED: unexpected reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
-                else failwith ("FAILED: failed to find reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
+            Assert.Contains("FSharp.Core, Version="+desc, res)
                 
 [<Fact>]
 let ``GenerativePropertyProviderWithStaticParams attributes are read correctly``() : unit  = 
@@ -259,8 +238,6 @@ let ``GenerativePropertyProviderWithStaticParams reflection on MethodSymbol and 
             let ctorCustomAttributes = ctors |> Array.choose (fun ctorSymbol -> ctorSymbol.GetCustomAttributes(true) |> Array.tryHead )
             Assert.NotEmpty ctorCustomAttributes
                             
-
-
 [<TypeProvider>]
 type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces (config)
@@ -303,8 +280,6 @@ type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypePro
 
         this.AddNamespace(ns, [myStaticParameterizedType])
 
-
-
 [<Fact>]
 let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correctly``() : unit  = 
     for (text, desc, supports, refs) in testCases() do
@@ -313,7 +288,6 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correc
             printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correctly: %s ------- " text 
             let staticArgs = [|  box 3; box 4  |] 
             let runtimeAssemblyRefs = refs()
-            //printfn "refs = %A" runtimeAssemblyRefs
 
             let runtimeAssembly = runtimeAssemblyRefs.[0]
             let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
@@ -338,16 +312,10 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correc
             printfn "----- %s ------- " text 
             printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" text res
-            for desc2 in possibleVersions do 
-                let contains = res.Contains("FSharp.Core, Version="+desc2)
-                if contains = (desc = desc2) then ()
-                elif contains then failwith ("FAILED: unexpected reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
-                else failwith ("FAILED: failed to find reference to FSharp.Core, Version=" + desc2 + " in output for " + text + " when generating for FSharp.Core, Version="+desc+", runtimeAssemblyRefs = "+ sprintf "%A" runtimeAssemblyRefs + ", res = " + res)
+            Assert.Contains("FSharp.Core, Version="+desc, res)
 
-#if !NETSTANDARD && !NETCOREAPP3_1
-[<Fact>]
 let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for hosted execution correctly``() : unit  = 
-    for (desc, supports, refs) in hostedTestCases() do
+    for (text, desc, supports, refs) in testCases() do
         if supports() then 
             printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes hosted execution: %s ------- " desc 
             let staticArgs = [|  box 3; box 4  |] 
@@ -374,16 +342,13 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for ho
             let simpleName = Path.GetFileNameWithoutExtension(assemblyFileName)
             let asmName = AssemblyName(simpleName)
             let currentDom  = AppDomain.CurrentDomain
-            let asmB = currentDom.DefineDynamicAssembly(asmName, AssemblyBuilderAccess.RunAndSave, ".")
-            let modB = asmB.DefineDynamicModule(simpleName,  Path.GetFileName assemblyFileName)
+            let asmB = AssemblyBuilder.DefineDynamicAssembly(asmName, AssemblyBuilderAccess.Run)
+            let modB = asmB.DefineDynamicModule(simpleName)
             let typB = modB.DefineType("A", TypeAttributes.Sealed ||| TypeAttributes.Class)
             let methB = typB.DefineMethod("M", MethodAttributes.Static)
-        
+
             methB.SetParameters( [| |])
             methB.SetReturnType(t)
-
-
-#endif
 
     // TESTING TODO: Register binary
     // TESTING TODO: field defs

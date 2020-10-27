@@ -1,6 +1,5 @@
 module MyProviderTests
 
-
 open MyNamespace
 open NUnit.Framework
 

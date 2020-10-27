@@ -1,7 +1,6 @@
 
 namespace ProviderImplementation
 
-open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open FSharp.Quotations
 open FSharp.Core.CompilerServices

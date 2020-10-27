@@ -9,8 +9,6 @@ module FSharp.TypeProviders.SDK.Tests.GenerativeAbstractClassesTests
 
 #nowarn "760" // IDisposable needs new
 
-#if !NO_GENERATIVE
-
 open System
 open System.Reflection
 open Microsoft.FSharp.Core.CompilerServices
@@ -64,9 +62,8 @@ type GenerativeAbstractClassesProvider (config: TypeProviderConfig) as this =
         tempAssembly.AddTypes [container]
         this.AddNamespace(container.Namespace, [container])
 
-let testProvidedAssembly test = 
-    if Targets.supportsFSharp40() then
-        let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs()
+let testProvidedAssembly test =
+        let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
         let runtimeAssembly = runtimeAssemblyRefs.[0]
         let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
         let tp = GenerativeAbstractClassesProvider(cfg) :> TypeProviderForNamespaces
@@ -120,4 +117,3 @@ let ``Abstract classes with virtual members are generated correctly``() =
         Assert.False(contractSum.IsAbstract, "Expected Sum method to not be abstract")
         Assert.True(contractSum.IsVirtual, "Expected Sum method to be virtual")
 
-#endif

@@ -1,6 +1,5 @@
 #r @"paket:
-source https://nuget.org/api/v2
-framework netstandard2.0
+source https://api.nuget.org/v3/index.json
 nuget Fake.Core.Target
 nuget Fake.Core.Process
 nuget Fake.Core.ReleaseNotes 
@@ -22,21 +21,24 @@ open Fake.IO
 open Fake.DotNet
 open System
 open System.IO
-open System.Runtime.InteropServices
+open Fake.IO.Globbing.Operators
 
 Target.initEnvironment()
 
 let config = DotNet.BuildConfiguration.Release
-let setParams (p:DotNet.BuildOptions) = {p with Configuration = config}
+let setParams (p:DotNet.BuildOptions) = { p with Configuration = config }
 
-let outputPath = __SOURCE_DIRECTORY__ + "/bin"
+let outputPath = Path.Combine(__SOURCE_DIRECTORY__, "bin")
 
 // Read release notes & version info from RELEASE_NOTES.md
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 let release = ReleaseNotes.load "RELEASE_NOTES.md"
 
 Target.create "Clean" (fun _ ->
-    Shell.cleanDirs ["temp"]
+    !! "**/**/bin/" |> Shell.cleanDirs
+    !! "**/**/obj/" |> Shell.cleanDirs
+    
+    Shell.cleanDirs ["bin"; "temp"]
 )
 
 Target.create "Build" (fun _ ->
@@ -46,65 +48,29 @@ Target.create "Build" (fun _ ->
 
 Target.create "Examples" (fun _ ->
     DotNet.build setParams "examples/BasicProvider.DesignTime/BasicProvider.DesignTime.fsproj"
-    DotNet.build setParams "examples/BasicProvider/BasicProvider.fsproj"
-    DotNet.build setParams "examples/ComboProvider/ComboProvider.fsproj"
+    DotNet.build setParams "examples/BasicProvider.Runtime/BasicProvider.Runtime.fsproj"
     DotNet.build setParams "examples/StressProvider/StressProvider.fsproj"
 )
 
 Target.create "RunTests" (fun _ ->
-
-    let runXUnitRunner (fsproj:string) =
-        // We don't use "dotnet test" for Mono testing the test runner doesn't know how to run with Mono
-        // This is a bit of a hack to find the output test DLL and run xunit using Mono directly
-        let mode = if config = DotNet.BuildConfiguration.Release then "Release" else "Debug"
-        let pos = fsproj.LastIndexOf('/')
-        let file = fsproj.Substring(0,pos) + "/bin/" + mode + "/net461" + fsproj.Substring(pos).Replace(".fsproj",".dll")
-        // let file = 
-        //     (Array.append [| dir |] (System.IO.Directory.GetDirectories(dir)))
-        //     |> Array.pick (fun subdir -> 
-        //         let file = subdir + "/FSharp.TypeProviders.SDK.Tests.dll"
-        //         if System.IO.File.Exists file then Some file else None)
-
-        let exec p args = 
-            printfn "Executing %s %s" p args 
-            Shell.Exec(p, args) |> function 0 -> () | d -> failwithf "%s %s exited with error %d" p args d
-
-        "packages/xunit.runner.console/tools/net452/xunit.console.exe " + file + " -parallel none"
-        |> exec "mono"
-            
-        // This can also be used on Mono to give console output:
-        // msbuild tests/FSharp.TypeProviders.SDK.Tests.fsproj /p:Configuration=Debug && mono packages/xunit.runner.console/tools/net452/xunit.console.exe tests/bin/Debug/net461/FSharp.TypeProviders.SDK.Tests.dll -parallel none
-
-    let setTestOptions framework (p:DotNet.TestOptions) =
-        { p with Configuration = config; Framework= Some framework}
+    let setTestOptions (p:DotNet.TestOptions) =
+        { p with Configuration = config }
 
     [
         "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
         "examples/BasicProvider.Tests/BasicProvider.Tests.fsproj"
-        "examples/ComboProvider.Tests/ComboProvider.Tests.fsproj"
         "examples/StressProvider.Tests/StressProvider.Tests.fsproj"
     ]
-    |> List.iter (fun fsproj ->
-        if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
-        then DotNet.test (setTestOptions "net461") fsproj
-        else 
-            DotNet.build (fun p -> {setParams p with Framework=Some "net461"}) fsproj
-            runXUnitRunner fsproj
-
-        DotNet.test (setTestOptions "netcoreapp3.1") fsproj
-    )
-    
-    // This can also be used to give console output:
-    // dotnet build tests\FSharp.TypeProviders.SDK.Tests.fsproj -c Debug -f net461 && packages\xunit.runner.console\tools\net452\xunit.console.exe tests\bin\Debug\net461\FSharp.TypeProviders.SDK.Tests.dll -parallel none
+    |> List.iter (DotNet.test setTestOptions)
 )
 
 Target.create "Pack" (fun _ ->
     let releaseNotes = String.toLines release.Notes
-    // TODO: This is using an awkward mix of Paket and dotnet to do packaging. We should just use paket.
     let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config}
+
     DotNet.pack  (fun p -> { 
         setParams p with 
-            MSBuildParams= { 
+            MSBuildParams = { 
                 MSBuild.CliArguments.Create() with
                     Properties = [
                         "PackageVersion", release.NugetVersion
@@ -112,27 +78,32 @@ Target.create "Pack" (fun _ ->
                     ] 
             } 
         }) "src/FSharp.TypeProviders.SDK.fsproj"
-    DotNet.pack setParams "examples/BasicProvider/BasicProvider.fsproj"
-    DotNet.pack setParams "examples/ComboProvider/ComboProvider.fsproj"
+
+    DotNet.pack setParams "examples/BasicProvider.Runtime/BasicProvider.Runtime.fsproj"
     DotNet.pack setParams "examples/StressProvider/StressProvider.fsproj"
 
-    NuGet.NuGet.NuGetPack (fun p -> {
-        p with 
-            WorkingDir="templates"
-            OutputPath=outputPath
-            Version=release.NugetVersion
-            ReleaseNotes = releaseNotes
-    }) "templates/FSharp.TypeProviders.Templates.nuspec"
+    DotNet.pack (fun p -> { 
+        setParams p with 
+            MSBuildParams = { 
+                MSBuild.CliArguments.Create() with
+                    Properties = [
+                        "PackageVersion", release.NugetVersion
+                        "ReleaseNotes", releaseNotes
+                    ]
+            } 
+        }) "templates/FSharp.TypeProviders.Templates.proj"
 )
 
 Target.create "TestTemplatesNuGet" (fun _ ->
     let wd = Path.Combine(__SOURCE_DIRECTORY__, "temp")
     let runInTempDir (p:DotNet.Options) = { p with WorkingDirectory = wd }
-    // Globally install the templates from the template nuget package we just built
-    DotNet.exec runInTempDir "new" ("-i " + outputPath + "/FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg") |> ignore
+
+    DotNet.exec runInTempDir "new" "-u FSharp.TypeProviders.Templates" |> ignore
+    DotNet.exec runInTempDir "new" ("-i " + Path.Combine(outputPath, "FSharp.TypeProviders.Templates." + release.NugetVersion + ".nupkg")) |> ignore
 
     // Instantiate the template into a randomly generated name
-    let testAppName = "tp2" + string (abs (hash DateTime.Now.Ticks) % 100)
+    let ticks = DateTime.Now.Ticks
+    let testAppName = "tp2" + string (abs (hash ticks) % 100)
     let testAppDir = Path.Combine(wd, testAppName)
     Shell.cleanDir testAppDir
     DotNet.exec runInTempDir "new" (sprintf "typeprovider -n %s -lang F#" testAppName) |> ignore
@@ -142,6 +113,8 @@ Target.create "TestTemplatesNuGet" (fun _ ->
     DotNet.exec runInTestAppDir "paket" "restore" |> ignore
     DotNet.exec runInTestAppDir "build" "-c debug" |> ignore
     DotNet.exec runInTestAppDir "test" "-c debug" |> ignore
+
+    DotNet.exec runInTempDir "new" "-u FSharp.TypeProviders.Templates" |> ignore
 
     (* Manual steps without building nupkg
         dotnet pack src\FSharp.TypeProviders.SDK.fsproj /p:PackageVersion=0.0.0.99 --output bin -c release
@@ -153,7 +126,12 @@ Target.create "TestTemplatesNuGet" (fun _ ->
 
 Target.create "All" ignore
 
-"Clean" ==> "Pack"
-"Build" ==> "Examples" ==> "RunTests" ==> "Pack" ==> "TestTemplatesNuGet" ==> "All"
+"Clean"
+  ==> "Build"
+  ==> "Examples"
+  ==> "RunTests"
+  ==> "Pack"
+  ==> "TestTemplatesNuGet"
+  ==> "All"
 
 Target.runOrDefault "All"

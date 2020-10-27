@@ -9,8 +9,6 @@ module TPSDK.GenerativeEnumsProvisionTests
 
 #nowarn "760" // IDisposable needs new
 
-#if !NO_GENERATIVE
-
 open System
 open System.Reflection
 open Microsoft.FSharp.Core.CompilerServices
@@ -58,9 +56,8 @@ type GenerativeEnumsProvider (config: TypeProviderConfig) as this =
         tempAssembly.AddTypes [container]
         this.AddNamespace(container.Namespace, [container])
 
-let testProvidedAssembly test = 
-    if Targets.supportsFSharp40() then
-        let runtimeAssemblyRefs = Targets.DotNet45FSharp40Refs()
+let testProvidedAssembly test =
+        let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
         let runtimeAssembly = runtimeAssemblyRefs.[0]
         let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs) 
         let tp = GenerativeEnumsProvider(cfg) :> TypeProviderForNamespaces
@@ -106,4 +103,3 @@ let ``Enums are generated correctly``() =
         Assert.Equal(topLevelEnum, topLevelEnumField.FieldType)
 
 
-#endif

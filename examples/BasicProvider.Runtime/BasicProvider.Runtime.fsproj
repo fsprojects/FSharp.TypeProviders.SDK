@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -7,18 +7,20 @@
     <FSharpToolsDirectory>typeproviders</FSharpToolsDirectory>
     <PackagePath>typeproviders</PackagePath>
   </PropertyGroup>
+
   <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="MyProvider.Runtime.fs" />
-    <None Include="paket.references" />
+    <Compile Include="BasicProvider.Runtime.fs" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.7.2" />
-    <ProjectReference Include="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj">
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BasicProvider.DesignTime\BasicProvider.DesignTime.fsproj">
       <IsFSharpDesignTimeProvider>true</IsFSharpDesignTimeProvider>
       <PrivateAssets>all</PrivateAssets>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
 
 </Project>

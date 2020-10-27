@@ -1,7 +1,6 @@
 
 namespace ProviderImplementation
 
-open ProviderImplementation
 open ProviderImplementation.ProvidedTypes
 open FSharp.Quotations
 open FSharp.Core.CompilerServices
@@ -9,7 +8,7 @@ open System.Reflection
 
 [<TypeProvider>]
 type BasicErasingProvider (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces (config, assemblyReplacementMap=[("BasicProvider.DesignTime", "BasicProvider")], addDefaultProbingLocation=true)
+    inherit TypeProviderForNamespaces (config, assemblyReplacementMap=[("BasicProvider.DesignTime", "BasicProvider.Runtime")], addDefaultProbingLocation=true)
 
     let ns = "BasicProvider.Provided"
     let asm = Assembly.GetExecutingAssembly()
