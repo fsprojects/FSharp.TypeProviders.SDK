@@ -1,5 +1,5 @@
 FSharp.Core
-
 group Test
-    NUnit
-    NUnit3TestAdapter version_in_path: true
+NUnit
+NUnit3TestAdapter version_in_path: true
+Microsoft.NET.Test.Sdk
