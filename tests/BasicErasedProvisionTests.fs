@@ -127,6 +127,98 @@ let nonPrimitives =
       "System.TimeSpan", typeof<TimeSpan>, box TimeSpan.Zero
       "System.DayOfWeek", typeof<DayOfWeek>, box DayOfWeek.Friday ]
 
+[<Fact>]
+let ``Check target primitive types are not identical to design-time types``() : unit  = 
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    // primitive types with element types are ALWAYS equivalent the design-time types
+    for tname, sourceType, _ in primitives do
+        let targetType = mscorlib31.GetType(tname)
+        Assert.NotEqual(targetType, sourceType)
+    // System.Void is given a special treatment
+    let targetType = mscorlib31.GetType("System.Void")
+    Assert.NotEqual(targetType, typeof<Void>)
+
+[<Fact>]
+let ``Check target non-primitive types are different to design-time types``() : unit  = 
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    // non-primitive types should be _not_ be equal - we should see the target type in the referenced assemblies
+    for tname, sourceType, _ in nonPrimitives do
+        let targetType = mscorlib31.GetType(tname)
+        Assert.NotEqual(targetType, sourceType)
+
+
+[<Fact>]
+let ``Check type remapping functions work for primitives``() : unit  = 
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    for tname, sourceType, _ in primitives do
+        let targetType = mscorlib31.GetType(tname)
+        let sourceTypeT = tp.TargetContext.ConvertSourceTypeToTarget sourceType
+        let targetTypeS = tp.TargetContext.ConvertTargetTypeToSource targetType
+        Assert.Equal(targetType, sourceTypeT)
+        Assert.Equal(targetTypeS, sourceType)
+
+
+[<Fact>]
+let ``Check type remapping functions work for nonPrimtives``() : unit  = 
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    for tname, sourceType, _ in nonPrimitives do
+        let targetType = mscorlib31.GetType(tname)
+        // TODO: determine why this one is failing....
+        //Assert.Equal(targetType, ConvertSourceTypeToTarget sourceType)
+        Assert.Equal(tp.TargetContext.ConvertTargetTypeToSource targetType, sourceType)
+
+[<Fact>]
+
+let ``Check can create Expr Value nodes for primitive types``() : unit  = 
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    // primitive types with element types are ALWAYS equivalent the design-time types
+    for tname, _sourceType, sampleValue in primitives do
+        let targetType = mscorlib31.GetType(tname)
+        Quotations.Expr.Value(sampleValue, targetType) |> ignore // does not throw
+
+    // We expect Expr.Value to fail for non-primitive compile-time types.  This is a check in the F# quotations library
+    for _tname, sourceType, sampleValue in nonPrimitives do
+       Quotations.Expr.Value(sampleValue, sourceType) |> ignore // no exception
+
+[<Fact>]
+let ``Check can't create Expr Value nodes for non-primitive types``() : unit  = 
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    let mscorlib31 = match tp.TargetContext.TryBindSimpleAssemblyNameToTarget("mscorlib") with Choice1Of2 asm -> asm | Choice2Of2 err -> failwithf "couldn't bind mscorlib, err: %O" err
+    // We expect Expr.Value to fail for non-primitive compile-time types.  This is a check in the F# quotations library
+    for tname, _sourceType, sampleValue in nonPrimitives do
+        try 
+           let targetType = mscorlib31.GetType(tname)
+           Quotations.Expr.Value(sampleValue, targetType) |> ignore
+        with _ -> () // ok
+
+[<Fact>]
+let ``test basic binding context netstandard20``() =
+   let refs = Targets.DotNetStandard20FSharpRefs()
+   let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+   use tp1 = new TypeProviderForNamespaces(config)
+   let ctxt1 = tp1.TargetContext
+
+   match ctxt1.TryBindAssemblyNameToTarget(AssemblyName("mscorlib")) with
+   | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d,"System.Object"))
+   | Choice2Of2 err -> raise err
+
 let stressTestCore() = 
     let refs = Targets.DotNetStandard20FSharpRefs()
     let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
