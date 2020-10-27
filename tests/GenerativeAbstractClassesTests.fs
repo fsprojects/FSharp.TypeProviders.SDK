@@ -9,8 +9,6 @@ module FSharp.TypeProviders.SDK.Tests.GenerativeAbstractClassesTests
 
 #nowarn "760" // IDisposable needs new
 
-#if !NO_GENERATIVE
-
 open System
 open System.Reflection
 open Microsoft.FSharp.Core.CompilerServices
@@ -119,4 +117,3 @@ let ``Abstract classes with virtual members are generated correctly``() =
         Assert.False(contractSum.IsAbstract, "Expected Sum method to not be abstract")
         Assert.True(contractSum.IsVirtual, "Expected Sum method to be virtual")
 
-#endif

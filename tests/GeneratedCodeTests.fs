@@ -7,8 +7,6 @@
 module TPSDK.GeneratedCodeTests
 #endif
 
-#if !NO_GENERATIVE
-
 open System
 open System.Reflection
 open Microsoft.FSharp.Core.CompilerServices
@@ -182,5 +180,3 @@ let ``struct``() =
             
         ]
     
-    
-#endif

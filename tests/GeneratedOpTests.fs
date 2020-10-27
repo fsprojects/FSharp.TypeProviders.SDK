@@ -7,8 +7,6 @@
 module TPSDK.GeneratedOpTests
 #endif
 
-#if !NO_GENERATIVE
-
 open System
 open System.Reflection
 open Microsoft.FSharp.Core.CompilerServices
@@ -1130,4 +1128,3 @@ let ``bitwise not execute correctly``() =
            checkExpr <@ ~~~1234us @>
            checkExpr <@ ~~~12uy @>
        ]
-#endif

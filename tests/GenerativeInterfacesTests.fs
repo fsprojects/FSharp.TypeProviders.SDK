@@ -9,8 +9,6 @@ module FSharp.TypeProviders.SDK.Tests.GenerativeInterfacesTests
 
 #nowarn "760" // IDisposable needs new
 
-#if !NO_GENERATIVE
-
 open System
 open System.Reflection
 open Microsoft.FSharp.Core.CompilerServices
@@ -98,4 +96,3 @@ let ``Interfaces with methods are generated correctly``() =
         Assert.True(contractSum.IsAbstract, "Expected Sum method to be abstract")
         Assert.True(contractSum.IsVirtual, "Expected Sum method to be virtual")
 
-#endif

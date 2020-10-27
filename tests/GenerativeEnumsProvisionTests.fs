@@ -9,8 +9,6 @@ module TPSDK.GenerativeEnumsProvisionTests
 
 #nowarn "760" // IDisposable needs new
 
-#if !NO_GENERATIVE
-
 open System
 open System.Reflection
 open Microsoft.FSharp.Core.CompilerServices
@@ -105,4 +103,3 @@ let ``Enums are generated correctly``() =
         Assert.Equal(topLevelEnum, topLevelEnumField.FieldType)
 
 
-#endif
