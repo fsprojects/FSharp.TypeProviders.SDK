@@ -1,23 +1,20 @@
 module MyProviderTests
 
-
-// TODO figure this out
-//open MyNamespace
+open MyNamespace
 open NUnit.Framework
 
-// TODO - figure this out
-// [<Test>]
-// let ``Default constructor should create instance`` () =
-//     Assert.AreEqual("My internal state", MyType().InnerState)
+[<Test>]
+let ``Default constructor should create instance`` () =
+    Assert.AreEqual("My internal state", MyType().InnerState)
 
-// [<Test>]
-// let ``Constructor with parameter should create instance`` () =
-//     Assert.AreEqual("override", MyType("override").InnerState)
+[<Test>]
+let ``Constructor with parameter should create instance`` () =
+    Assert.AreEqual("override", MyType("override").InnerState)
 
-// [<Test>]
-// let ``Method with ReflectedDefinition parameter should get its name`` () =
-//     let myValue = 2
-//     Assert.AreEqual("myValue", MyType.NameOf(myValue))
+[<Test>]
+let ``Method with ReflectedDefinition parameter should get its name`` () =
+    let myValue = 2
+    Assert.AreEqual("myValue", MyType.NameOf(myValue))
 
 type Generative2 = MyProvider.GenerativeProvider<2>
 type Generative4 = MyProvider.GenerativeProvider<4>

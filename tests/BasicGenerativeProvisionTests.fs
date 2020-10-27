@@ -7,7 +7,9 @@ module TPSDK.Tests.BasicGenerativeTests
 #endif
 
 open System
+open System.IO
 open System.Reflection
+open System.Reflection.Emit
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Quotations
@@ -311,6 +313,42 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates correc
             printfn "compilation references for FSharp.Core target %s = %A" text runtimeAssemblyRefs
             printfn "assembly references for FSharp.Core target %s = %s" text res
             Assert.Contains("FSharp.Core, Version="+desc, res)
+
+let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for hosted execution correctly``() : unit  = 
+    for (text, desc, supports, refs) in testCases() do
+        if supports() then 
+            printfn "----- GenerativeProviderWithRecursiveReferencesToGeneratedTypes hosted execution: %s ------- " desc 
+            let staticArgs = [|  box 3; box 4  |] 
+            let runtimeAssemblyRefs = refs()
+            //printfn "----- refs = %A ------- " runtimeAssemblyRefs
+            let runtimeAssembly = runtimeAssemblyRefs.[0]
+            let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs, isHostedExecution=true) 
+            let tp = GenerativeProviderWithRecursiveReferencesToGeneratedTypes cfg :> TypeProviderForNamespaces
+            let providedNamespace = tp.Namespaces.[0] 
+            let providedTypes  = providedNamespace.GetTypes()
+            let providedType = providedTypes.[0] 
+            let typeName = providedType.Name + (staticArgs |> Seq.map (fun s -> ",\"" + (if isNull s then "" else s.ToString()) + "\"") |> Seq.reduce (+))
+
+            let t = (tp :> ITypeProvider).ApplyStaticArguments(providedType, [| typeName |], staticArgs)
+
+            match t.Assembly with 
+            | :? ProvidedAssembly -> failwithf "did not expect a ProvidedAssembly - when used in hosted execution a type provider should return a Reflection.Load assembly"  
+            | _ -> ()
+
+            // OK, now check we can do a little bit of reflection emit against the types coming from this assembly
+            let tmpFile = Path.GetTempFileName()
+            let assemblyFileName = Path.ChangeExtension(tmpFile, "dll")
+            File.Delete(tmpFile)
+            let simpleName = Path.GetFileNameWithoutExtension(assemblyFileName)
+            let asmName = AssemblyName(simpleName)
+            let currentDom  = AppDomain.CurrentDomain
+            let asmB = AssemblyBuilder.DefineDynamicAssembly(asmName, AssemblyBuilderAccess.Run)
+            let modB = asmB.DefineDynamicModule(simpleName)
+            let typB = modB.DefineType("A", TypeAttributes.Sealed ||| TypeAttributes.Class)
+            let methB = typB.DefineMethod("M", MethodAttributes.Static)
+
+            methB.SetParameters( [| |])
+            methB.SetReturnType(t)
 
     // TESTING TODO: Register binary
     // TESTING TODO: field defs

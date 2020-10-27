@@ -1916,8 +1916,6 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
 
 module internal AssemblyReader =
 
-    //#nowarn "1182"
-
     open System
     open System.Collections.Generic
     open System.Collections.Concurrent
