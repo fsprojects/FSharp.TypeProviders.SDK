@@ -154,6 +154,35 @@ let ``Check target non-primitive types are different to design-time types``() : 
 
 
 [<Fact>]
+let ``Check target enum types gives right values``() : unit  = 
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    let dayOfWeekType = typeof<System.DayOfWeek>
+    let dayOfWeekTypeT = tp.TargetContext.ConvertSourceTypeToTarget dayOfWeekType
+    printfn "Enums #1"
+    Assert.True(dayOfWeekType.IsEnum)
+    printfn "Enums #2"
+    Assert.Equal(dayOfWeekType.GetEnumUnderlyingType().FullName, "System.Int32")
+    printfn "Enums #3"
+    Assert.True(dayOfWeekTypeT.IsEnum)
+    printfn "Enums #4"
+    Assert.Equal(dayOfWeekTypeT.GetEnumUnderlyingType().FullName, "System.Int32")
+    printfn "Done Enums"
+
+[<Fact>]
+let ``Check target delegate types gives right values``() : unit  = 
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    let tp = TypeProviderForNamespaces(cfg)
+    for delegateType in [ typeof<Func<int,int>>; typeof<System.Converter<int,int>>; typeof<System.Action> ] do
+        let delegateTypeT = tp.TargetContext.ConvertSourceTypeToTarget delegateType
+        printfn "Delegates #1, delegateType = %A" delegateType
+        Assert.True(delegateType.IsSubclassOf(typeof<System.Delegate>))
+        printfn "Delegates #2, delegateType = %A" delegateType
+        Assert.True(delegateTypeT.IsSubclassOf(typeof<System.Delegate>))
+
+[<Fact>]
 let ``Check type remapping functions work for primitives``() : unit  = 
     let refs = Targets.DotNetStandard20FSharpRefs()
     let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
@@ -365,35 +394,6 @@ type ErasingProviderWithCustomAttributes (config : TypeProviderConfig) as this =
 
     do
         this.AddNamespace(ns, createTypes())
-
-[<Fact>]
-let ``Check target enum types gives right values``() : unit  = 
-    let refs = Targets.DotNetStandard20FSharpRefs()
-    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
-    let tp = TypeProviderForNamespaces(cfg)
-    let dayOfWeekType = typeof<System.DayOfWeek>
-    let dayOfWeekTypeT = tp.TargetContext.ConvertSourceTypeToTarget dayOfWeekType
-    printfn "Enums #1"
-    Assert.True(dayOfWeekType.IsEnum)
-    printfn "Enums #2"
-    Assert.Equal(dayOfWeekType.GetEnumUnderlyingType().FullName, "System.Int32")
-    printfn "Enums #3"
-    Assert.True(dayOfWeekTypeT.IsEnum)
-    printfn "Enums #4"
-    Assert.Equal(dayOfWeekTypeT.GetEnumUnderlyingType().FullName, "System.Int32")
-    printfn "Done Enums"
-
-[<Fact>]
-let ``Check target delegate types gives right values``() : unit  = 
-    let refs = Targets.DotNetStandard20FSharpRefs()
-    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
-    let tp = TypeProviderForNamespaces(cfg)
-    for delegateType in [ typeof<Func<int,int>>; typeof<System.Converter<int,int>>; typeof<System.Action> ] do
-        let delegateTypeT = tp.TargetContext.ConvertSourceTypeToTarget delegateType
-        printfn "Delegates #1, delegateType = %A" delegateType
-        Assert.True(delegateType.IsSubclassOf(typeof<System.Delegate>))
-        printfn "Delegates #2, delegateType = %A" delegateType
-        Assert.True(delegateTypeT.IsSubclassOf(typeof<System.Delegate>))
 
 [<Fact>]
 let ``test basic symbol type ops``() =
