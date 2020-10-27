@@ -248,6 +248,62 @@ let ``test basic binding context netstandard20``() =
    | Choice1Of2 asm -> asm.GetType("System.Object").FullName |> (fun d -> Assert.Equal(d,"System.Object"))
    | Choice2Of2 err -> raise err
 
+[<Fact>]
+let ``test basic symbol type ops``() =
+   let refs = Targets.DotNetStandard20FSharpRefs()
+   let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+   use tp = new TypeProviderForNamespaces(config)
+   let ctxt = tp.TargetContext
+
+   //let fscore =  ctxt1.TryBindAssemblyNameToTarget(AssemblyName("FSharp.Core")) 
+   let decimalT = typeof<decimal>
+   let kg = ProvidedMeasureBuilder.SI "kg"
+   let t1 = ProvidedMeasureBuilder.AnnotateType(decimalT, [ kg ])
+
+   match kg with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol"
+   match t1 with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#2"
+
+   let t1T = ctxt.ConvertSourceTypeToTarget t1
+   let kgT = ctxt.ConvertSourceTypeToTarget kg
+   match kgT with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol#3"
+   match t1T with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#4"
+
+   let t2 = ProvidedTypeBuilder.MakeTupleType([ t1; t1 ])
+
+   Assert.True(not t2.IsGenericTypeDefinition) 
+   Assert.True(t2.IsGenericType) 
+   Assert.True(t2.GetGenericTypeDefinition().IsGenericType) 
+   Assert.True(t2.GetGenericTypeDefinition().IsGenericTypeDefinition) 
+
+   Assert.True(t2.GetType().Name = "TypeSymbol") // TypeSymbol is an internal type but we test it here anyway for double-check
+
+   // We test that we can call GetProperties on tuple type symbols produced by ProvidedTypeBuilder because these get 
+   // handed off to FSharpValue.PreComputeTupleConstructorInfo and so on by the SDK or by F# quotations
+   Assert.True(t2.GetProperties().Length <> 0) 
+   // We check these others just to make sure they have some implementation on symbols produced by ProvidedTypeBuilder 
+   Assert.True(t2.GetEvents(BindingFlags.Public ||| BindingFlags.Instance).Length = 0) 
+   Assert.True(t2.GetEvents(BindingFlags.NonPublic ||| BindingFlags.Instance).Length = 0) 
+   Assert.True(t2.GetEvents().Length = 0) 
+   t2.GetMethods() |> ignore
+   t2.GetFields() |> ignore
+   t2.GetConstructors() |> ignore
+   t2.GetMethod("get_Item1") |> ignore
+
+
+   let t2T = ctxt.ConvertSourceTypeToTarget t2
+
+   Assert.True(t2T.GetType().Name = "TypeSymbol")// TypeSymbol is an internal type but we test it here anyway for double-check
+   Assert.True(not t2T.IsGenericTypeDefinition) 
+   Assert.True(t2T.GetGenericTypeDefinition().IsGenericType) 
+   Assert.True(t2T.GetGenericTypeDefinition().IsGenericTypeDefinition) 
+   Assert.True(t2T.IsGenericType) 
+   Assert.True(t2T.GetProperties().Length <> 0) 
+   Assert.True(t2T.GetEvents().Length = 0) 
+   t2T.GetMethods() |> ignore
+   t2T.GetFields() |> ignore
+   t2T.GetConstructors() |> ignore
+   t2T.GetMethod("get_Item1") |> ignore
+
 let stressTestCore() = 
     let refs = Targets.DotNetStandard20FSharpRefs()
     let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
@@ -394,62 +450,6 @@ type ErasingProviderWithCustomAttributes (config : TypeProviderConfig) as this =
 
     do
         this.AddNamespace(ns, createTypes())
-
-[<Fact>]
-let ``test basic symbol type ops``() =
-   let refs = Targets.DotNetStandard20FSharpRefs()
-   let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
-   use tp = new TypeProviderForNamespaces(config)
-   let ctxt = tp.TargetContext
-
-   //let fscore =  ctxt1.TryBindAssemblyNameToTarget(AssemblyName("FSharp.Core")) 
-   let decimalT = typeof<decimal>
-   let kg = ProvidedMeasureBuilder.SI "kg"
-   let t1 = ProvidedMeasureBuilder.AnnotateType(decimalT, [ kg ])
-
-   match kg with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol"
-   match t1 with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#2"
-
-   let t1T = ctxt.ConvertSourceTypeToTarget t1
-   let kgT = ctxt.ConvertSourceTypeToTarget kg
-   match kgT with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpTypeAbbreviation) | _ -> failwith "expected a ProvidedTypeSymbol#3"
-   match t1T with :? ProvidedTypeSymbol as st -> Assert.True(st.IsFSharpUnitAnnotated) | _ -> failwith "expected a ProvidedTypeSymbol#4"
-
-   let t2 = ProvidedTypeBuilder.MakeTupleType([ t1; t1 ])
-
-   Assert.True(not t2.IsGenericTypeDefinition) 
-   Assert.True(t2.IsGenericType) 
-   Assert.True(t2.GetGenericTypeDefinition().IsGenericType) 
-   Assert.True(t2.GetGenericTypeDefinition().IsGenericTypeDefinition) 
-
-   Assert.True(t2.GetType().Name = "TypeSymbol") // TypeSymbol is an internal type but we test it here anyway for double-check
-
-   // We test that we can call GetProperties on tuple type symbols produced by ProvidedTypeBuilder because these get 
-   // handed off to FSharpValue.PreComputeTupleConstructorInfo and so on by the SDK or by F# quotations
-   Assert.True(t2.GetProperties().Length <> 0) 
-   // We check these others just to make sure they have some implementation on symbols produced by ProvidedTypeBuilder 
-   Assert.True(t2.GetEvents(BindingFlags.Public ||| BindingFlags.Instance).Length = 0) 
-   Assert.True(t2.GetEvents(BindingFlags.NonPublic ||| BindingFlags.Instance).Length = 0) 
-   Assert.True(t2.GetEvents().Length = 0) 
-   t2.GetMethods() |> ignore
-   t2.GetFields() |> ignore
-   t2.GetConstructors() |> ignore
-   t2.GetMethod("get_Item1") |> ignore
-
-
-   let t2T = ctxt.ConvertSourceTypeToTarget t2
-
-   Assert.True(t2T.GetType().Name = "TypeSymbol")// TypeSymbol is an internal type but we test it here anyway for double-check
-   Assert.True(not t2T.IsGenericTypeDefinition) 
-   Assert.True(t2T.GetGenericTypeDefinition().IsGenericType) 
-   Assert.True(t2T.GetGenericTypeDefinition().IsGenericTypeDefinition) 
-   Assert.True(t2T.IsGenericType) 
-   Assert.True(t2T.GetProperties().Length <> 0) 
-   Assert.True(t2T.GetEvents().Length = 0) 
-   t2T.GetMethods() |> ignore
-   t2T.GetFields() |> ignore
-   t2T.GetConstructors() |> ignore
-   t2T.GetMethod("get_Item1") |> ignore
 
 [<Fact>]
 let ``ErasingConstructorProvider generates for .NET Standard 2.0 correctly``() : unit  = 
