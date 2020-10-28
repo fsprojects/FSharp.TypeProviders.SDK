@@ -80,7 +80,11 @@ Target.create "Pack" (fun _ ->
         }) "src/FSharp.TypeProviders.SDK.fsproj"
 
     DotNet.pack setParams "examples/BasicProvider.Runtime/BasicProvider.Runtime.fsproj"
-    DotNet.pack setParams "examples/StressProvider/StressProvider.fsproj"
+
+    let sdkVersion = SemVer.parse(DotNet.getVersion id)
+    if sdkVersion >= SemVer.parse("3.1.403") && sdkVersion < SemVer.parse("5.0.0") // we assume the issue is fixed in .net5 - maybe this needs tweaking in any direction
+    then Trace.traceErrorfn "dotnet pack is not supported in combination with paket on dotnet sdk %O (see https://github.com/NuGet/Home/issues/9786). Creation of StressProvider.*.nupkg skipped." sdkVersion
+    else DotNet.pack setParams "examples/StressProvider/StressProvider.fsproj"
 
     DotNet.pack (fun p -> { 
         setParams p with 
