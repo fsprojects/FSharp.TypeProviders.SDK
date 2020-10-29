@@ -31,7 +31,7 @@ The type provider also contains the logic necessary to package the type provider
 
 ## The ProvidedTypes API - A Basic Type Provider
 
-When you instantiate the template above you get basic erasing and geneative type providers.
+When you instantiate the template above you get basic erasing and generative type providers.
 
 ## Some unit testing helpers
 
