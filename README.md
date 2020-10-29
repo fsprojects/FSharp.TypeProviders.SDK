@@ -47,7 +47,7 @@ which is sometimes incorporated into a type provider to help enable unit testing
 
 Sometimes unit test DLLs incorporate the entire type provider implementation, and sometimes they use InternalsVisibleTo.
 
-The unit testing helpers aren't really an official, documented part of the DK - caveat emptor.
+The unit testing helpers aren't really an official, documented part of the SDK - caveat emptor.
 
 ## Examples
 
