@@ -108,7 +108,7 @@ Runtime dependencies are often the same as design time dependencies for simple t
 
 These dependencies are packaged and managed differently 
 
-* The runtime dependencies are normal nuget package dependencies just like any normal .NET library. FOr example, if your type provider has Newtonsoft.Json as a runtime
+* The runtime dependencies are normal nuget package dependencies just like any normal .NET library. For example, if your type provider has Newtonsoft.Json as a runtime
   dependency then your nuget package should list this a normal nuget dependency.
 
 * The design dependencies must all be bundled alongside your design-time DLL.  The design-time component is a component loaded into a tool like Ionide or
