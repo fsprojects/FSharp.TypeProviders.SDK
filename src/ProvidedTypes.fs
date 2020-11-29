@@ -8978,8 +8978,8 @@ namespace ProviderImplementation.ProvidedTypes
             | true, newT -> newT
             | false, _ ->
                 match t with 
-                | :? ProvidedTypeDefinition as ptd when toTgt (* && ptd.IsErased *) -> 
-                    if ptd.BelongsToTargetModel then failwithf "unexpected erased target ProvidedTypeDefinition '%O'" ptd
+                | :? ProvidedTypeDefinition as ptd when toTgt -> 
+                    if ptd.IsErased && ptd.BelongsToTargetModel then failwithf "unexpected erased target ProvidedTypeDefinition '%O'" ptd
                     // recursively get the provided type.
                     convTypeDefToTgt t
                     
@@ -9266,7 +9266,7 @@ namespace ProviderImplementation.ProvidedTypes
             cattrs |> Array.ofSeq |> Array.choose tryConvCustomAttributeDataToTgt 
  
         and convProvidedTypeDefToTgt (x: ProvidedTypeDefinition) =
-          if x.BelongsToTargetModel then failwithf "unexpected target type definition '%O'" x
+          if x.IsErased && x.BelongsToTargetModel then failwithf "unexpected target type definition '%O'" x
           match typeTableFwd.TryGetValue(x) with
           | true, newT -> (newT :?> ProvidedTypeDefinition)
           | false, _ ->
