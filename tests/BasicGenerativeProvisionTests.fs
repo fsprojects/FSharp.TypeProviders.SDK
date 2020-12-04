@@ -15,6 +15,7 @@ open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Core.CompilerServices
+open UncheckedQuotations
 open Xunit
 
 #nowarn "760" // IDisposable needs new
@@ -255,7 +256,15 @@ type GenerativeProviderWithRecursiveReferencesToGeneratedTypes (config : TypePro
         // Note: this method refers to another generated type as its return type
         let myMeth2 = ProvidedMethod("MyInstanceMethod", [], myBaseType, isStatic = false, invokeCode = (fun _args -> Expr.NewObject(myCtorOnBaseType, [Expr.Value(1)])))
         // Note: this method refers to another generated type as its return type
-        let myProp1 = ProvidedProperty("MyProp", typeof<int list>, isStatic = false, getterCode = (fun _args -> <@@ [1] @@>))
+        let myProp1 =
+            match <@@ Seq.map id [] @@> with
+            | Patterns.Call(_, m, _) ->
+                let method = ProvidedTypeBuilder.MakeGenericMethod(m.GetGenericMethodDefinition(), [myBaseType])
+                let resultType = ProvidedTypeBuilder.MakeGenericType(typedefof<seq<_>>, [myBaseType])
+                let lambda = Expr.Lambda(Var("_", typeof<int>), Expr.NewObject(myCtorOnBaseType,  [Expr.Value(1)]))
+                ProvidedProperty("MyProp", resultType, getterCode = function _ -> Expr.CallUnchecked(method, [lambda ; <@@ Seq.empty @@>]))
+            | x -> failwithf "unexpected pattern %A" x
+
         myBaseType.AddMembers [ (myCtorOnBaseType :> MemberInfo); (myMeth1 :> MemberInfo) ; (myProp1 :> MemberInfo) ]
         myType.AddMembers [ (myMeth2 :> MemberInfo) ]
 
