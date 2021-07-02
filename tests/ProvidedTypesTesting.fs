@@ -592,8 +592,7 @@ module internal Targets =
         | _ -> false
     
     let packagesDirectory isTest = 
-        // this takes into account both linux-on-windows (can't use __SOURCE_DIRECTORY__) and shadow copying (can't use .Location)
-        let root = Path.GetDirectoryName(Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath)
+        let root = Path.GetDirectoryName(Uri(Assembly.GetExecutingAssembly().Location).LocalPath)
         let rec loop dir =
              if Directory.Exists(dir ++ "packages" ++ (if isTest then "test" else "FSharp.Core")) then 
                  dir ++ "packages" ++ (if isTest then "test" else "FSharp.Core")
