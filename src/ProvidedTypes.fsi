@@ -232,10 +232,10 @@ type ProvidedTypeBuilder =
     static member MakeGenericMethod: genericMethodDefinition: MethodInfo * genericArguments: Type list -> MethodInfo
 
     /// Like FsharpType.MakeTupleType, but will also work with unit-annotated types and provided types
-    static member MakeTupleType: args: Type list*isStruct: bool -> Type
+    static member MakeTupleType: types: Type list*isStruct: bool -> Type
 
     /// Like FsharpType.MakeTupleType, but will also work with unit-annotated types and provided types
-    static member MakeTupleType: args: Type list -> Type
+    static member MakeTupleType: types: Type list -> Type
 
 /// Helps create erased provided unit-of-measure annotations.
 [<Class>]
@@ -388,7 +388,8 @@ type ProvidedAssembly =
     /// and adjust the 'Assembly' property of all provided type definitions to return that
     /// assembly.
     /// </summary>
-    /// <param name="enclosingTypeNames">A path of type names to wrap the generated types. The generated types are then generated as nested types.</param>
+    /// <param name="types">Provided type definitions. </param>
+    /// <param name="enclosingGeneratedTypeNames">A path of type names to wrap the generated types. The generated types are then generated as nested types.</param>
     member AddNestedTypes: types: ProvidedTypeDefinition list * enclosingGeneratedTypeNames: string list -> unit
 
 #endif
@@ -440,6 +441,10 @@ type ProvidedTypesContext =
 type TypeProviderForNamespaces =
 
     /// <summary>Initializes a type provider to provide the types in the given namespace.</summary>
+    /// <param name="config"> Type provider config. </param>
+    /// <param name="namespaceName"> Name of namespace. </param>
+    /// <param name="types"> Provided type definitions. </param>
+    ///               
     /// <param name="sourceAssemblies">
     ///    Optionally specify the design-time assemblies available to use as a basis for authoring provided types.
     ///    The transitive dependencies of these assemblies are also included. By default
@@ -457,6 +462,7 @@ type TypeProviderForNamespaces =
     new: config: TypeProviderConfig * namespaceName:string * types: ProvidedTypeDefinition list * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list * ?addDefaultProbingLocation: bool -> TypeProviderForNamespaces
 
     /// <summary>Initializes a type provider.</summary>
+    /// <param name="config"> Type provider config. </param>
     /// <param name="sourceAssemblies">
     ///    Optionally specify the design-time assemblies available to use as a basis for authoring provided types.
     ///    The transitive dependencies of these assemblies are also included. By default
