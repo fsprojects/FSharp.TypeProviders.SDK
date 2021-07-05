@@ -180,3 +180,13 @@ let ``struct``() =
             
         ]
     
+
+[<Fact>]
+let ``typeof``() =
+    testProvidedAssembly 
+        [
+            check 
+                <@ 
+                    typeof<DateTime>.Name
+                @> "DateTime"
+        ]

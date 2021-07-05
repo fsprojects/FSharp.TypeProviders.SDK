@@ -14016,6 +14016,8 @@ namespace ProviderImplementation.ProvidedTypes
                     Some()
                 | _ -> None)
             
+        let (|TypeOf|_|) = (|SpecificCall|_|) <@ typeof<obj> @>
+
         let (|LessThan|_|) = (|SpecificCall|_|) <@ (<) @>
         let (|GreaterThan|_|) = (|SpecificCall|_|) <@ (>) @>
         let (|LessThanOrEqual|_|) = (|SpecificCall|_|) <@ (<=) @>
@@ -14287,7 +14289,9 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_castclass (transType  targetTy))
 
                 popIfEmptyExpected expectedState
-                
+               
+            | TypeOf(None, [t1], []) -> emitExpr expectedState (Expr.Value(t1)) 
+
             | NaN -> emitExpr ExpectedStackState.Value <@@ Double.NaN @@>
 
             | NaNSingle -> emitExpr ExpectedStackState.Value <@@ Single.NaN @@>
