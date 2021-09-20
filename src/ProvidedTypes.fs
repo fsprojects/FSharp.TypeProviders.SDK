@@ -758,7 +758,7 @@ type ProvidedTypeSymbol(kind: ProvidedTypeSymbolKind, typeArgs: Type list, typeB
 
     override this.MakeArrayType arg = ProvidedTypeSymbol(ProvidedTypeSymbolKind.Array arg, [this], typeBuilder) :> Type
 
-#if NETCOREAPP
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
     // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
     override __.IsSZArray = 
         match kind with
@@ -1698,7 +1698,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
 
     override __.MemberType = if this.IsNested then MemberTypes.NestedType else MemberTypes.TypeInfo
 
-#if NETCOREAPP
+#if NETCOREAPP || NETSTANDANETSTANDARD2_1_OR_GREATERRD2_1
     // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
     override __.IsSZArray = false
 #endif
@@ -7524,7 +7524,7 @@ namespace ProviderImplementation.ProvidedTypes
             | TypeSymbolKind.OtherGeneric gtd -> gtd.MemberType
             | _ -> notRequired this "MemberType" this.FullName
             
-#if NETCOREAPP
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
         // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
         override __.IsSZArray =
             match kind with
@@ -8079,7 +8079,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.MakeFieldInfo (declTy: Type) md = txILFieldDef declTy md
         member __.MakeNestedTypeInfo (declTy: Type) md =  asm.TxILTypeDef (Some declTy) md
         override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
-#if NETCOREAPP
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
         // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
         override __.IsSZArray = false
 #endif

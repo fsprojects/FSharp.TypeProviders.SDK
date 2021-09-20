@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build and Test and Publish
 
 on:
   push:
@@ -41,15 +41,7 @@ jobs:
         publish_branch: gh-pages
         force_orphan: true
 
-    - name: Examine outputs
+    - name: Publish NuGets (if versions not published before)
       if: matrix.os != 'windows-latest'
-      run: ls -r .
-
-    - name: Publish SDK NuGet (if this version not published before)
-      if: matrix.os != 'windows-latest'
-      run: dotnet nuget push src\bin\Release\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
-
-    - name: Publish template NuGet (if this version not published before)
-      if: matrix.os != 'windows-latest'
-      run: dotnet nuget push templates\bin\Release\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
+      run: dotnet nuget push bin\FSharp.TypeProviders.*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
 
