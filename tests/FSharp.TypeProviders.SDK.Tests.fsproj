@@ -4,7 +4,6 @@
     <TargetFrameworks>netcoreapp3.1;net5.0;net472</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <DefineConstants>$(DefineConstants);INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS</DefineConstants>
-     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
   <ItemGroup>
     <None Include="Script1.fsx" />
@@ -25,7 +24,6 @@
     <Compile Include="GenerativeEnumsProvisionTests.fs" />
     <Compile Include="GenerativeInterfacesTests.fs" />
     <Compile Include="GenerativeAbstractClassesTests.fs" />
-    <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp3.1' " />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1" />
