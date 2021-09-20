@@ -1,0 +1,55 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  build:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        dotnet: [5.0.400]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup .NET Core
+      # Fix for https://github.com/actions/setup-dotnet/issues/29#issuecomment-548740241
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ matrix.dotnet }}
+
+    - name: Build on Windows
+      if: matrix.os == 'windows-latest'
+      run: .\build.cmd
+
+    - name: Build on Unix
+      if: matrix.os != 'windows-latest'
+      run: ./build.sh
+
+    - name: Deploy documentation from master
+      if: matrix.os != 'windows-latest'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        personal_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./output
+        publish_branch: gh-pages
+        force_orphan: true
+
+    - name: Examine outputs
+      if: matrix.os != 'windows-latest'
+      run: ls -r .
+
+    - name: Publish SDK NuGet (if this version not published before)
+      if: matrix.os != 'windows-latest'
+      run: dotnet nuget push src\bin\Release\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
+
+    - name: Publish template NuGet (if this version not published before)
+      if: matrix.os != 'windows-latest'
+      run: dotnet nuget push templates\bin\Release\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
+

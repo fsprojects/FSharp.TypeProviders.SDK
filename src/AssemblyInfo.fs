@@ -1,4 +1,4 @@
-﻿module AssemblyInfo
+﻿namespace AssemblyInfo
 
 open System.Runtime.CompilerServices
 

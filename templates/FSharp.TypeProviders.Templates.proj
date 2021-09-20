@@ -1,11 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>`dotnet new` template for building F# Type Providers.</Description>
-    <Authors>https://github.com/fsprojects/FSharp.TypeProviders.SDK contributors</Authors>
-    <License>MIT</License>
-    <PackageProjectUrl>https://github.com/fsprojects/FSharp.TypeProviders.SDK#the-f-type-provider-sdk</PackageProjectUrl>
-    <RepositoryUrl>http://github.com/fsprojects/FSharp.TypeProviders.SDK</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
     <PackageIcon>logo.png</PackageIcon>
     <PackageTags>F#;type provider</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
@@ -25,7 +20,7 @@
         **/.ionide/**/*;
         **/.suo;
     </ExcludeFromPackage>
-</PropertyGroup>
+  </PropertyGroup>
   <ItemGroup>
     <Content Include="content/**/*" Exclude="$(ExcludeFromPackage)" >
         <PackagePath>content\</PackagePath>
