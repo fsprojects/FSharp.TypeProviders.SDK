@@ -31,14 +31,25 @@ jobs:
     - name: Build on Unix
       if: matrix.os != 'windows-latest'
       run: ./build.sh
+
     - name: Deploy documentation from master
+      if: matrix.os != 'windows-latest'
       uses: peaceiris/actions-gh-pages@v3
       with:
         personal_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./output
         publish_branch: gh-pages
         force_orphan: true
-    - name: Examine bin
-      run: ls -r bin
-    - name: Publish NuGets (if this version not published before)
-      run: dotnet nuget push bin\FSharp.Data.*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
+
+    - name: Examine outputs
+      if: matrix.os != 'windows-latest'
+      run: ls -r .
+
+    - name: Publish SDK NuGet (if this version not published before)
+      if: matrix.os != 'windows-latest'
+      run: dotnet nuget push src\bin\Release\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
+
+    - name: Publish template NuGet (if this version not published before)
+      if: matrix.os != 'windows-latest'
+      run: dotnet nuget push templates\bin\Release\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
+
