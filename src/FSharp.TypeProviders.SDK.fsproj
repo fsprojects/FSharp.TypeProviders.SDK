@@ -17,6 +17,7 @@
     <Tags>F# fsharp typeprovider</Tags>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
   </ItemGroup>

@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <IsPackable>false</IsPackable>
-    <DefineConstants>$(DefineConstants);INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <None Include="paket.references" />

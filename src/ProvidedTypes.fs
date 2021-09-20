@@ -11375,8 +11375,6 @@ namespace ProviderImplementation.ProvidedTypes
             let labelRangeInsideLabelRange lab2pc ls1 ls2 = 
                 rangeInsideRange (labelsToRange lab2pc ls1) (labelsToRange lab2pc ls2) 
 
-// This file still gets used when targeting FSharp.Core 3.1.0.0, e.g. in FSharp.Data
-#if !ABOVE_FSCORE_4_0_0_0
             let mapFold f acc (array: _[]) =
                 match array.Length with
                 | 0 -> [| |], acc
@@ -11389,7 +11387,7 @@ namespace ProviderImplementation.ProvidedTypes
                         res.[i] <- h'
                         acc <- s'
                     res, acc
-#endif
+
             let findRoots contains vs = 
                 // For each item, either make it a root or make it a child of an existing root
                 let addToRoot roots x = 
@@ -13958,11 +13956,7 @@ namespace ProviderImplementation.ProvidedTypes
                 (fun tm ->
                    match tm with
                    | Call(obj, minfo2, args)
-        #if FX_NO_REFLECTION_METADATA_TOKENS
-                      when ( // if metadata tokens are not available we'll rely only on equality of method references
-        #else
                       when (minfo1.MetadataToken = minfo2.MetadataToken &&
-        #endif
                             if isg1 then
                               minfo2.IsGenericMethod && gmd = minfo2.GetGenericMethodDefinition()
                             else
@@ -13977,11 +13971,7 @@ namespace ProviderImplementation.ProvidedTypes
             (fun tm ->
                match tm with
                | Call(None, minfo2, args)
-        #if FX_NO_REFLECTION_METADATA_TOKENS
-                  when ( // if metadata tokens are not available we'll rely only on equality of method references
-        #else
                   when (minfo1.MetadataToken = minfo2.MetadataToken &&
-        #endif
                         minfo1 = minfo2) ->
                    Some(args)
                | _ -> None)
@@ -13992,11 +13982,7 @@ namespace ProviderImplementation.ProvidedTypes
             (fun e -> 
                 match e with
                 | Call(None, minfo2, [])
-        #if FX_NO_REFLECTION_METADATA_TOKENS
-                  when ( // if metadata tokens are not available we'll rely only on equality of method references
-        #else
                   when (minfo1.MetadataToken = minfo2.MetadataToken &&
-        #endif
                         minfo1 = minfo2) ->
                     Some()
                 | _ -> None)
@@ -14007,11 +13993,7 @@ namespace ProviderImplementation.ProvidedTypes
             (fun e -> 
                 match e with
                 | Call(None, minfo2, [])
-        #if FX_NO_REFLECTION_METADATA_TOKENS
-                  when ( // if metadata tokens are not available we'll rely only on equality of method references
-        #else
                   when (minfo1.MetadataToken = minfo2.MetadataToken &&
-        #endif
                         minfo1 = minfo2) ->
                     Some()
                 | _ -> None)
