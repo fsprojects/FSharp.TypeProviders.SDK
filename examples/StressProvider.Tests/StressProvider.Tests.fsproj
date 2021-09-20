@@ -1,20 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFrameworks>netcoreapp3.1;net5.0;net472</TargetFrameworks>
     <IsPackable>false</IsPackable>
-    <GenerateProgramFile>false</GenerateProgramFile>
+    <DefineConstants>NO_GENERATIVE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="paket.references" />
     <Compile Include="File1.fs" />
     <Compile Include="StressProvider.Tests.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp3.1' " />
     <None Include="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+    <PackageReference Include="xunit" Version="2.4.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1" />
     <ProjectReference Include="..\StressProvider\StressProvider.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

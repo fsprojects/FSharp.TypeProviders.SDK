@@ -1,26 +1,34 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <GenerateProgramFile>false</GenerateProgramFile>
+    <TargetFrameworks>netcoreapp3.1;net5.0;net472</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <DefineConstants>$(DefineConstants);INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="paket.references" />
+    <None Include="Script1.fsx" />
     <None Include="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <Compile Include="..\src\ProvidedTypes.fsi">
+      <Link>ProvidedTypes.fsi</Link>
+    </Compile>
+    <Compile Include="..\src\ProvidedTypes.fs">
+      <Link>ProvidedTypes.fs</Link>
+    </Compile>
     <Compile Include="ProvidedTypesTesting.fs" />
     <Compile Include="BasicErasedProvisionTests.fs" />
     <Compile Include="BasicGenerativeProvisionTests.fs" />
+    <Compile Include="AssemblyReaderTest.fs" />
     <Compile Include="GeneratedCodeTests.fs" />
     <Compile Include="GeneratedOpTests.fs" />
     <Compile Include="GenerativeEnumsProvisionTests.fs" />
     <Compile Include="GenerativeInterfacesTests.fs" />
     <Compile Include="GenerativeAbstractClassesTests.fs" />
-    <Compile Include="Program.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\src\FSharp.TypeProviders.SDK.fsproj" />
+    <Compile Include="Program.fs" Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netcoreapp3.1' " />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+    <PackageReference Include="xunit" Version="2.4.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>

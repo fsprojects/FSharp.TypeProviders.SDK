@@ -1,16 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    <Version>0.1</Version>
+    <!-- Use an explicit nuspec to allow us to specify "references", the metadata properties at https://docs.microsoft.com/en-us/dotnet/core/tools/csproj#nuget-metadata-properties don't allow this -->
+    <NuspecFile>StressProvider.nuspec</NuspecFile>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\src\ProvidedTypes.fsi" />
+    <Compile Include="..\..\src\ProvidedTypes.fs" />
     <Compile Include="StressProvider.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\FSharp.TypeProviders.SDK.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
