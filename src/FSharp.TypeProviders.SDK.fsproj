@@ -2,6 +2,9 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.1</TargetFrameworks>
     <OutputType>Library</OutputType>
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <PackageIcon>logo.png</PackageIcon>
     <Description>The core implementation of an F# type provider</Description>
@@ -15,6 +18,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="../docs/files/img/logo.png" Pack="true" Visible="false" PackagePath="" />
+    <Content Include="ProvidedTypes.*" copyToOutput="true">
+      <IncludeInPackage>true</IncludeInPackage>
+      <CopyToOutput>true</CopyToOutput>
+      <BuildAction>Content</BuildAction>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <PackagePath>src</PackagePath>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.7.2" />

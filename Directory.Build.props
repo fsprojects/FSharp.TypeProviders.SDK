@@ -7,6 +7,6 @@
     <RepositoryType>git</RepositoryType>
     <Copyright>Copyright 2020 FSharp.TypeProviders.SDK contributors</Copyright>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <Version>2.0.1</Version>
+    <Version>2.0.2</Version>
   </PropertyGroup>
 </Project>
