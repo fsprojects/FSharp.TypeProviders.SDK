@@ -639,7 +639,8 @@ module internal Targets =
         | "netstandard2.0"->
             let packageDir = paketPackageFromMainPaketGroup "NETStandard.Library" 
             packageDir ++ "build" ++ "netstandard2.0" ++ "ref"
-        | "netcoreapp3.1"->
+        | "netcoreapp3.1"
+        | "net5.0"->
             let packageDir = paketPackageFromMainPaketGroup "Microsoft.NETCore.App" 
             packageDir ++ "ref" ++ "netcoreapp2.2"
         | _ -> failwith (sprintf "unimplemented profile '%s'" profile)
@@ -769,7 +770,8 @@ module internal Targets =
              yield sysPath ++ "System.Xml.XmlSerializer.dll"
              yield sysPath ++ "System.Xml.XPath.dll"
              yield sysPath ++ "System.Xml.XPath.XDocument.dll"
-          | "netcoreapp3.1" ->
+          | "netcoreapp3.1"
+          | "net5.0" ->
              // See typical command line in https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/190#issuecomment-356564344
              let sysPath = sysAssembliesPath profile
              yield sysPath ++ "Microsoft.CSharp.dll"

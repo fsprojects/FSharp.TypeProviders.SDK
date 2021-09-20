@@ -166,7 +166,7 @@ Here your test project is referencing your provider project, and your type provi
 In the compilation of your test project you will see something like this:
 
          C:\Program Files\dotnet\dotnet.exe "C:\Program Files\dotnet\sdk\3.1.401\FSharp\fsc.exe"
-             -o:obj\Debug\netcoreapp3.1\Joe.Test.dll
+             -o:obj\Debug\net5.0\Joe.Test.dll
              ...
              -r:E:\GitHub\admin\joe-provider\src\Joe.Provider\bin\Debug\netstandard2.0\Joe.Provider.dll
              ...
