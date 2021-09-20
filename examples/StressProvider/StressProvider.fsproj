@@ -5,8 +5,6 @@
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
-    <!-- Use an explicit nuspec to allow us to specify "references", the metadata properties at https://docs.microsoft.com/en-us/dotnet/core/tools/csproj#nuget-metadata-properties don't allow this -->
-    <NuspecFile>StressProvider.nuspec</NuspecFile>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\src\ProvidedTypes.fsi" />
