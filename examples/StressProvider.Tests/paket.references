@@ -6,4 +6,4 @@ group Test
     nuget xunit.runner.visualstudio
     nuget coverlet.collector
     nuget Microsoft.NET.Test.Sdk
-    nuget Microsoft.NETCore.App framework: netcoreapp3.1, net5.0
+    nuget Microsoft.NETCore.App

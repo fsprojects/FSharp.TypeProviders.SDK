@@ -19,7 +19,9 @@
   <ItemGroup>
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
-
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../docs/files/img/logo.png" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.7.2" />
