@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <OutputType>Library</OutputType>
@@ -17,17 +16,14 @@
     <Copyright>Copyright 2020 FSharp.TypeProviders.SDK contributors</Copyright>
     <Tags>F# fsharp typeprovider</Tags>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <None Include="../docs/files/img/logo.png" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.7.2" />
   </ItemGroup>

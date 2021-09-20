@@ -10,6 +10,7 @@ group Test
     source https://api.nuget.org/v3/index.json
 
     nuget Microsoft.NET.Test.Sdk
+    nuget Microsoft.NETCore.App
     nuget NUnit
     nuget NUnit.Console
     nuget NUnit3TestAdapter version_in_path: true

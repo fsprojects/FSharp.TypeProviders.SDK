@@ -1,19 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>netstandard2.0</TargetFramework>
     <DefineConstants>IS_DESIGNTIME</DefineConstants>
   </PropertyGroup>
-
   <ItemGroup>
     <!-- It is normal to include a copy of the runtime helpers in the design-time DLL, to help build the code model which gets mapped to target files -->
-    <Compile Include="..\BasicProvider.Runtime\BasicProvider.Runtime.fs">
-      <Link>BasicProvider.Runtime.fs</Link>
-    </Compile>
+    <Compile Include="..\BasicProvider.Runtime\BasicProvider.Runtime.fs" />
     <Compile Include="BasicProvider.Provider.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\FSharp.TypeProviders.SDK.fsproj" />
   </ItemGroup>
@@ -21,5 +16,4 @@
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.7.2" />
   </ItemGroup>
-
 </Project>
