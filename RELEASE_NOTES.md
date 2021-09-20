@@ -1,3 +1,8 @@
+#### 7.0.0 - September 21, 2021
+* Updated packages
+* Moved to netstandard2.1
+* Nuget includes ProvidedTypes.fs/fsi source in "src/"
+
 #### 6.0.0 - December 24, 2019
 * Template migrated to .NET Core 3.1 
 
