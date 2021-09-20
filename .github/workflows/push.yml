@@ -43,5 +43,5 @@ jobs:
 
     - name: Publish NuGets (if versions not published before)
       if: matrix.os != 'windows-latest'
-      run: dotnet nuget push bin\FSharp.TypeProviders.*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
+      run: dotnet nuget push bin/FSharp.TypeProviders.*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
 
