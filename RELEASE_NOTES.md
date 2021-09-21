@@ -1,3 +1,6 @@
+#### 7.0.1 - September 21, 2021
+* Allow both netstandard2.0 and netstandard2.1
+
 #### 7.0.0 - September 21, 2021
 * Updated packages
 * Moved to netstandard2.1
