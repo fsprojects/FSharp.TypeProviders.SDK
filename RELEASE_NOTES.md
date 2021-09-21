@@ -1,3 +1,6 @@
+#### 7.0.2 - September 22, 2021
+* Fix template paket version
+
 #### 7.0.1 - September 21, 2021
 * Allow both netstandard2.0 and netstandard2.1
 
