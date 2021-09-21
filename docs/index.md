@@ -49,7 +49,6 @@ Here are some examples of existing type providers that aren't too bad (they are 
 * `DynamicsNAVProvider`  (better would be `FSharp.Interop.DynamicsNAVProvider`)
 * `DynamicsCRMProvider`  (better would be `FSharp.Interop.DynamicsCRMProvider`)
 
-
 ## Resources
 
 For advice on how to get started building a type provider, check out:
