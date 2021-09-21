@@ -32,11 +32,11 @@ jobs:
       if: matrix.os != 'windows-latest'
       run: ./build.sh
 
-    - name: Build on Unix
+    - name: Build docs (unix)
       if: matrix.os != 'windows-latest'
       run: dotnet fsdocs build --clean --properties Configuration=Release
 
-    - name: Deploy documentation from master
+    - name: Deploy documentation from master (unix)
       if: matrix.os != 'windows-latest'
       uses: peaceiris/actions-gh-pages@v3
       with:
@@ -45,7 +45,7 @@ jobs:
         publish_branch: gh-pages
         force_orphan: true
 
-    - name: Publish NuGets (if versions not published before)
+    - name: Publish NuGets (unix, if versions not published before)
       if: matrix.os != 'windows-latest'
       run: dotnet nuget push bin/FSharp.TypeProviders.*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_TOKEN }} --skip-duplicate
 

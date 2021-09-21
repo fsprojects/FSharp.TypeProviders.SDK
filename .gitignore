@@ -207,3 +207,7 @@ tests/fsyacc/Test1/test1lex.fs
 .ionide/
 
 paket-files/
+
+output/
+
+.fsdocs/

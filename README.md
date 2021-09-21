@@ -14,10 +14,9 @@ See [the documentation](https://fsprojects.github.io/FSharp.TypeProviders.SDK).
 
 ## Support and community
 
- - If you have a question about `FSharp`, ask at StackOverflow and [mark your question with the `f#` tag](http://stackoverflow.com/questions/tagged/f%23). 
+ - If you have a question about `FSharp`, ask at StackOverflow and [mark your question with the `f#` tag](https://stackoverflow.com/questions/tagged/f%23). 
  - If you want to submit a bug, a feature request or help with fixing bugs then look at [issues](https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues).
- - To discuss more general issues about F# Type Providers SDK, its goals and other open-source F# projects, join the [fsharp-opensource mailing list](http://groups.google.com/group/fsharp-opensource)
-
+ 
 ## Building
 
 Use

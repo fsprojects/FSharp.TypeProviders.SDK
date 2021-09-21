@@ -5,11 +5,11 @@ authors
 owners
     Steffen Forkmann, Gustavo Guerra, JohnDoeKyrgyz, Don Syme
 projectUrl
-    http://github.com/fsprojects/MyProvider
+    https://github.com/fsprojects/MyProvider
 iconUrl
     https://raw.githubusercontent.com/fsprojects/MyProvider/master/docs/files/img/logo.png
 licenseUrl
-    http://github.com/fsprojects/MyProvider/blob/master/LICENSE.txt
+    https://github.com/fsprojects/MyProvider/blob/master/LICENSE.txt
 requireLicenseAcceptance
     false
 tags

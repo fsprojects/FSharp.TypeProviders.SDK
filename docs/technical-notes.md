@@ -40,7 +40,7 @@ These dependencies are packaged and managed differently
 
 F# type providers are hosted by applications using FSharp.Compiler.Service.
 These notes describe the lifetime and typical resource usage of type provider instances for applications that incorporate 
-FSharp.Compiler.Service (the host).  Most documentation on the compiler as a service can be found at http://github.com/fsharp/FSharp.Compiler.Service.
+FSharp.Compiler.Service (the host).  
 
 Each time the host application (e.g. devenv.exe) checks a file using type providers (e.g. containing `JsonProvider<"...">`), one or more new TP instantiations may be created, along with subsequent calls to `ApplyStaticArguments`.   
 

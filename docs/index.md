@@ -55,8 +55,8 @@ For advice on how to get started building a type provider, check out:
 
  - [Tehcnical Notes](technical-notes.html)
  - [FAQ](faq.html)
- - [Type Providers from the ground up](http://blog.mavnn.co.uk/type-providers-from-the-ground-up/)
- - (and the [follow up posts](http://blog.mavnn.co.uk/blog/categories/typeprovider/))
- - [The MSDN Tutorial](http://msdn.microsoft.com/en-us/library/hh361034.aspx). The code in this package replaces the code from the sample pack it mentions.
+ - [Type Providers from the ground up](https://blog.mavnn.co.uk/type-providers-from-the-ground-up/)
+ - (and the [follow up posts](https://blog.mavnn.co.uk/blog/categories/typeprovider/))
+ - [The MSDN Tutorial](https://msdn.microsoft.com/en-us/library/hh361034.aspx). The code in this package replaces the code from the sample pack it mentions.
 
 
