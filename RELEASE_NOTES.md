@@ -1,3 +1,6 @@
+#### 7.0.3 - September 22, 2021
+* Fix template .NET version in global.json
+
 #### 7.0.2 - September 22, 2021
 * Fix template paket version
 
