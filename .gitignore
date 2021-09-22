@@ -211,3 +211,4 @@ paket-files/
 output/
 
 .fsdocs/
+tmp/
