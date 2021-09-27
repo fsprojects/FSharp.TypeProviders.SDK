@@ -6,7 +6,7 @@ The F# Type Provider SDK is two things:
 
 2. [Documentation and samples on type provider creation](https://fsprojects.github.io/FSharp.TypeProviders.SDK)
 
-[![Build Status](https://github.com/fsprojects/FSharp.TypeProviders.SDK/workflows/Build%20and%20Test/badge.svg?branch=master)](https://github.com/fsprojects/FSharp.TypeProviders.SDK/actions?query=branch%3Amaster)
+[![Build and Test and Publish](https://github.com/fsprojects/FSharp.TypeProviders.SDK/actions/workflows/push.yml/badge.svg)](https://github.com/fsprojects/FSharp.TypeProviders.SDK/actions/workflows/push.yml)
 
 ## Getting Started
 
