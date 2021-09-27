@@ -2,10 +2,11 @@
   <PropertyGroup>
     <Authors>FSharp.TypeProviders.SDK contributors</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/fsprojects/FSharp.TypeProviders.SDK#the-f-type-provider-sdk</PackageProjectUrl>
+    <PackageProjectUrl>https://fsprojects.github.io/FSharp.TypeProviders.SDK/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/fsprojects/FSharp.TypeProviders.SDK</RepositoryUrl>
+    <FsDocsLogoSource>https://raw.githubusercontent.com/fsprojects/FSharp.TypeProviders.SDK/master/docs/files/img/logo.png</FsDocsLogoSource>
     <RepositoryType>git</RepositoryType>
-    <Copyright>Copyright 2020 FSharp.TypeProviders.SDK contributors</Copyright>
+    <Copyright>Copyright 2021 FSharp.TypeProviders.SDK contributors</Copyright>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 </Project>
