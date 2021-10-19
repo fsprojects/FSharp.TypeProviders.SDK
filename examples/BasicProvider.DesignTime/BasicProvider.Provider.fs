@@ -41,7 +41,7 @@ type BasicErasingProvider (config : TypeProviderConfig) as this =
             }
             ProvidedMethod("NameOf", [ param ], typeof<string>, isStatic = true, invokeCode = fun args ->
                 <@@
-                    match (%%args.[0]) : Microsoft.FSharp.Quotations.Expr<int> with
+                    match (%%args.[0]) : Expr<int> with
                     | Microsoft.FSharp.Quotations.Patterns.ValueWithName (_, _, n) -> n
                     | e -> failwithf "Invalid quotation argument (expected ValueWithName): %A" e
                 @@>)
