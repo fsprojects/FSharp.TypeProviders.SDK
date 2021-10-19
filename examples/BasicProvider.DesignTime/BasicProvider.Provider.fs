@@ -3,6 +3,7 @@ namespace ProviderImplementation
 
 open ProviderImplementation.ProvidedTypes
 open FSharp.Quotations
+open FSharp.Quotations.Patterns
 open FSharp.Core.CompilerServices
 open System.Reflection
 
@@ -42,7 +43,7 @@ type BasicErasingProvider (config : TypeProviderConfig) as this =
             ProvidedMethod("NameOf", [ param ], typeof<string>, isStatic = true, invokeCode = fun args ->
                 <@@
                     match (%%args.[0]) : Expr<int> with
-                    | Microsoft.FSharp.Quotations.Patterns.ValueWithName (_, _, n) -> n
+                    | ValueWithName (_, _, n) -> n
                     | e -> failwithf "Invalid quotation argument (expected ValueWithName): %A" e
                 @@>)
         myType.AddMember(nameOf)
