@@ -5,6 +5,7 @@
 namespace ProviderImplementation.ProvidedTypes
 
 #nowarn "1182"
+#nowarn "3370"
 
 // This file contains a set of helper types and methods for providing types in an implementation
 // of ITypeProvider.
