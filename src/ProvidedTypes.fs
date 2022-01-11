@@ -8339,7 +8339,20 @@ namespace ProviderImplementation.ProvidedTypes
             | :? TargetTypeDefinition -> failwithf "unexpected target model in ProvidedTypeBuilder.MakeGenericType, stacktrace = %s " Environment.StackTrace
             | :? ProvidedTypeDefinition as ptd when ptd.BelongsToTargetModel -> failwithf "unexpected target model ptd in MakeGenericType, stacktrace = %s " Environment.StackTrace
             | :? ProvidedTypeDefinition -> ProvidedTypeSymbol(ProvidedTypeSymbolKind.Generic genericTypeDefinition, genericArguments, ProvidedTypeBuilder.typeBuilder) :> Type
-            | _ -> TypeSymbol(TypeSymbolKind.OtherGeneric genericTypeDefinition, List.toArray genericArguments, ProvidedTypeBuilder.typeBuilder) :> Type
+            | _ ->
+                let hasProvidedArguments =
+                    genericArguments
+                    |> List.exists (function 
+                        | :? ProvidedTypeDefinition
+                        | :? ProvidedTypeSymbol -> true
+                        | _ -> false )
+                if hasProvidedArguments then
+                    TypeSymbol(TypeSymbolKind.OtherGeneric genericTypeDefinition, List.toArray genericArguments, ProvidedTypeBuilder.typeBuilder) :> Type
+                else
+                    // both genericTypeDefinition and genericArguments are not provided,
+                    // fallback on fx MakeGenericType
+                    genericTypeDefinition.MakeGenericType(List.toArray genericArguments)
+
 
         static member MakeGenericMethod(genericMethodDefinition, genericArguments: Type list) = 
             if genericArguments.Length = 0 then genericMethodDefinition else

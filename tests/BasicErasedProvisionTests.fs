@@ -296,6 +296,13 @@ let ``test basic symbol type ops``() =
    t2T.GetConstructors() |> ignore
    t2T.GetMethod("get_Item1") |> ignore
 
+   // MakeGenericType should fallback to classic generic type when neither typedef and arguments are generated
+
+   let t3 = ProvidedTypeBuilder.MakeGenericType(typedefof<seq<_>>, [ typeof<bool> ])
+   Assert.NotEqual<string>("TypeSymbol", t3.GetType().Name ) 
+
+
+
 let stressTestCore() = 
     let refs = Targets.DotNetStandard20FSharpRefs()
     let config = Testing.MakeSimulatedTypeProviderConfig (resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
