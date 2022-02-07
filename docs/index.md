@@ -36,7 +36,7 @@ See examples the [`examples`](https://github.com/fsprojects/FSharp.TypeProviders
 For advice on how to get started building a type provider, check out:
 
  - [Debugging Type Providers](debugging.html)
- - [Tehcnical Notes](technical-notes.html)
+ - [Technical Notes](technical-notes.html)
  - [Type Providers from the ground up](https://blog.mavnn.co.uk/type-providers-from-the-ground-up/) and the [follow up posts](https://blog.mavnn.co.uk/blog/categories/typeprovider/)
 
 
