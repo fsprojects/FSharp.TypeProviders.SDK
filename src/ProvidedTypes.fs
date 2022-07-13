@@ -552,8 +552,6 @@ module UncheckedQuotations =
             ShapeCombinationUnchecked (Shape (function [cond; body] -> Expr.WhileLoopUnchecked (cond, body) | _ -> invalidArg "expr" "invalid shape"), [cond; body])
         | IfThenElse (g, t, e) ->
             ShapeCombinationUnchecked (Shape (function [g; t; e] -> Expr.IfThenElseUnchecked (g, t, e) | _ -> invalidArg "expr" "invalid shape"), [g; t; e])
-        | TupleGet (expr, i) ->
-            ShapeCombinationUnchecked (Shape (function [expr] -> Expr.TupleGetUnchecked (expr, i) | _ -> invalidArg "expr" "invalid shape"), [expr])
         | ExprShape.ShapeCombination (comb, args) ->
             ShapeCombinationUnchecked (Shape (fun args -> ExprShape.RebuildShapeCombination(comb, args)), args)
         | ExprShape.ShapeVar v -> ShapeVarUnchecked v
