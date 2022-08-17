@@ -1,3 +1,6 @@
+#### 8.0.2 - August 17, 2022
+* [Fixes to allow TPs to have references, also notes on using the nuget package](https://github.com/fsprojects/FSharp.TypeProviders.SDK/pull/389)
+
 #### 8.0.1 - August 17, 2022
 * [Workaround for target assemblies where packages with transitive references contain type providers ](https://github.com/fsprojects/FSharp.TypeProviders.SDK/pull/388)
 
