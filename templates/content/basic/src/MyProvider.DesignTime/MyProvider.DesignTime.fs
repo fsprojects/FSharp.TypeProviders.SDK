@@ -98,6 +98,3 @@ type BasicGenerativeProvider (config : TypeProviderConfig) as this =
     do
         this.AddNamespace(ns, [myParamType])
 
-
-[<TypeProviderAssembly>]
-do ()

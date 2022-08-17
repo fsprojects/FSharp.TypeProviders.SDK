@@ -3,6 +3,8 @@
     <OutputType>Library</OutputType>
     <TargetFramework>netstandard2.1</TargetFramework>
     <DefineConstants>IS_DESIGNTIME</DefineConstants>
+    <!-- This allows the component to execute from 'bin' directory during build -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.SDK\src\ProvidedTypes.fsi">
@@ -17,6 +19,19 @@
     <Compile Include="..\MyProvider.Runtime\MyProvider.Runtime.fs" />
     <Compile Include="MyProvider.DesignTime.fs" />
     <None Include="paket.references" />
+  </ItemGroup>
+  <ItemGroup>
+   <!-- 
+    To use a reference to the FSharp.TypeProviders.SDK nuget package, do this:
+    
+    <PackageReference Include="FSharp.TypeProviders.SDK" Version="7.0.3">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    -->
+    <PackageReference Update="FSharp.Core" Version="4.7.2">
+      <!-- This excludes FSharp.Core.xml and FSharp.Core.resources.dll while referencing the right FSharp.Core.dll version -->
+      <ExcludeAssets>runtime;contentFiles</ExcludeAssets>
+    </PackageReference>
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="MyProvider.Runtime.fs" />
+    <Compile Include="TypeProviderAssembly.fs" />
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
