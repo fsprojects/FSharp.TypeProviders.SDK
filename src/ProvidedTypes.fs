@@ -8320,7 +8320,7 @@ namespace ProviderImplementation.ProvidedTypes
            member x.GetElements() = [ for v in (x :?> System.Collections.IEnumerable) do yield v ]
 
 
-    // The 'ReferencedAssemblies' reported by type providers have a problem in scripting scenarios
+    // The 'ReferencedAssemblies' reported to type providers by TypeProviderConfig have a problem in scripting scenarios
     // involving incremental additions to the referenced assembly set, see 
     //
     //   https://github.com/dotnet/fsharp/issues/13710
@@ -9446,19 +9446,29 @@ namespace ProviderImplementation.ProvidedTypes
 
                 let backingDataSource = Some (checkFreshMethods, getFreshMethods, getFreshInterfaces, getFreshMethodOverrides)
 
-                ProvidedTypeDefinition(true, container, x.Name, 
-                                        (x.BaseTypeRaw >> Option.map convTypeToTgt), 
-                                        x.AttributesRaw, 
-                                        (x.EnumUnderlyingTypeRaw >> Option.map convTypeToTgt), 
-                                        (fun () -> x.StaticParams |> List.map convStaticParameterDefToTgt), 
-                                        x.StaticParamsApply |> Option.map (fun f s p ->  
-                                            let t = f s p 
-                                            let tT = convProvidedTypeDefToTgt t
-                                            tT), 
-                                        backingDataSource, 
-                                        (x.GetCustomAttributesData >> convCustomAttributesDataToTgt), 
-                                        x.NonNullable, 
-                                        x.HideObjectMethods, ProvidedTypeBuilder.typeBuilder) 
+                let getStaticParameters() =
+                    // By the time we are asked for static parameters, all DLLs will have been registered
+                    registerAdditionalTargetAssembliesOnce.Force()
+                    x.StaticParams |> List.map convStaticParameterDefToTgt
+
+                let applyStaticParameters =
+                    x.StaticParamsApply |> Option.map (fun f s p ->  
+                        let t = f s p 
+                        let tT = convProvidedTypeDefToTgt t
+                        tT)
+
+                ProvidedTypeDefinition(true,
+                    container,
+                    x.Name, 
+                    (x.BaseTypeRaw >> Option.map convTypeToTgt), 
+                    x.AttributesRaw, 
+                    (x.EnumUnderlyingTypeRaw >> Option.map convTypeToTgt), 
+                    getStaticParameters, 
+                    applyStaticParameters, 
+                    backingDataSource, 
+                    (x.GetCustomAttributesData >> convCustomAttributesDataToTgt), 
+                    x.NonNullable, 
+                    x.HideObjectMethods, ProvidedTypeBuilder.typeBuilder) 
 
             Debug.Assert(not (typeTableFwd.ContainsKey(x)))
             typeTableFwd.[x] <- xT
@@ -9480,8 +9490,6 @@ namespace ProviderImplementation.ProvidedTypes
                               (x.GetCustomAttributesData >> convCustomAttributesDataToTgt))
 
         and convStaticParameterDefToTgt (x: ProvidedStaticParameter) = 
-            // By the time we are asked for static parameters, all DLLs will have been registered
-            registerAdditionalTargetAssembliesOnce.Force()
             Debug.Assert (not x.BelongsToTargetModel, "unexpected target ProvidedStaticParameter")
             ProvidedStaticParameter(x.Name, convTypeToTgt x.ParameterType, ?parameterDefaultValue=x.ParameterDefaultValue) 
             

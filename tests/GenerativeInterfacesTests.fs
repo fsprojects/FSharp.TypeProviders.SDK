@@ -1,11 +1,4 @@
-#if INTERACTIVE
-#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" 
-#load "../src/ProvidedTypesTesting.fs"
-
-#else
-
-module FSharp.TypeProviders.SDK.Tests.GenerativeInterfacesTests
-#endif
+module TPSDK.GenerativeInterfacesTests
 
 #nowarn "760" // IDisposable needs new
 

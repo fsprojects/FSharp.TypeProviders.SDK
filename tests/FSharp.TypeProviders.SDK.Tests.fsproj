@@ -17,6 +17,7 @@
     <Compile Include="GenerativeEnumsProvisionTests.fs" />
     <Compile Include="GenerativeInterfacesTests.fs" />
     <Compile Include="GenerativeAbstractClassesTests.fs" />
+    <Compile Include="ReferencedAssemblies.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\src\FSharp.TypeProviders.SDK.fsproj" />
