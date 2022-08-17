@@ -3,6 +3,7 @@
     <OutputType>Library</OutputType>
     <TargetFramework>netstandard2.1</TargetFramework>
     <DefineConstants>IS_DESIGNTIME</DefineConstants>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.SDK\src\ProvidedTypes.fsi">
@@ -13,6 +14,16 @@
       <Paket>True</Paket>
       <Link>paket-files/ProvidedTypes.fs</Link>
     </Compile>
+   <!-- 
+    To use a reference to the FSharp.TypeProviders.SDK nuget package, do this:
+    
+    <PackageReference Include="FSharp.TypeProviders.SDK" Version="7.0.3">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Update="FSharp.Core" Version="6.0.5">
+      <ExcludeAssets>all</ExcludeAssets>
+    </PackageReference>
+    -->
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="..\MyProvider.Runtime\MyProvider.Runtime.fs" />
     <Compile Include="MyProvider.DesignTime.fs" />
