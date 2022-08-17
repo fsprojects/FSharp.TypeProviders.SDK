@@ -1,11 +1,4 @@
-#if INTERACTIVE
-#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs" 
-#load "../src/ProvidedTypesTesting.fs"
-
-#else
-
 module TPSDK.GeneratedCodeTests
-#endif
 
 open System
 open System.Reflection

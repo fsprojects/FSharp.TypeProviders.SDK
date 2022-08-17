@@ -15,17 +15,61 @@ open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
 open Microsoft.FSharp.Reflection
 
+module Utils = 
+    let isNull x = match x with null -> true | _ -> false
+
+
+/// Simulate a real host of TypeProviderConfig
+type internal DllInfo(path: string) =
+   // Must have a property called FileName
+    member _.FileName = path
+
+/// Simulate a real host of TypeProviderConfig
+// Must be a type called TcImports
+type internal TcImports(bas: TcImports option, dllInfosInitial: DllInfo list) =
+    // Must have a field called "dllInfos"
+    let mutable dllInfos = dllInfosInitial
+    member _.Base = bas
+    member _.DllInfos = dllInfos
+    member _.AddReferencedDlls paths = dllInfos <- dllInfos @ [ for p in paths -> DllInfo(p) ]
+
 type internal Testing() =
 
     /// Simulates a real instance of TypeProviderConfig
-    static member MakeSimulatedTypeProviderConfig (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list, ?isHostedExecution, ?isInvalidationSupported) =
+    static member MakeSimulatedTypeProviderConfigIncremental (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list, ?isHostedExecution, ?isInvalidationSupported) =
         let runtimeAssemblyRefs = (runtimeAssembly :: runtimeAssemblyRefs) |> List.distinct
-        let cfg = TypeProviderConfig(fun _ -> failwith "SystemRuntimeContainsType is deprecated and should never be called")
+        let cfg = TypeProviderConfig(fun _ -> false)
         cfg.IsHostedExecution <- defaultArg isHostedExecution false
         cfg.IsInvalidationSupported <- defaultArg isInvalidationSupported true
         cfg.ResolutionFolder <- resolutionFolder
         cfg.RuntimeAssembly <- runtimeAssembly
         cfg.ReferencedAssemblies <- Array.ofList runtimeAssemblyRefs
+        let (?<-) cfg prop value =
+            let ty = cfg.GetType()
+            match ty.GetProperty(prop,BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic) with
+            | null -> 
+                let fld = ty.GetField(prop,BindingFlags.Instance ||| BindingFlags.Public ||| BindingFlags.NonPublic)
+                if fld = null then failwith ("expected TypeProviderConfig to have a property or field "+prop)
+                fld.SetValue(cfg, value)|> ignore
+            | p -> 
+                p.GetSetMethod(nonPublic = true).Invoke(cfg, [| box value |]) |> ignore
+
+        // Fake an implementation of SystemRuntimeContainsType the shape expected by AssemblyResolver.fs.
+        let dllInfos = [yield DllInfo(runtimeAssembly); for r in runtimeAssemblyRefs do yield DllInfo(r)]
+        let tcImports = TcImports(Some(TcImports(None,[])),dllInfos)
+        let systemRuntimeContainsType = (fun (_s:string) -> if tcImports.DllInfos.Length = 1 then true else true)
+        cfg?systemRuntimeContainsType <- systemRuntimeContainsType
+
+        //Diagnostics.Debugger.Launch() |> ignore
+        Diagnostics.Debug.Assert(cfg.GetType().GetField("systemRuntimeContainsType",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
+        Diagnostics.Debug.Assert(systemRuntimeContainsType.GetType().GetField("tcImports",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
+        Diagnostics.Debug.Assert(typeof<TcImports>.GetField("dllInfos",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
+        Diagnostics.Debug.Assert(typeof<TcImports>.GetProperty("Base",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
+        Diagnostics.Debug.Assert(typeof<DllInfo>.GetProperty("FileName",BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance) |> isNull |> not)
+        cfg, tcImports
+
+    static member MakeSimulatedTypeProviderConfig (resolutionFolder: string, runtimeAssembly: string, runtimeAssemblyRefs: string list, ?isHostedExecution, ?isInvalidationSupported) =
+        let cfg, _ = Testing.MakeSimulatedTypeProviderConfigIncremental (resolutionFolder, runtimeAssembly, runtimeAssemblyRefs, ?isHostedExecution=isHostedExecution, ?isInvalidationSupported=isInvalidationSupported)
         cfg
 
     /// Simulates a real instance of TypeProviderConfig and then creates an instance of the last

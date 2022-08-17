@@ -10,6 +10,7 @@
     <Description>The core implementation of an F# type provider</Description>
     <Tags>F# fsharp typeprovider</Tags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <LangVersion>5.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />

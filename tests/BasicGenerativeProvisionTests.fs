@@ -1,10 +1,4 @@
-#if INTERACTIVE
-#load "../src/ProvidedTypes.fsi" "../src/ProvidedTypes.fs"
-#load "../src/ProvidedTypesTesting.fs"
-
-#else
-module TPSDK.Tests.BasicGenerativeTests
-#endif
+module TPSDK.BasicGenerativeTests
 
 open System
 open System.IO
