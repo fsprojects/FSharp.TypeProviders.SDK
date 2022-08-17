@@ -1364,7 +1364,7 @@ and
 /// backingDataSource is a set of functions to fetch backing data for the ProvidedTypeDefinition, 
 /// and allows us to reuse this type for both target and source models, even when the
 /// source model is being incrementally updates by further .AddMember calls
-and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, getBaseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, staticParams, staticParamsApply, backingDataSource, customAttributesData, nonNullable, hideObjectMethods, typeBuilder: ITypeBuilder) as this =
+and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: string, getBaseType: (unit -> Type option), attrs: TypeAttributes, getEnumUnderlyingType, getStaticParams, staticParamsApply, backingDataSource, customAttributesData, nonNullable, hideObjectMethods, typeBuilder: ITypeBuilder) as this =
     inherit TypeDelegator()
 
     do match container, !ProvidedTypeDefinition.Logger with
@@ -1391,7 +1391,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     let membersQueue = ResizeArray<(unit -> MemberInfo[])>()
 
     let mutable staticParamsDefined = false
-    let mutable staticParams = staticParams
+    let mutable staticParams = lazy getStaticParams()
     let mutable staticParamsApply = staticParamsApply
     let mutable container = container
     let interfaceImpls = ResizeArray<Type>()
@@ -1509,7 +1509,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
         let hideObjectMethods = defaultArg hideObjectMethods false
         let attrs = defaultAttributes (isErased, isSealed, isInterface, isAbstract)
         //if not isErased && assembly.GetType().Name <> "ProvidedAssembly" then failwithf "a non-erased (i.e. generative) ProvidedTypeDefinition '%s.%s' was placed in an assembly '%s' that is not a ProvidedAssembly" namespaceName className (assembly.GetName().Name)
-        ProvidedTypeDefinition(false, TypeContainer.Namespace (K assembly, namespaceName), className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods, defaultTypeBuilder)
+        ProvidedTypeDefinition(false, TypeContainer.Namespace (K assembly, namespaceName), className, K baseType, attrs, K None, K [], None, None, K [| |], nonNullable, hideObjectMethods, defaultTypeBuilder)
 
     new (className:string, baseType, ?hideObjectMethods, ?nonNullable, ?isErased, ?isSealed, ?isInterface, ?isAbstract) = 
         let isErased = defaultArg isErased true
@@ -1519,7 +1519,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
         let nonNullable = defaultArg nonNullable false
         let hideObjectMethods = defaultArg hideObjectMethods false
         let attrs = defaultAttributes (isErased, isSealed, isInterface, isAbstract)
-        ProvidedTypeDefinition(false, TypeContainer.TypeToBeDecided, className, K baseType, attrs, K None, [], None, None, K [| |], nonNullable, hideObjectMethods, defaultTypeBuilder)
+        ProvidedTypeDefinition(false, TypeContainer.TypeToBeDecided, className, K baseType, attrs, K None, K [], None, None, K [| |], nonNullable, hideObjectMethods, defaultTypeBuilder)
 
     // state ops
 
@@ -1735,7 +1735,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     member __.EnumUnderlyingTypeRaw() = enumUnderlyingType.Force()
     member __.Container = container
     member __.BaseTypeRaw() = baseType.Force()
-    member __.StaticParams = staticParams
+    member __.StaticParams = staticParams.Force()
     member __.StaticParamsApply = staticParamsApply
         
     // Count the members declared since the indicated position in the members list.  This allows the target model to observe 
@@ -1830,17 +1830,17 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     member __.DefineStaticParameters(parameters: ProvidedStaticParameter list, instantiationFunction: (string -> obj[] -> ProvidedTypeDefinition)) =
         if staticParamsDefined then failwithf "Static parameters have already been defined for this type. stacktrace = %A" Environment.StackTrace
         staticParamsDefined <- true
-        staticParams      <- parameters
+        staticParams      <- lazy parameters
         staticParamsApply <- Some instantiationFunction
 
     /// Get ParameterInfo[] for the parametric type parameters 
-    member __.GetStaticParametersInternal() = [| for p in staticParams -> p :> ParameterInfo |]
+    member __.GetStaticParametersInternal() = [| for p in staticParams.Force() -> p :> ParameterInfo |]
 
     /// Instantiate parametric type
     member this.ApplyStaticArguments(name:string, args:obj[]) =
-        if staticParams.Length <> args.Length then
-            failwithf "ProvidedTypeDefinition: expecting %d static parameters but given %d for type %s" staticParams.Length args.Length this.FullName
-        if staticParams.Length > 0 then
+        if staticParams.Force().Length <> args.Length then
+            failwithf "ProvidedTypeDefinition: expecting %d static parameters but given %d for type %s" staticParams.Value.Length args.Length this.FullName
+        if staticParams.Force().Length > 0 then
             match staticParamsApply with
             | None -> failwith "ProvidedTypeDefinition: DefineStaticParameters was not called"
             | Some f -> f name args
@@ -8838,16 +8838,18 @@ namespace ProviderImplementation.ProvidedTypes
 
     /// Represents the type binding context for the type provider based on the set of assemblies
     /// referenced by the compilation.
-    type ProvidedTypesContext(referencedAssemblyPaths: string list, assemblyReplacementMap: (string*string) list, sourceAssemblies: Assembly list) as this =
+    type ProvidedTypesContext(recomputeReferencedAssemblyPaths: unit -> string list, assemblyReplacementMap: (string*string) list, sourceAssemblies: Assembly list) as this =
 
         // A duplicate 'mscorlib' appears in the paths reported by the F# compiler
-        let referencedAssemblyPaths = referencedAssemblyPaths |> Seq.distinctBy Path.GetFileNameWithoutExtension |> Seq.toList
+        let recomputeReferencedAssemblyPaths() =
+            recomputeReferencedAssemblyPaths() |> Seq.distinctBy Path.GetFileNameWithoutExtension |> Seq.toList
         //do System.Diagnostics.Debugger.Break()
 
+        let initialReferencedAssemblyPaths = recomputeReferencedAssemblyPaths()
         /// Find which assembly defines System.Object etc.
         let systemRuntimeScopeRef =
           lazy
-            referencedAssemblyPaths |> List.tryPick (fun path ->
+            initialReferencedAssemblyPaths |> List.tryPick (fun path ->
               try
                 let simpleName = Path.GetFileNameWithoutExtension path
                 if simpleName = "mscorlib" || simpleName = "System.Runtime" || simpleName = "netstandard" || simpleName = "System.Private.CoreLib" then
@@ -8868,7 +8870,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         let fsharpCoreRefVersion =
           lazy
-            referencedAssemblyPaths |> List.tryPick (fun path ->
+            initialReferencedAssemblyPaths |> List.tryPick (fun path ->
               try
                 let simpleName = Path.GetFileNameWithoutExtension path
                 if simpleName = "FSharp.Core" then
@@ -8894,14 +8896,18 @@ namespace ProviderImplementation.ProvidedTypes
         let targetAssembliesTable_ =  ConcurrentDictionary<string, Choice<Assembly, _>>()
         let targetAssemblies_ = ResizeArray<Assembly>()
         let targetAssembliesQueue = ResizeArray<_>()
-        do targetAssembliesQueue.Add (fun () -> 
-              for ref in referencedAssemblyPaths do
-                  let reader = mkReader ref 
+        let register referencedAssemblyPaths =
+              targetAssembliesQueue.Add (fun () -> 
+                for ref in referencedAssemblyPaths do
                   let simpleName = Path.GetFileNameWithoutExtension ref 
-                  targetAssembliesTable_.[simpleName] <- reader
-                  match reader with 
-                  | Choice2Of2 _ -> () 
-                  | Choice1Of2 asm -> targetAssemblies_.Add asm)
+                  if not (targetAssembliesTable_.ContainsKey simpleName) then
+                    let reader = mkReader ref 
+                    targetAssembliesTable_.[simpleName] <- reader
+                    match reader with 
+                    | Choice2Of2 _ -> () 
+                    | Choice1Of2 asm -> targetAssemblies_.Add asm)
+        do register initialReferencedAssemblyPaths
+        let registerAdditional = lazy register (recomputeReferencedAssemblyPaths())
         let flush() = 
             let qs = targetAssembliesQueue.ToArray()
             targetAssembliesQueue.Clear()
@@ -9334,7 +9340,7 @@ namespace ProviderImplementation.ProvidedTypes
                                         (x.BaseTypeRaw >> Option.map convTypeToTgt), 
                                         x.AttributesRaw, 
                                         (x.EnumUnderlyingTypeRaw >> Option.map convTypeToTgt), 
-                                        x.StaticParams |> List.map convStaticParameterDefToTgt, 
+                                        (fun () -> x.StaticParams |> List.map convStaticParameterDefToTgt), 
                                         x.StaticParamsApply |> Option.map (fun f s p ->  
                                             let t = f s p 
                                             let tT = convProvidedTypeDefToTgt t
@@ -9364,6 +9370,8 @@ namespace ProviderImplementation.ProvidedTypes
                               (x.GetCustomAttributesData >> convCustomAttributesDataToTgt))
 
         and convStaticParameterDefToTgt (x: ProvidedStaticParameter) = 
+            // By the time we are asked for static parameters, all DLLs will have been registered
+            registerAdditional.Force()
             Debug.Assert (not x.BelongsToTargetModel, "unexpected target ProvidedStaticParameter")
             ProvidedStaticParameter(x.Name, convTypeToTgt x.ParameterType, ?parameterDefaultValue=x.ParameterDefaultValue) 
             
@@ -9468,7 +9476,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         member __.ILGlobals = ilGlobals.Value
 
-        member __.ReferencedAssemblyPaths = referencedAssemblyPaths
+        member __.GetReferencedAssemblyPaths() = recomputeReferencedAssemblyPaths()
 
         member __.GetTargetAssemblies() =  getTargetAssemblies().ToArray()
 
@@ -9503,8 +9511,77 @@ namespace ProviderImplementation.ProvidedTypes
 
             // Use the reflection hack to determine the set of referenced assemblies by reflecting over the SystemRuntimeContainsType
             // closure in the TypeProviderConfig object.
-            let referencedAssemblyPaths = config.ReferencedAssemblies |> Array.toList
-            ProvidedTypesContext(referencedAssemblyPaths, assemblyReplacementMap, sourceAssemblies)
+            let recomputeReferencedAssemblyPaths() =
+              try
+
+                printf "Evaluating referencedAssemblyPaths..."
+                let hostConfigType = config.GetType()
+                let hostAssembly = hostConfigType.Assembly
+                let hostAssemblyLocation = hostAssembly.Location
+
+                let msg = sprintf "Host is assembly '%A' at location '%s'" (hostAssembly.GetName()) hostAssemblyLocation
+
+                if isNull (hostConfigType.GetField("systemRuntimeContainsType",bindAll)) then
+                    failwithf "Invalid host of cross-targeting type provider: a field called systemRuntimeContainsType must exist in the TypeProviderConfiguration object. Please check that the type provider being hosted by the F# compiler tools or a simulation of them. %s" msg
+
+                printf """config.GetField("systemRuntimeContainsType")..."""
+                let systemRuntimeContainsTypeObj = config.GetField("systemRuntimeContainsType")
+
+                // Account for https://github.com/Microsoft/visualfsharp/pull/591
+                let systemRuntimeContainsTypeObj2 =
+                    if systemRuntimeContainsTypeObj.HasField("systemRuntimeContainsTypeRef") then
+                        systemRuntimeContainsTypeObj.GetField("systemRuntimeContainsTypeRef").GetProperty("Value")
+                    else
+                        systemRuntimeContainsTypeObj
+
+                if not (systemRuntimeContainsTypeObj2.HasField("tcImports")) then
+                    failwithf "Invalid host of cross-targeting type provider: a field called tcImports must exist in the systemRuntimeContainsType closure. Please check that the type provider being hosted by the F# compiler tools or a simulation of them. %s" msg
+
+                printf """systemRuntimeContainsTypeObj2.GetField("tcImports")..."""
+                let tcImports = systemRuntimeContainsTypeObj2.GetField("tcImports")
+
+                if not (tcImports.HasField("dllInfos")) then
+                    failwithf "Invalid host of cross-targeting type provider: a field called dllInfos must exist in the tcImports object. Please check that the type provider being hosted by the F# compiler tools or a simulation of them. %s" msg
+
+                if not (tcImports.HasProperty("Base")) then
+                    failwithf "Invalid host of cross-targeting type provider: a field called Base must exist in the tcImports object. Please check that the type provider being hosted by the F# compiler tools or a simulation of them. %s" msg
+
+                printf """tcImports.GetField("dllInfos")..."""
+                let dllInfos = tcImports.GetField("dllInfos")
+                if isNull dllInfos then
+                    let ty = dllInfos.GetType()
+                    let fld = ty.GetField("dllInfos", bindAll)
+                    failwithf """Invalid host of cross-targeting type provider: unexpected 'null' value in dllInfos field of TcImports, ty = %A, fld = %A. %s""" ty fld msg
+
+                printf """tcImports.GetProperty("Base")..."""
+                let baseObj = tcImports.GetProperty("Base")
+
+                printf """compute..."""
+                let results =
+                 [ for dllInfo in dllInfos.GetElements() -> (dllInfo.GetProperty("FileName") :?> string)
+                   if not (isNull baseObj) then
+                    let baseObjValue = baseObj.GetProperty("Value")
+                    if isNull baseObjValue then
+                        let ty = baseObjValue.GetType()
+                        let prop = ty.GetProperty("Value", bindAll)
+                        failwithf """Invalid host of cross-targeting type provider: unexpected 'null' value in Value property of baseObj, ty = %A, prop = %A. %s""" ty prop msg
+
+                    let baseDllInfos = baseObjValue.GetField("dllInfos")
+
+                    if isNull baseDllInfos then
+                        let ty = baseDllInfos.GetType()
+                        let fld = ty.GetField("dllInfos", bindAll)
+                        failwithf """Invalid host of cross-targeting type provider: unexpected 'null' value in dllInfos field of baseDllInfos, ty = %A, fld = %A. %s""" ty fld msg
+
+                    for baseDllInfo in baseDllInfos.GetElements() -> (baseDllInfo.GetProperty("FileName") :?> string) ]
+                printfn "results = %A" results
+                results
+              with e ->
+                failwithf "Invalid host of cross-targeting type provider. Exception: %A" e
+
+
+//            let referencedAssemblyPaths = config.ReferencedAssemblies |> Array.toList
+            ProvidedTypesContext(recomputeReferencedAssemblyPaths, assemblyReplacementMap, sourceAssemblies)
 
 
 

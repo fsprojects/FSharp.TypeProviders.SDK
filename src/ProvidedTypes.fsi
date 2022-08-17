@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation 2005-2014 and other contributors.
+// Copyright (c) Microsoft Corporation 2005-2014 and other contributors.
 // This sample code is provided "as is" without warranty of any kind.
 // We disclaim all warranties, either express or implied, including the
 // warranties of merchantability and fitness for a particular purpose.
@@ -405,7 +405,7 @@ type ProvidedTypesContext =
     member TryBindSimpleAssemblyNameToTarget: assemblyName: string  -> Choice<Assembly, exn> 
 
     /// Get the list of referenced assemblies determined by the type provider configuration
-    member ReferencedAssemblyPaths: string list
+    member GetReferencedAssemblyPaths: unit -> string list
 
     /// Get the resolved referenced assemblies determined by the type provider configuration
     member GetTargetAssemblies : unit -> Assembly[]
@@ -510,7 +510,7 @@ type TypeProviderForNamespaces =
 #if !NO_GENERATIVE
     /// Register that a given file is a provided generated target assembly, e.g. an assembly produced by an external
     /// code generation tool.  This assembly should be a target assembly, i.e. use the same asssembly references
-    /// as given by TargetContext.ReferencedAssemblyPaths
+    /// as given by TargetContext.GetReferencedAssemblyPaths()
     member RegisterGeneratedTargetAssembly: fileName: string -> Assembly
 #endif
 
@@ -557,4 +557,3 @@ module internal AssemblyReader =
     
         val GetWeakReaderCache : unit -> System.Collections.Concurrent.ConcurrentDictionary<(string * string), DateTime * WeakReference<ILModuleReader>>
         val GetStrongReaderCache : unit -> System.Collections.Concurrent.ConcurrentDictionary<(string * string), DateTime * int * ILModuleReader>
-    
