@@ -27,7 +27,7 @@ let ``test incremental target assemblies are available via simulated tcImports a
 
     // We now evaluate the static parameters, indicating the type provider actually starts to get used
     // This causes the type provider to do a one-off re-evaluation of the available referenced DLLs
-    let ty = tp1.Namespaces[0].GetTypes()[0]
+    let ty = tp1.Namespaces.[0].GetTypes().[0]
     let tp2 = (tp1 :> ITypeProvider)
     let _dummy = tp2.GetStaticParameters(ty)
 
