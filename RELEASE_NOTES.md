@@ -1,3 +1,6 @@
+#### 8.0.1 - August 17, 2022
+* [Workaround for target assemblies where packages with transitive references contain type providers ](https://github.com/fsprojects/FSharp.TypeProviders.SDK/pull/388)
+
 #### 7.0.3 - September 22, 2021
 * Fix template .NET version in global.json
 
