@@ -294,6 +294,9 @@ let ``test basic symbol type ops``() =
    let t3 = ProvidedTypeBuilder.MakeGenericType(typedefof<seq<_>>, [ typeof<bool> ])
    Assert.NotEqual<string>("TypeSymbol", t3.GetType().Name ) 
 
+   // MakeGenericType doesn't fallback to classic generic type when type argument is a tuple composed of provided types
+   let t4 = ProvidedTypeBuilder.MakeGenericType(typedefof<seq<_>>, [ t2 ])
+   Assert.Equal<string>("TypeSymbol", t4.GetType().Name ) 
 
 
 let stressTestCore() = 
