@@ -1313,16 +1313,17 @@ and ProvidedMeasureBuilder() =
     // there seems to be no way to check if a type abbreviation exists
     static let unitNamesTypeAbbreviations =
         [
-            "meter"; "hertz"; "newton"; "pascal"; "joule"; "watt"; "coulomb";
-            "volt"; "farad"; "ohm"; "siemens"; "weber"; "tesla"; "henry"
-            "lumen"; "lux"; "becquerel"; "gray"; "sievert"; "katal"
+             "metre"; "meter"; "kilogram"; "second"; "ampere"; "kelvin"; "mole"; "candela"
+             "hertz"; "newton"; "pascal"; "joule"; "watt"; "coulomb"; "volt"; "farad"
+             "ohm"; "siemens"; "weber"; "tesla"; "henry"; "lumen"; "lux"; "becquerel"
+             "gray"; "sievert"; "katal"
         ]
         |> Set.ofList
 
     static let unitSymbolsTypeAbbreviations =
         [
             "m"; "kg"; "s"; "A"; "K"; "mol"; "cd"; "Hz"; "N"; "Pa"; "J"; "W"; "C"
-            "V"; "F"; "S"; "Wb"; "T"; "lm"; "lx"; "Bq"; "Gy"; "Sv"; "kat"; "H"
+            "V"; "F"; "S"; "ohm"; "Wb"; "T"; "lm"; "lx"; "Bq"; "Gy"; "Sv"; "kat"; "H"
         ]
         |> Set.ofList 
 
