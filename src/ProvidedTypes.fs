@@ -7529,7 +7529,7 @@ namespace ProviderImplementation.ProvidedTypes
         // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
         override __.IsSZArray =
             match kind with
-            | TypeSymbolKind.SDArray _ -> true
+            | TypeSymbolKind.SDArray -> true
             | _ -> false
 #endif
         override this.GetMember(_name, _mt, _bindingFlags) = notRequired this "GetMember" this.Name
