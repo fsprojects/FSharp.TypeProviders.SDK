@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>ProvidedMethod (FSharp.TypeProviders.SDK)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="FSharp.TypeProviders.SDK contributors">
+
+    <link rel="stylesheet" id="theme_link" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/4.6.0/materia/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
+
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+    <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico">
+    <link type="text/css" rel="stylesheet" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/navbar-fixed-left.css" />
+    <link type="text/css" rel="stylesheet" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-default.css" />
+    <link type="text/css" rel="stylesheet" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-custom.css" />
+    <script type="text/javascript" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-tips.js"></script>
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <!-- END SEARCH BOX: this adds support for the search box -->
+    
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-md navbar-light bg-secondary fixed-left" id="fsdocs-nav">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse navbar-nav-scroll" id="navbarsExampleDefault">
+            <a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/"><img id="fsdocs-logo" src="https://raw.githubusercontent.com/fsprojects/FSharp.TypeProviders.SDK/master/docs/files/img/logo.png" /></a>
+            <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+            <div id="header">
+                <div class="searchbox" id="fsdocs-searchbox">
+                    <label for="search-by">
+                        <i class="fas fa-search"></i>
+                    </label>
+                    <input data-search-input="" id="search-by" type="search" placeholder="Search..." />
+                    <span data-search-clear="">
+                        <i class="fas fa-times"></i>
+                    </span>
+                </div>
+            </div>
+
+            <!-- END SEARCH BOX: this adds support for the search box -->
+            <ul class="navbar-nav">
+                <li class="nav-header">Links</li>
+                <li class="nav-item" id="fsdocs-license-link"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/LICENSE.md">License</a></li>
+                <li class="nav-item" id="fsdocs-release-notes-link"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
+                <li class="nav-item" id="fsdocs-repository-link"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/">Source Repository</a></li>
+                <li class="nav-header">
+  Documentation
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/technical-notes.html">
+    Technical Notes
+
+  </a>
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/debugging.html">
+    Debugging a Type Provider
+
+  </a>
+</li>
+                <li class="nav-header">
+  API Reference
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/index.html">
+    All Namespaces
+  </a>
+</li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="masthead">
+            <h3 class="muted"><a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/">FSharp.TypeProviders.SDK</a></h3>
+        </div>
+        <hr />
+        <div class="container" id="fsdocs-content">
+            <div>
+  <h2>
+    ProvidedMethod Type
+  </h2>
+  <dl class="fsdocs-metadata">
+    <dt>
+      Namespace: 
+      <a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/providerimplementation-providedtypes.html">
+        ProviderImplementation.ProvidedTypes
+      </a>
+    </dt>
+    <dt>
+      Assembly: FSharp.TypeProviders.SDK.dll
+    </dt>
+    <dt>
+      Base Type: 
+      <code><a href="https://docs.microsoft.com/dotnet/api/system.reflection.methodinfo">MethodInfo</a></code>
+    </dt>
+    <dt>
+      All Interfaces: 
+      <code><a href="https://docs.microsoft.com/dotnet/api/system.reflection.icustomattributeprovider">ICustomAttributeProvider</a></code>
+    </dt>
+  </dl>
+  <div class="fsdocs-xmldoc">
+    <div>
+      <p class="fsdocs-summary">
+        
+      </p>
+    </div>
+  </div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div>
+    <h3>
+      Constructors
+    </h3>
+    <table class="table outer-list fsdocs-member-list">
+      <thead>
+        <tr>
+          <td class="fsdocs-member-list-header">
+            Constructor
+          </td>
+          <td class="fsdocs-member-list-header">
+            Description
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '36', 36)" onmouseover="showTip(event, '36', 36)">
+                <p>
+                  <a id="( .ctor )">
+                    <a href="#( .ctor )">
+                      <code><span>ProvidedMethod<span><span>(<span>methodName,&#32;parameters,&#32;returnType,&#32;?invokeCode,&#32;?isStatic</span>)</span></span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="36">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>ProvidedMethod<span><span>(<span>methodName,&#32;parameters,&#32;returnType,&#32;?invokeCode,&#32;?isStatic</span>)</span></span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        methodName
+                      </b>
+                      :
+                      <code>string</code>
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        parameters
+                      </b>
+                      :
+                      <code><span><a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/providerimplementation-providedtypes-providedparameter.html">ProvidedParameter</a>&#32;list</span></code>
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        returnType
+                      </b>
+                      :
+                      <code><a href="https://docs.microsoft.com/dotnet/api/system.type">Type</a></code>
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        ?invokeCode
+                      </b>
+                      :
+                      <code><span><span><a href="https://fsharp.github.io/fsharp-core-docs/reference/fsharp-quotations-fsharpexpr">Expr</a>&#32;list</span>&#32;->&#32;<a href="https://fsharp.github.io/fsharp-core-docs/reference/fsharp-quotations-fsharpexpr">Expr</a></span></code>
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        ?isStatic
+                      </b>
+                      :
+                      <code>bool</code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                  <span>
+                    Returns: 
+                    <code><a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/providerimplementation-providedtypes-providedmethod.html">ProvidedMethod</a></code>
+                  </span>
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:ProviderImplementation.ProvidedTypes.ProvidedMethod.#ctor`')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:ProviderImplementation.ProvidedTypes.ProvidedMethod.#ctor\'/>')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/src/ProvidedTypes.fs#L1062-1062" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+ When making a cross-targeting type provider, use this method instead of the ProvidedMethod constructor from ProvidedTypes
+
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  methodName
+                </span>
+                :
+                <code>string</code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  parameters
+                </span>
+                :
+                <code><span><a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/providerimplementation-providedtypes-providedparameter.html">ProvidedParameter</a>&#32;list</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  returnType
+                </span>
+                :
+                <code><a href="https://docs.microsoft.com/dotnet/api/system.type">Type</a></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  ?invokeCode
+                </span>
+                :
+                <code><span><span><a href="https://fsharp.github.io/fsharp-core-docs/reference/fsharp-quotations-fsharpexpr">Expr</a>&#32;list</span>&#32;->&#32;<a href="https://fsharp.github.io/fsharp-core-docs/reference/fsharp-quotations-fsharpexpr">Expr</a></span></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  ?isStatic
+                </span>
+                :
+                <code>bool</code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+            <dl class="fsdocs-returns">
+              <dt>
+                <span class="fsdocs-return-name">
+                  Returns: 
+                </span>
+                <code><a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/providerimplementation-providedtypes-providedmethod.html">ProvidedMethod</a></code>
+              </dt>
+              <dd class="fsdocs-return-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <h3>
+      Instance members
+    </h3>
+    <table class="table outer-list fsdocs-member-list">
+      <thead>
+        <tr>
+          <td class="fsdocs-member-list-header">
+            Instance member
+          </td>
+          <td class="fsdocs-member-list-header">
+            Description
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '37', 37)" onmouseover="showTip(event, '37', 37)">
+                <p>
+                  <a id="AddCustomAttribute">
+                    <a href="#AddCustomAttribute">
+                      <code><span>this.AddCustomAttribute<span><span>(<span>arg1</span>)</span></span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="37">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>this.AddCustomAttribute<span><span>(<span>arg1</span>)</span></span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        arg0
+                      </b>
+                      :
+                      <code><a href="https://docs.microsoft.com/dotnet/api/system.reflection.customattributedata">CustomAttributeData</a></code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddCustomAttribute`')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddCustomAttribute\'/>')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/src/ProvidedTypes.fs#L1072-1072" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+ Add a custom attribute to the provided method definition.
+
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  arg0
+                </span>
+                :
+                <code><a href="https://docs.microsoft.com/dotnet/api/system.reflection.customattributedata">CustomAttributeData</a></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '38', 38)" onmouseover="showTip(event, '38', 38)">
+                <p>
+                  <a id="AddDefinitionLocation">
+                    <a href="#AddDefinitionLocation">
+                      <code><span>this.AddDefinitionLocation<span><span>(<span>line,&#32;column,&#32;filePath</span>)</span></span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="38">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>this.AddDefinitionLocation<span><span>(<span>line,&#32;column,&#32;filePath</span>)</span></span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        line
+                      </b>
+                      :
+                      <code>int</code>
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        column
+                      </b>
+                      :
+                      <code>int</code>
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        filePath
+                      </b>
+                      :
+                      <code>string</code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddDefinitionLocation`')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddDefinitionLocation\'/>')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/src/ProvidedTypes.fs#L1071-1071" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+ Add definition location information to the provided type definition.
+
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  line
+                </span>
+                :
+                <code>int</code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  column
+                </span>
+                :
+                <code>int</code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  filePath
+                </span>
+                :
+                <code>string</code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '39', 39)" onmouseover="showTip(event, '39', 39)">
+                <p>
+                  <a id="AddMethodAttrs">
+                    <a href="#AddMethodAttrs">
+                      <code><span>this.AddMethodAttrs<span><span>(<span>attributes</span>)</span></span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="39">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>this.AddMethodAttrs<span><span>(<span>attributes</span>)</span></span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        attributes
+                      </b>
+                      :
+                      <code><a href="https://docs.microsoft.com/dotnet/api/system.reflection.methodattributes">MethodAttributes</a></code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddMethodAttrs`')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddMethodAttrs\'/>')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/src/ProvidedTypes.fs#L1075-1075" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  attributes
+                </span>
+                :
+                <code><a href="https://docs.microsoft.com/dotnet/api/system.reflection.methodattributes">MethodAttributes</a></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '40', 40)" onmouseover="showTip(event, '40', 40)">
+                <p>
+                  <a id="AddObsoleteAttribute">
+                    <a href="#AddObsoleteAttribute">
+                      <code><span>this.AddObsoleteAttribute<span><span>(<span>message,&#32;?isError</span>)</span></span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="40">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>this.AddObsoleteAttribute<span><span>(<span>message,&#32;?isError</span>)</span></span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        message
+                      </b>
+                      :
+                      <code>string</code>
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        ?isError
+                      </b>
+                      :
+                      <code>bool</code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddObsoleteAttribute`')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddObsoleteAttribute\'/>')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/src/ProvidedTypes.fs#L1070-1070" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+ Add XML documentation information to this provided method
+
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  message
+                </span>
+                :
+                <code>string</code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  ?isError
+                </span>
+                :
+                <code>bool</code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '41', 41)" onmouseover="showTip(event, '41', 41)">
+                <p>
+                  <a id="AddXmlDoc">
+                    <a href="#AddXmlDoc">
+                      <code><span>this.AddXmlDoc<span><span>(<span>xmlDoc</span>)</span></span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="41">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>this.AddXmlDoc<span><span>(<span>xmlDoc</span>)</span></span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        xmlDoc
+                      </b>
+                      :
+                      <code>string</code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddXmlDoc`')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddXmlDoc\'/>')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/src/ProvidedTypes.fs#L1069-1069" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+ Add XML documentation information to this provided constructor
+
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  xmlDoc
+                </span>
+                :
+                <code>string</code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '42', 42)" onmouseover="showTip(event, '42', 42)">
+                <p>
+                  <a id="AddXmlDocComputed">
+                    <a href="#AddXmlDocComputed">
+                      <code><span>this.AddXmlDocComputed<span><span>(<span>xmlDocFunction</span>)</span></span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="42">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>this.AddXmlDocComputed<span><span>(<span>xmlDocFunction</span>)</span></span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        xmlDocFunction
+                      </b>
+                      :
+                      <code><span>unit&#32;->&#32;string</span></code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddXmlDocComputed`')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddXmlDocComputed\'/>')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/src/ProvidedTypes.fs#L1067-1067" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+ Add XML documentation information to this provided constructor, where the computation of the documentation is delayed until necessary
+ The documentation is re-computed  every time it is required.
+
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  xmlDocFunction
+                </span>
+                :
+                <code><span>unit&#32;->&#32;string</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '43', 43)" onmouseover="showTip(event, '43', 43)">
+                <p>
+                  <a id="AddXmlDocDelayed">
+                    <a href="#AddXmlDocDelayed">
+                      <code><span>this.AddXmlDocDelayed<span><span>(<span>xmlDocFunction</span>)</span></span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="43">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>this.AddXmlDocDelayed<span><span>(<span>xmlDocFunction</span>)</span></span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        xmlDocFunction
+                      </b>
+                      :
+                      <code><span>unit&#32;->&#32;string</span></code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddXmlDocDelayed`')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:ProviderImplementation.ProvidedTypes.ProvidedMethod.AddXmlDocDelayed\'/>')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/src/ProvidedTypes.fs#L1068-1068" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+ Add XML documentation information to this provided constructor, where the computation of the documentation is delayed until necessary
+
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  xmlDocFunction
+                </span>
+                :
+                <code><span>unit&#32;->&#32;string</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '44', 44)" onmouseover="showTip(event, '44', 44)">
+                <p>
+                  <a id="DefineStaticParameters">
+                    <a href="#DefineStaticParameters">
+                      <code><span>this.DefineStaticParameters<span><span>(<span>parameters,&#32;instantiationFunction</span>)</span></span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="44">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>this.DefineStaticParameters<span><span>(<span>parameters,&#32;instantiationFunction</span>)</span></span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        parameters
+                      </b>
+                      :
+                      <code><span><a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/providerimplementation-providedtypes-providedstaticparameter.html">ProvidedStaticParameter</a>&#32;list</span></code>
+                    </span>
+                    <br/>
+                    <span>
+                      <b>
+                        instantiationFunction
+                      </b>
+                      :
+                      <code><span>string&#32;->&#32;<span>obj[]</span>&#32;->&#32;<a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/providerimplementation-providedtypes-providedmethod.html">ProvidedMethod</a></span></code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:ProviderImplementation.ProvidedTypes.ProvidedMethod.DefineStaticParameters`')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:ProviderImplementation.ProvidedTypes.ProvidedMethod.DefineStaticParameters\'/>')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/src/ProvidedTypes.fs#L1079-1079" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+ Define the static parameters available on a statically parameterized method
+
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  parameters
+                </span>
+                :
+                <code><span><a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/providerimplementation-providedtypes-providedstaticparameter.html">ProvidedStaticParameter</a>&#32;list</span></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  instantiationFunction
+                </span>
+                :
+                <code><span>string&#32;->&#32;<span>obj[]</span>&#32;->&#32;<a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/providerimplementation-providedtypes-providedmethod.html">ProvidedMethod</a></span></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+        <tr>
+          <td class="fsdocs-member-usage">
+            <div>
+              <code onmouseout="hideTip(event, '45', 45)" onmouseover="showTip(event, '45', 45)">
+                <p>
+                  <a id="SetMethodAttrs">
+                    <a href="#SetMethodAttrs">
+                      <code><span>this.SetMethodAttrs<span><span>(<span>attributes</span>)</span></span></span></code>
+                    </a>
+                  </a>
+                </p>
+              </code>
+              <div class="fsdocs-tip" id="45">
+                <div class="member-tooltip">
+                  Full Usage: 
+                  <code><span>this.SetMethodAttrs<span><span>(<span>attributes</span>)</span></span></span></code>
+                  <br/>
+                  <br/>
+                  Parameters: 
+                  <ul>
+                    <span>
+                      <b>
+                        attributes
+                      </b>
+                      :
+                      <code><a href="https://docs.microsoft.com/dotnet/api/system.reflection.methodattributes">MethodAttributes</a></code>
+                    </span>
+                    <br/>
+                  </ul>
+                  <br/>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="fsdocs-member-xmldoc">
+            <div class="fsdocs-summary">
+              <div class="fsdocs-source-link" title="Copy signature (Markdown)" onclick="Clipboard_CopyTo('`cref:M:ProviderImplementation.ProvidedTypes.ProvidedMethod.SetMethodAttrs`')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-md-hover.png" class="hover"/>
+              </div>
+              <div class="fsdocs-source-link" title="Copy signature (XML)" onclick="Clipboard_CopyTo('<see cref=\'M:ProviderImplementation.ProvidedTypes.ProvidedMethod.SetMethodAttrs\'/>')">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/copy-xml-hover.png" class="hover"/>
+              </div>
+              <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/src/ProvidedTypes.fs#L1074-1074" class="fsdocs-source-link" title="Source on GitHub">
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github.png" class="normal"/>
+                <img src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/img/github-hover.png" class="hover"/>
+              </a>
+              <p class="fsdocs-summary">
+                
+ Set the method attributes of the method. By default these are simple 'MethodAttributes.Public'
+
+              </p>
+            </div>
+            <dl class="fsdocs-params">
+              <dt class="fsdocs-param">
+                <span class="fsdocs-param-name">
+                  attributes
+                </span>
+                :
+                <code><a href="https://docs.microsoft.com/dotnet/api/system.reflection.methodattributes">MethodAttributes</a></code>
+              </dt>
+              <dd class="fsdocs-param-docs"></dd>
+            </dl>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div></div>
+</div>
+            
+        </div>
+
+        <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+        <script type="text/javascript">var fsdocs_search_baseurl = 'https://fsprojects.github.io/FSharp.TypeProviders.SDK/';</script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.min.js"></script>
+        <script type="text/javascript" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-search.js"></script>
+        <!-- END SEARCH BOX: this adds support for the search box -->
+    </div>
+</body>
+
+</html>

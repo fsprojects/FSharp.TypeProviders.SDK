@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Technical Notes
+</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="FSharp.TypeProviders.SDK contributors">
+
+    <link rel="stylesheet" id="theme_link" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/4.6.0/materia/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
+
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+    <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico">
+    <link type="text/css" rel="stylesheet" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/navbar-fixed-left.css" />
+    <link type="text/css" rel="stylesheet" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-default.css" />
+    <link type="text/css" rel="stylesheet" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-custom.css" />
+    <script type="text/javascript" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-tips.js"></script>
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <!-- END SEARCH BOX: this adds support for the search box -->
+    
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-md navbar-light bg-secondary fixed-left" id="fsdocs-nav">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse navbar-nav-scroll" id="navbarsExampleDefault">
+            <a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/"><img id="fsdocs-logo" src="https://raw.githubusercontent.com/fsprojects/FSharp.TypeProviders.SDK/master/docs/files/img/logo.png" /></a>
+            <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+            <div id="header">
+                <div class="searchbox" id="fsdocs-searchbox">
+                    <label for="search-by">
+                        <i class="fas fa-search"></i>
+                    </label>
+                    <input data-search-input="" id="search-by" type="search" placeholder="Search..." />
+                    <span data-search-clear="">
+                        <i class="fas fa-times"></i>
+                    </span>
+                </div>
+            </div>
+
+            <!-- END SEARCH BOX: this adds support for the search box -->
+            <ul class="navbar-nav">
+                <li class="nav-header">Links</li>
+                <li class="nav-item" id="fsdocs-license-link"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/LICENSE.md">License</a></li>
+                <li class="nav-item" id="fsdocs-release-notes-link"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
+                <li class="nav-item" id="fsdocs-repository-link"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/">Source Repository</a></li>
+                <li class="nav-header">
+  Documentation
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/technical-notes.html">
+    Technical Notes
+
+  </a>
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/debugging.html">
+    Debugging a Type Provider
+
+  </a>
+</li>
+                <li class="nav-header">
+  API Reference
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/index.html">
+    All Namespaces
+  </a>
+</li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="masthead">
+            <h3 class="muted"><a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/">FSharp.TypeProviders.SDK</a></h3>
+        </div>
+        <hr />
+        <div class="container" id="fsdocs-content">
+            <h1><a name="Technical-Notes" class="anchor" href="#Technical-Notes">Technical Notes</a></h1>
+<p>A type provider is simultaneously a tool and a library. There is a component that runs at compile-time (also called "design-time") and a component
+that runs at runtime. F# type providers are hosted by applications using FSharp.Compiler.Service.</p>
+<p>First, some terminology:</p>
+<ul>
+<li><p>The <strong>Type Provider Run Time Component (TPRTC)</strong> is the component referenced by <code>#r</code> or <code>-r:</code> on the command line or other configration of a host tool, e.g. <code>FSharp.Data.dll</code>.</p></li>
+<li><p>The <strong>Type Provider Design Time Component (TPDTC)</strong>, e.g. <code>FSharp.Data.DesignTime.dll</code> is the DLL that gets loaded into host tools.</p></li>
+<li><p>The <strong>host tool</strong> is, for example <code>fsc.exe</code> or <code>fsi.exe</code>, or some tool hosting <code>FSharp.Compiler.Service.dll</code> such as <code>devenv.exe</code> or <code>FsAutoComplete.exe</code>.</p></li>
+</ul>
+<h2><a name="The-Type-Provider-Runtime-Component-TPRTC" class="anchor" href="#The-Type-Provider-Runtime-Component-TPRTC">The Type Provider Runtime Component (TPRTC)</a></h2>
+<p>This contains either a <a href="https://fsharp.github.io/fsharp-core-docs/reference/fsharp-core-compilerservices-typeproviderassemblyattribute.html"><code>TypeProviderAssembly</code></a> attribute indicating that  this component is also a TPDTC, or <code>TypeProviderAssembly("MyDesignTime.dll")</code> attribute indicating that the name of the design time component.</p>
+<p>TPRTCs are normally <code>netstandard2.0</code> or above.</p>
+<h2><a name="The-Type-Provider-Design-Time-Component-TPDTC" class="anchor" href="#The-Type-Provider-Design-Time-Component-TPDTC">The Type Provider Design Time Component (TPDTC)</a></h2>
+<p>The Type Provider Design Time Component (TPDTC) is, for example, <code>FSharp.Data.DesignTime.dll</code>.</p>
+<p>This is the DLL that gets loaded into host tools, and may be the same physical file as the TPRTC. This component includes the ProvidedTypes.fs/fsi files from the type provider SDK.</p>
+<p>TPDTC are generally netstandard2.0 or netstandard2.1 components.</p>
+<p>See <a href="https://github.com/Microsoft/visualfsharp/issues/3736">Loading type providers</a> for the rules to find TPDTC components.</p>
+<h2><a name="Naming-Conventions" class="anchor" href="#Naming-Conventions">Naming Conventions</a></h2>
+<p>The following guidance extends <a href="https://fsharp.github.io/2014/09/19/fsharp-libraries.html.">https://fsharp.github.io/2014/09/19/fsharp-libraries.html.</a></p>
+<ul>
+<li><p>A type provider for a data source or schema format XYZ can often be placed in <code>FSharp.Data</code>, e.g. “FSharp.Data.XYZ”.</p></li>
+<li><p>A type provider for interoperability can often be placed in<code>FSharp.Interop</code>, e.g. “FSharp.Interop.XYZ”.</p></li>
+</ul>
+<p>Good type provider naming examples:</p>
+<ul>
+<li><code>FSharp.Text.RegexProvider</code></li>
+<li><code>FSharp.Azure.StorageTypeProvider</code></li>
+</ul>
+<p>Here are some examples of existing type providers that aren't too bad (they are clear) but could be renamed to follow the guidelines:</p>
+<ul>
+<li><code>ExcelProvider</code> (better would be <code>FSharp.Interop.ExcelProvider</code>)</li>
+<li><code>RProvider</code> (better would be <code>FSharp.Interop.RProvider</code>)</li>
+<li><code>ApiaryProvider</code> (better would be <code>FSharp.Data.ApiaryProvider</code>)</li>
+<li><code>SQLProvider</code>  (better would be <code>FSharp.Data.SQLProvider</code>)</li>
+<li><code>DynamicsNAVProvider</code>  (better would be <code>FSharp.Interop.DynamicsNAVProvider</code>)</li>
+<li><code>DynamicsCRMProvider</code>  (better would be <code>FSharp.Interop.DynamicsCRMProvider</code>)</li>
+</ul>
+<h2><a name="Nuget-package-layout" class="anchor" href="#Nuget-package-layout">Nuget package layout</a></h2>
+<p>The nuget package layout of a type provider follows these rules:</p>
+<ol>
+<li>The TPRTCs go under <code>lib</code></li>
+<li>The TPDTC goes under <code>typeproviders/fsharp41</code></li>
+<li>ALl dependencies of the TPDTC are bundled with the TPDTC (except the framework and FSharp.Core)</li>
+</ol>
+<p>For examples:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">lib/net45
+    FSharp.Data.dll
+lib/netstandard2.0
+    MyProvider.dll
+
+typeproviders/fsharp41/netstandard2.0/
+    MyProvider.DesignTime.dll // TPDTC
+    MyDesignTimeDependency.dll // bundled dependencies of TPDTC
+</code></pre></td></tr></table>
+<h2><a name="Dependencies" class="anchor" href="#Dependencies">Dependencies</a></h2>
+<p>Runtime dependencies are often the same as design time dependencies for simple type providers.  For more complex providers these can be different</p>
+<ul>
+<li>The runtime dependencies are the dependencies of everything in your quotations in your type provider implementation.</li>
+<li>The design dependencies are the dependencies of everything outside the quotations to decide and generate the provided types.</li>
+</ul>
+<p>These dependencies are packaged and managed differently</p>
+<ul>
+<li>
+<p>The runtime dependencies are normal nuget package dependencies just like any normal .NET library. For example, if your type provider has Newtonsoft.Json as a runtime
+dependency then your nuget package should list this a normal nuget dependency.</p>
+</li>
+<li>
+<p>The design dependencies must all be bundled alongside your design-time DLL.  The design-time component is a component loaded into a tool like Ionide or
+Visual Studio and must be loadable without referencing any other packages.</p>
+</li>
+</ul>
+<h2><a name="Lifetime-of-type-provider-instantiations" class="anchor" href="#Lifetime-of-type-provider-instantiations">Lifetime of type provider instantiations</a></h2>
+<p>F# type providers are hosted by applications using FSharp.Compiler.Service.
+These notes describe the lifetime and typical resource usage of type provider instances for applications that incorporate
+FSharp.Compiler.Service (the host).</p>
+<p>Each time the host application (e.g. devenv.exe) checks a file using type providers (e.g. containing <code>JsonProvider&lt;"..."&gt;</code>), one or more new TP instantiations may be created, along with subsequent calls to <code>ApplyStaticArguments</code>.</p>
+<ul>
+<li>The F# compiler service doesn't try to cache these (except where it caches the TAST structures that results of checking a file or project).</li>
+<li>Individual type providers may use caching of some kind, returning previous provided types when the type provider is instantiated the same way.  Care should be taken that these caches do not permanently occupy resources</li>
+<li>Under the hood, the majority of resources used by a TP instantiation are those required to "map" the generated types to the referenced assemblies.  To support this, each TP Instantiation creates one ILModuleReader for each referenced assembly. When the compiler is used as a service, the natural (minimal)  lifetime of a ILModuleReader is the same as its TP Instanatiation.  The TPSDK may share these resources.</li>
+<li>The natural (i.e. minimal) lifetime of a TP Instantiation and its related objects (ProvidedType ProvidedMethodInfo etc. etc. ) is the same as the TAST structures which refer these things (TProvidedTypeInfo, MethInfo, FieldInfo from infos.fs).</li>
+</ul>
+<p>The lifetime of TAST structures is as long as they are held in the IncrementalBuilder, or you hold on to FSharpCheckFileResults, or FSharpCheckProjectResults, or FSharpAssemblyContents.</p>
+<h2><a name="Explicit-construction-of-code-MakeGenericType-MakeGenericMethod-and-UncheckedQuotations" class="anchor" href="#Explicit-construction-of-code-MakeGenericType-MakeGenericMethod-and-UncheckedQuotations">Explicit construction of code: MakeGenericType, MakeGenericMethod and UncheckedQuotations</a></h2>
+<p>Some type providers need to build code via explicit calls to <code>FSharp.Quotations.Expr.*</code> rather than via quotation
+literals. Frequently, this is needed when code must instantiate generic methods or types.  However, in some cases limitations
+of the F# quotations API are reached.</p>
+<p>In these cases, follow these rules</p>
+<ol>
+<li>Always use <code>ProvidedTypeBuilder.MakeGenericType(type, typeArguments)</code> rather than <code>type.MakeGenericType(typeArguments)</code></li>
+<li>Always use <code>ProvidedTypeBuilder.MakeGenericMethod(methInfo, methTypeArguments)</code> rather than <code>methInfo.MakeGenericType(methTypeArguments)</code></li>
+<li>Where necessary open <code>open ProviderImplementation.ProvidedTypes.UncheckedQuotations</code> and make quotation nodes representing calls and other operations using <code>Expr.CallUnchecked</code>.</li>
+</ol>
+<p>If you don't do this you may get errors like</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">    The type provider 'FSharp.Configuration.ConfigTypeProvider+FSharpConfigurationProvider' reported an error: Type mismatch when building 'args': invalid parameter for a method or indexer property. Expected 'System.Collections.Generic.IEnumerable`1[System.String]', but received type 'System.Collections.Generic.IEnumerable`1[System.String]'.�Parameter name: receivedType
+</code></pre></td></tr></table>
+<p>or</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">    System.InvalidOperationException: the operation is not valid due to the current state of the object. at System.Reflection.MemberInfo.get_MetadataToken() in f:\dd\ndp\clr\src\BCL\system\reflection\memberinfo.cs:line 65
+</code></pre></td></tr></table>
+
+            
+        </div>
+
+        <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+        <script type="text/javascript">var fsdocs_search_baseurl = 'https://fsprojects.github.io/FSharp.TypeProviders.SDK/';</script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.min.js"></script>
+        <script type="text/javascript" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-search.js"></script>
+        <!-- END SEARCH BOX: this adds support for the search box -->
+    </div>
+</body>
+
+</html>

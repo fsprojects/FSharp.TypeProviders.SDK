@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Debugging a Type Provider
+</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="FSharp.TypeProviders.SDK contributors">
+
+    <link rel="stylesheet" id="theme_link" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/4.6.0/materia/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
+
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+    <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico">
+    <link type="text/css" rel="stylesheet" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/navbar-fixed-left.css" />
+    <link type="text/css" rel="stylesheet" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-default.css" />
+    <link type="text/css" rel="stylesheet" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-custom.css" />
+    <script type="text/javascript" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-tips.js"></script>
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+    <!-- END SEARCH BOX: this adds support for the search box -->
+    
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-md navbar-light bg-secondary fixed-left" id="fsdocs-nav">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse navbar-nav-scroll" id="navbarsExampleDefault">
+            <a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/"><img id="fsdocs-logo" src="https://raw.githubusercontent.com/fsprojects/FSharp.TypeProviders.SDK/master/docs/files/img/logo.png" /></a>
+            <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+            <div id="header">
+                <div class="searchbox" id="fsdocs-searchbox">
+                    <label for="search-by">
+                        <i class="fas fa-search"></i>
+                    </label>
+                    <input data-search-input="" id="search-by" type="search" placeholder="Search..." />
+                    <span data-search-clear="">
+                        <i class="fas fa-times"></i>
+                    </span>
+                </div>
+            </div>
+
+            <!-- END SEARCH BOX: this adds support for the search box -->
+            <ul class="navbar-nav">
+                <li class="nav-header">Links</li>
+                <li class="nav-item" id="fsdocs-license-link"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/LICENSE.md">License</a></li>
+                <li class="nav-item" id="fsdocs-release-notes-link"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
+                <li class="nav-item" id="fsdocs-repository-link"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/">Source Repository</a></li>
+                <li class="nav-header">
+  Documentation
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/technical-notes.html">
+    Technical Notes
+
+  </a>
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/debugging.html">
+    Debugging a Type Provider
+
+  </a>
+</li>
+                <li class="nav-header">
+  API Reference
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/index.html">
+    All Namespaces
+  </a>
+</li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="masthead">
+            <h3 class="muted"><a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/">FSharp.TypeProviders.SDK</a></h3>
+        </div>
+        <hr />
+        <div class="container" id="fsdocs-content">
+            <h1><a name="Debugging-a-Type-Provider" class="anchor" href="#Debugging-a-Type-Provider">Debugging a Type Provider</a></h1>
+<p>Debugging a type provider can be difficult because it is a program run at compile-time and editing-time in host compilation tools including
+<code>fsc.exe</code>, <code>devenv.exe</code> and <code>FsAutoComplete.exe</code>.</p>
+<p>This articule discusses some techniques you can use to debug a type provider when it is run inside these different tools.</p>
+<h2><a name="How-do-I-debug-execution-of-a-type-provider-when-using-NET-SDK-tools" class="anchor" href="#How-do-I-debug-execution-of-a-type-provider-when-using-NET-SDK-tools">How do I debug execution of a type provider when using .NET SDK tools?</a></h2>
+<p>To debug a use of a type provider inside the <code>dotnet</code> toolchain, you should first isolate a precise invocation of the <code>dotnet</code> tool used in compilation.</p>
+<ol>
+<li><p>Capture output of <code>dotnet build -v:n</code> in <code>args.txt</code> and trim out the rubbish leaving just the command line arguments to the F# compiler, usually starting with <code>-o:...</code></p></li>
+<li>Run an explicit invocation of the compiler, checking that your failures still happen, then debug that invocation.</li>
+</ol>
+<p>For example, on Windows:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">"c:\Program Files\dotnet\dotnet.exe" "C:\Program Files\dotnet\sdk\2.1.403\FSharp\fsc.exe" @args.txt
+
+devenv /debugexe "c:\Program Files\dotnet\dotnet.exe" "C:\Program Files\dotnet\sdk\2.1.403\FSharp\fsc.exe" @args.txt
+</code></pre></td></tr></table>
+<p>Be careful to make sure Visual Studio debugging type is set to ".NET Core" (right click properties on dotnet and set debug type). Set first-catch exception handling (Ctrl-Alt-E, select all CLR exceptions) and set Just My Code off.</p>
+<h2><a name="How-do-I-debug-execution-of-a-type-provider-hosted-in-F-Interactive" class="anchor" href="#How-do-I-debug-execution-of-a-type-provider-hosted-in-F-Interactive">How do I debug execution of a type provider hosted in F# Interactive?</a></h2>
+<p>If your failures only happen in F# Interactive then use <code>devenv /debugexe fsi.exe MyProj.fsproj</code>, or a simialr .NET SDK invocation.</p>
+<h2><a name="How-do-I-debug-execution-of-a-type-provider-inside-an-IDE" class="anchor" href="#How-do-I-debug-execution-of-a-type-provider-inside-an-IDE">How do I debug execution of a type provider inside an IDE?</a></h2>
+<p>This can be quite tricky. First try to unit-test the type-provider and debug command-line invocations thoroughly.  If your failures only happen
+in Visual Studio, then use <code>devenv /debugexe devenv.exe MyProj.fsproj</code>, set debug type to  ".NET Framework 4.0"
+and launch F5.</p>
+<h2><a name="How-do-I-debug-execution-of-a-type-provider-when-using-NET-Framework-tools" class="anchor" href="#How-do-I-debug-execution-of-a-type-provider-when-using-NET-Framework-tools">How do I debug execution of a type provider when using .NET Framework tools?</a></h2>
+<p>To debug a use of a type provider inside the <code>msbuild</code> toolchain (.NET Framework), you should first isolate a precise invocation of the <code>dotnet</code> tool used in compilation.</p>
+<ol>
+<li><p>Capture output of <code>msbuild -v:n</code> in <code>args.txt</code> and trim to leave the command line arguments to the F# compiler, usually starting with <code>-o:...</code></p></li>
+<li>Run an explicit invocation of the compiler using this, checking that your failures still happen, then debug that invocation.</li>
+</ol>
+<p>For example, on Windows:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">fsc.exe @args.txt
+
+devenv /debugexe fsc.exe @args.txt
+</code></pre></td></tr></table>
+<p>Set first-catch exception handling (Ctrl-Alt-E, select all CLR exceptions) and set Just My Code off.</p>
+<h2><a name="A-dependency-of-my-type-provider-is-not-loading-what-do-I-do" class="anchor" href="#A-dependency-of-my-type-provider-is-not-loading-what-do-I-do">A dependency of my type provider is not loading, what do I do?</a></h2>
+<p>For example, let's say you have this error in your test project:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">2&gt;E:\GitHub\admin\joe-provider\test\Joe.Test\ProviderTests.fs(8,10): error FS3033: The type provider 'Joe.Provider.JoeProvider' reported an error: Could not load file or assembly 'Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed'. The system cannot find the file specified. [E:\GitHub\dsyme\joe-provider\test\Joe.Test\Joe.Test.fsproj]
+</code></pre></td></tr></table>
+<p>Here your test project is referencing your provider project, and your type provider has a dependency on <code>Newtonsoft.Json.dll</code>. To see what's going on, run</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">dotnet build -v:n
+</code></pre></td></tr></table>
+<p>In the compilation of your test project you will see something like this:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">C:\Program Files\dotnet\dotnet.exe "C:\Program Files\dotnet\sdk\3.1.401\FSharp\fsc.exe"
+    -o:obj\Debug\net5.0\Joe.Test.dll
+    ...
+    -r:E:\GitHub\admin\joe-provider\src\Joe.Provider\bin\Debug\netstandard2.0\Joe.Provider.dll
+    ...
+</code></pre></td></tr></table>
+<ol>
+<li>
+<p>The tool <code>fsc.exe</code> is trying to load the type provider but a dependency is not found.  As mentioned above, all dependencies must be packaged
+alongside your design time component.  For example, adding</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">    &lt;Content Include="..\..\packages\Newtonsoft.Json\lib\netstandard2.0\Newtonsoft.Json.dll" CopyToOutputDirectory="PreserveNewest" /&gt;
+</code></pre></td></tr></table>
+<p>will include the component and unblock you.  However, you will need to be careful to make sure this component is laid down in the right place in your nuget
+package, see the instructions above for what the final layout of the nuget package should be.</p>
+</li>
+<li>When making type providers whose design-time components have dependencies, you should always use a "split" type provider that separates the design-time and runtime components.</li>
+</ol>
+<p>TODO: give exact .fsproj/nuget instructions to get the dependency into the <code>typeproviders\fsharp41\netstandard2.0</code> directory alongside the design-time component.</p>
+
+            
+        </div>
+
+        <!-- BEGIN SEARCH BOX: this adds support for the search box -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.css" />
+        <script type="text/javascript">var fsdocs_search_baseurl = 'https://fsprojects.github.io/FSharp.TypeProviders.SDK/';</script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/JavaScript-autoComplete/1.0.4/auto-complete.min.js"></script>
+        <script type="text/javascript" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-search.js"></script>
+        <!-- END SEARCH BOX: this adds support for the search box -->
+    </div>
+</body>
+
+</html>
