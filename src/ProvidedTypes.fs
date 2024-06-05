@@ -15929,7 +15929,6 @@ namespace ProviderImplementation.ProvidedTypes
         let probingFolders = ResizeArray()
         let handler = ResolveEventHandler(fun _ args -> this.ResolveAssembly(args))
         do AppDomain.CurrentDomain.add_AssemblyResolve handler
-#endif
 
         // By default add the location of the TPDTC assembly (which is assumed to contain this file)
         // as a probing location.
@@ -15937,6 +15936,7 @@ namespace ProviderImplementation.ProvidedTypes
             let thisAssembly = Assembly.GetExecutingAssembly() 
             let folder = thisAssembly.Location |> Path.GetDirectoryName
             probingFolders.Add folder 
+#endif
 
         new (config, namespaceName, types, ?sourceAssemblies, ?assemblyReplacementMap, ?addDefaultProbingLocation) = 
             let sourceAssemblies = defaultArg sourceAssemblies [ Assembly.GetCallingAssembly() ]
