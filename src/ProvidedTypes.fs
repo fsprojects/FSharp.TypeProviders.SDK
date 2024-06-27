@@ -14044,6 +14044,40 @@ namespace ProviderImplementation.ProvidedTypes
         let stringTypeTgt = convTypeToTgt typeof<string>
         let mathTypeTgt = convTypeToTgt typeof<System.Math>
 
+#if FSHARP6
+        let makeTypePattern tp = 
+            let tt = convTypeToTgt tp
+            fun (t : Type) -> if t = tt then ValueSome() else ValueNone
+
+        [<return: Struct>]
+        let (|Bool|_|) = makeTypePattern(typeof<bool>)
+        [<return: Struct>]
+        let (|SByte|_|) = makeTypePattern(typeof<sbyte>)
+        [<return: Struct>]
+        let (|Int16|_|) = makeTypePattern(typeof<int16>)
+        [<return: Struct>]
+        let (|Int32|_|) = makeTypePattern(typeof<int32>)
+        [<return: Struct>]
+        let (|Int64|_|) = makeTypePattern(typeof<int64>)
+        [<return: Struct>]
+        let (|Byte|_|) = makeTypePattern(typeof<byte>)
+        [<return: Struct>]
+        let (|UInt16|_|) = makeTypePattern(typeof<uint16>)
+        [<return: Struct>]
+        let (|UInt32|_|) = makeTypePattern(typeof<uint32>)
+        [<return: Struct>]
+        let (|UInt64|_|) = makeTypePattern(typeof<uint64>)
+        [<return: Struct>]
+        let (|Single|_|) = makeTypePattern(typeof<single>)
+        [<return: Struct>]
+        let (|Double|_|) = makeTypePattern(typeof<double>)
+        [<return: Struct>]
+        let (|Char|_|) = makeTypePattern(typeof<char>)
+        [<return: Struct>]
+        let (|Decimal|_|) = makeTypePattern(typeof<decimal>)
+        [<return: Struct>]
+        let (|String|_|) = makeTypePattern(typeof<string>)
+#else
         let makeTypePattern tp = 
             let tt = convTypeToTgt tp
             fun (t : Type) -> if t = tt then Some() else None
@@ -14062,7 +14096,7 @@ namespace ProviderImplementation.ProvidedTypes
         let (|Char|_|) = makeTypePattern(typeof<char>)
         let (|Decimal|_|) = makeTypePattern(typeof<decimal>)
         let (|String|_|) = makeTypePattern(typeof<string>)
-
+#endif
         let (|StaticMethod|_|) name tps (t : Type) =
             match t.GetMethod(name, BindingFlags.Static ||| BindingFlags.Public, null, tps, null) with 
             | null -> None
@@ -14115,7 +14149,10 @@ namespace ProviderImplementation.ProvidedTypes
                         minfo1 = minfo2) ->
                    Some(args)
                | _ -> None)
- 
+
+#if FSHARP6
+        [<return: Struct>]
+#endif
         let (|NaN|_|) =
             let operatorsType = convTypeToTgt (typedefof<list<_>>.Assembly.GetType("Microsoft.FSharp.Core.Operators"))
             let minfo1 = operatorsType.GetProperty("NaN").GetGetMethod()
@@ -14124,9 +14161,17 @@ namespace ProviderImplementation.ProvidedTypes
                 | Call(None, minfo2, [])
                   when (minfo1.MetadataToken = minfo2.MetadataToken &&
                         minfo1 = minfo2) ->
+#if FSHARP6
+                    ValueSome()
+                | _ -> ValueNone)
+#else
                     Some()
                 | _ -> None)
-            
+#endif
+
+#if FSHARP6
+        [<return: Struct>]
+#endif
         let (|NaNSingle|_|) =
             let operatorsType = convTypeToTgt (typedefof<list<_>>.Assembly.GetType("Microsoft.FSharp.Core.Operators"))
             let minfo1 = operatorsType.GetProperty("NaNSingle").GetGetMethod()
@@ -14135,8 +14180,13 @@ namespace ProviderImplementation.ProvidedTypes
                 | Call(None, minfo2, [])
                   when (minfo1.MetadataToken = minfo2.MetadataToken &&
                         minfo1 = minfo2) ->
+#if FSHARP6
+                    ValueSome()
+                | _ -> ValueNone)
+#else
                     Some()
                 | _ -> None)
+#endif
             
         let (|TypeOf|_|) = (|SpecificCall|_|) <@ typeof<obj> @>
 
