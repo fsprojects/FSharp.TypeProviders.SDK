@@ -8139,13 +8139,13 @@ namespace ProviderImplementation.ProvidedTypes
 
         override x.GetType (nm:string) =
             if nm.Contains("+") then
-                let i = nm.LastIndexOf("+")
+                let i = nm.LastIndexOf '+'
                 let enc, nm2 = nm.[0..i-1], nm.[i+1..]
                 match x.GetType(enc) with
                 | null -> null
                 | t -> t.GetNestedType(nm2, bindAll)
             elif nm.Contains(".") then
-                let i = nm.LastIndexOf(".")
+                let i = nm.LastIndexOf '.'
                 let nsp, nm2 = nm.[0..i-1], nm.[i+1..]
                 x.TryBindType(USome nsp, nm2) |> Option.toObj
             else
@@ -8233,7 +8233,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override x.GetType (nm: string) = 
             if nm.Contains("+") then
-                let i = nm.LastIndexOf("+")
+                let i = nm.LastIndexOf '+'
                 let enc, nm2 = nm.[0..i-1], nm.[i+1..]
                 match x.GetType(enc) with
                 | null -> null
