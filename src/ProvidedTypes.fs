@@ -14044,7 +14044,7 @@ namespace ProviderImplementation.ProvidedTypes
         let stringTypeTgt = convTypeToTgt typeof<string>
         let mathTypeTgt = convTypeToTgt typeof<System.Math>
 
-#if FSHARP6
+#if FSHARP6_OR_GREATER
         let makeTypePattern tp = 
             let tt = convTypeToTgt tp
             fun (t : Type) -> if t = tt then ValueSome() else ValueNone
@@ -14150,7 +14150,7 @@ namespace ProviderImplementation.ProvidedTypes
                    Some(args)
                | _ -> None)
 
-#if FSHARP6
+#if FSHARP6_OR_GREATER
         [<return: Struct>]
 #endif
         let (|NaN|_|) =
@@ -14161,7 +14161,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | Call(None, minfo2, [])
                   when (minfo1.MetadataToken = minfo2.MetadataToken &&
                         minfo1 = minfo2) ->
-#if FSHARP6
+#if FSHARP6_OR_GREATER
                     ValueSome()
                 | _ -> ValueNone)
 #else
@@ -14169,7 +14169,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> None)
 #endif
 
-#if FSHARP6
+#if FSHARP6_OR_GREATER
         [<return: Struct>]
 #endif
         let (|NaNSingle|_|) =
@@ -14180,7 +14180,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | Call(None, minfo2, [])
                   when (minfo1.MetadataToken = minfo2.MetadataToken &&
                         minfo1 = minfo2) ->
-#if FSHARP6
+#if FSHARP6_OR_GREATER
                     ValueSome()
                 | _ -> ValueNone)
 #else
