@@ -11,6 +11,7 @@
     <Tags>F# fsharp typeprovider</Tags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <LangVersion>5.0</LangVersion>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />

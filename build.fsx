@@ -26,7 +26,7 @@ open Fake.IO.Globbing.Operators
 Target.initEnvironment()
 
 let config = DotNet.BuildConfiguration.Release
-let setParams (p:DotNet.BuildOptions) = { p with Configuration = config }
+let setParams (p:DotNet.BuildOptions) = { p with Configuration = config; MSBuildParams = { p.MSBuildParams with DisableInternalBinLog = true } }
 
 let outputPath = Path.Combine(__SOURCE_DIRECTORY__, "bin")
 
@@ -66,7 +66,7 @@ Target.create "RunTests" (fun _ ->
 
 Target.create "Pack" (fun _ ->
     let releaseNotes = String.toLines release.Notes
-    let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config}
+    let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config; MSBuildParams = { p.MSBuildParams with DisableInternalBinLog = true }}
 
     DotNet.pack  (fun p -> { 
         setParams p with 
