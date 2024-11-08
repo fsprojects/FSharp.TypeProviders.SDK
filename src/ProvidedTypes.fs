@@ -14073,7 +14073,7 @@ namespace ProviderImplementation.ProvidedTypes
             |> Array.tryFind 
                 (fun x -> 
                     x.Name = name
-                        && x.ReturnType = returnType 
+                        && Type.(=)(x.ReturnType, returnType)
                         && (x.GetParameters() |> Array.map (fun i -> i.ParameterType)) = tps)
             
 
@@ -14303,13 +14303,13 @@ namespace ProviderImplementation.ProvidedTypes
             let pop () = ilg.Emit(I_pop)
             let popIfEmptyExpected s = if isEmpty s then pop()
             let emitConvIfNecessary t1 =
-                if t1 = typeof<int16> then
+                if Type.(=)(t1, typeof<int16>) then
                     ilg.Emit(I_conv DT_I2)
-                elif t1 = typeof<uint16> then
+                elif Type.(=)(t1, typeof<uint16>) then
                     ilg.Emit(I_conv DT_U2)
-                elif t1 = typeof<sbyte> then
+                elif Type.(=)(t1, typeof<sbyte>) then
                     ilg.Emit(I_conv DT_I1)
-                elif t1 = typeof<byte> then
+                elif Type.(=)(t1, typeof<byte>) then
                     ilg.Emit(I_conv DT_U1)
             /// emits given expression to corresponding IL
             match expr with
@@ -14983,7 +14983,7 @@ namespace ProviderImplementation.ProvidedTypes
                             |> Array.tryFind 
                                 (fun x -> 
                                     x.Name = "op_Explicit"  
-                                        && x.ReturnType = rtTgt 
+                                        && Type.(=)(x.ReturnType, rtTgt)
                                         && (x.GetParameters() |> Array.map (fun i -> i.ParameterType)) = [|t1|])
                         match m with 
                         | None -> 
@@ -15215,7 +15215,7 @@ namespace ProviderImplementation.ProvidedTypes
                 | false, true ->
                         // method produced something, but we don't need it
                         pop()
-                | true, false when expr.Type = typeof<unit> ->
+                | true, false when Type.(=)(expr.Type, typeof<unit>) ->
                         // if we need result and method produce void and result should be unit - push null as unit value on stack
                         ilg.Emit(I_ldnull)
                 | _ -> ()
@@ -15251,7 +15251,7 @@ namespace ProviderImplementation.ProvidedTypes
                     | :? float32 as x -> ilg.Emit(I_ldc (DT_R4, ILConst.R4 x))
                     | :? float as x -> ilg.Emit(I_ldc(DT_R8, ILConst.R8 x))
     #if !FX_NO_GET_ENUM_UNDERLYING_TYPE
-                    | :? Enum as x when x.GetType().GetEnumUnderlyingType() = typeof<int32> -> ilg.Emit(mk_ldc (unbox<int32> v))
+                    | :? Enum as x when Type.(=) (x.GetType().GetEnumUnderlyingType(), typeof<int32>) -> ilg.Emit(mk_ldc (unbox<int32> v))
     #endif
                     | :? Type as ty ->
                         ilg.Emit(I_ldtoken (ILToken.ILType (transType ty)))
