@@ -2210,7 +2210,7 @@ module internal AssemblyReader =
 
         override x.ToString() = x.QualifiedName
 
-    type ILArrayBound = int32 option
+    type ILArrayBound = int32 uoption
     type ILArrayBounds = ILArrayBound * ILArrayBound
 
     [<StructuralEquality; StructuralComparison>]
@@ -2218,11 +2218,11 @@ module internal AssemblyReader =
         | ILArrayShape of ILArrayBounds[] (* lobound/size pairs *)
         member x.Rank = (let (ILArrayShape l) = x in l.Length)
         static member SingleDimensional = ILArrayShapeStatics.SingleDimensional
-        static member FromRank n = if n = 1 then ILArrayShape.SingleDimensional else ILArrayShape(List.replicate n (Some 0, None) |> List.toArray)
+        static member FromRank n = if n = 1 then ILArrayShape.SingleDimensional else ILArrayShape(List.replicate n (USome 0, UNone) |> List.toArray)
 
 
     and ILArrayShapeStatics() =
-        static let singleDimensional = ILArrayShape [| (Some 0, None) |]
+        static let singleDimensional = ILArrayShape [| (USome 0, UNone) |]
         static member SingleDimensional = singleDimensional
 
     /// Calling conventions.  These are used in method pointer types.
@@ -2260,6 +2260,7 @@ module internal AssemblyReader =
         static member Instance = instanceCallConv
         static member Static = staticCallConv
 
+    [<StructuralEquality; StructuralComparison>]
     type ILBoxity =
         | AsObject
         | AsValue
@@ -5810,8 +5811,8 @@ module internal AssemblyReader =
                     let lobounds, sigptr = sigptrFold sigptrGetZInt32 numLoBounded bytes sigptr
                     let shape =
                         let dim i =
-                          (if i <  numLoBounded then Some lobounds.[i] else None), 
-                          (if i <  numSized then Some sizes.[i] else None)
+                          (if i <  numLoBounded then USome lobounds.[i] else UNone), 
+                          (if i <  numSized then USome sizes.[i] else UNone)
                         ILArrayShape (Array.init rank dim)
                     ILType.Array (shape, typ), sigptr
 
@@ -6563,7 +6564,7 @@ module internal AssemblyReader =
                             step()
                         drop()
 
-                        Some(ILArrayShape(Array.create rank (Some 0, None)))
+                        Some(ILArrayShape(Array.create rank (USome 0, UNone)))
                     else
                         None
 
@@ -8136,13 +8137,13 @@ namespace ProviderImplementation.ProvidedTypes
 
         override x.GetType (nm:string) =
             if nm.Contains("+") then
-                let i = nm.LastIndexOf("+")
+                let i = nm.LastIndexOf '+'
                 let enc, nm2 = nm.[0..i-1], nm.[i+1..]
                 match x.GetType(enc) with
                 | null -> null
                 | t -> t.GetNestedType(nm2, bindAll)
             elif nm.Contains(".") then
-                let i = nm.LastIndexOf(".")
+                let i = nm.LastIndexOf '.'
                 let nsp, nm2 = nm.[0..i-1], nm.[i+1..]
                 x.TryBindType(USome nsp, nm2) |> Option.toObj
             else
@@ -8230,7 +8231,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override x.GetType (nm: string) = 
             if nm.Contains("+") then
-                let i = nm.LastIndexOf("+")
+                let i = nm.LastIndexOf '+'
                 let enc, nm2 = nm.[0..i-1], nm.[i+1..]
                 match x.GetType(enc) with
                 | null -> null
@@ -10298,13 +10299,13 @@ namespace ProviderImplementation.ProvidedTypes
 
         // REVIEW: write into an accumuating buffer
         let EmitArrayShape (bb: ByteBuffer) (ILArrayShape shape) = 
-            let sized = Array.filter (function (_, Some _) -> true | _ -> false) shape
-            let lobounded = Array.filter (function (Some _, _) -> true | _ -> false) shape
+            let sized = Array.filter (function (_, USome _) -> true | _ -> false) shape
+            let lobounded = Array.filter (function (USome _, _) -> true | _ -> false) shape
             bb.EmitZ32 shape.Length
             bb.EmitZ32 sized.Length
-            sized |> Array.iter (function (_, Some sz) -> bb.EmitZ32 sz | c -> failwithf "%O ?" c)
+            sized |> Array.iter (function (_, USome sz) -> bb.EmitZ32 sz | c -> failwithf "%O ?" c)
             bb.EmitZ32 lobounded.Length
-            lobounded |> Array.iter (function (Some low, _) -> bb.EmitZ32 low | c -> failwithf "%O ?" c) 
+            lobounded |> Array.iter (function (USome low, _) -> bb.EmitZ32 low | c -> failwithf "%O ?" c) 
                 
         let hasthisToByte hasthis =
              match hasthis with 
@@ -15639,21 +15640,23 @@ namespace ProviderImplementation.ProvidedTypes
                         | :? ProvidedMethod as pminfo when not (methMap.ContainsKey pminfo)  ->
                             let mb = tb.DefineMethod(minfo.Name, minfo.Attributes, transType minfo.ReturnType, [| for p in minfo.GetParameters() -> transType p.ParameterType |])
 
+                            let ctorTy1 = typeof<System.Runtime.InteropServices.DefaultParameterValueAttribute>
+                            let ctor1 = ctorTy1.GetConstructor([|typeof<obj>|])
+                            let ctorTgt1 = context.ConvertSourceConstructorRefToTarget ctor1
+
+                            let ctorTy2 = typeof<System.Runtime.InteropServices.OptionalAttribute>
+                            let ctor2 = ctorTy2.GetConstructor([||])
+                            let ctorTgt2 = context.ConvertSourceConstructorRefToTarget ctor2
+
                             for (i, p) in minfo.GetParameters() |> Seq.mapi (fun i x -> (i, x :?> ProvidedParameter)) do
 
                                 let pb = mb.DefineParameter(i+1, p.Attributes, p.Name)
                                 if p.HasDefaultParameterValue then
-                                    let ctorTy = typeof<System.Runtime.InteropServices.DefaultParameterValueAttribute>
-                                    let ctor = ctorTy.GetConstructor([|typeof<obj>|])
-                                    let ctorTgt = context.ConvertSourceConstructorRefToTarget ctor
 
-                                    let ca = mkILCustomAttribMethRef (transCtorSpec ctorTgt, [p.RawDefaultValue], [], [])
+                                    let ca = mkILCustomAttribMethRef (transCtorSpec ctorTgt1, [p.RawDefaultValue], [], [])
                                     pb.SetCustomAttribute ca
 
-                                    let ctorTy = typeof<System.Runtime.InteropServices.OptionalAttribute>
-                                    let ctor = ctorTy.GetConstructor([||])
-                                    let ctorTgt = context.ConvertSourceConstructorRefToTarget ctor
-                                    let ca = mkILCustomAttribMethRef (transCtorSpec ctorTgt, [], [], [])
+                                    let ca = mkILCustomAttribMethRef (transCtorSpec ctorTgt2, [], [], [])
                                     pb.SetCustomAttribute ca
 
                                     pb.SetConstant p.RawDefaultValue
