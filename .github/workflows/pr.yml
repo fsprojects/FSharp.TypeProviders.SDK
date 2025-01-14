@@ -24,6 +24,16 @@ jobs:
       with:
         dotnet-version: ${{ matrix.dotnet }}
 
+    - name: Setup .NET Core 6
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 6.0.425
+
+    - name: Setup .NET Core 8
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 8.0.400
+
     - name: Build on Windows
       if: matrix.os == 'windows-latest'
       run: .\build.cmd
