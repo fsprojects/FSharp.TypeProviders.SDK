@@ -5,7 +5,7 @@ that runs at runtime. F# type providers are hosted by applications using FSharp.
 
 First, some terminology: 
 
-* The **Type Provider Run Time Component (TPRTC)** is the component referenced by ``#r`` or ``-r:`` on the command line or other configration of a host tool, e.g. ``FSharp.Data.dll``.
+* The **Type Provider Run Time Component (TPRTC)** is the component referenced by ``#r`` or ``-r:`` on the command line or other configuration of a host tool, e.g. ``FSharp.Data.dll``.
 
 * The **Type Provider Design Time Component (TPDTC)**, e.g. ``FSharp.Data.DesignTime.dll`` is the DLL that gets loaded into host tools.
 
@@ -51,7 +51,7 @@ Here are some examples of existing type providers that aren't too bad (they are 
 
 ## Nuget package layout
 
-The nuget package layout of a type provider follows these rules:
+The Nuget package layout of a type provider follows these rules:
 
 1. The TPRTCs go under `lib`
 2. The TPDTC goes under `typeproviders/fsharp41`
@@ -80,7 +80,7 @@ Runtime dependencies are often the same as design time dependencies for simple t
 
 These dependencies are packaged and managed differently 
 
-* The runtime dependencies are normal nuget package dependencies just like any normal .NET library. For example, if your type provider has Newtonsoft.Json as a runtime
+* The runtime dependencies are normal Nuget package dependencies just like any normal .NET library. For example, if your type provider has Newtonsoft.Json as a runtime
   dependency then your nuget package should list this a normal nuget dependency.
 
 * The design dependencies must all be bundled alongside your design-time DLL.  The design-time component is a component loaded into a tool like Ionide or
@@ -96,11 +96,11 @@ Each time the host application (e.g. devenv.exe) checks a file using type provid
 
 * The F# compiler service doesn't try to cache these (except where it caches the TAST structures that results of checking a file or project).
 
-* Individual type providers may use caching of some kind, returning previous provided types when the type provider is instantiated the same way.  Care should be taken that these caches do not permanently occupy resources
+* Individual type providers may use caching of some kind, returning previously provided types when the type provider is instantiated the same way.  Care should be taken that these caches do not permanently occupy resources
 
-* Under the hood, the majority of resources used by a TP instantiation are those required to "map" the generated types to the referenced assemblies.  To support this, each TP Instantiation creates one ILModuleReader for each referenced assembly. When the compiler is used as a service, the natural (minimal)  lifetime of a ILModuleReader is the same as its TP Instanatiation.  The TPSDK may share these resources.
+* Under the hood, the majority of resources used by a TP instantiation are those required to "map" the generated types to the referenced assemblies.  To support this, each TP Instantiation creates one ILModuleReader for each referenced assembly. When the compiler is used as a service, the natural (minimal)  lifetime of an ILModuleReader is the same as its TP Instantiation.  The TPSDK may share these resources.
 
-* The natural (i.e. minimal) lifetime of a TP Instantiation and its related objects (ProvidedType ProvidedMethodInfo etc. etc. ) is the same as the TAST structures which refer these things (TProvidedTypeInfo, MethInfo, FieldInfo from infos.fs).
+* The natural (i.e. minimal) lifetime of a TP Instantiation and its related objects (ProvidedType ProvidedMethodInfo etc. etc. ) is the same as the TAST structures which refer to these things (TProvidedTypeInfo, MethInfo, FieldInfo from infos.fs).
 
 The lifetime of TAST structures is as long as they are held in the IncrementalBuilder, or you hold on to FSharpCheckFileResults, or FSharpCheckProjectResults, or FSharpAssemblyContents.  
 

@@ -9,7 +9,7 @@ dotnet new -i FSharp.TypeProviders.Templates
 dotnet new typeprovider -n LemonadeProvider -lang F#
 ```
 
-The template uses paket to acquire the files of the latest published type provider SDK.
+The template uses Paket to acquire the files of the latest published type provider SDK.
 
 ```text
 cd LemonadeProvider
@@ -29,7 +29,7 @@ dotnet paket pack nuget --version 0.0.1
 
 ## Examples
 
-See examples the [`examples`](https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/examples) directory.
+See examples in the [`examples`](https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/examples) directory.
 
 ## Debugging Type Providers
 
@@ -41,7 +41,7 @@ See [Technical Notes](technical-notes.html)
 
 ## Experimental: Using the NuGet Package
 
-You can use the TypeProvider SDK via a nuget package instead of by source inclusion. To enable this, use settings like these in the design-time component:
+You can use the TypeProvider SDK via a NuGet package instead of by source inclusion. To enable this, use settings like these in the design-time component:
 
 ```xml
     <PackageReference Include="FSharp.TypeProviders.SDK" Version="7.0.3">

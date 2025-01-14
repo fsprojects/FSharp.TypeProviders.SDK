@@ -3,13 +3,13 @@
 Debugging a type provider can be difficult because it is a program run at compile-time and editing-time in host compilation tools including
 `fsc.exe`, `devenv.exe` and `FsAutoComplete.exe`.
 
-This articule discusses some techniques you can use to debug a type provider when it is run inside these different tools.
+This article discusses some techniques you can use to debug a type provider when it is run inside these different tools.
 
-## How do I debug execution of a type provider when using .NET SDK tools?
+## How do I debug the execution of a type provider when using .NET SDK tools?
 
-To debug a use of a type provider inside the `dotnet` toolchain, you should first isolate a precise invocation of the `dotnet` tool used in compilation.
+To debug the use of a type provider inside the `dotnet` toolchain, you should first isolate a precise invocation of the `dotnet` tool used in compilation.
 
-1. Capture output of `dotnet build -v:n` in `args.txt` and trim out the rubbish leaving just the command line arguments to the F# compiler, usually starting with `-o:...`
+1. Capture the output of `dotnet build -v:n` in `args.txt` and trim out the rubbish, leaving just the command line arguments to the F# compiler, usually starting with `-o:...`
 
 2. Run an explicit invocation of the compiler, checking that your failures still happen, then debug that invocation.
 
@@ -23,21 +23,21 @@ devenv /debugexe "c:\Program Files\dotnet\dotnet.exe" "C:\Program Files\dotnet\s
 
 Be careful to make sure Visual Studio debugging type is set to ".NET Core" (right click properties on dotnet and set debug type). Set first-catch exception handling (Ctrl-Alt-E, select all CLR exceptions) and set Just My Code off.
 
-## How do I debug execution of a type provider hosted in F# Interactive?
+## How do I debug the execution of a type provider hosted in F# Interactive?
 
 If your failures only happen in F# Interactive then use `devenv /debugexe fsi.exe MyProj.fsproj`, or a simialr .NET SDK invocation.
 
-## How do I debug execution of a type provider inside an IDE?
+## How do I debug the execution of a type provider inside an IDE?
 
 This can be quite tricky. First try to unit-test the type-provider and debug command-line invocations thoroughly.  If your failures only happen
 in Visual Studio, then use `devenv /debugexe devenv.exe MyProj.fsproj`, set debug type to  ".NET Framework 4.0"
 and launch F5.
 
-## How do I debug execution of a type provider when using .NET Framework tools?
+## How do I debug the execution of a type provider when using .NET Framework tools?
 
-To debug a use of a type provider inside the `msbuild` toolchain (.NET Framework), you should first isolate a precise invocation of the `dotnet` tool used in compilation.
+To debug the use of a type provider inside the `msbuild` toolchain (.NET Framework), you should first isolate a precise invocation of the `dotnet` tool used in compilation.
 
-1. Capture output of `msbuild -v:n` in `args.txt` and trim to leave the command line arguments to the F# compiler, usually starting with `-o:...`
+1. Capture the output of `msbuild -v:n` in `args.txt` and trim to leave the command line arguments to the F# compiler, usually starting with `-o:...`
 
 2. Run an explicit invocation of the compiler using this, checking that your failures still happen, then debug that invocation.
 
