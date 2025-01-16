@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-22.04]
         dotnet: [5.0.400]
     runs-on: ${{ matrix.os }}
 
@@ -37,10 +37,6 @@ jobs:
     - name: Build on Windows
       if: matrix.os == 'windows-latest'
       run: .\build.cmd
-
-    - name: Unix install libssl
-      if: matrix.os != 'windows-latest'
-      run: sudo apt-get install -y libssl-dev
 
     - name: Build on Unix
       if: matrix.os != 'windows-latest'
