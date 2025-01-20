@@ -1725,8 +1725,8 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     override __.GetElementType() = notRequired this "Module" this.Name
     override __.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "Module" this.Name
     override __.AssemblyQualifiedName = notRequired this "Module" this.Name
-    // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
-    override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
+    // Needed because TypeDelegator.cs provides a delegating implementation of this, and we are self-delegating
+    override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegating implementation of this, and we are self-delegating
 
     // Get the model
     member __.BelongsToTargetModel = isTgt
@@ -5897,12 +5897,12 @@ module internal AssemblyReader =
 
             and byteAsCallConv b =
                 let cc =
-                    let ccMaxked = b &&& 0x0Fuy
-                    if ccMaxked =  e_IMAGE_CEE_CS_CALLCONV_FASTCALL then ILArgConvention.FastCall
-                    elif ccMaxked = e_IMAGE_CEE_CS_CALLCONV_STDCALL then ILArgConvention.StdCall
-                    elif ccMaxked = e_IMAGE_CEE_CS_CALLCONV_THISCALL then ILArgConvention.ThisCall
-                    elif ccMaxked = e_IMAGE_CEE_CS_CALLCONV_CDECL then ILArgConvention.CDecl
-                    elif ccMaxked = e_IMAGE_CEE_CS_CALLCONV_VARARG then ILArgConvention.VarArg
+                    let ccMasked = b &&& 0x0Fuy
+                    if ccMasked =  e_IMAGE_CEE_CS_CALLCONV_FASTCALL then ILArgConvention.FastCall
+                    elif ccMasked = e_IMAGE_CEE_CS_CALLCONV_STDCALL then ILArgConvention.StdCall
+                    elif ccMasked = e_IMAGE_CEE_CS_CALLCONV_THISCALL then ILArgConvention.ThisCall
+                    elif ccMasked = e_IMAGE_CEE_CS_CALLCONV_CDECL then ILArgConvention.CDecl
+                    elif ccMasked = e_IMAGE_CEE_CS_CALLCONV_VARARG then ILArgConvention.VarArg
                     else  ILArgConvention.Default
                 let generic = (b &&& e_IMAGE_CEE_CS_CALLCONV_GENERIC) <> 0x0uy
                 generic, Callconv (byteAsHasThis b, cc)
@@ -6602,7 +6602,7 @@ module internal AssemblyReader =
                     | None -> [| |]
                     | Some(genericArgs) -> genericArgs
                 let tspec = ILTypeSpec(tref, genericArgs)
-                let ilty =
+                let ilTy =
                     match tspec.Name with
                     | "System.SByte"
                     | "System.Byte"
@@ -6620,8 +6620,8 @@ module internal AssemblyReader =
 
                 // if it's an array, wrap it - otherwise, just return the IL type
                 match rank with
-                | Some(r) -> ILType.Array(r, ilty)
-                | _ -> ilty
+                | Some(r) -> ILType.Array(r, ilTy)
+                | _ -> ilTy
 
 
         let sigptr_get_bytes n (bytes:byte[]) sigptr =
@@ -7539,7 +7539,7 @@ namespace ProviderImplementation.ProvidedTypes
         override this.MakePointerType() = TypeSymbol(TypeSymbolKind.Pointer, [| this |], typeBuilder) :> Type
         override this.MakeByRefType() = TypeSymbol(TypeSymbolKind.ByRef, [| this |], typeBuilder) :> Type
 
-        override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
+        override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegating implementation of this, and we are self-delegating
         override this.ToString() = this.FullName
 
 
@@ -7616,7 +7616,7 @@ namespace ProviderImplementation.ProvidedTypes
         override this.Module = notRequired this "txILGenericParam: Module" this.Name: Module 
         override this.GetElementType() = notRequired this "txILGenericParam: GetElementType" this.Name
         override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "txILGenericParam: InvokeMember" this.Name
-        override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
+        override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegating implementation of this, and we are self-delegating
 
     /// Clones namespaces, type providers, types and members provided by tp, renaming namespace nsp1 into namespace nsp2.
 
@@ -8030,7 +8030,7 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetEnumUnderlyingType() =
             if this.IsEnum then
-                txILType ([| |], [| |]) ilGlobals.typ_Int32 // TODO: in theory the assumption of "Int32" is not accurate for all enums, howver in practice .NET only uses enums with backing field Int32
+                txILType ([| |], [| |]) ilGlobals.typ_Int32 // TODO: in theory the assumption of "Int32" is not accurate for all enums, however in practice .NET only uses enums with backing field Int32
             else failwithf "not enum type %O" this
 
         override __.IsArrayImpl() = false
@@ -8078,7 +8078,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.MakeEventInfo (declTy: Type) md = txILEventDef declTy md
         member __.MakeFieldInfo (declTy: Type) md = txILFieldDef declTy md
         member __.MakeNestedTypeInfo (declTy: Type) md =  asm.TxILTypeDef (Some declTy) md
-        override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
+        override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegating implementation of this, and we are self-delegating
 #if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
         // See bug https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/236
         override __.IsSZArray = false
@@ -9336,7 +9336,7 @@ namespace ProviderImplementation.ProvidedTypes
             | ShapeVarUnchecked v ->
                 Expr.Var (convVarToTgt v)
             | ShapeLambdaUnchecked _ as d ->
-                failwithf "It's not possible to use construct %O when cross targetting to a different FSharp.Core. Make sure you're not calling a function with signature A->(B->C) instead of A->B->C (using |> causes this)." d
+                failwithf "It's not possible to use construct %O when cross targeting to a different FSharp.Core. Make sure you're not calling a function with signature A->(B->C) instead of A->B->C (using |> causes this)." d
             | ShapeCombinationUnchecked (o, exprs) ->
                 RebuildShapeCombinationUnchecked (o, List.map convExprToTgt exprs)
 
@@ -10364,8 +10364,6 @@ namespace ProviderImplementation.ProvidedTypes
         and EmitType cenv env bb ty =
             match ty with 
             | ElementType et ->   bb.EmitByte et
-            | _ ->
-            match ty with 
             | ILType.Boxed tspec ->  EmitTypeSpec cenv env bb (et_CLASS, tspec)
             | ILType.Value tspec ->  EmitTypeSpec cenv env bb (et_VALUETYPE, tspec)
             | ILType.Array (shape, ty) ->  
@@ -10677,7 +10675,7 @@ namespace ProviderImplementation.ProvidedTypes
         // -------------------------------------------------------------------- 
         // ILMethodRef --> ILMethodDef.  
         // 
-        // Only successfuly converts ILMethodRef's referring to 
+        // Only successfully converts ILMethodRef's referring to 
         // methods in the module being emitted.
         // -------------------------------------------------------------------- 
 
@@ -12277,7 +12275,7 @@ namespace ProviderImplementation.ProvidedTypes
         // manifest --> generate Assembly row
         // -------------------------------------------------------------------- 
 
-        and GetManifsetAsAssemblyRow cenv m = 
+        and GetManifestAsAssemblyRow cenv m = 
             UnsharedRow 
                 [|ULong m.AuxModuleHashAlgorithm
                   UShort (match m.Version with UNone -> 0us | USome v -> uint16 v.Major)
@@ -12302,7 +12300,7 @@ namespace ProviderImplementation.ProvidedTypes
                   (match m.Locale with UNone -> StringE 0 | USome x -> StringE (GetStringHeapIdx cenv x)) |]
 
         and GenManifestPass3 cenv m = 
-            let aidx = AddUnsharedRow cenv ILTableNames.Assembly (GetManifsetAsAssemblyRow cenv m)
+            let aidx = AddUnsharedRow cenv ILTableNames.Assembly (GetManifestAsAssemblyRow cenv m)
 #if EMIT_SECURITY_DECLS
             GenSecurityDeclsPass3 cenv (hds_Assembly, aidx) m.SecurityDecls.Entries
 #endif
@@ -14280,8 +14278,8 @@ namespace ProviderImplementation.ProvidedTypes
 
             let unitType = transType (convTypeToTgt (typeof<unit>))
             let expectedState = if (retType = ILType.Void || retType.QualifiedName = unitType.QualifiedName) then ExpectedStackState.Empty else ExpectedStackState.Value
-            let lambadParamVars = [| Var("this", typeof<obj>); v|]
-            let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, lambdaLocals, lambadParamVars)
+            let lambdaParamVars = [| Var("this", typeof<obj>); v|]
+            let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, lambdaLocals, lambdaParamVars)
             codeGen.EmitExpr (expectedState, body)
             if retType.QualifiedName = unitType.QualifiedName then 
                 ilg.Emit(I_ldnull)
@@ -14310,7 +14308,7 @@ namespace ProviderImplementation.ProvidedTypes
                     ilg.Emit(I_conv DT_I1)
                 elif Type.(=)(t1, typeof<byte>) then
                     ilg.Emit(I_conv DT_U1)
-            /// emits given expression to corresponding IL
+            // emits given expression to corresponding IL
             match expr with
             | ForIntegerRangeLoop(loopVar, first, last, body) ->
                 // for(loopVar = first..last) body
@@ -15682,14 +15680,14 @@ namespace ProviderImplementation.ProvidedTypes
                         |> Seq.choose (function :? ProvidedConstructor as pcinfo when not pcinfo.IsTypeInitializer -> Some pcinfo | _ -> None)
                         |> Seq.toList
 
-                    let implictCtorArgs =
+                    let implicitCtorArgs =
                         match ctors  |> List.filter (fun x -> x.IsImplicitConstructor)  with
                         | [] -> []
                         | [ pcinfo ] -> [ for p in pcinfo.GetParameters() -> p ]
                         | _ -> failwith "at most one implicit constructor allowed"
 
                     let implicitCtorArgsAsFields =
-                        [ for ctorArg in implictCtorArgs ->
+                        [ for ctorArg in implicitCtorArgs ->
                               tb.DefineField(ctorArg.Name, transType ctorArg.ParameterType, FieldAttributes.Private) ]
 
 
