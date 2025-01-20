@@ -177,7 +177,7 @@ module Utils =
             let gtype = typedefof<Attributes<_>>.MakeGenericType([| typ |])
             // the Empty member is private due to the presence of the fsi file
             // but when getting rid of the fsi for diagnostic purpose, it becomes public
-            // this is the reason for having both Public and NonPublic flag bellow
+            // this is the reason for having both Public and NonPublic flag below
             let gmethod = gtype.GetMethod("Empty", BindingFlags.Static ||| BindingFlags.Public ||| BindingFlags.NonPublic)
             gmethod.Invoke(null, [||]) :?> obj array
 
@@ -322,7 +322,7 @@ module Utils =
 //
 //   - However, these quotation values are a bit fragile. Using existing FSharp.Core.Quotations.Patterns
 //     active patterns on these quotation nodes will generally work correctly. But using ExprShape.RebuildShapeCombination
-//     on these new nodes will not succed, nor will operations that build new quotations such as Expr.Call.
+//     on these new nodes will not succeed, nor will operations that build new quotations such as Expr.Call.
 //     Instead, use the replacement provided in this module.
 //
 //   - Likewise, some operations in these quotation values like "expr.Type" may be a bit fragile, possibly returning non cross-targeted types in
@@ -774,7 +774,7 @@ type ProvidedTypeSymbol(kind: ProvidedTypeSymbolKind, typeArgs: Type list, typeB
         | ProvidedTypeSymbolKind.Generic gty  -> gty.MetadataToken
         | ProvidedTypeSymbolKind.FSharpTypeAbbreviation _ -> typeof<obj>.MetadataToken
 
-    override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegting implementation of this, and we are self-delegating
+    override this.GetEvents() = this.GetEvents(BindingFlags.Public ||| BindingFlags.Instance ||| BindingFlags.Static) // Needed because TypeDelegator.cs provides a delegating implementation of this, and we are self-delegating
 
     override this.ToString() = this.FullName
 
@@ -888,12 +888,12 @@ module Misc =
         let mutable hasReflectedDefinition = false
 
         // XML doc text that we only compute once, if any. This must _not_ be forced until the ConstructorArguments
-        // property of the custom attribute is foced.
+        // property of the custom attribute is forced.
         let xmlDocDelayedText =
             lazy
                 (match xmlDocDelayed with None -> assert false; "" | Some f -> f())
 
-        // Custom atttributes that we only compute once
+        // Custom attributes that we only compute once
         let customAttributesOnce =
             lazy
                 [|
@@ -1912,7 +1912,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
 // AssemblyReader for ProvidedTypesContext
 //
 // A lightweight .NET assembly reader that fits in a single F# file.  Based on the well-tested Abstract IL
-// binary reader code.  Used by the type provider to read referenced asssemblies.
+// binary reader code.  Used by the type provider to read referenced assemblies.
 
 module internal AssemblyReader =
 
@@ -4755,8 +4755,8 @@ module internal AssemblyReader =
             let subsys = seekReadUInt16 is (peOptionalHeaderPhysLoc + 68)   (* SubSystem Subsystem required to run this image. Shall be either IMAGE_SUBSYSTEM_WINDOWS_CE_GUI (!0x3) or IMAGE_SUBSYSTEM_WINDOWS_GUI (!0x2). QUERY: Why is this 3 on the images ILASM produces??? *)
             let useHighEntropyVA =
                 let n = seekReadUInt16 is (peOptionalHeaderPhysLoc + 70)
-                let highEnthropyVA = 0x20us
-                (n &&& highEnthropyVA) = highEnthropyVA
+                let highEntropyVA = 0x20us
+                (n &&& highEntropyVA) = highEntropyVA
 
              (* x86: 000000e0 *)
              (* x86: 000000f0, x64: 00000100 *)
@@ -6894,7 +6894,7 @@ namespace ProviderImplementation.ProvidedTypes
     // implementation must support the operations used by the F# compiler to interrogate the reflection objects.
     //
     //     For a System.Assembly, the information must be sufficient to allow the Assembly --> ILScopeRef conversion
-    //     in ExtensionTyping.fs of the F# compiler. This requires:
+    //     in TypeProviders.fs of the F# compiler. This requires:
     //         Assembly.GetName()
     //
     //     For a System.Type representing a reference to a named type definition, the information must be sufficient
@@ -10297,7 +10297,7 @@ namespace ProviderImplementation.ProvidedTypes
                 else failwith "getTypeDefOrRefAsUncodedToken"
             getUncodedToken tab idx
 
-        // REVIEW: write into an accumuating buffer
+        // REVIEW: write into an accumulating buffer
         let EmitArrayShape (bb: ByteBuffer) (ILArrayShape shape) = 
             let sized = Array.filter (function (_, USome _) -> true | _ -> false) shape
             let lobounded = Array.filter (function (USome _, _) -> true | _ -> false) shape
@@ -10325,7 +10325,7 @@ namespace ProviderImplementation.ProvidedTypes
             | ILArgConvention.VarArg -> e_IMAGE_CEE_CS_CALLCONV_VARARG)
           
 
-        // REVIEW: write into an accumuating buffer
+        // REVIEW: write into an accumulating buffer
         let rec EmitTypeSpec cenv env (bb: ByteBuffer) (et, tspec:ILTypeSpec) = 
             if isEmpty tspec.GenericArgs then 
                 bb.EmitByte et
@@ -10437,7 +10437,7 @@ namespace ProviderImplementation.ProvidedTypes
         let rec GetFieldInitAsBlobIdx cenv (x:ILFieldInit) = 
             GetBytesAsBlobIdx cenv (emitBytesViaBuffer (fun bb -> GetFieldInit bb x))
 
-        // REVIEW: write into an accumuating buffer
+        // REVIEW: write into an accumulating buffer
         and GetFieldInit (bb: ByteBuffer) x = 
             match x with 
             | :? string as b -> bb.EmitBytes (Encoding.Unicode.GetBytes b)
@@ -10498,7 +10498,7 @@ namespace ProviderImplementation.ProvidedTypes
             | ILTypeDefAccess.Nested ILMemberAccess.FamilyAndAssembly -> 0x00000006
             | ILTypeDefAccess.Nested ILMemberAccess.FamilyOrAssembly -> 0x00000007
             | ILTypeDefAccess.Nested ILMemberAccess.Assembly -> 0x00000005
-            | ILTypeDefAccess.Nested ILMemberAccess.CompilerControlled -> failwith "bad type acccess"
+            | ILTypeDefAccess.Nested ILMemberAccess.CompilerControlled -> failwith "bad type access"
 
         let rec GetTypeDefAsRow cenv env _enc (td:ILTypeDef) = 
             let nselem, nelem = GetTypeNameAsElemPair cenv (td.Namespace, td.Name)
@@ -10858,7 +10858,7 @@ namespace ProviderImplementation.ProvidedTypes
             let fenv = envForFieldSpec fspec
             FindOrAddSharedRow cenv ILTableNames.MemberRef (GetFieldSpecAsMemberRefRow cenv env fenv fspec)
 
-        // REVIEW: write into an accumuating buffer
+        // REVIEW: write into an accumulating buffer
         and EmitFieldSpecSig cenv env (bb: ByteBuffer) (fspec:ILFieldSpec) = 
             bb.EmitByte e_IMAGE_CEE_CS_CALLCONV_FIELD
             EmitType cenv env bb fspec.FormalType
@@ -12491,7 +12491,7 @@ namespace ProviderImplementation.ProvidedTypes
             let pdbData = ()
 #endif
 
-            let idxForNextedTypeDef (tds:ILTypeDef list, td:ILTypeDef) =
+            let idxForNestedTypeDef (tds:ILTypeDef list, td:ILTypeDef) =
                 let enc = tds |> List.map (fun td -> td.Name)
                 GetIdxForTypeDef cenv (TdKey(enc, td.Namespace, td.Name))
 
@@ -12504,18 +12504,18 @@ namespace ProviderImplementation.ProvidedTypes
             // turn idx tbls into token maps 
             let mappings =
              { TypeDefTokenMap = (fun t ->
-                getUncodedToken ILTableNames.TypeDef (idxForNextedTypeDef t))
+                getUncodedToken ILTableNames.TypeDef (idxForNestedTypeDef t))
                FieldDefTokenMap = (fun t fd ->
-                let tidx = idxForNextedTypeDef t
+                let tidx = idxForNestedTypeDef t
                 getUncodedToken ILTableNames.Field (GetFieldDefAsFieldDefIdx cenv tidx fd))
                MethodDefTokenMap = (fun t md ->
-                let tidx = idxForNextedTypeDef t
+                let tidx = idxForNestedTypeDef t
                 getUncodedToken ILTableNames.Method (FindMethodDefIdx cenv (GetKeyForMethodDef tidx md)))
                PropertyTokenMap = (fun t pd ->
-                let tidx = idxForNextedTypeDef t
+                let tidx = idxForNestedTypeDef t
                 getUncodedToken ILTableNames.Property (cenv.propertyDefs.GetTableEntry (GetKeyForPropertyDef tidx pd)))
                EventTokenMap = (fun t ed ->
-                let tidx = idxForNextedTypeDef t
+                let tidx = idxForNestedTypeDef t
                 getUncodedToken ILTableNames.Event (cenv.eventDefs.GetTableEntry (EventKey (tidx, ed.Name)))) }
             // New return the results 
             let data = cenv.data.Close()
@@ -13263,7 +13263,7 @@ namespace ProviderImplementation.ProvidedTypes
                       let timestamp = int final.[16] ||| (int final.[17] <<< 8) ||| (int final.[18] <<< 16) ||| (int (final.[19] ||| 128uy) <<< 24) 
                       writeInt32 os timestamp
                       // Update pdbData with new guid and timestamp.  Portable and embedded PDBs don't need the ModuleID
-                      // Full and PdbOnly aren't supported under deterministic builds currently, they rely on non-determinsitic Windows native code
+                      // Full and PdbOnly aren't supported under deterministic builds currently, they rely on non-deterministic Windows native code
                       { pdbData with ModuleID = final.[0..15] ; Timestamp = timestamp }
                     else
                       writeInt32 os timestamp   // date since 1970
