@@ -1,100 +1,135 @@
+#### 8.1.0 - January 21, 2025
+
+- Performance optimizations #406, #411
+- Fix typing corrections #414, #410
+- Remove AutoOpen from ILTableName #412
+- Remove warning about patter discard not allowed for union case that takes no data #401
+- Update hardcoded units of measure #394
+- Fix MakeGenericType fallback #393
+- Remove unnecessary pattern discards #392
+- Fixes to allow TPs to have references, also notes on using the nuget package #389
+- Building with .NET 8 compiler and new FAKE and Paket #409
+- FSharpLint as .NET tool #398
+- Fix Ubuntu builds #413
+
 #### 8.0.2 - August 17, 2022
-* [Fixes to allow TPs to have references, also notes on using the nuget package](https://github.com/fsprojects/FSharp.TypeProviders.SDK/pull/389)
+
+- [Fixes to allow TPs to have references, also notes on using the nuget package](https://github.com/fsprojects/FSharp.TypeProviders.SDK/pull/389)
 
 #### 8.0.1 - August 17, 2022
-* [Workaround for target assemblies where packages with transitive references contain type providers ](https://github.com/fsprojects/FSharp.TypeProviders.SDK/pull/388)
+
+- [Workaround for target assemblies where packages with transitive references contain type providers](https://github.com/fsprojects/FSharp.TypeProviders.SDK/pull/388)
 
 #### 7.0.3 - September 22, 2021
-* Fix template .NET version in global.json
+
+- Fix template .NET version in global.json
 
 #### 7.0.2 - September 22, 2021
-* Fix template paket version
+
+- Fix template paket version
 
 #### 7.0.1 - September 21, 2021
-* Allow both netstandard2.0 and netstandard2.1
+
+- Allow both netstandard2.0 and netstandard2.1
 
 #### 7.0.0 - September 21, 2021
-* Updated packages
-* Moved to netstandard2.1
-* Nuget includes ProvidedTypes.fs/fsi source in "src/"
+
+- Updated packages
+- Moved to netstandard2.1
+- Nuget includes ProvidedTypes.fs/fsi source in "src/"
 
 #### 6.0.0 - December 24, 2019
-* Template migrated to .NET Core 3.1 
+
+- Template migrated to .NET Core 3.1
 
 #### 5.0.0 - September 17, 2018
-* Addition of template pack
-* Many bug fixes
+
+- Addition of template pack
+- Many bug fixes
 
 #### 4.1.0 - October 24 2017
-* Many improvemnts to the implementation of type mapping
-* Remove Default on ProvidedMeasureBuilder and make members static
+
+- Many improvemnts to the implementation of type mapping
+- Remove Default on ProvidedMeasureBuilder and make members static
 
 #### 4.0.0 - October 17 2017
-* Config parameter new passed to ``TypeProviderForNamespaces``, i.e. ``inherit TypeProviderForNamespaces(config)``
-* ProvidedTypesContext now internal to ``TypeProviderForNamespaces``.  You can access it using ``this.TargetContext`` in the ``TypeProviderForNamespaces`` object
-* Calls such as ``ctxt.ProvidedTypeDefinition(...)`` become just ``ProvidedTypeDefinition`` once again
-* ``ProvidedLiteralField`` --> ``ProvidedField.Literal``
-* Bug fixes to context translation based on further testing
-* ``ProvidedTypesContext.MakeGenericType`` --> ``ProvidedTypeBuilder.MakeGenericType``
-* ``ProvidedTypesContext.MakeGenericMethod`` --> ``ProvidedTypeBuilder.MakeGenericMethod``
-* More internal consistency checking of translation, better diagnostics
-* Some getters removed from public API.
-* ``IsImplicitCtor`` --> ``IsImplicitConstructor``
-* ``ProvidedTypeDefinition.Logger`` removed
-* ``TryBindAssembly*`` --> ``TryBindTargetAssembly*``
-* ``RegisterGenerated`` --> ``RegisterGeneratedTargetAssembly``
-* ``tp.TargetContext`` added to access the target context of referenced assemblies
 
+- Config parameter new passed to `TypeProviderForNamespaces`, i.e. `inherit TypeProviderForNamespaces(config)`
+- ProvidedTypesContext now internal to `TypeProviderForNamespaces`. You can access it using `this.TargetContext` in the `TypeProviderForNamespaces` object
+- Calls such as `ctxt.ProvidedTypeDefinition(...)` become just `ProvidedTypeDefinition` once again
+- `ProvidedLiteralField` --> `ProvidedField.Literal`
+- Bug fixes to context translation based on further testing
+- `ProvidedTypesContext.MakeGenericType` --> `ProvidedTypeBuilder.MakeGenericType`
+- `ProvidedTypesContext.MakeGenericMethod` --> `ProvidedTypeBuilder.MakeGenericMethod`
+- More internal consistency checking of translation, better diagnostics
+- Some getters removed from public API.
+- `IsImplicitCtor` --> `IsImplicitConstructor`
+- `ProvidedTypeDefinition.Logger` removed
+- `TryBindAssembly*` --> `TryBindTargetAssembly*`
+- `RegisterGenerated` --> `RegisterGeneratedTargetAssembly`
+- `tp.TargetContext` added to access the target context of referenced assemblies
 
 #### 3.0.1 - October 1 2017
-* Cross-targeting for generative type providers, and reimplement binary reader 
+
+- Cross-targeting for generative type providers, and reimplement binary reader
 
 #### 3.0.0 - October 9 2017
-* All type providers now use a ProvidedTypesContext, e.g.
-     let ctxt = ProvidedTypesContext.Create(config)
-     ...
-     let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-    ...
+
+- All type providers now use a ProvidedTypesContext, e.g.
+  let ctxt = ProvidedTypesContext.Create(config)
+  ...
+  let myType = ctxt.ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+  ...
   There are no more direct constructors for ProvidedTypeDefinition etc.
 
-* ProvidedTypesContext.Create now takes a flag isForGenerated. It should be set to true for generative type providers
+- ProvidedTypesContext.Create now takes a flag isForGenerated. It should be set to true for generative type providers
 
-* ``IsStaticMethod=true`` becomes ``isStatic=true`` and some other similar naming changes
+- `IsStaticMethod=true` becomes `isStatic=true` and some other similar naming changes
 
-* Direct setters such as prop.GetterCode <- ... are removed in favour of optional parameters ``getterCode=...``. You must specify getterCode as a parameter
+- Direct setters such as prop.GetterCode <- ... are removed in favour of optional parameters `getterCode=...`. You must specify getterCode as a parameter
 
-* Enables use as part of .NET Core execution of the F# compiler by extending TypeDelegator instead of Type. This needs to be more fully tested but repo itself now compiles as both .NET Standard 2.0 and .NET Framework, and passes tests as both .NET CoreApp 2.0 and .NET Framework 4.6.1
+- Enables use as part of .NET Core execution of the F# compiler by extending TypeDelegator instead of Type. This needs to be more fully tested but repo itself now compiles as both .NET Standard 2.0 and .NET Framework, and passes tests as both .NET CoreApp 2.0 and .NET Framework 4.6.1
 
-* Puts everything into one file ProvidedTypes.fs and ProvidedTypes.fsi. This file is large but this approach makes it very easy for people writing existing type providers to update (after accounting for changes in the ProvidedTypes API)
+- Puts everything into one file ProvidedTypes.fs and ProvidedTypes.fsi. This file is large but this approach makes it very easy for people writing existing type providers to update (after accounting for changes in the ProvidedTypes API)
 
 #### 2.1.0 - August 25 2017
-* Mono 5 support
-* Parameter names unification
+
+- Mono 5 support
+- Parameter names unification
 
 #### 2.0.0 - 02/02/2016
-* Updates for cross-targeting of type providers
+
+- Updates for cross-targeting of type providers
 
 #### 1.1.3 - July 30 2014
-* Remove folders
+
+- Remove folders
 
 #### 1.1.2 - July 30 2014
-* Fix nuget package
+
+- Fix nuget package
 
 #### 1.1.1 - July 17 2014
-* Fix build on some versions of .net
+
+- Fix build on some versions of .net
 
 #### 1.1.0 - July 11 2014
-* Fixed utterly broken indentation in ProvidedTypes.md
-* Add compile step to build as sanity check
+
+- Fixed utterly broken indentation in ProvidedTypes.md
+- Add compile step to build as sanity check
 
 #### 1.0.1 - July 7 2014
-* Add targets file to help PCL builds
+
+- Add targets file to help PCL builds
 
 #### 1.0 - July 7 2014
-* Latest updates merged in, first FsProjects based release
+
+- Latest updates merged in, first FsProjects based release
 
 #### 0.9.1 - December 16 2013
-* Make sure files are added in the right order by putting them in a sub folder.
+
+- Make sure files are added in the right order by putting them in a sub folder.
 
 #### 0.9 - December 16 2013
-* Initial release
+
+- Initial release
