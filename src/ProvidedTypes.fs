@@ -6,6 +6,7 @@ namespace ProviderImplementation.ProvidedTypes
 
 #nowarn "1182"
 #nowarn "3370"
+#nowarn "0044" // This construct is deprecated. Formatter-based serialization is obsolete and should not be used.
 
 // This file contains a set of helper types and methods for providing types in an implementation
 // of ITypeProvider.
@@ -2926,6 +2927,9 @@ module internal AssemblyReader =
         member x.IsStatic = x.Attributes &&& FieldAttributes.Static <> enum 0
         member x.IsInitOnly = x.Attributes &&& FieldAttributes.InitOnly <> enum 0
         member x.IsLiteral = x.Attributes &&& FieldAttributes.Literal <> enum 0
+#if NETSTANDARD2_1_OR_GREATER
+        [<Obsolete(DiagnosticId = "SYSLIB0051")>] 
+#endif
         member x.NotSerialized = x.Attributes &&& FieldAttributes.NotSerialized <> enum 0
         member x.IsSpecialName = x.Attributes &&& FieldAttributes.SpecialName <> enum 0
                  //let isStatic = (flags &&& 0x0010) <> 0
@@ -3030,6 +3034,9 @@ module internal AssemblyReader =
         member x.IsDelegate =  (match x.Kind with ILTypeDefKind.Delegate -> true | _ -> false)
         member x.IsAbstract= (x.Attributes &&& TypeAttributes.Abstract) <> enum 0
         member x.IsSealed= (x.Attributes &&& TypeAttributes.Sealed) <> enum 0
+#if NETSTANDARD2_1_OR_GREATER
+        [<Obsolete(DiagnosticId = "SYSLIB0051")>] 
+#endif
         member x.IsSerializable= (x.Attributes &&& TypeAttributes.Serializable) <> enum 0
         member x.IsComInterop= (x.Attributes &&& TypeAttributes.Import) <> enum 0
         member x.IsSpecialName= (x.Attributes &&& TypeAttributes.SpecialName) <> enum 0
