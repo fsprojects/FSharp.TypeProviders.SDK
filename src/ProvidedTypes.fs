@@ -1952,108 +1952,11 @@ module internal AssemblyReader =
         let dw1 n = byte ((n >>> 8)  &&& 0xFFL)
         let dw0 n = byte (n &&& 0xFFL)
 
-
-        module SHA1 =
-            let inline (>>>&)  (x:int) (y:int) = int32 (uint32 x >>> y)
-            let f(t, b, c, d) =
-                if t < 20 then (b &&& c) ||| ((~~~b) &&& d)
-                elif t < 40 then b ^^^ c ^^^ d
-                elif t < 60 then (b &&& c) ||| (b &&& d) ||| (c &&& d)
-                else b ^^^ c ^^^ d
-
-            let [<Literal>] k0to19 = 0x5A827999
-            let [<Literal>] k20to39 = 0x6ED9EBA1
-            let [<Literal>] k40to59 = 0x8F1BBCDC
-            let [<Literal>] k60to79 = 0xCA62C1D6
-
-            let k t =
-                if t < 20 then k0to19
-                elif t < 40 then k20to39
-                elif t < 60 then k40to59
-                else k60to79
-
-            type SHAStream =
-                { stream: byte[];
-                  mutable pos: int;
-                  mutable eof:  bool; }
-
-            let rotLeft32 x n =  (x <<< n) ||| (x >>>& (32-n))
-
-            // padding and length (in bits!) recorded at end
-            let shaAfterEof sha  =
-                let n = sha.pos
-                let len = sha.stream.Length
-                if n = len then 0x80
-                else
-                  let paddedLen = (((len + 9 + 63) / 64) * 64) - 8
-                  if n < paddedLen - 8  then 0x0
-                  elif (n &&& 63) = 56 then int32 ((int64 len * int64 8) >>> 56) &&& 0xff
-                  elif (n &&& 63) = 57 then int32 ((int64 len * int64 8) >>> 48) &&& 0xff
-                  elif (n &&& 63) = 58 then int32 ((int64 len * int64 8) >>> 40) &&& 0xff
-                  elif (n &&& 63) = 59 then int32 ((int64 len * int64 8) >>> 32) &&& 0xff
-                  elif (n &&& 63) = 60 then int32 ((int64 len * int64 8) >>> 24) &&& 0xff
-                  elif (n &&& 63) = 61 then int32 ((int64 len * int64 8) >>> 16) &&& 0xff
-                  elif (n &&& 63) = 62 then int32 ((int64 len * int64 8) >>> 8) &&& 0xff
-                  elif (n &&& 63) = 63 then (sha.eof <- true; int32 (int64 len * int64 8) &&& 0xff)
-                  else 0x0
-
-            let shaRead8 sha =
-                let s = sha.stream
-                let b = if sha.pos >= s.Length then shaAfterEof sha else int32 s.[sha.pos]
-                sha.pos <- sha.pos + 1
-                b
-
-            let shaRead32 sha  =
-                let b0 = shaRead8 sha
-                let b1 = shaRead8 sha
-                let b2 = shaRead8 sha
-                let b3 = shaRead8 sha
-                let res = (b0 <<< 24) ||| (b1 <<< 16) ||| (b2 <<< 8) ||| b3
-                res
-
-            let sha1Hash sha =
-                let mutable h0 = 0x67452301
-                let mutable h1 = 0xEFCDAB89
-                let mutable h2 = 0x98BADCFE
-                let mutable h3 = 0x10325476
-                let mutable h4 = 0xC3D2E1F0
-                let mutable a = 0
-                let mutable b = 0
-                let mutable c = 0
-                let mutable d = 0
-                let mutable e = 0
-                let w = Array.create 80 0x00
-                while (not sha.eof) do
-                    for i = 0 to 15 do
-                        w.[i] <- shaRead32 sha
-                    for t = 16 to 79 do
-                        w.[t] <- rotLeft32 (w.[t-3] ^^^ w.[t-8] ^^^ w.[t-14] ^^^ w.[t-16]) 1
-                    a <- h0
-                    b <- h1
-                    c <- h2
-                    d <- h3
-                    e <- h4
-                    for t = 0 to 79 do
-                        let temp = (rotLeft32 a 5) + f(t, b, c, d) + e + w.[t] + k(t)
-                        e <- d
-                        d <- c
-                        c <- rotLeft32 b 30
-                        b <- a
-                        a <- temp
-                    h0 <- h0 + a
-                    h1 <- h1 + b
-                    h2 <- h2 + c
-                    h3 <- h3 + d
-                    h4 <- h4 + e
-                h0, h1, h2, h3, h4
-
-            let sha1HashBytes s =
-                let (_h0, _h1, _h2, h3, h4) = sha1Hash { stream = s; pos = 0; eof = false }   // the result of the SHA algorithm is stored in registers 3 and 4
-                Array.map byte [|  b0 h4; b1 h4; b2 h4; b3 h4; b0 h3; b1 h3; b2 h3; b3 h3; |]
-
-
-        let sha1HashBytes s = SHA1.sha1HashBytes s
-
+        let sha1HashBytes (s: byte[]) : byte[] =
+            use sha = System.Security.Cryptography.SHA1.Create()
+            let fullHash = sha.ComputeHash s
+            // Return last 8 bytes as per original implementation
+            Array.sub fullHash (fullHash.Length - 8) 8 |> Array.rev
 
     [<StructuralEquality; StructuralComparison>]
     type PublicKey =
@@ -2066,7 +1969,7 @@ module internal AssemblyReader =
 
         member x.ToToken() =
             match x with
-            | PublicKey bytes -> SHA1.sha1HashBytes bytes
+            | PublicKey bytes -> sha1HashBytes bytes
             | PublicKeyToken token -> token
         static member KeyAsToken(k) = PublicKeyToken(PublicKey(k).ToToken())
 
