@@ -1,8 +1,9 @@
 {
-  "last_run": "2026-02-24T21:52:17Z",
-  "last_run_id": "22371591793",
+  "last_run": "2026-02-24T22:03:07Z",
+  "last_run_id": "22371948745",
   "tasks_last_run": {
     "task1_triage": "2026-02-24",
+    "task2_fix_issues": "2026-02-24",
     "task6_stale_pr_nudge": "2026-02-24",
     "task7_labels": "2026-02-24",
     "task8_release_prep": "2026-02-24",
@@ -15,10 +16,10 @@
     "number": 421
   },
   "comments_made": {
-    "365": {"date": "2026-02-24", "topic": "bug triage - CustomAttribute on nested erased types"},
+    "365": {"date": "2026-02-24", "topic": "fix PR created - custom attrs on nested erased types"},
     "391": {"date": "2026-02-24", "topic": "bug triage - System.Private.CoreLib reference issue"},
     "395": {"date": "2026-02-24", "topic": "bug triage - infinite loop in UoM type comparison"},
-    "408": {"date": "2026-02-24", "topic": "summary of .NET 8 TP design-time support status, answered Dec 2025 question from jkone27"},
+    "408": {"date": "2026-02-24", "topic": "summary of .NET 8 TP design-time support status"},
     "416": {"date": "2026-02-24", "topic": "stale PR nudge - asked author about net8.0 plans", "type": "pr"}
   },
   "labels_applied": {
@@ -32,7 +33,14 @@
   "pr_nudges": {
     "416": {"date": "2026-02-24"}
   },
-  "fix_attempts": {},
+  "fix_attempts": {
+    "365": {
+      "date": "2026-02-24",
+      "branch": "repo-assist/fix-issue-365-nested-erased-custom-attrs",
+      "description": "Fix tryConvConstructorRefToTgt to catch convTypeToTgt exceptions and tryConvCustomAttributeDataToTgt to skip unresolvable attrs instead of failwith",
+      "status": "pr_created"
+    }
+  },
   "improvement_ideas": [],
   "welcomed_contributors": [],
   "release_prep": {
@@ -41,5 +49,5 @@
     "pr_branch": "repo-assist/release-v8.2.0",
     "changes_included": ["#417 perf opt", "reference assembly loading fixes", "#404 FX_NO_LOCAL_FILESYSTEM build fix"]
   },
-  "notes": "Run 3 on 2026-02-24. Task8 done: created release prep PR for v8.2.0. Tasks still not run: task2 (fix issues - candidates: #346 all-optional static params, #336 GetUnionCases on option, #232 single optional param limitation), task3 (improvements), task4 (deps update - paket deps look simple, FSharp.Core 4.7.2 + xunit), task5 (maintain PRs - only #416 from Thorium is open), task9 (welcome - no new contributors today), task10 (forward). Next runs should prioritize task2, task4, task3."
+  "notes": "Run 4 on 2026-02-24. Task2 done: fixed #365 (custom attrs on nested erased types - PR created). Fix is in tryConvConstructorRefToTgt (try/catch) and tryConvCustomAttributeDataToTgt (skip unresolvable attrs). Tasks still not run: task3 (improvements), task4 (deps update), task5 (maintain PRs - new PRs #426, #428, #430, #431), task9 (welcome - no new contributors), task10 (forward). Open fix PRs: #426 (UoM loop fix), #428 (optional params warn), #430 (fsdocs update), #431 (net8 update). Need to check if #365 fix PR was successfully created."
 }
