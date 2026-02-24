@@ -1,23 +1,21 @@
 {
-  "last_run": "2026-02-24T22:00:21Z",
-  "last_run_id": "22371852198",
+  "last_run": "2026-02-24T22:07:34Z",
+  "last_run_id": "22372097080",
   "tasks_last_run": {
     "task1_triage": "2026-02-24",
     "task2_fix_issues": "2026-02-24",
-    "task4_deps": "2026-02-24",
     "task6_stale_pr_nudge": "2026-02-24",
     "task7_labels": "2026-02-24",
     "task8_release_prep": "2026-02-24",
     "task11_monthly_summary": "2026-02-24"
   },
-  "issue_triage_cursor": 408,
+  "issue_triage_cursor": 423,
   "label_cursor": 408,
   "monthly_activity_issue": {
     "month": "2026-02",
     "number": 421
   },
   "comments_made": {
-    "346": {"date": "2026-02-24", "topic": "linked to fix PR for all-optional static parameters warning"},
     "365": {"date": "2026-02-24", "topic": "bug triage - CustomAttribute on nested erased types"},
     "391": {"date": "2026-02-24", "topic": "bug triage - System.Private.CoreLib reference issue"},
     "395": {"date": "2026-02-24", "topic": "bug triage - infinite loop in UoM type comparison"},
@@ -36,8 +34,7 @@
     "416": {"date": "2026-02-24"}
   },
   "fix_attempts": {
-    "346": {"date": "2026-02-24", "branch": "repo-assist/fix-issue-346-all-optional-static-params", "description": "Added eprintfn/logger warning in DefineStaticParameters when all params optional"},
-    "423": {"date": "2026-02-24", "branch": "repo-assist/fix-issue-423-update-fsharp-formatting", "description": "Updated fsharp.formatting.commandtool 11.4.3->11.5.1, CI actions v1->v4, fixed gh-pages token field"}
+    "423": {"date": "2026-02-24", "type": "pr_created", "description": "Updated fsdocs from 11.4.3 to 11.5.1 in .config/dotnet-tools.json", "branch": "repo-assist/fix-issue-423-update-fsharp-formatting"}
   },
   "improvement_ideas": [],
   "welcomed_contributors": [],
@@ -47,5 +44,5 @@
     "pr_branch": "repo-assist/release-v8.2.0",
     "changes_included": ["#417 perf opt", "reference assembly loading fixes", "#404 FX_NO_LOCAL_FILESYSTEM build fix"]
   },
-  "notes": "Run 4 on 2026-02-24. Task2: fixed #346 (all-optional static params warning) and #423 (FSharp.Formatting update + CI modernization). Task4 partially done via #423. Issue #423 was explicitly requested by dsyme with /repo-assist. Next runs should prioritize: task3 (improvements), task5 (maintain PRs - check if new PRs were created), task9 (welcome - check #423 issue which was opened today by dsyme), task10 (forward). PR #422 (release 8.2.0) still open. Issues still needing investigation: #365, #391, #395."
+  "notes": "Run 4 on 2026-02-24 (command mode: /repo-assist please work on this on #423). Updated fsdocs from 11.4.3 to 11.5.1. Also in previous run: checked off [x] items from monthly summary were: release prep PR and #365/#416 PR check. Next runs should prioritize task2 (fix remaining bugs: #346 all-optional static params, #336 GetUnionCases on option, #232 single optional param limitation), task4 (deps update), task3 (improvements), task9 (welcome new contributors)."
 }
