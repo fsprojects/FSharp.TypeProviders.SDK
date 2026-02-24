@@ -671,7 +671,20 @@ type ProvidedTypeSymbol(kind: ProvidedTypeSymbolKind, typeArgs: Type list, typeB
         | ProvidedTypeSymbolKind.FSharpTypeAbbreviation _, _ -> 3092
         | c -> failwithf "unreachable %O" c 
 
-    override this.Equals(other: obj) = eqTypeObj this other
+    override this.Equals(other: obj) =
+        // FSharpTypeAbbreviation types (unit-of-measure abbreviations) are not generic/array/pointer/byref,
+        // so eqTypes falls through to ty1.Equals(box ty2), which would call eqTypeObj → eqTypes → loop.
+        // Break the cycle by doing a direct structural comparison for this case.
+        match kind with
+        | ProvidedTypeSymbolKind.FSharpTypeAbbreviation (asm1, ns1, path1) ->
+            match other with
+            | :? ProvidedTypeSymbol as otherPts ->
+                match otherPts.Kind with
+                | ProvidedTypeSymbolKind.FSharpTypeAbbreviation (asm2, ns2, path2) ->
+                    asm1 = asm2 && ns1 = ns2 && path1 = path2
+                | _ -> false
+            | _ -> false
+        | _ -> eqTypeObj this other
 
     override this.Equals(otherTy: Type) = eqTypes this otherTy
 
