@@ -9221,17 +9221,19 @@ namespace ProviderImplementation.ProvidedTypes
 
         and tryConvConstructorRefToTgt (cons: ConstructorInfo) =
             Debug.Assert((match cons with :? ProvidedConstructor as x -> not x.BelongsToTargetModel | _ -> true), "unexpected target ProvidedConstructor")
-            let declTyT = convTypeToTgt cons.DeclaringType
-            let parameterTypesT = cons.GetParameters() |> Array.map (fun p -> convTypeToTgt p.ParameterType)
-            let flags = 
-                (if cons.IsStatic then BindingFlags.Static else BindingFlags.Instance) 
-                ||| (if cons.IsPublic then BindingFlags.Public else BindingFlags.NonPublic )
-            let consT = declTyT.GetConstructor(flags, null,parameterTypesT, null )
-            match consT with
-            | null -> Choice1Of2 (sprintf "Constructor '%O' not found in type '%O'. This constructor may be missing in the types available in the target assemblies." cons declTyT)
-            | _ -> 
-                Debug.Assert((match consT with :? ProvidedConstructor as x -> x.BelongsToTargetModel | _ -> true), "expected a target ProvidedConstructor")
-                Choice2Of2 consT
+            try
+                let declTyT = convTypeToTgt cons.DeclaringType
+                let parameterTypesT = cons.GetParameters() |> Array.map (fun p -> convTypeToTgt p.ParameterType)
+                let flags = 
+                    (if cons.IsStatic then BindingFlags.Static else BindingFlags.Instance) 
+                    ||| (if cons.IsPublic then BindingFlags.Public else BindingFlags.NonPublic )
+                let consT = declTyT.GetConstructor(flags, null,parameterTypesT, null )
+                match consT with
+                | null -> Choice1Of2 (sprintf "Constructor '%O' not found in type '%O'. This constructor may be missing in the types available in the target assemblies." cons declTyT)
+                | _ -> 
+                    Debug.Assert((match consT with :? ProvidedConstructor as x -> x.BelongsToTargetModel | _ -> true), "expected a target ProvidedConstructor")
+                    Choice2Of2 consT
+            with ex -> Choice1Of2 (ex.Message)
 
         and convConstructorRefToTgt (cons: ConstructorInfo) =
             match tryConvConstructorRefToTgt cons with 
@@ -9394,11 +9396,14 @@ namespace ProviderImplementation.ProvidedTypes
             CustomAttributeNamedArgument(convMemberRefToTgt x.MemberInfo, convCustomAttributesTypedArg x.TypedValue)
 
         and tryConvCustomAttributeDataToTgt (x: CustomAttributeData) = 
-             // Allow a fail on AllowNullLiteralAttribute. Some downlevel FSharp.Core don't have this. 
-             // In this case just skip the attribute which means null is allowed when targeting downlevel FSharp.Core.
+             // If the custom attribute's type is not available in the target reference assemblies,
+             // skip the attribute. This can happen when an attribute type is defined in the design-time
+             // assembly only, not in the target (e.g. .NET Standard 2.0) reference set. Erased type
+             // provider custom attributes are only meaningful at design time, so skipping is appropriate.
+             // Note: Some downlevel FSharp.Core don't have AllowNullLiteralAttribute either, which is
+             // handled by the same fallthrough to None.
              match tryConvConstructorRefToTgt x.Constructor  with 
-             | Choice1Of2 _ when x.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name -> None
-             | Choice1Of2 msg -> failwith msg
+             | Choice1Of2 _ -> None
              | Choice2Of2 res -> 
                  Some
                      { new CustomAttributeData () with

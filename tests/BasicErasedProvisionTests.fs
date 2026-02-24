@@ -446,6 +446,36 @@ type ErasingProviderWithCustomAttributes (config : TypeProviderConfig) as this =
     do
         this.AddNamespace(ns, createTypes())
 
+[<TypeProvider>]
+type ErasingProviderWithNestedCustomAttributes (config : TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces (config)
+
+    let ns = "NestedCustomAttributes.Provided"
+    let asm = Assembly.GetExecutingAssembly()
+
+    let createTypes typeName (_args: obj[]) =
+        let myType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>)
+        let ctor = ProvidedConstructor([], invokeCode = fun _ -> <@@ obj() @@>)
+        myType.AddMember(ctor)
+
+        let nestedType = ProvidedTypeDefinition("Nested", Some typeof<obj>)
+        // Add an ObsoleteAttribute (which is available in the target .NET Standard 2.0 refs)
+        nestedType.AddCustomAttribute {
+            new CustomAttributeData() with
+                member __.Constructor = typeof<ObsoleteAttribute>.GetConstructor([|typeof<string>|])
+                member __.ConstructorArguments = [| CustomAttributeTypedArgument(typeof<string>, "use something else" :> obj) |] :> _
+                member __.NamedArguments = [||] :> _
+        }
+        myType.AddMember nestedType
+
+        myType
+
+    do
+        let baseType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+        let staticParams = [ProvidedStaticParameter("count", typeof<int>)]
+        baseType.DefineStaticParameters(staticParams, createTypes)
+        this.AddNamespace(ns, [baseType])
+
 [<Fact>]
 let ``ErasingConstructorProvider generates for netstandard20 correctly``() : unit  = 
     printfn "--------- Generating code for .NET Standard 2.0  ------"
@@ -462,6 +492,22 @@ let ``check custom attributes``() =
     let tp, t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, ErasingProviderWithCustomAttributes, [| |]  )
     Assert.True(t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name))
     Assert.Equal(1, t.GetMethod("NameOf").GetParameters().[0].GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ReflectedDefinitionAttribute>.Name) |> Seq.length)
+
+[<Fact>]
+let ``check custom attributes on nested erased types``() =
+    // Regression test for https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/365
+    // Custom attributes added via AddCustomAttribute to nested erased types should be visible
+    // in the target model's GetCustomAttributesData() when the attribute type is available in the
+    // target reference assemblies.
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let tp, t = Testing.GenerateProvidedTypeInstantiation (__SOURCE_DIRECTORY__, refs.[0], refs, ErasingProviderWithNestedCustomAttributes, [| box 1 |])
+    let bindAll = BindingFlags.DeclaredOnly ||| BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Static ||| BindingFlags.Instance
+    let nestedTy = t.GetNestedType("Nested", bindAll)
+    Assert.NotNull(nestedTy)
+    // ObsoleteAttribute is in .NET Standard 2.0 target refs, so it should be present
+    Assert.True(nestedTy.GetCustomAttributesData() |> Seq.exists (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ObsoleteAttribute>.Name),
+        "Expected ObsoleteAttribute on nested erased type to be visible in target model")
+    Assert.Equal(1, nestedTy.GetCustomAttributesData() |> Seq.filter (fun cad -> cad.Constructor.DeclaringType.Name = typeof<ObsoleteAttribute>.Name) |> Seq.length)
 
 [<Fact>]
 let ``check on-demand production of members``() = 
