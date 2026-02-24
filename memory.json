@@ -1,6 +1,6 @@
 {
-  "last_run": "2026-02-24T22:14:14Z",
-  "last_run_id": "22372315014",
+  "last_run": "2026-02-24T22:30:05Z",
+  "last_run_id": "22372832275",
   "tasks_last_run": {
     "task1_triage": "2026-02-24",
     "task2_fix_issues": "2026-02-24",
@@ -40,10 +40,11 @@
     "416": {"date": "2026-02-24"}
   },
   "fix_attempts": {
-    "423": {"date": "2026-02-24", "type": "pr_created", "description": "Updated fsdocs from 11.4.3 to 11.5.1 in .config/dotnet-tools.json", "branch": "repo-assist/fix-issue-423-update-fsharp-formatting"},
+    "423": {"date": "2026-02-24", "type": "pr_created", "description": "Updated fsdocs from 11.4.3 to 11.5.1 in .config/dotnet-tools.json", "branch": "repo-assist/fix-issue-423-update-fsharp-formatting", "pr": 430},
     "346": {"date": "2026-02-24", "type": "pr_created", "description": "Added warning when all static params optional", "pr": 428},
     "395": {"date": "2026-02-24", "type": "pr_created", "description": "Fixed UoM infinite loop", "pr": 426},
-    "425": {"date": "2026-02-24", "type": "pr_created", "description": "Updated test projects and CI from .NET 5 to .NET 8", "pr": 431}
+    "425": {"date": "2026-02-24", "type": "pr_created", "description": "Updated test projects and CI from .NET 5 to .NET 8", "pr": 431},
+    "365": {"date": "2026-02-24", "type": "pr_created", "description": "Fixed custom attributes on nested erased types", "pr": 432}
   },
   "improvement_ideas": [],
   "welcomed_contributors": [],
@@ -54,5 +55,7 @@
     "pr": 422,
     "notes": "Release PR #422 was merged"
   },
-  "notes": "Run on 2026-02-24T22:14 (non-command mode). Created PR #431 for .NET 8 update (issue #425). Labelled #424/#425/#427 with enhancement. Open Repo Assist PRs: #426 (UoM fix), #428 (all-optional params warning), #430 (fsdocs update), #431 (.NET 8 update). Next runs should prioritize: task3 (improvements), task4 (deps update), task9 (welcome new contributors), task2 (fix #336 GetUnionCases on option, #232 single optional param limitation). Also: #427 (trusted publishing) and #424 (coverage) are new maintainer requests to work on."
+  "open_repo_assist_prs": [426, 428, 430, 431, 432],
+  "fallback_issues_to_close": [429, 433],
+  "notes": "Run on 2026-02-24T22:30 (non-command mode). Task 5: All Repo Assist PRs have passing CI. Task 11: Updated monthly summary with PR #432 and fallback issues #429/#433. No new human contributors in last 24h. Next runs should prioritize: task3 (improvements), task4 (deps update), task9 (welcome new contributors when they arrive), task2 (fix #336 GetUnionCases on option). Also: #427 (trusted publishing) and #424 (coverage) are maintainer requests. Note: monthly summary issue #421 received a -1 reaction - consider whether activity level is appropriate."
 }
