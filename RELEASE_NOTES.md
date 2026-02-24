@@ -1,3 +1,9 @@
+#### 8.2.0 - February 24, 2026
+
+- Performance optimizations for design-time loading: lazy ILAssemblyRefs, optimize convTypeRef, inline isNull #417
+- Reference assembly loading fixes: don't reload already-loaded assemblies
+- Build fix for FX_NO_LOCAL_FILESYSTEM #404
+
 #### 8.1.0 - January 21, 2025
 
 - Performance optimizations #406, #411
