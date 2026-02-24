@@ -1,18 +1,15 @@
 {
-  "last_run": "2026-02-24T23:03:22Z",
-  "last_run_id": "22373832313",
+  "last_run": "2026-02-24T21:52:17Z",
+  "last_run_id": "22371591793",
   "tasks_last_run": {
     "task1_triage": "2026-02-24",
-    "task2_fix_issues": "2026-02-24",
-    "task5_maintain_prs": "2026-02-24",
     "task6_stale_pr_nudge": "2026-02-24",
     "task7_labels": "2026-02-24",
     "task8_release_prep": "2026-02-24",
-    "task10_forward": "2026-02-24",
     "task11_monthly_summary": "2026-02-24"
   },
-  "issue_triage_cursor": 425,
-  "label_cursor": 427,
+  "issue_triage_cursor": 408,
+  "label_cursor": 408,
   "monthly_activity_issue": {
     "month": "2026-02",
     "number": 421
@@ -22,8 +19,7 @@
     "391": {"date": "2026-02-24", "topic": "bug triage - System.Private.CoreLib reference issue"},
     "395": {"date": "2026-02-24", "topic": "bug triage - infinite loop in UoM type comparison"},
     "408": {"date": "2026-02-24", "topic": "summary of .NET 8 TP design-time support status, answered Dec 2025 question from jkone27"},
-    "416": {"date": "2026-02-24", "topic": "stale PR nudge - asked author about net8.0 plans", "type": "pr"},
-    "425": {"date": "2026-02-24", "topic": "linked PR #431 for .NET 8 update"}
+    "416": {"date": "2026-02-24", "topic": "stale PR nudge - asked author about net8.0 plans", "type": "pr"}
   },
   "labels_applied": {
     "387": {"date": "2026-02-24", "labels": ["bug", "needs triage"]},
@@ -31,31 +27,19 @@
     "395": {"date": "2026-02-24", "labels": ["bug"]},
     "400": {"date": "2026-02-24", "labels": ["question", "documentation"]},
     "405": {"date": "2026-02-24", "labels": ["enhancement"]},
-    "408": {"date": "2026-02-24", "labels": ["needs investigation"]},
-    "424": {"date": "2026-02-24", "labels": ["enhancement"]},
-    "425": {"date": "2026-02-24", "labels": ["enhancement"]},
-    "427": {"date": "2026-02-24", "labels": ["enhancement"]}
+    "408": {"date": "2026-02-24", "labels": ["needs investigation"]}
   },
   "pr_nudges": {
     "416": {"date": "2026-02-24"}
   },
-  "fix_attempts": {
-    "423": {"date": "2026-02-24", "type": "pr_created", "description": "Updated fsdocs from 11.4.3 to 11.5.1 in .config/dotnet-tools.json", "branch": "repo-assist/fix-issue-423-update-fsharp-formatting", "pr": 430},
-    "346": {"date": "2026-02-24", "type": "pr_created", "description": "Added warning when all static params optional", "pr": 428},
-    "395": {"date": "2026-02-24", "type": "pr_created", "description": "Fixed UoM infinite loop", "pr": 426},
-    "425": {"date": "2026-02-24", "type": "pr_created", "description": "Updated test projects and CI from .NET 5 to .NET 8", "pr": 431},
-    "365": {"date": "2026-02-24", "type": "pr_created", "description": "Fixed custom attributes on nested erased types", "pr": 432}
-  },
+  "fix_attempts": {},
   "improvement_ideas": [],
   "welcomed_contributors": [],
   "release_prep": {
     "proposed_version": "8.2.0",
     "date": "2026-02-24",
-    "status": "merged",
-    "pr": 422,
-    "notes": "Release PR #422 was merged"
+    "pr_branch": "repo-assist/release-v8.2.0",
+    "changes_included": ["#417 perf opt", "reference assembly loading fixes", "#404 FX_NO_LOCAL_FILESYSTEM build fix"]
   },
-  "open_repo_assist_prs": [426, 428, 430, 431, 432],
-  "fallback_issues_to_close": [429, 433],
-  "notes": "Run 22373832313 on 2026-02-24T23:03 — no-op run (5 min after previous). All open Repo Assist PRs (426, 428, 430, 431, 432) still pending with 0 CI checks. No new issues or human activity. Monthly summary #421 is current. Next run priorities: (1) Task 5 — check CI status of open PRs and fix failures once CI runs; (2) Task 3/10 — improvements (issues #336, #366, #384 not yet fixed — but wait for existing PRs to be reviewed first). Issue #434 is the agentics no-op tracking issue (system-generated, ignore). Issues #429 and #433 are Repo Assist fallback issues to be closed by maintainer. Maintainer has -1 reaction on monthly summary #421 — avoid being spammy."
+  "notes": "Run 3 on 2026-02-24. Task8 done: created release prep PR for v8.2.0. Tasks still not run: task2 (fix issues - candidates: #346 all-optional static params, #336 GetUnionCases on option, #232 single optional param limitation), task3 (improvements), task4 (deps update - paket deps look simple, FSharp.Core 4.7.2 + xunit), task5 (maintain PRs - only #416 from Thorium is open), task9 (welcome - no new contributors today), task10 (forward). Next runs should prioritize task2, task4, task3."
 }
