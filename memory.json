@@ -1,0 +1,38 @@
+{
+  "last_run": "2026-02-24T21:38:08Z",
+  "last_run_id": "22371114520",
+  "tasks_last_run": {
+    "task1_triage": "2026-02-24",
+    "task6_stale_pr_nudge": "2026-02-24",
+    "task7_labels": "2026-02-24",
+    "task11_monthly_summary": "2026-02-24"
+  },
+  "issue_triage_cursor": 395,
+  "label_cursor": 408,
+  "monthly_activity_issue": {
+    "month": "2026-02",
+    "number": null,
+    "note": "Created in 2026-02-24 run; issue number not returned by create_issue tool"
+  },
+  "comments_made": {
+    "365": {"date": "2026-02-24", "topic": "bug triage - CustomAttribute on nested erased types"},
+    "391": {"date": "2026-02-24", "topic": "bug triage - System.Private.CoreLib reference issue"},
+    "395": {"date": "2026-02-24", "topic": "bug triage - infinite loop in UoM type comparison"},
+    "416": {"date": "2026-02-24", "topic": "stale PR nudge - asked author about net8.0 plans", "type": "pr"}
+  },
+  "labels_applied": {
+    "387": {"date": "2026-02-24", "labels": ["bug", "needs triage"]},
+    "391": {"date": "2026-02-24", "labels": ["bug", "needs investigation"]},
+    "395": {"date": "2026-02-24", "labels": ["bug"]},
+    "400": {"date": "2026-02-24", "labels": ["question", "documentation"]},
+    "405": {"date": "2026-02-24", "labels": ["enhancement"]},
+    "408": {"date": "2026-02-24", "labels": ["needs investigation"]}
+  },
+  "pr_nudges": {
+    "416": {"date": "2026-02-24"}
+  },
+  "fix_attempts": {},
+  "improvement_ideas": [],
+  "welcomed_contributors": [],
+  "notes": "First run. No AGENTS.md found. Only one open PR (#416, stale). Many unlabeled issues triaged."
+}
