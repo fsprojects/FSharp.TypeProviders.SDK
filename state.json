@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-25T20:32:42Z",
-    "last_run_id": "22414535332",
+    "last_run": "2026-02-25T20:41:57Z",
+    "last_run_id": "22415024016",
     "tasks_last_run": {
         "task1_triage": "2026-02-25",
         "task2_fix_issues": "2026-02-25",
@@ -22,6 +22,10 @@
         "365": {
             "date": "2026-02-24",
             "topic": "bug triage - CustomAttribute on nested erased types"
+        },
+        "387": {
+            "date": "2026-02-25",
+            "topic": "template triage - NUnit.Console removable dep, FSharp.Core pinning explained, VS first-build workaround"
         },
         "391": {
             "date": "2026-02-24",
@@ -180,5 +184,5 @@
         "391_comment": "2026-02-25",
         "408_comment": "2026-02-25"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PRs #442, #443, #444 open as drafts, awaiting CI/review. All CI currently pending. No new activity since 20:22 UTC run. Monthly activity issue NOT updated this run (no new actions taken)."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PRs #442, #443, #444 open as drafts, CI still pending after 40+ minutes - likely no CI on PRs. Issue #387 (template warnings) now triaged: NUnit.Console is removable, FSharp.Core pinning intentional. Template uses net8.0 test project, paket 9.0.2. Future: could create PR to remove NUnit.Console from template paket.dependencies."
 }
