@@ -1,15 +1,15 @@
 {
-  "last_run": "2026-02-24T23:59:19Z",
-  "last_run_id": "22375467427",
+  "last_run": "2026-02-25T00:04:08Z",
+  "last_run_id": "22375606048",
   "tasks_last_run": {
     "task1_triage": "2026-02-24",
     "task2_fix_issues": "2026-02-24",
-    "task5_maintain_prs": "2026-02-24",
+    "task5_maintain_prs": "2026-02-25",
     "task6_stale_pr_nudge": "2026-02-24",
     "task7_labels": "2026-02-24",
     "task8_release_prep": "2026-02-24",
     "task10_forward": "2026-02-24",
-    "task11_monthly_summary": "2026-02-24"
+    "task11_monthly_summary": "2026-02-25"
   },
   "issue_triage_cursor": 0,
   "label_cursor": 427,
@@ -18,34 +18,135 @@
     "number": 421
   },
   "comments_made": {
-    "365": {"date": "2026-02-24", "topic": "bug triage - CustomAttribute on nested erased types"},
-    "391": {"date": "2026-02-24", "topic": "bug triage - System.Private.CoreLib reference issue"},
-    "395": {"date": "2026-02-24", "topic": "bug triage - infinite loop in UoM type comparison"},
-    "408": {"date": "2026-02-24", "topic": "summary of .NET 8 TP design-time support status, answered Dec 2025 question from jkone27"},
-    "416": {"date": "2026-02-24", "topic": "stale PR nudge - asked author about net8.0 plans", "type": "pr"},
-    "425": {"date": "2026-02-24", "topic": "linked PR #431 for .NET 8 update"}
+    "365": {
+      "date": "2026-02-24",
+      "topic": "bug triage - CustomAttribute on nested erased types"
+    },
+    "391": {
+      "date": "2026-02-24",
+      "topic": "bug triage - System.Private.CoreLib reference issue"
+    },
+    "395": {
+      "date": "2026-02-24",
+      "topic": "bug triage - infinite loop in UoM type comparison"
+    },
+    "408": {
+      "date": "2026-02-24",
+      "topic": "summary of .NET 8 TP design-time support status, answered Dec 2025 question from jkone27"
+    },
+    "416": {
+      "date": "2026-02-24",
+      "topic": "stale PR nudge - asked author about net8.0 plans",
+      "type": "pr"
+    },
+    "425": {
+      "date": "2026-02-24",
+      "topic": "linked PR #431 for .NET 8 update"
+    }
   },
   "labels_applied": {
-    "387": {"date": "2026-02-24", "labels": ["bug", "needs triage"]},
-    "391": {"date": "2026-02-24", "labels": ["bug", "needs investigation"]},
-    "395": {"date": "2026-02-24", "labels": ["bug"]},
-    "400": {"date": "2026-02-24", "labels": ["question", "documentation"]},
-    "405": {"date": "2026-02-24", "labels": ["enhancement"]},
-    "408": {"date": "2026-02-24", "labels": ["needs investigation"]},
-    "423": {"date": "2026-02-24", "labels": ["enhancement", "documentation"]},
-    "424": {"date": "2026-02-24", "labels": ["enhancement"]},
-    "425": {"date": "2026-02-24", "labels": ["enhancement"]},
-    "427": {"date": "2026-02-24", "labels": ["enhancement"]}
+    "387": {
+      "date": "2026-02-24",
+      "labels": [
+        "bug",
+        "needs triage"
+      ]
+    },
+    "391": {
+      "date": "2026-02-24",
+      "labels": [
+        "bug",
+        "needs investigation"
+      ]
+    },
+    "395": {
+      "date": "2026-02-24",
+      "labels": [
+        "bug"
+      ]
+    },
+    "400": {
+      "date": "2026-02-24",
+      "labels": [
+        "question",
+        "documentation"
+      ]
+    },
+    "405": {
+      "date": "2026-02-24",
+      "labels": [
+        "enhancement"
+      ]
+    },
+    "408": {
+      "date": "2026-02-24",
+      "labels": [
+        "needs investigation"
+      ]
+    },
+    "423": {
+      "date": "2026-02-24",
+      "labels": [
+        "enhancement",
+        "documentation"
+      ]
+    },
+    "424": {
+      "date": "2026-02-24",
+      "labels": [
+        "enhancement"
+      ]
+    },
+    "425": {
+      "date": "2026-02-24",
+      "labels": [
+        "enhancement"
+      ]
+    },
+    "427": {
+      "date": "2026-02-24",
+      "labels": [
+        "enhancement"
+      ]
+    }
   },
   "pr_nudges": {
-    "416": {"date": "2026-02-24"}
+    "416": {
+      "date": "2026-02-24"
+    }
   },
   "fix_attempts": {
-    "423": {"date": "2026-02-24", "type": "pr_created", "description": "Updated fsdocs from 11.4.3 to 11.5.1 in .config/dotnet-tools.json", "branch": "repo-assist/fix-issue-423-update-fsharp-formatting", "pr": 430},
-    "346": {"date": "2026-02-24", "type": "pr_created", "description": "Added warning when all static params optional", "pr": 428},
-    "395": {"date": "2026-02-24", "type": "pr_created", "description": "Fixed UoM infinite loop", "pr": 426},
-    "425": {"date": "2026-02-24", "type": "pr_created", "description": "Updated test projects and CI from .NET 5 to .NET 8", "pr": 431},
-    "365": {"date": "2026-02-24", "type": "pr_created", "description": "Fixed custom attributes on nested erased types", "pr": 432}
+    "423": {
+      "date": "2026-02-24",
+      "type": "pr_created",
+      "description": "Updated fsdocs from 11.4.3 to 11.5.1 in .config/dotnet-tools.json",
+      "branch": "repo-assist/fix-issue-423-update-fsharp-formatting",
+      "pr": 430
+    },
+    "346": {
+      "date": "2026-02-24",
+      "type": "pr_created",
+      "description": "Added warning when all static params optional",
+      "pr": 428
+    },
+    "395": {
+      "date": "2026-02-24",
+      "type": "pr_created",
+      "description": "Fixed UoM infinite loop",
+      "pr": 426
+    },
+    "425": {
+      "date": "2026-02-24",
+      "type": "pr_created",
+      "description": "Updated test projects and CI from .NET 5 to .NET 8",
+      "pr": 431
+    },
+    "365": {
+      "date": "2026-02-24",
+      "type": "pr_created",
+      "description": "Fixed custom attributes on nested erased types",
+      "pr": 432
+    }
   },
   "improvement_ideas": [],
   "welcomed_contributors": [],
@@ -56,7 +157,16 @@
     "pr": 422,
     "notes": "Release PR #422 was merged"
   },
-  "open_repo_assist_prs": [426, 428, 430, 431, 432],
-  "fallback_issues_to_close": [429, 433],
-  "notes": "Multiple runs on 2026-02-24 (runs 22371114520, 22371355457, 22371591793, 22372097080, 22372315014, 22372832275, 22374158002, 22374635592, 22375339932, 22375467427). Maintainer has -1 reaction on monthly activity issue #421 — signals displeasure with run frequency or volume. All 5 Repo Assist PRs (#426, #428, #430, #431, #432) still awaiting CI/review. IMPORTANT: Be very conservative on future runs — avoid creating more PRs or comments unless genuinely new activity or significant changes. Do NOT update monthly summary unless something new was done. Wait for PRs to be reviewed/merged before taking more action."
+  "open_repo_assist_prs": [
+    426,
+    428,
+    430,
+    431,
+    432
+  ],
+  "fallback_issues_to_close": [
+    429,
+    433
+  ],
+  "notes": "Multiple runs on 2026-02-24 (runs 22371114520, 22371355457, 22371591793, 22372097080, 22372315014, 22372832275, 22374158002, 22374635592, 22375339932, 22375467427). Maintainer has -1 reaction on monthly activity issue #421 \u2014 signals displeasure with run frequency or volume. All 5 Repo Assist PRs (#426, #428, #430, #431, #432) still awaiting CI/review. 2026-02-25 run 22375606048: no new activity, no CI failures, no action taken. IMPORTANT: Be very conservative on future runs \u2014 avoid creating more PRs or comments unless genuinely new activity or significant changes. Do NOT update monthly summary unless something new was done. Wait for PRs to be reviewed/merged before taking more action."
 }
