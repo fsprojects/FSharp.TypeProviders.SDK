@@ -58,11 +58,11 @@ safe-outputs:
   add-labels:
     allowed: [bug, enhancement, "help wanted", "good first issue", "spam", "off topic", documentation, question, duplicate, wontfix, "needs triage", "needs investigation", "breaking change", performance, security, refactor]
     max: 30
-    target: "*" 
+    target: "*"
   remove-labels:
     allowed: [bug, enhancement, "help wanted", "good first issue", "spam", "off topic", documentation, question, duplicate, wontfix, "needs triage", "needs investigation", "breaking change", performance, security, refactor]
     max: 5
-    target: "*" 
+    target: "*"
 
 tools:
   web-fetch:
@@ -71,8 +71,7 @@ tools:
   bash: true
   repo-memory: true
 
-source: githubnext/agentics/workflows/repo-assist.md@b87234850bf9664d198f28a02df0f937d0447295
-engine: copilot
+source: githubnext/agentics/workflows/repo-assist.md@f2c5cf1e4af58e09a93ba0703c6bf084711b265f
 ---
 
 # Repo Assist
@@ -81,7 +80,7 @@ engine: copilot
 
 Take heed of **instructions**: "${{ steps.sanitized.outputs.text }}"
 
-If these are non-empty (not ""), then you have been triggered via `/repo-assist <instructions>`. Follow the user's instructions instead of the normal scheduled workflow. Focus exclusively on those instructions. Apply all the same guidelines (read AGENTS.md, run formatters/linters/tests, be polite, use AI disclosure). Skip the round-robin task workflow below and the reporting and instead directly do what the user requested. If no specific instructions were provided (empty or blank), proceed with the normal scheduled workflow below. 
+If these are non-empty (not ""), then you have been triggered via `/repo-assist <instructions>`. Follow the user's instructions instead of the normal scheduled workflow. Focus exclusively on those instructions. Apply all the same guidelines (read AGENTS.md, run formatters/linters/tests, be polite, use AI disclosure). Skip the round-robin task workflow below and the reporting and instead directly do what the user requested. If no specific instructions were provided (empty or blank), proceed with the normal scheduled workflow below.
 
 Then exit  -  do not run the normal workflow after completing the instructions.
 
@@ -115,6 +114,8 @@ Read memory at the **start** of every run; update it at the **end**.
 ## Workflow
 
 Use a **round-robin strategy**: each run, work on a different subset of tasks, rotating through them across runs so that all tasks get attention over time. Use memory to track which tasks were run most recently, and prioritise the ones that haven't run for the longest. Aim to do 2–4 tasks per run (plus the mandatory Task 11).
+
+**Repeat-run mode**: When invoked via `gh aw run repo-assist --repeat`, runs occur every 5–10 minutes. Even in this mode, **actively look for useful work to do** on every run. Do not skip a run just because the last one was recent or because open PRs are awaiting CI — there is always a task to advance: label issues, scan the backlog, study the codebase, prepare a fix, push an update, or work on Task 10. Treat a "nothing to do" conclusion as a sign you haven't looked hard enough, unless there really is, like, literally nothing to do. And be careful not to do duplicate work across runs — check memory to see if you've already tried a fix or commented on an issue before doing it again.
 
 Always do Task 11 (Update Monthly Activity Summary Issue) every run. In all comments and PR descriptions, identify yourself as "Repo Assist".
 
@@ -211,7 +212,7 @@ Maintain a single open issue titled `[Repo Assist] Monthly Activity {YYYY}-{MM}`
 
    ## Suggested Actions for Maintainer
 
-   **Comprehensive list** of all pending actions requiring maintainer attention (excludes items already actioned and checked off). 
+   **Comprehensive list** of all pending actions requiring maintainer attention (excludes items already actioned and checked off).
    - Reread the issue you're updating before you update it  -  there may be new checkbox adjustments since your last update that require you to adjust the suggested actions.
    - List **all** the comments, PRs, and issues that need attention
    - Exclude **all** items that have either
