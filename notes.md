@@ -16,6 +16,7 @@
 - PR #443: Memoize transType in AssemblyCompiler to reduce redundant type translation (issue #341)
 - PR #444: Add tests and docs for equality/comparison on generative provided types (issue #99)
 - PR #445: Add docs and tests for nonNullable, hideObjectMethods, AddCustomAttribute, ProvidedMeasureBuilder (issues #170 and #67)
+- PR #446: Remove NUnit.Console and Microsoft.NETCore.App from template (issue #387)
 
 ## Notes
 - The repository uses paket for dependency management
@@ -32,4 +33,5 @@
 - IEquatable<ProvidedType> and IComparable<ProvidedType> both work in current SDK
 - Need to open UncheckedQuotations when using Expr.FieldGetUnchecked/FieldSetUnchecked in test code
 - ProvidedConstructor does NOT have AddCustomAttribute (use AddObsoleteAttribute instead); this is documented in PR #445
-- PR #445 estimated number (actual may differ) - verify next run
+- Template fix: NUnit.Console caused NUnit.Extension.TeamCityEventListener warning (unlisted pkg) - fixed in PR #446
+- Older issues not yet engaged with: #384 (wrong namespace generative TPs - dsyme is aware), #336 (GetUnionCases on option - workaround exists), #325 (lazy TP instantiation - enhancement)
