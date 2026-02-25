@@ -14,6 +14,7 @@
 ## Open PRs
 - PR #442: Add coverage tests and Coverage build target (issue #424)
 - PR #443: Memoize transType in AssemblyCompiler to reduce redundant type translation (issue #341)
+- PR #444: Add tests and docs for equality/comparison on generative provided types (issue #99)
 
 ## Notes
 - The repository uses paket for dependency management
@@ -24,3 +25,6 @@
 - Issue #438 tracks no-op runs - maintainer is clearly seeing noise
 - Maintainer asked in issue #341 at 19:36 UTC to profile SwaggerProvider perf - done and responded
 - transType memoization PR #443 targets the identified bottleneck (no caching of repeated type translations)
+- Maintainer asked in issue #99 at 19:26 UTC to investigate equality/comparison on provided types - done; PR #444 created
+- IEquatable<ProvidedType> and IComparable<ProvidedType> both work in current SDK
+- Need to open UncheckedQuotations when using Expr.FieldGetUnchecked/FieldSetUnchecked in test code
