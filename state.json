@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-25T21:55:13Z",
-    "last_run_id": "22417595931",
+    "last_run": "2026-02-25T22:11:31Z",
+    "last_run_id": "22418138660",
     "tasks_last_run": {
         "task1_triage": "2026-02-25",
         "task2_fix_issues": "2026-02-25",
@@ -90,7 +90,7 @@
         "99": { "date": "2026-02-25", "type": "pr_open", "pr": 444, "branch": "repo-assist/improve-equality-comparison-tests" },
         "170": { "date": "2026-02-25", "type": "pr_open", "pr": 445, "branch": "repo-assist/docs-nonNullable-customAttrs-measureBuilder-170-67" },
         "67": { "date": "2026-02-25", "type": "pr_open", "pr": 445, "branch": "repo-assist/docs-nonNullable-customAttrs-measureBuilder-170-67" },
-        "387": { "date": "2026-02-25", "type": "pr_open", "pr": 446, "branch": "repo-assist/fix-template-nunit-console-warning", "description": "Remove NUnit.Console and Microsoft.NETCore.App from template paket.dependencies" }
+        "387": { "date": "2026-02-25", "type": "pr_open", "pr": 446, "branch": "repo-assist/fix-template-nunit-console-warning" }
     },
     "improvement_ideas": [],
     "welcomed_contributors": [],
@@ -113,5 +113,5 @@
         "99": "investigate equality/comparison on generative types - DONE (PR #444)",
         "341": "profile SwaggerProvider perf - DONE (PR #443)"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PRs #442, #443, #444, #445, #446 open as drafts. Issue #441 is no-op runs issue - avoid engaging. ProvidedConstructor does NOT have AddCustomAttribute (only AddObsoleteAttribute). PR #446 removes NUnit.Console + Microsoft.NETCore.App from template - unlisted TeamCityEventListener warning fix. Older issues not yet engaged: #384, #336, #325, #299."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PRs #442, #443, #444, #445, #446 open as drafts, CI still pending. Issue #441 is no-op runs issue - avoid engaging. ProvidedConstructor does NOT have AddCustomAttribute (only AddObsoleteAttribute). Older issues not yet engaged: #384, #336, #325, #299."
 }
