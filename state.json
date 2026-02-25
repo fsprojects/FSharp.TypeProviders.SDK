@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-25T21:26:01Z",
-    "last_run_id": "22416564961",
+    "last_run": "2026-02-25T21:35:39Z",
+    "last_run_id": "22416919546",
     "tasks_last_run": {
         "task1_triage": "2026-02-25",
         "task2_fix_issues": "2026-02-25",
@@ -87,7 +87,9 @@
         "436": { "date": "2026-02-25", "type": "pr_merged", "pr": 437 },
         "341": { "date": "2026-02-25", "type": "pr_open", "pr": 443, "branch": "repo-assist/improve-transtype-memoization" },
         "424": { "date": "2026-02-25", "type": "pr_open", "pr": 442, "branch": "repo-assist/fix-issue-424-coverage-0f634663b848668c" },
-        "99": { "date": "2026-02-25", "type": "pr_open", "pr": 444, "branch": "repo-assist/improve-equality-comparison-tests" }
+        "99": { "date": "2026-02-25", "type": "pr_open", "pr": 444, "branch": "repo-assist/improve-equality-comparison-tests" },
+        "170": { "date": "2026-02-25", "type": "pr_open", "pr": 445, "branch": "repo-assist/docs-nonNullable-customAttrs-measureBuilder-170-67", "description": "Docs and tests for nonNullable, hideObjectMethods, AddCustomAttribute, ProvidedMeasureBuilder" },
+        "67": { "date": "2026-02-25", "type": "pr_open", "pr": 445, "branch": "repo-assist/docs-nonNullable-customAttrs-measureBuilder-170-67", "description": "Docs for ProvidedMeasureBuilder (combined with #170 PR)" }
     },
     "improvement_ideas": [],
     "welcomed_contributors": [],
@@ -98,11 +100,17 @@
         "pr": 422,
         "notes": "Maintainer committed 'update versions' (17:51) and 'update docs' (17:36) on 2026-02-25 - likely preparing 8.2.1 release. Do NOT create release PR - maintainer is handling it."
     },
-    "open_repo_assist_prs": [442, 443, 444],
+    "open_repo_assist_prs": [442, 443, 444, 445],
     "merged_this_month": [422, 426, 428, 430, 431, 432, 437],
     "maintainer_checked_off": {
         "391_comment": "2026-02-25",
         "408_comment": "2026-02-25"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PRs #442, #443, #444 open as drafts awaiting CI and maintainer review. Issue #441 is the no-op runs issue - avoid engaging with it. Run at 21:26 UTC had no new activity to act on - truly nothing changed since 21:13 UTC run."
+    "maintainer_requests": {
+        "170": "add docs AND tests for nonNullable, hideObjectMethods, AddCustomAttribute - DONE (PR #445)",
+        "67": "add docs for ProvidedMeasureBuilder - DONE (PR #445)",
+        "99": "investigate equality/comparison on generative types - DONE (PR #444)",
+        "341": "profile SwaggerProvider perf - DONE (PR #443)"
+    },
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PRs #442, #443, #444, #445 open as drafts. Issue #441 is no-op runs issue - avoid engaging. ProvidedConstructor does NOT have AddCustomAttribute (only AddObsoleteAttribute). PR #445 estimated number - verify next run."
 }
