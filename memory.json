@@ -47,67 +47,43 @@
   "labels_applied": {
     "387": {
       "date": "2026-02-24",
-      "labels": [
-        "bug",
-        "needs triage"
-      ]
+      "labels": ["bug", "needs triage"]
     },
     "391": {
       "date": "2026-02-24",
-      "labels": [
-        "bug",
-        "needs investigation"
-      ]
+      "labels": ["bug", "needs investigation"]
     },
     "395": {
       "date": "2026-02-24",
-      "labels": [
-        "bug"
-      ]
+      "labels": ["bug"]
     },
     "400": {
       "date": "2026-02-24",
-      "labels": [
-        "question",
-        "documentation"
-      ]
+      "labels": ["question", "documentation"]
     },
     "405": {
       "date": "2026-02-24",
-      "labels": [
-        "enhancement"
-      ]
+      "labels": ["enhancement"]
     },
     "408": {
       "date": "2026-02-24",
-      "labels": [
-        "needs investigation"
-      ]
+      "labels": ["needs investigation"]
     },
     "423": {
       "date": "2026-02-24",
-      "labels": [
-        "enhancement",
-        "documentation"
-      ]
+      "labels": ["enhancement", "documentation"]
     },
     "424": {
       "date": "2026-02-24",
-      "labels": [
-        "enhancement"
-      ]
+      "labels": ["enhancement"]
     },
     "425": {
       "date": "2026-02-24",
-      "labels": [
-        "enhancement"
-      ]
+      "labels": ["enhancement"]
     },
     "427": {
       "date": "2026-02-24",
-      "labels": [
-        "enhancement"
-      ]
+      "labels": ["enhancement"]
     }
   },
   "pr_nudges": {
@@ -146,13 +122,6 @@
       "type": "pr_created",
       "description": "Fixed custom attributes on nested erased types",
       "pr": 432
-    },
-    "436": {
-      "date": "2026-02-25",
-      "type": "pr_created",
-      "description": "Updated fsdocs from fsharp.formatting.commandtool 11.5.1 to fsdocs-tool 21.0.0",
-      "branch": "repo-assist/fix-issue-436-update-fsdocs-tool",
-      "pr": "pending"
     }
   },
   "improvement_ideas": [],
@@ -164,16 +133,7 @@
     "pr": 422,
     "notes": "Release PR #422 was merged"
   },
-  "open_repo_assist_prs": [
-    426,
-    428,
-    430,
-    431,
-    432
-  ],
-  "fallback_issues_to_close": [
-    429,
-    433
-  ],
-  "notes": "Multiple runs on 2026-02-24 and 2026-02-25. Maintainer has -1 reaction on monthly activity issue #421 \u2014 signals displeasure with run frequency or volume. All 5 Repo Assist PRs (#426, #428, #430, #431, #432) still awaiting CI/review. CI shows 'pending' with 0 checks for all PRs. IMPORTANT: Be very conservative \u2014 avoid creating more PRs or comments unless genuinely new activity or significant changes. Do NOT update monthly summary unless something new was done. Wait for PRs to be reviewed/merged before taking more action. Do NOT run frequently if nothing has changed. Runs 22376433289, 22376570236, 22376695221, 22376803799, 22376929415, and 22377057861 (2026-02-25) were all no-ops: nothing changed since previous run. System-generated issues #434 (No-Op tracker) and #435 (failure report for run 22372136326) are open but require no Repo Assist action."
+  "open_repo_assist_prs": [426, 428, 430, 431, 432],
+  "fallback_issues_to_close": [429, 433],
+  "notes": "Multiple runs on 2026-02-24 and 2026-02-25. Maintainer has -1 reaction on monthly activity issue #421 — signals displeasure with run frequency or volume. All 5 Repo Assist PRs (#426, #428, #430, #431, #432) still awaiting CI/review. CI shows 'pending' with 0 checks for all PRs. IMPORTANT: Be very conservative — avoid creating more PRs or comments unless genuinely new activity or significant changes. Do NOT update monthly summary unless something new was done. Wait for PRs to be reviewed/merged before taking more action. Do NOT run frequently if nothing has changed. Runs 22376433289, 22376570236, 22376695221, 22376803799, 22376929415, and 22377057861 (2026-02-25) were all no-ops: nothing changed since previous run. System-generated issues #434 (No-Op tracker) and #435 (failure report for run 22372136326) are open but require no Repo Assist action."
 }
