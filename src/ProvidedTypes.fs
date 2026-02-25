@@ -1830,6 +1830,12 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     member __.DefineStaticParameters(parameters: ProvidedStaticParameter list, instantiationFunction: (string -> obj[] -> ProvidedTypeDefinition)) =
         if staticParamsDefined then failwithf "Static parameters have already been defined for this type. stacktrace = %A" Environment.StackTrace
         staticParamsDefined <- true
+        // Warn when all static parameters are optional. This can cause issues when the user provides
+        // values that exactly match the defaults (see https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/346).
+        if parameters.Length > 0 && parameters |> List.forall (fun p -> p.ParameterDefaultValue.IsSome) then
+            match !ProvidedTypeDefinition.Logger with
+            | Some logger -> logger (sprintf "WARNING: ProvidedTypeDefinition '%s' has all static parameters defined as optional. This can cause issues when all provided argument values match the defaults. Consider making at least one static parameter non-optional." className)
+            | None -> eprintfn "WARNING (TypeProviders SDK): ProvidedTypeDefinition '%s' has all static parameters defined as optional. This can cause issues when all provided argument values match the defaults. Consider making at least one static parameter non-optional." className
         staticParams      <- lazy parameters
         staticParamsApply <- Some instantiationFunction
 
