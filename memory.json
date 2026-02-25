@@ -1,6 +1,6 @@
 {
-  "last_run": "2026-02-25T00:56:55Z",
-  "last_run_id": "22377057861",
+  "last_run": "2026-02-25T03:17:36Z",
+  "last_run_id": "22380547696",
   "tasks_last_run": {
     "task1_triage": "2026-02-24",
     "task2_fix_issues": "2026-02-24",
@@ -42,6 +42,11 @@
     "425": {
       "date": "2026-02-24",
       "topic": "linked PR #431 for .NET 8 update"
+    },
+    "426": {
+      "date": "2026-02-25",
+      "topic": "confirmed tests pass - 84 passed, 1 skipped on net8.0",
+      "type": "pr"
     }
   },
   "labels_applied": {
@@ -94,34 +99,40 @@
   "fix_attempts": {
     "423": {
       "date": "2026-02-24",
-      "type": "pr_created",
+      "type": "pr_merged",
       "description": "Updated fsdocs from 11.4.3 to 11.5.1 in .config/dotnet-tools.json",
       "branch": "repo-assist/fix-issue-423-update-fsharp-formatting",
       "pr": 430
     },
     "346": {
       "date": "2026-02-24",
-      "type": "pr_created",
+      "type": "pr_merged",
       "description": "Added warning when all static params optional",
       "pr": 428
     },
     "395": {
       "date": "2026-02-24",
-      "type": "pr_created",
-      "description": "Fixed UoM infinite loop",
+      "type": "pr_open",
+      "description": "Fixed UoM infinite loop; regression test added; all 84 tests pass on net8.0",
       "pr": 426
     },
     "425": {
       "date": "2026-02-24",
-      "type": "pr_created",
+      "type": "pr_merged",
       "description": "Updated test projects and CI from .NET 5 to .NET 8",
       "pr": 431
     },
     "365": {
       "date": "2026-02-24",
-      "type": "pr_created",
+      "type": "pr_merged",
       "description": "Fixed custom attributes on nested erased types",
       "pr": 432
+    },
+    "436": {
+      "date": "2026-02-25",
+      "type": "pr_open",
+      "description": "Switch from fsharp.formatting.commandtool to fsdocs-tool 21.0.0",
+      "pr": 437
     }
   },
   "improvement_ideas": [],
@@ -133,7 +144,6 @@
     "pr": 422,
     "notes": "Release PR #422 was merged"
   },
-  "open_repo_assist_prs": [426, 428, 430, 431, 432],
-  "fallback_issues_to_close": [429, 433],
-  "notes": "Multiple runs on 2026-02-24 and 2026-02-25. Maintainer has -1 reaction on monthly activity issue #421 — signals displeasure with run frequency or volume. All 5 Repo Assist PRs (#426, #428, #430, #431, #432) still awaiting CI/review. CI shows 'pending' with 0 checks for all PRs. IMPORTANT: Be very conservative — avoid creating more PRs or comments unless genuinely new activity or significant changes. Do NOT update monthly summary unless something new was done. Wait for PRs to be reviewed/merged before taking more action. Do NOT run frequently if nothing has changed. Runs 22376433289, 22376570236, 22376695221, 22376803799, 22376929415, and 22377057861 (2026-02-25) were all no-ops: nothing changed since previous run. System-generated issues #434 (No-Op tracker) and #435 (failure report for run 22372136326) are open but require no Repo Assist action."
+  "open_repo_assist_prs": [426, 437],
+  "notes": "Maintainer (dsyme) merged 4 PRs today: #428, #430, #431, #432. Also closed fallback issues #429 and #433. Created new issue #436 asking for fsdocs-tool update; handled by run 22380483598 with PR #437. Current run 22380547696: confirmed PR #426 tests pass (84/85) and updated monthly summary. Only 2 PRs remain open: #426 (UoM fix, tests confirmed) and #437 (fsdocs-tool update)."
 }
