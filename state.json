@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-25T21:08:26Z",
-    "last_run_id": "22415943925",
+    "last_run": "2026-02-25T21:13:54Z",
+    "last_run_id": "22416138064",
     "tasks_last_run": {
         "task1_triage": "2026-02-25",
         "task2_fix_issues": "2026-02-25",
@@ -8,7 +8,7 @@
         "task5_maintain_prs": "2026-02-25",
         "task6_stale_pr_nudge": "2026-02-24",
         "task7_labels": "2026-02-25",
-        "task8_release_prep": "2026-02-24",
+        "task8_release_prep": "2026-02-25",
         "task10_forward": "2026-02-25",
         "task11_monthly_summary": "2026-02-25"
     },
@@ -22,6 +22,10 @@
         "365": {
             "date": "2026-02-24",
             "topic": "bug triage - CustomAttribute on nested erased types"
+        },
+        "366": {
+            "date": "2026-02-25",
+            "topic": "investigated Expr.NewUnionCase / Specified method not supported bug - root cause analysis and workaround"
         },
         "387": {
             "date": "2026-02-25",
@@ -59,115 +63,31 @@
         }
     },
     "labels_applied": {
-        "387": {
-            "date": "2026-02-24",
-            "labels": ["bug", "needs triage"]
-        },
-        "391": {
-            "date": "2026-02-24",
-            "labels": ["bug", "needs investigation"]
-        },
-        "395": {
-            "date": "2026-02-24",
-            "labels": ["bug"]
-        },
-        "400": {
-            "date": "2026-02-24",
-            "labels": ["question", "documentation"]
-        },
-        "405": {
-            "date": "2026-02-24",
-            "labels": ["enhancement"]
-        },
-        "408": {
-            "date": "2026-02-24",
-            "labels": ["needs investigation"]
-        },
-        "423": {
-            "date": "2026-02-24",
-            "labels": ["enhancement", "documentation"]
-        },
-        "424": {
-            "date": "2026-02-24",
-            "labels": ["enhancement"]
-        },
-        "425": {
-            "date": "2026-02-24",
-            "labels": ["enhancement"]
-        },
-        "427": {
-            "date": "2026-02-24",
-            "labels": ["enhancement"]
-        },
-        "436": {
-            "date": "2026-02-25",
-            "labels": ["enhancement"]
-        }
+        "387": { "date": "2026-02-24", "labels": ["bug", "needs triage"] },
+        "391": { "date": "2026-02-24", "labels": ["bug", "needs investigation"] },
+        "395": { "date": "2026-02-24", "labels": ["bug"] },
+        "400": { "date": "2026-02-24", "labels": ["question", "documentation"] },
+        "405": { "date": "2026-02-24", "labels": ["enhancement"] },
+        "408": { "date": "2026-02-24", "labels": ["needs investigation"] },
+        "423": { "date": "2026-02-24", "labels": ["enhancement", "documentation"] },
+        "424": { "date": "2026-02-24", "labels": ["enhancement"] },
+        "425": { "date": "2026-02-24", "labels": ["enhancement"] },
+        "427": { "date": "2026-02-24", "labels": ["enhancement"] },
+        "436": { "date": "2026-02-25", "labels": ["enhancement"] }
     },
     "pr_nudges": {
-        "416": {
-            "date": "2026-02-24"
-        }
+        "416": { "date": "2026-02-24" }
     },
     "fix_attempts": {
-        "423": {
-            "date": "2026-02-24",
-            "type": "pr_merged",
-            "description": "Updated fsdocs from 11.4.3 to 11.5.1 in .config/dotnet-tools.json",
-            "branch": "repo-assist/fix-issue-423-update-fsharp-formatting",
-            "pr": 430
-        },
-        "346": {
-            "date": "2026-02-24",
-            "type": "pr_merged",
-            "description": "Added warning when all static params optional",
-            "pr": 428
-        },
-        "395": {
-            "date": "2026-02-24",
-            "type": "pr_merged",
-            "description": "Fixed UoM infinite loop; regression test added; all 84 tests pass on net8.0",
-            "pr": 426
-        },
-        "425": {
-            "date": "2026-02-24",
-            "type": "pr_merged",
-            "description": "Updated test projects and CI from .NET 8",
-            "pr": 431
-        },
-        "365": {
-            "date": "2026-02-24",
-            "type": "pr_merged",
-            "description": "Fixed custom attributes on nested erased types",
-            "pr": 432
-        },
-        "436": {
-            "date": "2026-02-25",
-            "type": "pr_merged",
-            "description": "Switch from fsharp.formatting.commandtool to fsdocs-tool 21.0.0",
-            "pr": 437
-        },
-        "341": {
-            "date": "2026-02-25",
-            "type": "pr_open",
-            "description": "Memoize transType in AssemblyCompiler - avoids redundant type translation in generative TP compile",
-            "pr": 443,
-            "branch": "repo-assist/improve-transtype-memoization"
-        },
-        "424": {
-            "date": "2026-02-25",
-            "type": "pr_open",
-            "description": "Add coverage tests and Coverage build target",
-            "pr": 442,
-            "branch": "repo-assist/fix-issue-424-coverage-0f634663b848668c"
-        },
-        "99": {
-            "date": "2026-02-25",
-            "type": "pr_open",
-            "description": "Add tests and docs for equality/comparison on generative provided types; confirmed IEquatable<ProvidedType> and IComparable<ProvidedType> work; all 87 tests pass",
-            "pr": 444,
-            "branch": "repo-assist/improve-equality-comparison-tests"
-        }
+        "423": { "date": "2026-02-24", "type": "pr_merged", "pr": 430 },
+        "346": { "date": "2026-02-24", "type": "pr_merged", "pr": 428 },
+        "395": { "date": "2026-02-24", "type": "pr_merged", "pr": 426 },
+        "425": { "date": "2026-02-24", "type": "pr_merged", "pr": 431 },
+        "365": { "date": "2026-02-24", "type": "pr_merged", "pr": 432 },
+        "436": { "date": "2026-02-25", "type": "pr_merged", "pr": 437 },
+        "341": { "date": "2026-02-25", "type": "pr_open", "pr": 443, "branch": "repo-assist/improve-transtype-memoization" },
+        "424": { "date": "2026-02-25", "type": "pr_open", "pr": 442, "branch": "repo-assist/fix-issue-424-coverage-0f634663b848668c" },
+        "99": { "date": "2026-02-25", "type": "pr_open", "pr": 444, "branch": "repo-assist/improve-equality-comparison-tests" }
     },
     "improvement_ideas": [],
     "welcomed_contributors": [],
@@ -176,7 +96,7 @@
         "date": "2026-02-24",
         "status": "merged",
         "pr": 422,
-        "notes": "Release PR #422 was merged. Maintainer committed 'update versions' and 'update docs' on 2026-02-25 17:36/17:51. No release tags in repo yet."
+        "notes": "Maintainer committed 'update versions' (17:51) and 'update docs' (17:36) on 2026-02-25 - likely preparing 8.2.1 release. Do NOT create release PR - maintainer is handling it."
     },
     "open_repo_assist_prs": [442, 443, 444],
     "merged_this_month": [422, 426, 428, 430, 431, 432, 437],
@@ -184,5 +104,5 @@
         "391_comment": "2026-02-25",
         "408_comment": "2026-02-25"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PRs #442, #443, #444 open as drafts awaiting CI and maintainer review (all CI pending). No new activity since last run at 21:03 UTC. Future tasks: check for release tag after recent merges; triage older issues #366, #384, #336 when new human activity appears."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PRs #442, #443, #444 open as drafts awaiting CI and maintainer review. Maintainer committed 'update workflow' at 19:38 UTC on 2026-02-25 - may have changed CI. Issue #366 triaged this run (2021 bug about Expr.NewUnionCase in generative TPs). Future tasks: check older issues #170, #67, #427; look for more bugs to fix when PRs are merged."
 }
