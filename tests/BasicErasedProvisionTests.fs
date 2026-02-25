@@ -298,6 +298,27 @@ let ``test basic symbol type ops``() =
    let t4 = ProvidedTypeBuilder.MakeGenericType(typedefof<seq<_>>, [ t2 ])
    Assert.Equal<string>("TypeSymbol", t4.GetType().Name ) 
 
+// Regression test for https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/395
+// Comparing a FSharpTypeAbbreviation (UoM abbreviation) type using Equals must not infinite-loop.
+[<Fact>]
+let ``test FSharpTypeAbbreviation equality does not infinite loop`` () =
+   let kg1 = ProvidedMeasureBuilder.SI "kg"
+   let kg2 = ProvidedMeasureBuilder.SI "kg"
+   let m   = ProvidedMeasureBuilder.SI "m"
+
+   // Same unit abbreviation must be equal
+   Assert.True(kg1.Equals(kg2 :> obj), "same SI unit should be equal")
+   Assert.True(kg1.Equals(kg1 :> obj), "unit should equal itself")
+
+   // Different unit abbreviations must not be equal
+   Assert.False(kg1.Equals(m :> obj), "different SI units should not be equal")
+
+   // Comparing against a plain .NET type must return false (not loop or throw)
+   Assert.False(kg1.Equals(typeof<decimal> :> obj), "abbreviation vs plain type should not be equal")
+
+   // Comparing with null must return false
+   Assert.False(kg1.Equals(null), "abbreviation vs null should not be equal")
+
 
 let stressTestCore() = 
     let refs = Targets.DotNetStandard20FSharpRefs()
