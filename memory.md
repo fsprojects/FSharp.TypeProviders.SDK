@@ -12,7 +12,7 @@
 - PR #437: Update fsdocs-tool to v21 (merged 2026-02-25)
 
 ## Open PRs
-(none)
+- PR #440 (or next): Add coverage tests and Coverage build target (closes #424)
 
 ## Notes
 - The repository uses paket for dependency management
@@ -23,3 +23,6 @@
 - Issue #438 tracks no-op runs - maintainer is clearly seeing noise
 - Issue #439 is an auto-generated failure report
 - Monthly activity issue should only be updated when something was actually done
+- Current line coverage: 72.2%, branch coverage: 56.8% (above 60% target already)
+- coverlet.collector is already in paket.dependencies for coverage collection
+- Tried to fix issue #424: added 6 new tests + Coverage FAKE target
