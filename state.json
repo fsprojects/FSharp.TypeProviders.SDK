@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-26T12:44:27Z",
-    "last_run_id": "22442568592",
+    "last_run": "2026-02-26T12:53:36Z",
+    "last_run_id": "22442880065",
     "tasks_last_run": {
         "task1_triage": "2026-02-26",
         "task2_fix_issues": "2026-02-26",
@@ -11,7 +11,7 @@
         "task10_forward": "2026-02-26",
         "task11_monthly_summary": "2026-02-26"
     },
-    "issue_triage_cursor": 294,
+    "issue_triage_cursor": 325,
     "label_cursor": 459,
     "monthly_activity_issue": {
         "month": "2026-02",
@@ -32,7 +32,8 @@
         "336": {"date": "2026-02-26", "topic": "root cause analysis for GetUnionCases bug - TypeSymbol.GetNestedType not delegating; created PR #458"},
         "323": {"date": "2026-02-26", "topic": "implemented fix for mutable capture in closures - promote mutable vars to refs in QuotationSimplifier; created PR #459"},
         "342": {"date": "2026-02-26", "topic": "summarised SDK communication patterns: static params, errors, warnings, loading; pointed to new guide"},
-        "294": {"date": "2026-02-26", "topic": "summarised current TP error/warning approaches: exceptions, graceful degradation, PR #428 SDK warning, fslang-suggestions link"}
+        "294": {"date": "2026-02-26", "topic": "summarised current TP error/warning approaches: exceptions, graceful degradation, PR #428 SDK warning, fslang-suggestions link"},
+        "325": {"date": "2026-02-26", "topic": "noted recent SDK perf improvements (PR #443 merged, PR #457 open) reduce type-translation cost; lazy-instantiation remains compiler-side (dotnet/fsharp#7907)"}
     },
     "labels_applied": {
         "387": {"date": "2026-02-24", "labels": ["bug", "needs triage"]},
@@ -88,5 +89,5 @@
         "67_issue": "2026-02-26",
         "448_issue": "2026-02-26"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 — be conservative. PR #457 open (transTypeRef/transMethRef caching). PR #458 open (fix GetNestedType on TypeSymbol). PR #459 open (fix mutable capture in closures - issue #323). Issue #456 is agentic no-op tracker — do NOT engage. DO NOT retry issue #427. DO NOT create release PRs. Remaining older issues without Repo Assist comments: #384 (compiler-side, dsyme engaged - dsyme to fix rewrite phase), #325 (compiler-side perf - ref dotnet/fsharp#7907), #327 (shadow copy IL - enhancement, no SDK fix), #306 (DU emission - well-discussed), #300/#302/#298/#299 (long-term aims, already labeled enhancement). Issues already commented: #294 (TP warnings - summarised current approaches + fslang link), #342 (communication practices). Monthly activity issue #421 updated."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 — be conservative. PR #457 open (transTypeRef/transMethRef caching). PR #458 open (fix GetNestedType on TypeSymbol). PR #459 open (fix mutable capture in closures - issue #323). Issue #456 is agentic no-op tracker — do NOT engage. DO NOT retry issue #427. DO NOT create release PRs. Remaining older issues without Repo Assist comments: #384 (compiler-side, dsyme to fix rewrite phase), #327 (shadow copy IL - technical enhancement, no comments), #306 (DU emission - well-discussed), #300/#302/#298/#299 (long-term aims, labeled enhancement), #386 (external). Issues #294, #325, #323, #336, #341, #342 all commented. Issue #325 now updated with recent SDK perf improvements context."
 }
