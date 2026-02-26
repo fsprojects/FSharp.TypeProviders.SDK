@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-26T11:07:44Z",
-    "last_run_id": "22439359867",
+    "last_run": "2026-02-26T11:13:42Z",
+    "last_run_id": "22439558291",
     "tasks_last_run": {
         "task1_triage": "2026-02-25",
         "task2_fix_issues": "2026-02-25",
@@ -90,5 +90,5 @@
         "427": "set up NuGet trusted publishing via OIDC - ATTEMPTED TWICE (push not permitted; patch in issue #448)",
         "453": "completely overhaul docs - DONE (PR #455 merged 2026-02-26T10:57)"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. All Repo Assist PRs have been merged. Issues #99 and #67 closed by dsyme 2026-02-26. Only pending suggestion: close #341 (transType memoization merged in PR #443 but issue still open). Older issues not yet engaged: #384 (dsyme said he'd look at it), #336 (workaround exists in comment), #323 (enhancement, described fix), #325 (compiler issue), #299, #342, #302, #300, #298, #306, #327, #294. DO NOT retry issue #427 - push permissions not granted."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. All Repo Assist PRs have been merged. Issues #99 and #67 closed by dsyme 2026-02-26. Only pending suggestion: close #341 (transType memoization merged in PR #443 but issue still open). Issue #386 has full explanation from dsyme (F# compiler limitation, not SDK issue). Older issues not yet engaged: #384 (dsyme said he'd look at it), #336 (workaround exists in comment), #323 (enhancement, described fix), #325 (compiler issue), #299, #342, #302, #300, #298, #306, #327, #294. DO NOT retry issue #427 - push permissions not granted."
 }
