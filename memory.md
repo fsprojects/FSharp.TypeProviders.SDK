@@ -21,7 +21,8 @@
 - PR #459: Fix mutable variable captures in QuotationSimplifier (merged 2026-02-26)
 
 ## Open PRs
-- PR #TBD: Release 8.3.0 preparation (repo-assist/release-v8.3.0, created 2026-02-26)
+- PR #462: Release 8.3.0 preparation (repo-assist, created 2026-02-26, draft)
+- PR TBD: Fix custom attribute encoding (branch: repo-assist/fix-custom-attr-encoding, created 2026-02-26)
 
 ## Open Issues (as of 2026-02-26)
 - #298: Binary reader removal - Repo Assist commented 2026-02-26 (SRM migration approach)
@@ -46,4 +47,5 @@
 - UncheckedQuotations module (lines 332-517) uses mkFE0/1/2/3/N internal FSharp.Core methods - stable since F# 2.0
 - Binary reader in AssemblyReader module starts at ~line 1941 in ProvidedTypes.fs
 - Issue #384 is a compiler-side bug (dotnet/fsharp) - attribute blobs store type names as strings, not rewritten in generative TP compile
-- Release 8.3.0 prepared 2026-02-26 with RELEASE_NOTES.md update; PR created
+- Release 8.3.0 prepared 2026-02-26 with RELEASE_NOTES.md update; PR #462 created
+- Custom attr encoding fix: implemented obj[] support in encodeCustomAttrElemTypeForObject (was failwith "TODO"); applied transValue to constructorArgs and namedProps/namedFields in defineCustomAttrs (was dead code). 104 tests pass. PR pending.

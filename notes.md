@@ -43,3 +43,5 @@
 - UncheckedQuotations module (lines 332-517) uses mkFE0/1/2/3/N internal FSharp.Core methods - stable since F# 2.0
 - Binary reader in AssemblyReader module starts at ~line 1941 in ProvidedTypes.fs
 - Issue #384 is a compiler-side bug (dotnet/fsharp) - attribute blobs store type names as strings, not rewritten in generative TP compile
+- Release 8.3.0 prepared 2026-02-26 with RELEASE_NOTES.md update; PR #462 created
+- Custom attr encoding fix: implemented obj[] support in encodeCustomAttrElemTypeForObject (was failwith "TODO"); applied transValue to constructorArgs and namedProps/namedFields in defineCustomAttrs (was dead code). 104 tests pass. PR pending.
