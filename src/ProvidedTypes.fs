@@ -8666,6 +8666,13 @@ namespace ProviderImplementation.ProvidedTypes
             // therefore, we can perform inlining to translate this to a form that can be compiled
             | Let(v, vexpr, bexpr) when v.Type.IsByRef -> transLetOfByref v vexpr bexpr
 
+            // Promote mutable variables captured by closures to ref types.
+            // When a 'let mutable v = ...' variable is captured inside a lambda, mutations inside
+            // the lambda would not be visible outside (closures capture by value in generated assemblies).
+            // We rewrite 'let mutable v = e in body' to 'let v = ref e in body[v := !v_ref; v <- e := v_ref := e]'
+            | Let(v, vexpr, bexpr) when v.IsMutable && isCapturedByLambda v bexpr ->
+                promoteMutableToRef v (simplifyExpr vexpr) bexpr
+
             // Eliminate recursive let bindings (which are unsupported by the type provider API) to regular let bindings
             | LetRecursive(bindings, expr) -> simplifyLetRec bindings expr
 
@@ -8770,6 +8777,48 @@ namespace ProviderImplementation.ProvidedTypes
                 |> simplifyExpr
             | _ ->
                 failwithf "Unexpected byref binding: %A = %A. Please report this bug to https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues" v vexpr
+
+        // Checks if the given mutable variable is captured (as a free variable) by any lambda within expr.
+        and isCapturedByLambda (v: Var) (expr: Expr) =
+            match expr with
+            | ShapeLambdaUnchecked(param, body) when param <> v ->
+                body.GetFreeVars() |> Seq.exists ((=) v)
+            | ShapeLambdaUnchecked _ -> false
+            | ShapeCombinationUnchecked(_, args) ->
+                args |> List.exists (isCapturedByLambda v)
+            | ShapeVarUnchecked _ -> false
+
+        // Rewrites 'let mutable v = initExpr in body' to use a ref cell, so that closures
+        // that capture v see mutations correctly.  This mirrors how F# compilers handle mutable
+        // variables captured by closures, and allows the TPSDK quotation translator to emit
+        // correct IL for generated type providers.
+        and promoteMutableToRef (v: Var) (initExpr: Expr) (body: Expr) =
+            let refType = ProvidedTypeBuilder.MakeGenericType(typedefof<_ ref>, [v.Type])
+            let vRef = Var(v.Name, refType)
+
+            let refMethod =    match <@ ref 1 @>        with Call(None, r, [_]) -> r | _ -> failwith "Extracting MethodInfo from <@ ref 1 @> failed"
+            let derefMethod =  match <@ !(ref 1) @>     with Call(None, m, [_]) -> m | _ -> failwith "Extracting MethodInfo from <@ !(ref 1) @> failed"
+            let setRefMethod = match <@ (ref 1) := 2 @> with Call(None, m, [_;_]) -> m | _ -> failwith "Extracting MethodInfo from <@ (ref 1) := 2 @> failed"
+
+            let refMethodInst    = ProvidedTypeBuilder.MakeGenericMethod(refMethod.GetGenericMethodDefinition(),    [v.Type])
+            let derefMethodInst  = ProvidedTypeBuilder.MakeGenericMethod(derefMethod.GetGenericMethodDefinition(),  [v.Type])
+            let setRefMethodInst = ProvidedTypeBuilder.MakeGenericMethod(setRefMethod.GetGenericMethodDefinition(), [v.Type])
+
+            let initRef  = Expr.CallUnchecked(refMethodInst, [initExpr])
+            let derefExpr = Expr.CallUnchecked(derefMethodInst, [Expr.Var vRef])
+            let setRef newVal = Expr.CallUnchecked(setRefMethodInst, [Expr.Var vRef; newVal])
+
+            // Rewrite uses of v in body: reads become !vRef, writes become vRef := e
+            let rec rewrite (expr: Expr) =
+                match expr with
+                | ShapeVarUnchecked v2 when v2 = v -> derefExpr
+                | VarSet(v2, e) when v2 = v -> setRef (rewrite e)
+                | ShapeLambdaUnchecked(param, lambdaBody) -> Expr.Lambda(param, rewrite lambdaBody)
+                | ShapeCombinationUnchecked(comb, args) -> RebuildShapeCombinationUnchecked(comb, List.map rewrite args)
+                | _ -> expr
+
+            Expr.LetUnchecked(vRef, initRef, rewrite body)
+            |> simplifyExpr
 
         and transValueArray (o: Array, ty: Type) =
             let elemTy = ty.GetElementType()

@@ -110,7 +110,7 @@ let ``lambdas``() =
                 @> ".|.|."
         ]
     
-[<Fact(Skip = "Need to replace captured mutables with refs")>]
+[<Fact>]
 let ``lambdas - failing``() =
     testProvidedAssembly 
         [
