@@ -1,10 +1,9 @@
 {
-    "last_run": "2026-02-26T11:30:42Z",
-    "last_run_id": "22440128417",
+    "last_run": "2026-02-26T11:35:49Z",
+    "last_run_id": "22440294921",
     "tasks_last_run": {
-        "task1_triage": "2026-02-25",
-        "task2_fix_issues": "2026-02-25",
-        "task3_improvements": "2026-02-25",
+        "task1_triage": "2026-02-26",
+        "task2_fix_issues": "2026-02-26",
         "task5_maintain_prs": "2026-02-26",
         "task6_stale_pr_nudge": "2026-02-24",
         "task7_labels": "2026-02-26",
@@ -12,8 +11,8 @@
         "task10_forward": "2026-02-26",
         "task11_monthly_summary": "2026-02-26"
     },
-    "issue_triage_cursor": 0,
-    "label_cursor": 453,
+    "issue_triage_cursor": 336,
+    "label_cursor": 457,
     "monthly_activity_issue": {
         "month": "2026-02",
         "number": 421
@@ -29,7 +28,8 @@
         "426": {"date": "2026-02-25", "topic": "confirmed tests pass - 84 passed, 1 skipped on net8.0", "type": "pr"},
         "341": {"date": "2026-02-25", "topic": "performance investigation - root cause transType no memoization, created fix PR #443"},
         "99": {"date": "2026-02-25", "topic": "investigated equality/comparison on generative provided types per dsyme's direct request; confirmed all 4 approaches work; created PR #444"},
-        "453": {"date": "2026-02-26", "topic": "commented on docs overhaul issue - outlined guide PR #455 content and follow-on work"}
+        "453": {"date": "2026-02-26", "topic": "commented on docs overhaul issue - outlined guide PR #455 content and follow-on work"},
+        "336": {"date": "2026-02-26", "topic": "root cause analysis for GetUnionCases bug - TypeSymbol.GetNestedType not delegating; created PR #458"}
     },
     "labels_applied": {
         "387": {"date": "2026-02-24", "labels": ["bug", "needs triage"]},
@@ -55,14 +55,15 @@
         "425": {"date": "2026-02-24", "type": "pr_merged", "pr": 431},
         "365": {"date": "2026-02-24", "type": "pr_merged", "pr": 432},
         "436": {"date": "2026-02-25", "type": "pr_merged", "pr": 437},
-        "341": {"date": "2026-02-26", "type": "pr_open", "pr": 457, "notes": "PR #457 open - transTypeRef + transMethRef caching + stress benchmarks; CI pending as of 11:30 UTC"},
+        "341": {"date": "2026-02-26", "type": "pr_open", "pr": 457, "notes": "PR #457 open - transTypeRef + transMethRef caching + stress benchmarks"},
         "424": {"date": "2026-02-25", "type": "pr_merged", "pr": 442, "notes": "Merged by dsyme 2026-02-26T09:41"},
         "99": {"date": "2026-02-25", "type": "pr_merged", "pr": 444, "notes": "Merged by dsyme on 2026-02-26; issue closed by dsyme 2026-02-26T11:05"},
         "170": {"date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26"},
         "67": {"date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26; issue closed by dsyme 2026-02-26T11:05"},
         "387": {"date": "2026-02-25", "type": "pr_merged", "pr": 446, "notes": "Merged by dsyme on 2026-02-26"},
         "427": {"date": "2026-02-26", "type": "closed_by_maintainer", "issue": 448, "notes": "Patch issue #448 closed by dsyme as 'completed' 2026-02-26T09:38. Do NOT retry."},
-        "453": {"date": "2026-02-26", "type": "pr_merged", "pr": 455, "notes": "Merged by dsyme 2026-02-26T10:57. Issue #453 closed."}
+        "453": {"date": "2026-02-26", "type": "pr_merged", "pr": 455, "notes": "Merged by dsyme 2026-02-26T10:57. Issue #453 closed."},
+        "336": {"date": "2026-02-26", "type": "pr_open", "pr": 458, "notes": "PR #458 open - fix TypeSymbol.GetNestedType + ProvidedTypeSymbol.GetNestedType; 103 tests pass"}
     },
     "improvement_ideas": [],
     "welcomed_contributors": [],
@@ -73,7 +74,7 @@
         "pr": 422,
         "notes": "Maintainer committed 'update versions' (17:51) and 'update docs' (17:36) on 2026-02-25. Do NOT create release PR - maintainer handles releases."
     },
-    "open_repo_assist_prs": [457],
+    "open_repo_assist_prs": [457, 458],
     "merged_this_month": [422, 426, 428, 430, 431, 432, 437, 442, 443, 444, 445, 446, 455],
     "pr_416_status": "closed_without_merge_2026-02-24",
     "maintainer_checked_off": {
@@ -83,5 +84,5 @@
         "67_issue": "2026-02-26",
         "448_issue": "2026-02-26"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 — be conservative. PR #457 open (draft=false) — CI pending as of 11:30 UTC 2026-02-26. Issue #456 is agentic no-op tracker — do NOT engage. Issue #456 created 2026-02-26. DO NOT retry issue #427. DO NOT create release PRs. Older issues without Repo Assist comments: #384, #336, #323, #325, #299, #342."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 — be conservative. PR #457 open (transTypeRef/transMethRef caching). PR #458 open (fix GetNestedType on TypeSymbol). Issue #456 is agentic no-op tracker — do NOT engage. DO NOT retry issue #427. DO NOT create release PRs. Remaining older issues without Repo Assist comments: #384, #323, #325, #299, #342."
 }
