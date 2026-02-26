@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-26T13:02:02Z",
-    "last_run_id": "22443141456",
+    "last_run": "2026-02-26T13:44:25Z",
+    "last_run_id": "22444701443",
     "tasks_last_run": {
         "task1_triage": "2026-02-26",
         "task2_fix_issues": "2026-02-26",
@@ -59,7 +59,7 @@
         "425": {"date": "2026-02-24", "type": "pr_merged", "pr": 431},
         "365": {"date": "2026-02-24", "type": "pr_merged", "pr": 432},
         "436": {"date": "2026-02-25", "type": "pr_merged", "pr": 437},
-        "341": {"date": "2026-02-26", "type": "pr_open", "pr": 457, "notes": "PR #457 open - transTypeRef + transMethRef caching + stress benchmarks"},
+        "341": {"date": "2026-02-26", "type": "pr_merged", "pr": 457, "notes": "PR #457 merged by dsyme 2026-02-26T13:17"},
         "424": {"date": "2026-02-25", "type": "pr_merged", "pr": 442, "notes": "Merged by dsyme 2026-02-26T09:41"},
         "99": {"date": "2026-02-25", "type": "pr_merged", "pr": 444, "notes": "Merged by dsyme on 2026-02-26; issue closed by dsyme 2026-02-26T11:05"},
         "170": {"date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26"},
@@ -67,8 +67,9 @@
         "387": {"date": "2026-02-25", "type": "pr_merged", "pr": 446, "notes": "Merged by dsyme on 2026-02-26"},
         "427": {"date": "2026-02-26", "type": "closed_by_maintainer", "issue": 448, "notes": "Patch issue #448 closed by dsyme as 'completed' 2026-02-26T09:38. Do NOT retry."},
         "453": {"date": "2026-02-26", "type": "pr_merged", "pr": 455, "notes": "Merged by dsyme 2026-02-26T10:57. Issue #453 closed."},
-        "336": {"date": "2026-02-26", "type": "pr_open", "pr": 458, "notes": "PR #458 open - fix TypeSymbol.GetNestedType + ProvidedTypeSymbol.GetNestedType; 103 tests pass"},
-        "323": {"date": "2026-02-26", "type": "pr_open", "pr": 459, "notes": "PR #459 open - promote mutable captures to refs in QuotationSimplifier; re-enabled skipped test; 103/103 tests pass"}
+        "336": {"date": "2026-02-26", "type": "pr_merged", "pr": 458, "notes": "PR #458 merged by dsyme 2026-02-26T13:18"},
+        "323": {"date": "2026-02-26", "type": "pr_merged", "pr": 459, "notes": "PR #459 merged by dsyme 2026-02-26T13:22"},
+        "386": {"date": "2026-02-26", "type": "closed_by_maintainer", "notes": "Issue #386 closed by dsyme 2026-02-26T13:44. Do NOT retry."}
     },
     "improvement_ideas": [],
     "welcomed_contributors": [],
@@ -79,8 +80,8 @@
         "pr": 422,
         "notes": "Maintainer committed 'update versions' (17:51) and 'update docs' (17:36) on 2026-02-25. Do NOT create release PRs - maintainer handles releases."
     },
-    "open_repo_assist_prs": [457, 458, 459],
-    "merged_this_month": [422, 426, 428, 430, 431, 432, 437, 442, 443, 444, 445, 446, 455],
+    "open_repo_assist_prs": [],
+    "merged_this_month": [422, 426, 428, 430, 431, 432, 437, 442, 443, 444, 445, 446, 455, 457, 458, 459],
     "pr_416_status": "closed_without_merge_2026-02-24",
     "maintainer_checked_off": {
         "391_comment": "2026-02-25",
@@ -89,5 +90,5 @@
         "67_issue": "2026-02-26",
         "448_issue": "2026-02-26"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 — be conservative. PR #457 open (transTypeRef/transMethRef caching). PR #458 open (fix GetNestedType on TypeSymbol). PR #459 open (fix mutable capture in closures - issue #323). Issue #456 is agentic no-op tracker — do NOT engage. DO NOT retry issue #427. DO NOT create release PRs. Remaining older issues without Repo Assist comments: #384 (compiler-side, dsyme to fix rewrite phase), #327 (shadow copy IL - technical enhancement from 2019, low priority), #306 (DU emission - well-discussed by dsyme in 2019, low priority), #300/#302/#298/#299 (long-term aims, labeled enhancement), #386 (external). Issues #294, #325, #323, #336, #341, #342 all commented. Issue #325 now updated with recent SDK perf improvements context. This run (22443141456) was a no-op - last run was only 9 min before and nothing new had happened."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 — be conservative. All previously open Repo Assist PRs (#457, #458, #459) merged by dsyme 2026-02-26. Issue #386 closed by dsyme 2026-02-26. DO NOT retry issues #427, #386. DO NOT create release PRs. Remaining older issues without Repo Assist comments: #384 (compiler-side, dsyme to fix rewrite phase), #327 (shadow copy IL - technical enhancement from 2019), #306 (DU emission - well-discussed by dsyme, not feasible currently), #300/#302/#298/#299 (long-term aims by dsyme). Issues #294, #325, #323, #336, #341, #342 all commented. Issue #325 now updated with recent SDK perf improvements context. Issue #456, #438, #441 are no-op trackers — do NOT engage. No open PRs remain."
 }
