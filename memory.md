@@ -50,4 +50,6 @@
 - Release 8.3.0 prepared 2026-02-26 with RELEASE_NOTES.md update; PR #462 created
 - Custom attr encoding fix: implemented obj[] support in encodeCustomAttrElemTypeForObject (was failwith "TODO"); applied transValue to constructorArgs and namedProps/namedFields in defineCustomAttrs (was dead code). 104 tests pass. PR #463 created.
 - Issues #342, #294, #325 are now closed (removed from Suggested Actions in Monthly Activity)
-- Last run at 15:47 UTC: updated Monthly Activity issue #421 only (no new work needed - both PRs have passing CI, all issues commented)
+- Last run at 16:08 UTC: status check — no new work; noted struct type support gap; updated Monthly Activity issue
+- ProvidedTypeDefinition has no isStruct parameter - SDK cannot generate struct value types (potential future work)
+- TODO at line 6735/6740: decodeILCustomAttribData returns null for System.Type custom attr args (low priority)
