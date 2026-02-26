@@ -15438,6 +15438,7 @@ namespace ProviderImplementation.ProvidedTypes
         let methMap = Dictionary<ProvidedMethod, ILMethodBuilder>(HashIdentity.Reference)
         let fieldMap = Dictionary<FieldInfo, ILFieldBuilder>(HashIdentity.Reference)
         let transTypeCache = Dictionary<Type, ILType>()
+        let transTypeRefCache = Dictionary<Type, ILTypeRef>()
         let genUniqueTypeName() =
             // lambda name should be unique across all types that all type provider might contribute in result assembly
             sprintf "Lambda%O" (Guid.NewGuid())
@@ -15490,7 +15491,12 @@ namespace ProviderImplementation.ProvidedTypes
 
         and transTypeRef (ty: Type) = 
             let ty = if ty.IsGenericType then ty.GetGenericTypeDefinition() else ty
-            ILTypeRef(transTypeRefScope ty, StructOption.ofObj (if ty.IsNested then null else ty.Namespace), ty.Name)
+            match transTypeRefCache.TryGetValue(ty) with
+            | true, tref -> tref
+            | false, _ ->
+            let tref = ILTypeRef(transTypeRefScope ty, StructOption.ofObj (if ty.IsNested then null else ty.Namespace), ty.Name)
+            transTypeRefCache.[ty] <- tref
+            tref
 
         and transTypeRefScope (ty: Type): ILTypeRefScope = 
             match ty.DeclaringType with 
@@ -15527,14 +15533,21 @@ namespace ProviderImplementation.ProvidedTypes
                 let f2 = f.GetDefinition()
                 ILFieldSpec(ILFieldRef (transTypeRef f2.DeclaringType, f2.Name, transType f2.FieldType), transType f.DeclaringType)
 
+        let transMethRefCache = Dictionary<MethodInfo, ILMethodRef>()
+
         let transMethRef (m:MethodInfo) = 
             if (match m with :? ProvidedMethod as m -> not m.BelongsToTargetModel | _ -> false) then failwithf "expected '%O' to belong to the target model" m
             // Remove the generic instantiations to get the uninstantiated identity of the method
             let m2 = m.GetDefinition()
+            match transMethRefCache.TryGetValue(m2) with
+            | true, mref -> mref
+            | false, _ ->
             let ptys = [| for p in m2.GetParameters() -> transType p.ParameterType |]
             let genarity = (if m2.IsGenericMethod then m2.GetGenericArguments().Length else 0)
             let cc = (if m2.IsStatic then ILCallingConv.Static else ILCallingConv.Instance)
-            ILMethodRef (transTypeRef m2.DeclaringType, cc, genarity, m2.Name, ptys, transType m2.ReturnType)
+            let mref = ILMethodRef (transTypeRef m2.DeclaringType, cc, genarity, m2.Name, ptys, transType m2.ReturnType)
+            transMethRefCache.[m2] <- mref
+            mref
 
         let transMeth (m:MethodInfo): ILMethodSpec = 
             match m with 
