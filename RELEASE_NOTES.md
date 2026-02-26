@@ -1,3 +1,15 @@
+#### 8.3.0 - February 26, 2026
+
+- Performance: Memoize `transType` in `AssemblyCompiler` to reduce redundant type translation #443
+- Performance: Cache `transTypeRef` and `transMethRef` in assembly compiler #457
+- Bug fix: Fix custom attributes on nested erased types #432
+- Bug fix: Fix `GetNestedType` on `TypeSymbol`/`ProvidedTypeSymbol` for generic provided types #458
+- Bug fix: Fix mutable variable captures in `QuotationSimplifier` — promote to ref cells #459
+- New warning when all static parameters in a type provider are optional #428
+- Documentation guide overhaul #455
+- Add coverage tests and Coverage build target #442
+- Update to .NET 8 SDK and toolchain #431
+
 #### 8.2.0 - February 24, 2026
 
 - Performance optimizations for design-time loading: lazy ILAssemblyRefs, optimize convTypeRef, inline isNull #417
