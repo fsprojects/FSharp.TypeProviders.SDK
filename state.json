@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-26T11:19:42Z",
-    "last_run_id": "22439767170",
+    "last_run": "2026-02-26T11:25:15Z",
+    "last_run_id": "22439949246",
     "tasks_last_run": {
         "task1_triage": "2026-02-25",
         "task2_fix_issues": "2026-02-25",
@@ -9,7 +9,7 @@
         "task6_stale_pr_nudge": "2026-02-24",
         "task7_labels": "2026-02-26",
         "task8_release_prep": "2026-02-25",
-        "task10_forward": "2026-02-25",
+        "task10_forward": "2026-02-26",
         "task11_monthly_summary": "2026-02-26"
     },
     "issue_triage_cursor": 0,
@@ -55,13 +55,13 @@
         "425": {"date": "2026-02-24", "type": "pr_merged", "pr": 431},
         "365": {"date": "2026-02-24", "type": "pr_merged", "pr": 432},
         "436": {"date": "2026-02-25", "type": "pr_merged", "pr": 437},
-        "341": {"date": "2026-02-26", "type": "pr_merged", "pr": 443, "notes": "Merged by dsyme 2026-02-26T09:17"},
+        "341": {"date": "2026-02-26", "type": "pr_open", "pr": 457, "notes": "PR #457 open (draft) - transTypeRef + transMethRef caching + stress benchmarks; CI pending"},
         "424": {"date": "2026-02-25", "type": "pr_merged", "pr": 442, "notes": "Merged by dsyme 2026-02-26T09:41"},
         "99": {"date": "2026-02-25", "type": "pr_merged", "pr": 444, "notes": "Merged by dsyme on 2026-02-26; issue closed by dsyme 2026-02-26T11:05"},
         "170": {"date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26"},
         "67": {"date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26; issue closed by dsyme 2026-02-26T11:05"},
         "387": {"date": "2026-02-25", "type": "pr_merged", "pr": 446, "notes": "Merged by dsyme on 2026-02-26"},
-        "427": {"date": "2026-02-26", "type": "closed_by_maintainer", "issue": 448, "notes": "Patch issue #448 closed by dsyme as 'completed' 2026-02-26T09:38 - dsyme likely applied the patch manually. Do NOT retry."},
+        "427": {"date": "2026-02-26", "type": "closed_by_maintainer", "issue": 448, "notes": "Patch issue #448 closed by dsyme as 'completed' 2026-02-26T09:38 - dsyme applied the patch manually. Do NOT retry."},
         "453": {"date": "2026-02-26", "type": "pr_merged", "pr": 455, "notes": "Merged by dsyme 2026-02-26T10:57. Issue #453 closed."}
     },
     "improvement_ideas": [],
@@ -73,7 +73,7 @@
         "pr": 422,
         "notes": "Maintainer committed 'update versions' (17:51) and 'update docs' (17:36) on 2026-02-25 - likely preparing 8.2.1 release. Do NOT create release PR - maintainer is handling it."
     },
-    "open_repo_assist_prs": [],
+    "open_repo_assist_prs": [457],
     "merged_this_month": [422, 426, 428, 430, 431, 432, 437, 442, 443, 444, 445, 446, 455],
     "pr_416_status": "closed_without_merge_2026-02-24",
     "maintainer_checked_off": {
@@ -83,13 +83,5 @@
         "67_issue": "2026-02-26",
         "448_issue": "2026-02-26"
     },
-    "maintainer_requests": {
-        "170": "add docs AND tests for nonNullable, hideObjectMethods, AddCustomAttribute - DONE (PR #445, merged)",
-        "67": "add docs for ProvidedMeasureBuilder - DONE (PR #445, merged; issue #67 closed)",
-        "99": "investigate equality/comparison on generative types - DONE (PR #444, merged; issue #99 closed)",
-        "341": "profile SwaggerProvider perf - DONE (PR #443, merged); issue #341 still open",
-        "427": "set up NuGet trusted publishing via OIDC - patch applied by dsyme (issue #448 closed as 'completed')",
-        "453": "completely overhaul docs - DONE (PR #455 merged 2026-02-26T10:57)"
-    },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. All Repo Assist PRs merged. Issues #99 and #67 closed. Issue #448 (NuGet OIDC) closed by dsyme as completed - patch was applied manually. Only pending suggestion: close #341 (transType memoization merged in PR #443 but issue still open). Issues #384, #336, #323, #325, #299, #342, #302, #300, #298, #306, #327, #294 have labels but no Repo Assist comments - consider triaging on future runs if something useful to say. DO NOT retry issue #427 - dsyme applied the patch himself."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PR #457 open (draft) - transTypeRef + transMethRef caching + stress benchmarks for issue #341; CI pending. Issue #341 still open (fix PR #457 pending). Do NOT create release PR - dsyme handles releases. Issues #384, #336, #323, #325, #299, #342 have labels but no Repo Assist comments - consider triaging on future runs if something useful to say. DO NOT retry issue #427 - dsyme applied the patch himself."
 }
