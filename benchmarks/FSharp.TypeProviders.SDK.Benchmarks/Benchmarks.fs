@@ -120,6 +120,165 @@ module internal BenchmarkHelpers =
             tp.Namespaces.[0].GetTypes().[0] :?> ProvidedTypeDefinition
         tp, providedType
 
+    // ---------------------------------------------------------------------------
+    // Property-heavy scenario: many backing fields + properties with real bodies
+    // ---------------------------------------------------------------------------
+
+    /// Build a generative assembly with `typeCount` types each having `propsPerType`
+    /// properties.  Each property is backed by a ProvidedField; the getter and setter
+    /// bodies use Expr.FieldGetUnchecked / Expr.FieldSetUnchecked so that
+    /// transFieldSpec is exercised on the hot path.
+    let buildProviderWithProperties (typeCount: int) (propsPerType: int) =
+        let cfg = makeConfig ()
+        let tp = new TypeProviderForNamespaces(cfg)
+        let ns = "BenchmarkNamespace"
+        let tempAssembly = ProvidedAssembly()
+
+        // Cycle through primitive types for field types (no generic options here
+        // because nested generic types exercise a different path).
+        let fieldTypes =
+            [| typeof<string>; typeof<int>; typeof<bool>; typeof<float>; typeof<int64>
+               typeof<DateTime>; typeof<Guid>; typeof<decimal> |]
+
+        for i in 0 .. typeCount - 1 do
+            let container =
+                ProvidedTypeDefinition(
+                    tempAssembly, ns,
+                    sprintf "ResourceType%d" i,
+                    Some typeof<obj>, isErased = false)
+
+            let fields = Array.init propsPerType (fun p ->
+                let fty = fieldTypes.[p % fieldTypes.Length]
+                let f = ProvidedField(sprintf "_field%d" p, fty)
+                container.AddMember f
+                f)
+
+            for p in 0 .. propsPerType - 1 do
+                let field = fields.[p]
+                let fty = field.FieldType
+                let prop =
+                    ProvidedProperty(
+                        sprintf "Property%d" p,
+                        fty,
+                        getterCode = (fun args -> Expr.FieldGet(Expr.Coerce(args.[0], field.DeclaringType), field)),
+                        setterCode = (fun args -> Expr.FieldSet(Expr.Coerce(args.[0], field.DeclaringType), field, args.[1])))
+                container.AddMember prop
+
+            tempAssembly.AddTypes [container]
+            tp.AddNamespace(ns, [container])
+
+        let providedType =
+            tp.Namespaces.[0].GetTypes().[0] :?> ProvidedTypeDefinition
+        tp, providedType
+
+    // ---------------------------------------------------------------------------
+    // Complex-body scenario: method bodies that call real BCL methods
+    // (exercises transMeth / transMethRef caching)
+    // ---------------------------------------------------------------------------
+
+    /// Build a generative assembly where every method body calls a real BCL method
+    /// (String.IsNullOrEmpty).  All methods share the same BCL call target, so
+    /// transMethRef is invoked many times with identical inputs — the cache should
+    /// eliminate redundant ILMethodRef allocations.
+    let buildProviderWithComplexBodies (typeCount: int) (methodsPerType: int) =
+        let cfg = makeConfig ()
+        let tp = new TypeProviderForNamespaces(cfg)
+        let ns = "BenchmarkNamespace"
+        let tempAssembly = ProvidedAssembly()
+
+        // These BCL methods will be referenced from every generated method body.
+        let isNullOrEmpty  = typeof<string>.GetMethod("IsNullOrEmpty", [| typeof<string> |])
+        let objToString    = typeof<obj>.GetMethod("ToString", [||])
+
+        for i in 0 .. typeCount - 1 do
+            let container =
+                ProvidedTypeDefinition(
+                    tempAssembly, ns,
+                    sprintf "ServiceType%d" i,
+                    Some typeof<obj>, isErased = false)
+
+            for m in 0 .. methodsPerType - 1 do
+                // Alternate between two different BCL call sites to avoid trivially
+                // hitting the memoization cache for the result type.
+                let callSite, retTy =
+                    if m % 2 = 0 then isNullOrEmpty, typeof<bool>
+                    else objToString,   typeof<string>
+
+                let meth =
+                    ProvidedMethod(
+                        sprintf "Op%d" m,
+                        [ ProvidedParameter("s", typeof<string>) ],
+                        retTy,
+                        invokeCode =
+                            (if m % 2 = 0 then
+                                fun args -> Expr.Call(callSite, [ args.[0] ])
+                             else
+                                fun args -> Expr.Call(args.[0], callSite, [])),
+                        isStatic = (m % 2 = 0))
+                container.AddMember meth
+
+            tempAssembly.AddTypes [container]
+            tp.AddNamespace(ns, [container])
+
+        let providedType =
+            tp.Namespaces.[0].GetTypes().[0] :?> ProvidedTypeDefinition
+        tp, providedType
+
+    // ---------------------------------------------------------------------------
+    // Nested-types scenario: types containing nested type definitions
+    // ---------------------------------------------------------------------------
+
+    /// Build a generative assembly with `outerCount` top-level types, each
+    /// containing `nestingDepth` levels of nested types with `methodsPerLevel`
+    /// methods.  This exercises the recursive type-definition walk in Compile().
+    let buildProviderWithNestedTypes (outerCount: int) (nestingDepth: int) (methodsPerLevel: int) =
+        let cfg = makeConfig ()
+        let tp = new TypeProviderForNamespaces(cfg)
+        let ns = "BenchmarkNamespace"
+        let tempAssembly = ProvidedAssembly()
+
+        let retTy = typeof<string>
+
+        let rec buildNested (depth: int) (name: string) : ProvidedTypeDefinition =
+            let td = ProvidedTypeDefinition(name, Some typeof<obj>, isErased = false)
+            for m in 0 .. methodsPerLevel - 1 do
+                let meth =
+                    ProvidedMethod(
+                        sprintf "Method%d" m,
+                        [ ProvidedParameter("x", typeof<int>) ],
+                        retTy,
+                        invokeCode = (fun _ -> Expr.Value("", retTy)),
+                        isStatic = true)
+                td.AddMember meth
+            if depth > 1 then
+                let nested = buildNested (depth - 1) (sprintf "%s_Nested" name)
+                td.AddMember nested
+            td
+
+        for i in 0 .. outerCount - 1 do
+            let outer =
+                ProvidedTypeDefinition(
+                    tempAssembly, ns,
+                    sprintf "OuterType%d" i,
+                    Some typeof<obj>, isErased = false)
+            for m in 0 .. methodsPerLevel - 1 do
+                let meth =
+                    ProvidedMethod(
+                        sprintf "OuterMethod%d" m,
+                        [ ProvidedParameter("x", typeof<int>) ],
+                        retTy,
+                        invokeCode = (fun _ -> Expr.Value("", retTy)),
+                        isStatic = true)
+                outer.AddMember meth
+            let nested = buildNested nestingDepth (sprintf "OuterType%d_Nested" i)
+            outer.AddMember nested
+            tempAssembly.AddTypes [outer]
+            tp.AddNamespace(ns, [outer])
+
+        let providedType =
+            tp.Namespaces.[0].GetTypes().[0] :?> ProvidedTypeDefinition
+        tp, providedType
+
 // ---------------------------------------------------------------------------
 // Benchmark classes
 // ---------------------------------------------------------------------------
@@ -173,6 +332,112 @@ type LargeSchemaProviderBenchmark() =
 
     [<Benchmark(Description = "CompileLargeSchema_500types_10methods")>]
     member _.CompileLargeSchema() =
+        let tp, providedType = pool.Dequeue()
+        let bytes = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+        (tp :> IDisposable).Dispose()
+        bytes.Length
+
+
+/// Property-heavy benchmark: types with many backing fields and properties whose
+/// getter/setter bodies use Expr.FieldGetUnchecked / FieldSetUnchecked.
+/// This exercises the ProvidedField → fieldMap → ILFieldBuilder path and simulates
+/// data-transfer-object schemas (OpenAPI "components/schemas").
+[<MemoryDiagnoser>]
+[<SimpleJob(launchCount = 1, warmupCount = 2, iterationCount = 5)>]
+type PropertyHeavyBenchmark() =
+
+    let mutable pool: (TypeProviderForNamespaces * ProvidedTypeDefinition) Queue = Queue()
+
+    [<Params(50, 200)>]
+    member val TypeCount = 50 with get, set
+
+    [<Params(10)>]
+    member val PropsPerType = 10 with get, set
+
+    [<IterationSetup>]
+    member this.Setup() =
+        while pool.Count < 2 do
+            pool.Enqueue(buildProviderWithProperties this.TypeCount this.PropsPerType)
+
+    [<Benchmark(Description = "CompilePropertyHeavy")>]
+    member _.CompilePropertyHeavy() =
+        let tp, providedType = pool.Dequeue()
+        let bytes = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+        (tp :> IDisposable).Dispose()
+        bytes.Length
+
+
+/// Complex-body benchmark: method bodies that call real BCL methods, exercising
+/// the transMeth / transMethRef caching path.  All methods call one of two BCL
+/// methods (String.IsNullOrEmpty / Object.ToString), so without the
+/// transMethRefCache many identical ILMethodRef objects would be allocated.
+[<MemoryDiagnoser>]
+[<SimpleJob(launchCount = 1, warmupCount = 2, iterationCount = 5)>]
+type ComplexBodyBenchmark() =
+
+    let mutable pool: (TypeProviderForNamespaces * ProvidedTypeDefinition) Queue = Queue()
+
+    [<Params(100, 300)>]
+    member val TypeCount = 100 with get, set
+
+    [<Params(10)>]
+    member val MethodsPerType = 10 with get, set
+
+    [<IterationSetup>]
+    member this.Setup() =
+        while pool.Count < 2 do
+            pool.Enqueue(buildProviderWithComplexBodies this.TypeCount this.MethodsPerType)
+
+    [<Benchmark(Description = "CompileComplexBodies")>]
+    member _.CompileComplexBodies() =
+        let tp, providedType = pool.Dequeue()
+        let bytes = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+        (tp :> IDisposable).Dispose()
+        bytes.Length
+
+
+/// Nested-types benchmark: outer types each contain several levels of nested types.
+/// Exercises the recursive defineNestedTypes / typeMembers walk in Compile().
+[<MemoryDiagnoser>]
+[<SimpleJob(launchCount = 1, warmupCount = 2, iterationCount = 5)>]
+type NestedTypesBenchmark() =
+
+    let mutable pool: (TypeProviderForNamespaces * ProvidedTypeDefinition) Queue = Queue()
+
+    [<Params(30, 100)>]
+    member val OuterCount = 30 with get, set
+
+    [<Params(4)>]
+    member val NestingDepth = 4 with get, set
+
+    [<IterationSetup>]
+    member this.Setup() =
+        while pool.Count < 2 do
+            pool.Enqueue(buildProviderWithNestedTypes this.OuterCount this.NestingDepth 5)
+
+    [<Benchmark(Description = "CompileNestedTypes")>]
+    member _.CompileNestedTypes() =
+        let tp, providedType = pool.Dequeue()
+        let bytes = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+        (tp :> IDisposable).Dispose()
+        bytes.Length
+
+
+/// Extra-large stress benchmark: 1 000 types × 10 methods.  Designed to amplify
+/// any O(N²) behaviour that slipped through the smaller scenarios.
+[<MemoryDiagnoser>]
+[<SimpleJob(launchCount = 1, warmupCount = 1, iterationCount = 3)>]
+type XLargeStressBenchmark() =
+
+    let mutable pool: (TypeProviderForNamespaces * ProvidedTypeDefinition) Queue = Queue()
+
+    [<IterationSetup>]
+    member _.Setup() =
+        while pool.Count < 2 do
+            pool.Enqueue(buildLargeGenerativeAssembly 1000 10)
+
+    [<Benchmark(Description = "CompileXLarge_1000types_10methods")>]
+    member _.CompileXLarge() =
         let tp, providedType = pool.Dequeue()
         let bytes = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
         (tp :> IDisposable).Dispose()
