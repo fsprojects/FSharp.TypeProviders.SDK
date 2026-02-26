@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-26T10:48:01Z",
-    "last_run_id": "22438695607",
+    "last_run": "2026-02-26T10:54:08Z",
+    "last_run_id": "22438910098",
     "tasks_last_run": {
         "task1_triage": "2026-02-25",
         "task2_fix_issues": "2026-02-25",
@@ -75,6 +75,7 @@
     },
     "open_repo_assist_prs": [455],
     "merged_this_month": [422, 426, 428, 430, 431, 432, 437, 442, 443, 444, 445, 446],
+    "pr_416_status": "closed_without_merge_2026-02-24",
     "maintainer_checked_off": {
         "391_comment": "2026-02-25",
         "408_comment": "2026-02-25"
@@ -87,5 +88,5 @@
         "427": "set up NuGet trusted publishing via OIDC - ATTEMPTED TWICE (push not permitted; patch in issue #448)",
         "453": "completely overhaul docs - IN PROGRESS (PR #455 open, awaiting review)"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PR #455 is open (docs overhaul for #453, CI pending). Issue #448 has patch for trusted publishing (PR push failed twice). #449, #450 are auto-generated failure/noop issues - avoid engaging. Older issues not yet engaged: #384 (dsyme said he'd look at it), #336 (workaround exists in comment), #323 (enhancement, described fix), #325 (compiler issue), #299, #342, #302, #300, #298, #306, #327, #294. DO NOT retry issue #427 - push permissions not granted."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PR #455 is open draft (docs overhaul for #453, CI pending). Issue #448 has patch for trusted publishing (PR push failed twice). Issues #341, #99, #67 still open even though their PRs were merged - added to suggested actions. #449, #450 are auto-generated failure/noop issues - avoid engaging. Older issues not yet engaged: #384 (dsyme said he'd look at it), #336 (workaround exists in comment), #323 (enhancement, described fix), #325 (compiler issue), #299, #342, #302, #300, #298, #306, #327, #294. DO NOT retry issue #427 - push permissions not granted."
 }
