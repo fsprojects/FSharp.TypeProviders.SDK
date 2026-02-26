@@ -1,97 +1,68 @@
 {
-    "last_run": "2026-02-26T09:19:40Z",
-    "last_run_id": "22435637422",
+    "last_run": "2026-02-26T10:48:01Z",
+    "last_run_id": "22438695607",
     "tasks_last_run": {
         "task1_triage": "2026-02-25",
         "task2_fix_issues": "2026-02-25",
         "task3_improvements": "2026-02-25",
         "task5_maintain_prs": "2026-02-26",
         "task6_stale_pr_nudge": "2026-02-24",
-        "task7_labels": "2026-02-25",
+        "task7_labels": "2026-02-26",
         "task8_release_prep": "2026-02-25",
         "task10_forward": "2026-02-25",
         "task11_monthly_summary": "2026-02-26"
     },
     "issue_triage_cursor": 0,
-    "label_cursor": 441,
+    "label_cursor": 453,
     "monthly_activity_issue": {
         "month": "2026-02",
         "number": 421
     },
     "comments_made": {
-        "365": {
-            "date": "2026-02-24",
-            "topic": "bug triage - CustomAttribute on nested erased types"
-        },
-        "366": {
-            "date": "2026-02-25",
-            "topic": "investigated Expr.NewUnionCase / Specified method not supported bug - root cause analysis and workaround"
-        },
-        "387": {
-            "date": "2026-02-25",
-            "topic": "template triage - NUnit.Console removable dep, FSharp.Core pinning explained, VS first-build workaround"
-        },
-        "391": {
-            "date": "2026-02-24",
-            "topic": "bug triage - System.Private.CoreLib reference issue"
-        },
-        "395": {
-            "date": "2026-02-24",
-            "topic": "bug triage - infinite loop in UoM type comparison"
-        },
-        "408": {
-            "date": "2026-02-24",
-            "topic": "summary of .NET 8 TP design-time support status, answered Dec 2025 question from jkone27"
-        },
-        "416": {
-            "date": "2026-02-24",
-            "topic": "stale PR nudge - asked author about net8.0 plans",
-            "type": "pr"
-        },
-        "426": {
-            "date": "2026-02-25",
-            "topic": "confirmed tests pass - 84 passed, 1 skipped on net8.0",
-            "type": "pr"
-        },
-        "341": {
-            "date": "2026-02-25",
-            "topic": "performance investigation - root cause transType no memoization, created fix PR #443"
-        },
-        "99": {
-            "date": "2026-02-25",
-            "topic": "investigated equality/comparison on generative provided types per dsyme's direct request; confirmed all 4 approaches work; created PR #444"
-        }
+        "365": {"date": "2026-02-24", "topic": "bug triage - CustomAttribute on nested erased types"},
+        "366": {"date": "2026-02-25", "topic": "investigated Expr.NewUnionCase / Specified method not supported bug - root cause analysis and workaround"},
+        "387": {"date": "2026-02-25", "topic": "template triage - NUnit.Console removable dep, FSharp.Core pinning explained, VS first-build workaround"},
+        "391": {"date": "2026-02-24", "topic": "bug triage - System.Private.CoreLib reference issue"},
+        "395": {"date": "2026-02-24", "topic": "bug triage - infinite loop in UoM type comparison"},
+        "408": {"date": "2026-02-24", "topic": "summary of .NET 8 TP design-time support status, answered Dec 2025 question from jkone27"},
+        "416": {"date": "2026-02-24", "topic": "stale PR nudge - asked author about net8.0 plans", "type": "pr"},
+        "426": {"date": "2026-02-25", "topic": "confirmed tests pass - 84 passed, 1 skipped on net8.0", "type": "pr"},
+        "341": {"date": "2026-02-25", "topic": "performance investigation - root cause transType no memoization, created fix PR #443"},
+        "99": {"date": "2026-02-25", "topic": "investigated equality/comparison on generative provided types per dsyme's direct request; confirmed all 4 approaches work; created PR #444"},
+        "453": {"date": "2026-02-26", "topic": "commented on docs overhaul issue - outlined guide PR #455 content and follow-on work"}
     },
     "labels_applied": {
-        "387": { "date": "2026-02-24", "labels": ["bug", "needs triage"] },
-        "391": { "date": "2026-02-24", "labels": ["bug", "needs investigation"] },
-        "395": { "date": "2026-02-24", "labels": ["bug"] },
-        "400": { "date": "2026-02-24", "labels": ["question", "documentation"] },
-        "405": { "date": "2026-02-24", "labels": ["enhancement"] },
-        "408": { "date": "2026-02-24", "labels": ["needs investigation"] },
-        "423": { "date": "2026-02-24", "labels": ["enhancement", "documentation"] },
-        "424": { "date": "2026-02-24", "labels": ["enhancement"] },
-        "425": { "date": "2026-02-24", "labels": ["enhancement"] },
-        "427": { "date": "2026-02-24", "labels": ["enhancement"] },
-        "436": { "date": "2026-02-25", "labels": ["enhancement"] }
+        "387": {"date": "2026-02-24", "labels": ["bug", "needs triage"]},
+        "391": {"date": "2026-02-24", "labels": ["bug", "needs investigation"]},
+        "395": {"date": "2026-02-24", "labels": ["bug"]},
+        "400": {"date": "2026-02-24", "labels": ["question", "documentation"]},
+        "405": {"date": "2026-02-24", "labels": ["enhancement"]},
+        "408": {"date": "2026-02-24", "labels": ["needs investigation"]},
+        "423": {"date": "2026-02-24", "labels": ["enhancement", "documentation"]},
+        "424": {"date": "2026-02-24", "labels": ["enhancement"]},
+        "425": {"date": "2026-02-24", "labels": ["enhancement"]},
+        "427": {"date": "2026-02-24", "labels": ["enhancement"]},
+        "436": {"date": "2026-02-25", "labels": ["enhancement"]},
+        "453": {"date": "2026-02-26", "labels": ["documentation", "enhancement"]}
     },
     "pr_nudges": {
-        "416": { "date": "2026-02-24" }
+        "416": {"date": "2026-02-24"}
     },
     "fix_attempts": {
-        "423": { "date": "2026-02-24", "type": "pr_merged", "pr": 430 },
-        "346": { "date": "2026-02-24", "type": "pr_merged", "pr": 428 },
-        "395": { "date": "2026-02-24", "type": "pr_merged", "pr": 426 },
-        "425": { "date": "2026-02-24", "type": "pr_merged", "pr": 431 },
-        "365": { "date": "2026-02-24", "type": "pr_merged", "pr": 432 },
-        "436": { "date": "2026-02-25", "type": "pr_merged", "pr": 437 },
-        "341": { "date": "2026-02-26", "type": "pr_merged", "pr": 443, "notes": "Merged by dsyme 2026-02-26T09:17" },
-        "424": { "date": "2026-02-25", "type": "pr_open", "pr": 442, "branch": "repo-assist/fix-issue-424-coverage-0f634663b848668c", "ci": "unstable" },
-        "99": { "date": "2026-02-25", "type": "pr_merged", "pr": 444, "notes": "Merged by dsyme on 2026-02-26" },
-        "170": { "date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26" },
-        "67": { "date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26" },
-        "387": { "date": "2026-02-25", "type": "pr_merged", "pr": 446, "notes": "Merged by dsyme on 2026-02-26" },
-        "427": { "date": "2026-02-26", "type": "issue_patch", "issue": 448, "notes": "PR push failed twice (runs 22434613620 and 22435329872); patch artifact in issue #448. Do NOT retry - maintainer needs to apply manually or grant push access." }
+        "423": {"date": "2026-02-24", "type": "pr_merged", "pr": 430},
+        "346": {"date": "2026-02-24", "type": "pr_merged", "pr": 428},
+        "395": {"date": "2026-02-24", "type": "pr_merged", "pr": 426},
+        "425": {"date": "2026-02-24", "type": "pr_merged", "pr": 431},
+        "365": {"date": "2026-02-24", "type": "pr_merged", "pr": 432},
+        "436": {"date": "2026-02-25", "type": "pr_merged", "pr": 437},
+        "341": {"date": "2026-02-26", "type": "pr_merged", "pr": 443, "notes": "Merged by dsyme 2026-02-26T09:17"},
+        "424": {"date": "2026-02-25", "type": "pr_merged", "pr": 442, "notes": "Merged by dsyme 2026-02-26T09:41"},
+        "99": {"date": "2026-02-25", "type": "pr_merged", "pr": 444, "notes": "Merged by dsyme on 2026-02-26"},
+        "170": {"date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26"},
+        "67": {"date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26"},
+        "387": {"date": "2026-02-25", "type": "pr_merged", "pr": 446, "notes": "Merged by dsyme on 2026-02-26"},
+        "427": {"date": "2026-02-26", "type": "issue_patch", "issue": 448, "notes": "PR push failed twice (runs 22434613620 and 22435329872); patch artifact in issue #448. Do NOT retry."},
+        "453": {"date": "2026-02-26", "type": "pr_open", "pr": 455, "branch": "repo-assist/fix-issue-453-overhaul-docs-449fb1c1bb0a11a3", "ci": "pending"}
     },
     "improvement_ideas": [],
     "welcomed_contributors": [],
@@ -102,8 +73,8 @@
         "pr": 422,
         "notes": "Maintainer committed 'update versions' (17:51) and 'update docs' (17:36) on 2026-02-25 - likely preparing 8.2.1 release. Do NOT create release PR - maintainer is handling it."
     },
-    "open_repo_assist_prs": [442],
-    "merged_this_month": [422, 426, 428, 430, 431, 432, 437, 443, 444, 445, 446],
+    "open_repo_assist_prs": [455],
+    "merged_this_month": [422, 426, 428, 430, 431, 432, 437, 442, 443, 444, 445, 446],
     "maintainer_checked_off": {
         "391_comment": "2026-02-25",
         "408_comment": "2026-02-25"
@@ -113,7 +84,8 @@
         "67": "add docs for ProvidedMeasureBuilder - DONE (PR #445, merged)",
         "99": "investigate equality/comparison on generative types - DONE (PR #444, merged)",
         "341": "profile SwaggerProvider perf - DONE (PR #443, merged)",
-        "427": "set up NuGet trusted publishing via OIDC - ATTEMPTED TWICE (push not permitted; patch in issue #448)"
+        "427": "set up NuGet trusted publishing via OIDC - ATTEMPTED TWICE (push not permitted; patch in issue #448)",
+        "453": "completely overhaul docs - IN PROGRESS (PR #455 open, awaiting review)"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 — be conservative about run frequency. Only PR #442 open (coverage tests for #424, mergeable_state:unstable after #443 merge). Issue #448 has patch for trusted publishing (PR push failed twice). #449, #450 are auto-generated failure/noop issues — avoid engaging. Older issues not yet engaged: #384 (dsyme said he'd look at it), #336 (workaround exists in comment), #323 (enhancement, described fix in issue body), #325 (compiler issue), #299, #342. Issue #386 handled by dsyme. DO NOT retry issue #427 - it fails every time due to push permissions."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PR #455 is open (docs overhaul for #453, CI pending). Issue #448 has patch for trusted publishing (PR push failed twice). #449, #450 are auto-generated failure/noop issues - avoid engaging. Older issues not yet engaged: #384 (dsyme said he'd look at it), #336 (workaround exists in comment), #323 (enhancement, described fix), #325 (compiler issue), #299, #342, #302, #300, #298, #306, #327, #294. DO NOT retry issue #427 - push permissions not granted."
 }
