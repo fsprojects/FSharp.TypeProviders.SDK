@@ -796,3 +796,18 @@ let ``ProvidedMeasureBuilder SI name (lowercase) creates a FSharpTypeAbbreviatio
     | :? ProvidedTypeSymbol as sym ->
         Assert.True(sym.IsFSharpTypeAbbreviation, "SI 'kelvin' should be a FSharpTypeAbbreviation")
     | _ -> failwith "Expected ProvidedTypeSymbol for 'kelvin'"
+
+// Regression test for https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/336
+// GetUnionCases on a ProvidedTypeBuilder.MakeGenericType (e.g. option<ProvidedType>) must not throw.
+[<Fact>]
+let ``GetUnionCases works on option of provided type`` () =
+    let typ = ProvidedTypeDefinition("Blah", Some typeof<obj>)
+    let optionTyp = ProvidedTypeBuilder.MakeGenericType(typedefof<_ option>, [ typ ])
+    // GetNestedType on the ProvidedTypeSymbol wrapping option<T> must delegate to the real option type
+    let tagsNested = optionTyp.GetNestedType("Tags", BindingFlags.Public ||| BindingFlags.NonPublic)
+    Assert.NotNull(tagsNested)
+    // FSharpType.GetUnionCases uses GetNestedType internally — it should succeed
+    let cases = Microsoft.FSharp.Reflection.FSharpType.GetUnionCases(optionTyp)
+    Assert.Equal(2, cases.Length)
+    Assert.Equal("None", cases.[0].Name)
+    Assert.Equal("Some", cases.[1].Name)
