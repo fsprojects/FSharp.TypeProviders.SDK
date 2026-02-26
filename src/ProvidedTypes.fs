@@ -718,7 +718,10 @@ type ProvidedTypeSymbol(kind: ProvidedTypeSymbolKind, typeArgs: Type list, typeB
 
     override this.GetEvent(_name, _bindingFlags) = notRequired this "GetEvent" this.FullName
 
-    override this.GetNestedType(_name, _bindingFlags) = notRequired this "GetNestedType" this.FullName
+    override this.GetNestedType(name, bindingFlags) =
+        match kind with
+        | ProvidedTypeSymbolKind.Generic gty -> gty.GetNestedType(name, bindingFlags)
+        | _ -> notRequired this "GetNestedType" this.FullName
 
     override this.GetConstructors _bindingFlags = notRequired this "GetConstructors" this.FullName
 
@@ -730,7 +733,10 @@ type ProvidedTypeSymbol(kind: ProvidedTypeSymbolKind, typeArgs: Type list, typeB
 
     override this.GetEvents _bindingFlags = notRequired this "GetEvents" this.FullName
 
-    override this.GetNestedTypes _bindingFlags = notRequired this "GetNestedTypes" this.FullName
+    override this.GetNestedTypes bindingFlags =
+        match kind with
+        | ProvidedTypeSymbolKind.Generic gty -> gty.GetNestedTypes(bindingFlags)
+        | _ -> notRequired this "GetNestedTypes" this.FullName
 
     override this.GetMembers _bindingFlags = notRequired this "GetMembers" this.FullName
 
@@ -7528,7 +7534,10 @@ namespace ProviderImplementation.ProvidedTypes
                 |> Option.toObj
             | _ -> notRequired this "GetEvent" this.Name
 
-        override this.GetNestedType(_name, _bindingFlags) = notRequired this "GetNestedType" this.Name
+        override this.GetNestedType(name, bindingFlags) =
+            match kind with
+            | TypeSymbolKind.OtherGeneric gtd -> gtd.GetNestedType(name, bindingFlags)
+            | _ -> notRequired this "GetNestedType" this.Name
 
         override this.AssemblyQualifiedName = "[" + this.Assembly.FullName + "]" + this.FullName
 
