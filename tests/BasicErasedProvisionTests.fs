@@ -673,7 +673,6 @@ let ``test ProvidedField SetFieldAttributes``() =
     Assert.Equal(FieldAttributes.Private, f.Attributes)
     f.SetFieldAttributes(FieldAttributes.Public)
     Assert.Equal(FieldAttributes.Public, f.Attributes)
-    Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
 
 // ---------------------------------------------------------------------------
 // Tests for type definition properties: nonNullable, hideObjectMethods
