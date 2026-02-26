@@ -128,3 +128,156 @@ or
     System.InvalidOperationException: the operation is not valid due to the current state of the object. at System.Reflection.MemberInfo.get_MetadataToken() in f:\dd\ndp\clr\src\BCL\system\reflection\memberinfo.cs:line 65
 ```
 
+## Type Definition Properties: nonNullable, hideObjectMethods, and Custom Attributes
+
+### NonNullable
+
+Set `nonNullable = true` when constructing a `ProvidedTypeDefinition` to mark the type with
+`[<AllowNullLiteral(false)>]`. This prevents the F# `null` literal from being used with the
+provided type, which is the standard F# behaviour for non-nullable reference types.
+
+```fsharp
+let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>, nonNullable = true)
+// myType.NonNullable = true
+// myType.GetCustomAttributesData() contains AllowNullLiteralAttribute
+```
+
+The `NonNullable` property can be read back to check whether the flag was set.
+
+### HideObjectMethods
+
+Set `hideObjectMethods = true` to suppress the standard .NET `Object` methods (`ToString`,
+`GetHashCode`, `Equals`) from appearing in IntelliSense for instances of the provided type.
+This is useful for simple record-like or data types where the inherited methods add noise.
+
+```fsharp
+let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>, hideObjectMethods = true)
+// myType.HideObjectMethods = true
+```
+
+### AddCustomAttribute
+
+Use `AddCustomAttribute` to attach arbitrary custom attribute data to provided types, methods,
+properties, parameters, and constructors. Implement `CustomAttributeData` inline:
+
+```fsharp
+open System
+open System.Reflection
+
+// Add [<Obsolete("use something else")>] to a provided type
+let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
+myType.AddCustomAttribute {
+    new CustomAttributeData() with
+        member _.Constructor = typeof<ObsoleteAttribute>.GetConstructor([| typeof<string> |])
+        member _.ConstructorArguments =
+            [| CustomAttributeTypedArgument(typeof<string>, "use something else" :> obj) |] :> _
+        member _.NamedArguments = [||] :> _
+}
+
+// Add [<ReflectedDefinition>] to a method parameter
+let param = ProvidedParameter("p", typeof<Microsoft.FSharp.Quotations.Expr<int>>)
+param.AddCustomAttribute {
+    new CustomAttributeData() with
+        member _.Constructor = typeof<ReflectedDefinitionAttribute>.GetConstructor([||])
+        member _.ConstructorArguments = [||] :> _
+        member _.NamedArguments = [||] :> _
+}
+```
+
+`AddCustomAttribute` is available on `ProvidedTypeDefinition`, `ProvidedProperty`,
+`ProvidedMethod`, and `ProvidedParameter`. Note that `ProvidedConstructor` does not support
+`AddCustomAttribute`; use `AddObsoleteAttribute` for the common case of marking a constructor
+as obsolete.
+
+When using cross-targeting (the normal mode), custom attributes whose types exist in the
+target reference assemblies will appear in `GetCustomAttributesData()` on the translated
+(target) type. Attributes whose types are not present in the target assemblies are silently
+omitted from the cross-targeted model.
+
+## Units of Measure with ProvidedMeasureBuilder
+
+The `ProvidedMeasureBuilder` type allows type providers to create and compose F# units of measure.
+Units can be used to annotate numeric types (e.g. `float<kg>`) exposed by the type provider.
+
+### Standard SI Units
+
+Use `ProvidedMeasureBuilder.SI` to reference standard units from
+`Microsoft.FSharp.Data.UnitSystems.SI`. Pass either the unit symbol (e.g. `"kg"`) or the
+unit name in lowercase (e.g. `"kilogram"`):
+
+```fsharp
+let kg = ProvidedMeasureBuilder.SI "kg"       // UnitSymbols.kg
+let m  = ProvidedMeasureBuilder.SI "m"        // UnitSymbols.m
+let s  = ProvidedMeasureBuilder.SI "s"        // UnitSymbols.s
+let kelvin = ProvidedMeasureBuilder.SI "kelvin" // UnitNames.kelvin
+```
+
+### Annotating Types with Units
+
+Use `ProvidedMeasureBuilder.AnnotateType` to produce annotated numeric types such as `float<kg>`:
+
+```fsharp
+let kg = ProvidedMeasureBuilder.SI "kg"
+let floatKg = ProvidedMeasureBuilder.AnnotateType(typeof<float>, [ kg ])
+// floatKg represents float<kg>
+
+let weightProp = ProvidedProperty("WeightKg", floatKg, getterCode = fun _ -> <@@ 70.0 @@>)
+myType.AddMember weightProp
+```
+
+### Compound Units
+
+`ProvidedMeasureBuilder` provides combinators for composing units:
+
+```fsharp
+let kg = ProvidedMeasureBuilder.SI "kg"
+let m  = ProvidedMeasureBuilder.SI "m"
+let s  = ProvidedMeasureBuilder.SI "s"
+
+// Product: kg·m
+let kgTimesM = ProvidedMeasureBuilder.Product(kg, m)
+
+// Ratio: kg/m
+let kgPerM = ProvidedMeasureBuilder.Ratio(kg, m)
+
+// Square: m²
+let mSquared = ProvidedMeasureBuilder.Square(m)
+
+// Acceleration: m/s²
+let accel = ProvidedMeasureBuilder.Ratio(m, ProvidedMeasureBuilder.Square(s))
+
+// Inverse: 1/s (frequency in Hz)
+let perSecond = ProvidedMeasureBuilder.Inverse(s)
+
+// Dimensionless
+let one = ProvidedMeasureBuilder.One
+```
+
+### Non-Standard (Custom) Units
+
+To expose a custom unit of measure (not from the SI library), define an erased
+`ProvidedTypeDefinition` and use it directly as a measure argument to `AnnotateType`:
+
+```fsharp
+// Define a custom unit "USD" (US dollars)
+let dollar = ProvidedTypeDefinition(asm, ns, "USD", None, isErased = true)
+this.AddNamespace(ns, [ dollar ])
+
+// Use the custom unit to annotate a type
+let floatDollar = ProvidedMeasureBuilder.AnnotateType(typeof<float>, [ dollar ])
+
+let priceProp = ProvidedProperty("Price", floatDollar, getterCode = fun _ -> <@@ 9.99 @@>)
+myType.AddMember priceProp
+```
+
+### Multiple Unit Arguments (Generic Types)
+
+`AnnotateType` also supports generic types with multiple type arguments. For example, to produce
+`Vector<float, kg>`:
+
+```fsharp
+let kg = ProvidedMeasureBuilder.SI "kg"
+// Suppose vectorType is the generic definition of Vector<'T, 'U>
+let annotated = ProvidedMeasureBuilder.AnnotateType(vectorType, [ typeof<float>; kg ])
+```
+
