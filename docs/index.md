@@ -1,61 +1,54 @@
 # The F# Type Provider SDK
 
-## Getting Started
+The F# Type Provider SDK (TPSDK) is the standard library for building F# type providers. It provides
+`ProvidedTypes.fs`, a single source file that implements the full Type Provider API, including erased and
+generative type definitions, static parameters, quotation support, and cross-targeting infrastructure.
 
-To create a type provider use:
+## Quick Start
+
+Create a new type provider from the template:
 
 ```text
 dotnet new -i FSharp.TypeProviders.Templates
-dotnet new typeprovider -n LemonadeProvider -lang F#
-```
-
-The template uses Paket to acquire the files of the latest published type provider SDK.
-
-```text
-cd LemonadeProvider
-
+dotnet new typeprovider -n MyProvider -lang F#
+cd MyProvider
 dotnet tool restore
 dotnet paket update
-dotnet build -c release
-
-dotnet test -c release
+dotnet build -c Release
+dotnet test -c Release
 ```
 
-The type provider also contains the logic necessary to package the type provider:
+## Documentation
 
-```text
-dotnet paket pack nuget --version 0.0.1
-```
+| | |
+|---|---|
+| [**Complete Guide**](guide.html) | Step-by-step guide covering erased and generative providers, static parameters, quotations, interfaces, enumerations, units of measure, testing, and packaging. |
+| [**Technical Notes**](technical-notes.html) | Design-time vs runtime components, naming conventions, NuGet package layout, lifetime of type provider instances, quotation construction, and API reference for key features. |
+| [**Debugging**](debugging.html) | How to debug a type provider running inside `fsc.exe`, `dotnet fsi`, Visual Studio, or Ionide. |
 
 ## Examples
 
-See examples in the [`examples`](https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/examples) directory.
+See the [`examples`](https://github.com/fsprojects/FSharp.TypeProviders.SDK/tree/master/examples) directory
+for `BasicProvider` (both erased and generative variants) and `StressProvider`.
 
-## Debugging Type Providers
+## Using the SDK via NuGet
 
-See [Debugging Type Providers](debugging.html)
-
-## Technical notes
-
-See [Technical Notes](technical-notes.html)
-
-## Experimental: Using the NuGet Package
-
-You can use the TypeProvider SDK via a NuGet package instead of by source inclusion. To enable this, use settings like these in the design-time component:
+Instead of source-including `ProvidedTypes.fs`, you can reference the SDK as a NuGet package in the
+design-time component:
 
 ```xml
-    <PackageReference Include="FSharp.TypeProviders.SDK" Version="7.0.3">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Update="FSharp.Core" Version="6.0.5">
-      <ExcludeAssets>all</ExcludeAssets>
-    </PackageReference>
+<PackageReference Include="FSharp.TypeProviders.SDK" Version="8.0.0">
+  <PrivateAssets>all</PrivateAssets>
+</PackageReference>
+<PackageReference Update="FSharp.Core" Version="8.0.0">
+  <ExcludeAssets>all</ExcludeAssets>
+</PackageReference>
 ```
 
-The runtime-component should not have a reference to FSharp.TypeProviders.SDK.
+The runtime component should **not** reference `FSharp.TypeProviders.SDK`.
 
-## Resources
+## External Resources
 
-- [Debugging Type Providers](debugging.html)
-- [Technical Notes](technical-notes.html)
-- [Type Providers from the ground up](https://blog.mavnn.co.uk/type-providers-from-the-ground-up/) and the [follow up posts](https://blog.mavnn.co.uk/blog/categories/typeprovider/)
+- [Type Providers from the ground up](https://blog.mavnn.co.uk/type-providers-from-the-ground-up/) and
+  the [follow up posts](https://blog.mavnn.co.uk/blog/categories/typeprovider/)
+- [F# RFC FS-1034 – Provided Types](https://github.com/fsharp/fslang-design/blob/main/RFCs/FS-1034-fsharp-type-providers.md)
