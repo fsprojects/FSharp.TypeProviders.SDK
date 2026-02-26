@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-26T09:00:02Z",
-    "last_run_id": "22434965074",
+    "last_run": "2026-02-26T09:10:58Z",
+    "last_run_id": "22435329872",
     "tasks_last_run": {
         "task1_triage": "2026-02-25",
         "task2_fix_issues": "2026-02-25",
@@ -91,7 +91,7 @@
         "170": { "date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26" },
         "67": { "date": "2026-02-25", "type": "pr_merged", "pr": 445, "notes": "Merged by dsyme on 2026-02-26" },
         "387": { "date": "2026-02-25", "type": "pr_merged", "pr": 446, "notes": "Merged by dsyme on 2026-02-26" },
-        "427": { "date": "2026-02-26", "type": "issue_patch", "issue": 448, "notes": "PR push failed; patch artifact created in issue #448. Do not retry this run." }
+        "427": { "date": "2026-02-26", "type": "issue_patch", "issue": 448, "notes": "PR push failed twice (runs 22434613620 and 22435329872); patch artifact in issue #448. Do NOT retry - maintainer needs to apply manually or grant push access." }
     },
     "improvement_ideas": [],
     "welcomed_contributors": [],
@@ -113,7 +113,7 @@
         "67": "add docs for ProvidedMeasureBuilder - DONE (PR #445, merged)",
         "99": "investigate equality/comparison on generative types - DONE (PR #444, merged)",
         "341": "profile SwaggerProvider perf - DONE (PR #443 open)",
-        "427": "set up NuGet trusted publishing via OIDC - ATTEMPTED (push failed, patch in issue #448)"
+        "427": "set up NuGet trusted publishing via OIDC - ATTEMPTED TWICE (push not permitted; patch in issue #448)"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 — be conservative about run frequency. PRs #442 and #443 open. Issues #441, #449 are Repo Assist failure/noop issues — avoid engaging. Issue #448 has patch for trusted publishing (PR push failed). PRs #444 and #445 merged by dsyme on 2026-02-26. Older issues not yet engaged: #384 (dsyme said he'd look at it), #336 (workaround exists), #325 (compiler issue), #299 (long-term arch issue). CI pending on #442 and #443 (no checks at time of inspection - these are old PRs, CI likely passed earlier)."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 — be conservative about run frequency. PRs #442 and #443 open with pending CI (0 checks - no CI runs triggered for bot PRs). Issue #448 has patch for trusted publishing (PR push failed twice). #449, #450 are auto-generated failure/noop issues — avoid engaging. Older issues not yet engaged: #384 (dsyme said he'd look at it), #336 (workaround exists in comment), #323 (enhancement, described fix in issue body), #325 (compiler issue), #299, #342. Issue #386 handled by dsyme. DO NOT retry issue #427 - it fails every time due to push permissions."
 }
