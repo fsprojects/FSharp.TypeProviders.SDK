@@ -21,8 +21,8 @@
 - PR #459: Fix mutable variable captures in QuotationSimplifier (merged 2026-02-26)
 
 ## Open PRs
-- PR #462: Release 8.3.0 preparation (repo-assist, created 2026-02-26, draft)
-- PR TBD: Fix custom attribute encoding (branch: repo-assist/fix-custom-attr-encoding, created 2026-02-26)
+- PR #462: Release 8.3.0 preparation (repo-assist, created 2026-02-26, draft) - CI passing
+- PR #463: Fix custom attribute encoding (repo-assist, created 2026-02-26, draft) - CI passing
 
 ## Open Issues (as of 2026-02-26)
 - #298: Binary reader removal - Repo Assist commented 2026-02-26 (SRM migration approach)
@@ -48,4 +48,6 @@
 - Binary reader in AssemblyReader module starts at ~line 1941 in ProvidedTypes.fs
 - Issue #384 is a compiler-side bug (dotnet/fsharp) - attribute blobs store type names as strings, not rewritten in generative TP compile
 - Release 8.3.0 prepared 2026-02-26 with RELEASE_NOTES.md update; PR #462 created
-- Custom attr encoding fix: implemented obj[] support in encodeCustomAttrElemTypeForObject (was failwith "TODO"); applied transValue to constructorArgs and namedProps/namedFields in defineCustomAttrs (was dead code). 104 tests pass. PR pending.
+- Custom attr encoding fix: implemented obj[] support in encodeCustomAttrElemTypeForObject (was failwith "TODO"); applied transValue to constructorArgs and namedProps/namedFields in defineCustomAttrs (was dead code). 104 tests pass. PR #463 created.
+- Issues #342, #294, #325 are now closed (removed from Suggested Actions in Monthly Activity)
+- Last run at 15:47 UTC: updated Monthly Activity issue #421 only (no new work needed - both PRs have passing CI, all issues commented)
