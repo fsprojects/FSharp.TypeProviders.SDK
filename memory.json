@@ -1,30 +1,70 @@
 {
-    "last_run": "2026-02-25T19:00:13Z",
-    "last_run_id": "22411172783",
+    "last_run": "2026-02-26T16:18:26Z",
+    "last_run_id": "22450741398",
     "tasks_last_run": {
-        "task1_triage": "2026-02-24",
-        "task2_fix_issues": "2026-02-24",
-        "task5_maintain_prs": "2026-02-25",
+        "task1_triage": "2026-02-26",
+        "task2_fix_issues": "2026-02-26",
+        "task5_maintain_prs": "2026-02-26",
         "task6_stale_pr_nudge": "2026-02-24",
-        "task7_labels": "2026-02-25",
-        "task8_release_prep": "2026-02-24",
-        "task10_forward": "2026-02-24",
-        "task11_monthly_summary": "2026-02-25"
+        "task7_labels": "2026-02-26",
+        "task8_release_prep": "2026-02-26",
+        "task10_forward": "2026-02-26",
+        "task11_monthly_summary": "2026-02-26"
     },
     "issue_triage_cursor": 0,
-    "label_cursor": 436,
+    "label_cursor": 461,
     "monthly_activity_issue": {
         "month": "2026-02",
         "number": 421
     },
     "comments_made": {
+        "298": {
+            "date": "2026-02-26",
+            "topic": "SRM migration approach for replacing duplicated binary reader"
+        },
+        "299": {
+            "date": "2026-02-26",
+            "topic": "updated 2019 planning issue with .NET 8 PersistedAssemblyBuilder option"
+        },
+        "300": {
+            "date": "2026-02-26",
+            "topic": "current status of UncheckedQuotations hack and path to FSharp.Core fix"
+        },
+        "323": {
+            "date": "2026-02-26",
+            "topic": "root cause analysis + link to fix PR #459"
+        },
+        "325": {
+            "date": "2026-02-26",
+            "topic": "recent SDK perf improvements (PR #443, PR #457) address type-translation cost"
+        },
+        "336": {
+            "date": "2026-02-26",
+            "topic": "root cause analysis + link to fix PR #458"
+        },
+        "341": {
+            "date": "2026-02-26",
+            "topic": "performance investigation - link to PR #457"
+        },
+        "342": {
+            "date": "2026-02-26",
+            "topic": "summarised SDK communication patterns; pointed to new guide"
+        },
         "365": {
             "date": "2026-02-24",
             "topic": "bug triage - CustomAttribute on nested erased types"
         },
+        "384": {
+            "date": "2026-02-26",
+            "topic": "ECMA-335 attribute blob root cause and workaround for typeof in generative TPs"
+        },
         "391": {
             "date": "2026-02-24",
             "topic": "bug triage - System.Private.CoreLib reference issue"
+        },
+        "394": {
+            "date": "2026-02-26",
+            "topic": "summarised current TP error/warning approaches"
         },
         "395": {
             "date": "2026-02-24",
@@ -32,7 +72,7 @@
         },
         "408": {
             "date": "2026-02-24",
-            "topic": "summary of .NET 8 TP design-time support status, answered Dec 2025 question from jkone27"
+            "topic": "summary of .NET 8 TP design-time support status"
         },
         "416": {
             "date": "2026-02-24",
@@ -46,63 +86,44 @@
         }
     },
     "labels_applied": {
-        "387": {
-            "date": "2026-02-24",
-            "labels": ["bug", "needs triage"]
-        },
-        "391": {
-            "date": "2026-02-24",
-            "labels": ["bug", "needs investigation"]
-        },
-        "395": {
-            "date": "2026-02-24",
-            "labels": ["bug"]
-        },
-        "400": {
-            "date": "2026-02-24",
-            "labels": ["question", "documentation"]
-        },
-        "405": {
-            "date": "2026-02-24",
-            "labels": ["enhancement"]
-        },
-        "408": {
-            "date": "2026-02-24",
-            "labels": ["needs investigation"]
-        },
-        "423": {
-            "date": "2026-02-24",
-            "labels": ["enhancement", "documentation"]
-        },
-        "424": {
-            "date": "2026-02-24",
-            "labels": ["enhancement"]
-        },
-        "425": {
-            "date": "2026-02-24",
-            "labels": ["enhancement"]
-        },
-        "427": {
-            "date": "2026-02-24",
-            "labels": ["enhancement"]
-        },
-        "436": {
-            "date": "2026-02-25",
-            "labels": ["enhancement"]
-        }
+        "387": {"date": "2026-02-24", "labels": ["bug", "needs triage"]},
+        "391": {"date": "2026-02-24", "labels": ["bug", "needs investigation"]},
+        "395": {"date": "2026-02-24", "labels": ["bug"]},
+        "400": {"date": "2026-02-24", "labels": ["question", "documentation"]},
+        "405": {"date": "2026-02-24", "labels": ["enhancement"]},
+        "408": {"date": "2026-02-24", "labels": ["needs investigation"]},
+        "423": {"date": "2026-02-24", "labels": ["enhancement", "documentation"]},
+        "424": {"date": "2026-02-24", "labels": ["enhancement"]},
+        "425": {"date": "2026-02-24", "labels": ["enhancement"]},
+        "427": {"date": "2026-02-24", "labels": ["enhancement"]},
+        "436": {"date": "2026-02-25", "labels": ["enhancement"]}
     },
     "pr_nudges": {
-        "416": {
-            "date": "2026-02-24"
-        }
+        "416": {"date": "2026-02-24"}
     },
     "fix_attempts": {
-        "423": {
-            "date": "2026-02-24",
+        "298": {
+            "date": "2026-02-26",
+            "type": "comment_only",
+            "description": "Described SRM migration path for binary reader replacement"
+        },
+        "323": {
+            "date": "2026-02-26",
             "type": "pr_merged",
-            "description": "Updated fsdocs from 11.4.3 to 11.5.1 in .config/dotnet-tools.json",
-            "branch": "repo-assist/fix-issue-423-update-fsharp-formatting",
-            "pr": 430
+            "description": "Fix mutable variable captures in QuotationSimplifier",
+            "pr": 459
+        },
+        "336": {
+            "date": "2026-02-26",
+            "type": "pr_merged",
+            "description": "Fix GetNestedType on TypeSymbol/ProvidedTypeSymbol",
+            "pr": 458
+        },
+        "341": {
+            "date": "2026-02-26",
+            "type": "pr_merged",
+            "description": "Cache transTypeRef and transMethRef in assembly compiler",
+            "pr": 457
         },
         "346": {
             "date": "2026-02-24",
@@ -110,23 +131,39 @@
             "description": "Added warning when all static params optional",
             "pr": 428
         },
+        "365": {
+            "date": "2026-02-24",
+            "type": "pr_merged",
+            "description": "Fixed custom attributes on nested erased types",
+            "pr": 432
+        },
+        "384": {
+            "date": "2026-02-26",
+            "type": "comment_only",
+            "description": "Explained ECMA-335 attribute blob issue; fix needs dotnet/fsharp rewrite phase change"
+        },
+        "391": {
+            "date": "2026-02-24",
+            "type": "comment_only",
+            "description": "Investigated System.Private.CoreLib reference issue"
+        },
         "395": {
             "date": "2026-02-24",
             "type": "pr_merged",
-            "description": "Fixed UoM infinite loop; regression test added; all 84 tests pass on net8.0",
+            "description": "Fixed UoM infinite loop; regression test added",
             "pr": 426
+        },
+        "423": {
+            "date": "2026-02-24",
+            "type": "pr_merged",
+            "description": "Updated fsdocs from 11.4.3 to 11.5.1",
+            "pr": 430
         },
         "425": {
             "date": "2026-02-24",
             "type": "pr_merged",
             "description": "Updated test projects and CI from .NET 8",
             "pr": 431
-        },
-        "365": {
-            "date": "2026-02-24",
-            "type": "pr_merged",
-            "description": "Fixed custom attributes on nested erased types",
-            "pr": 432
         },
         "436": {
             "date": "2026-02-25",
@@ -135,16 +172,21 @@
             "pr": 437
         }
     },
-    "improvement_ideas": [],
+    "improvement_ideas": [
+        "Add isStruct support to ProvidedTypeDefinition (currently only class/interface/abstract/sealed/enum supported)"
+    ],
     "welcomed_contributors": [],
     "release_prep": {
-        "proposed_version": "8.2.0",
-        "date": "2026-02-24",
-        "status": "merged",
-        "pr": 422,
-        "notes": "Release PR #422 was merged. Maintainer committed 'update versions' and 'update docs' on 2026-02-25 17:36/17:51 - likely preparing 8.2.1 release with the 5 PRs merged after 8.2.0."
+        "proposed_version": "8.3.0",
+        "date": "2026-02-26",
+        "status": "pr_open",
+        "pr": 462,
+        "notes": "Release PR #462 (8.3.0) is open as draft. Also PR #463 (custom attr encoding fix) open as draft."
     },
-    "open_repo_assist_prs": [],
-    "merged_this_month": [422, 426, 428, 430, 431, 432, 437],
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. All Repo Assist PRs have been merged. No open PRs remain. Runs are happening very frequently (every ~5-10 min). Multiple consecutive no-op runs. Issue #438 tracks no-op runs - maintainer is clearly seeing noise. Issue #439 is an auto-generated failure report. Next run should wait for meaningful new activity before acting. Most promising future work: task1 (triage older issues #341, #366, #384 etc), task9 (welcome new contributors). Monthly activity issue should only be updated when something was actually done."
+    "open_repo_assist_prs": [
+        {"number": 462, "title": "Prepare release 8.3.0", "created": "2026-02-26"},
+        {"number": 463, "title": "Fix custom attribute encoding for generative type providers", "created": "2026-02-26"}
+    ],
+    "merged_this_month": [422, 426, 428, 430, 431, 432, 437, 442, 443, 444, 445, 446, 455, 457, 458, 459],
+    "notes": "All open issues (#298, #299, #300, #384) now have RA comments. Two open draft PRs (#462 release, #463 custom attr fix) await maintainer review. Monthly activity #421 up to date. Maintainer (dsyme) has -1 reaction on monthly activity issue - be conservative. Issue #460 tracks no-op runs (auto-generated). Issue #461 is RA failure report (auto-generated, expires Mar 5). All triage and labeling complete for current issues. Next substantive work: wait for maintainer to review/merge PRs or new issues/activity to appear."
 }
