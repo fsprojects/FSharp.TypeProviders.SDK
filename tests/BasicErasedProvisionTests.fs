@@ -595,6 +595,85 @@ let ``check on-demand production of members``() =
     Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
     Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
 
+// Tests for ProvidedMeasureBuilder arithmetic operations
+[<Fact>]
+let ``test ProvidedMeasureBuilder One Product Inverse Ratio Square``() =
+    let one = ProvidedMeasureBuilder.One
+    Assert.Equal(typeof<Microsoft.FSharp.Core.CompilerServices.MeasureOne>, one)
+
+    let kg = ProvidedMeasureBuilder.SI "kg"
+    let m  = ProvidedMeasureBuilder.SI "m"
+
+    let product = ProvidedMeasureBuilder.Product(kg, m)
+    Assert.True(product.IsGenericType, "Product should be a generic type")
+
+    let inv = ProvidedMeasureBuilder.Inverse(kg)
+    Assert.True(inv.IsGenericType, "Inverse should be a generic type")
+
+    let ratio = ProvidedMeasureBuilder.Ratio(m, kg)
+    Assert.True(ratio.IsGenericType, "Ratio should be a generic type")
+
+    let sq = ProvidedMeasureBuilder.Square(m)
+    Assert.True(sq.IsGenericType, "Square should be a generic type")
+
+// Test that ProvidedMeasureBuilder.SI returns null for an unknown unit name
+[<Fact>]
+let ``test ProvidedMeasureBuilder SI unknown unit``() =
+    let unknown = ProvidedMeasureBuilder.SI "foobar_not_a_unit"
+    Assert.Null(unknown)
+
+// Tests for ProvidedStaticParameter property accessors
+[<Fact>]
+let ``test ProvidedStaticParameter properties``() =
+    let p1 = ProvidedStaticParameter("myParam", typeof<int>)
+    Assert.Equal("myParam", p1.Name)
+    Assert.Equal(typeof<int>, p1.ParameterType)
+    Assert.Equal(0, p1.Position)
+    Assert.Null(p1.RawDefaultValue)
+    Assert.False(p1.Attributes.HasFlag(ParameterAttributes.Optional), "parameter without default should not be Optional")
+
+    let p2 = ProvidedStaticParameter("myParam2", typeof<string>, "hello")
+    Assert.Equal("myParam2", p2.Name)
+    Assert.Equal(typeof<string>, p2.ParameterType)
+    Assert.Equal("hello", p2.RawDefaultValue :?> string)
+    Assert.True(p2.Attributes.HasFlag(ParameterAttributes.Optional), "parameter with default should be Optional")
+
+// Tests for TypeProviderForNamespaces.AddNamespace, Namespaces, and Invalidate
+[<Fact>]
+let ``test TypeProviderForNamespaces AddNamespace and Namespaces``() =
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let config = Testing.MakeSimulatedTypeProviderConfig(resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+    use tp = new TypeProviderForNamespaces(config)
+
+    let ns = "Test.AddNamespace"
+    let asm = Assembly.GetExecutingAssembly()
+    let ty = ProvidedTypeDefinition(asm, ns, "TestType", Some typeof<obj>)
+    tp.AddNamespace(ns, [ty])
+
+    let namespaces = tp.Namespaces
+    Assert.True(namespaces |> Array.exists (fun n -> n.NamespaceName = ns),
+                sprintf "Namespace '%s' should be present" ns)
+
+// Test that Invalidate fires the Invalidate event via ITypeProvider
+[<Fact>]
+let ``test TypeProviderForNamespaces Invalidate``() =
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let config = Testing.MakeSimulatedTypeProviderConfig(resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+    use tp = new TypeProviderForNamespaces(config)
+
+    let mutable fired = false
+    (tp :> ITypeProvider).Invalidate.Add(fun _ -> fired <- true)
+    tp.Invalidate()
+    Assert.True(fired, "Invalidate event should have fired")
+
+// Tests for ProvidedField.SetFieldAttributes
+[<Fact>]
+let ``test ProvidedField SetFieldAttributes``() =
+    let f = ProvidedField("myField", typeof<int>)
+    Assert.Equal(FieldAttributes.Private, f.Attributes)
+    f.SetFieldAttributes(FieldAttributes.Public)
+    Assert.Equal(FieldAttributes.Public, f.Attributes)
+
 // ---------------------------------------------------------------------------
 // Tests for type definition properties: nonNullable, hideObjectMethods
 // Addresses https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/170

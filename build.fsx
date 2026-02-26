@@ -64,6 +64,17 @@ Target.create "RunTests" (fun _ ->
     |> List.iter (DotNet.test setTestOptions)
 )
 
+Target.create "Coverage" (fun _ ->
+    let coverageDir = Path.Combine(__SOURCE_DIRECTORY__, "coverage")
+    Shell.cleanDir coverageDir
+    let setTestOptions (p:DotNet.TestOptions) =
+        { p with
+            Configuration = config
+            Common = { p.Common with CustomParams = Some (sprintf "--collect:\"XPlat Code Coverage\" --results-directory \"%s\"" coverageDir) } }
+    DotNet.test setTestOptions "tests/FSharp.TypeProviders.SDK.Tests.fsproj"
+    printfn "Coverage results written to: %s" coverageDir
+)
+
 Target.create "Pack" (fun _ ->
     let releaseNotes = String.toLines release.Notes
     let setParams (p:DotNet.PackOptions) = { p with OutputPath = Some outputPath; Configuration = config; MSBuildParams = { p.MSBuildParams with DisableInternalBinLog = true }}
@@ -133,5 +144,8 @@ Target.create "All" ignore
   ==> "Pack"
   ==> "TestTemplatesNuGet"
   ==> "All"
+
+// Coverage can be run independently: dotnet fake run build.fsx -t Coverage
+"Build" ==> "Coverage"
 
 Target.runOrDefault "All"
