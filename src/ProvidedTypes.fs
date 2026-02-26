@@ -6431,7 +6431,26 @@ module internal AssemblyReader =
             | null     -> [| et_STRING  |]// yes, the 0xe prefix is used when passing a "null" to a property or argument of type "object" here
             | :? single   -> [| et_R4 |]
             | :? double   -> [| et_R8 |]
-            | :? (obj[])   -> failwith "TODO: can't yet emit arrays in attrs" // [| yield et_SZARRAY; yield! encodeCustomAttrElemType elemTy |]
+            | :? (obj[]) as arr ->
+                // Infer element type from the runtime array element type
+                let elemTy = arr.GetType().GetElementType()
+                let elemTypeCode =
+                    if elemTy = typeof<string> then [| et_STRING |]
+                    elif elemTy = typeof<bool> then [| et_BOOLEAN |]
+                    elif elemTy = typeof<char> then [| et_CHAR |]
+                    elif elemTy = typeof<sbyte> then [| et_I1 |]
+                    elif elemTy = typeof<int16> then [| et_I2 |]
+                    elif elemTy = typeof<int32> then [| et_I4 |]
+                    elif elemTy = typeof<int64> then [| et_I8 |]
+                    elif elemTy = typeof<byte> then [| et_U1 |]
+                    elif elemTy = typeof<uint16> then [| et_U2 |]
+                    elif elemTy = typeof<uint32> then [| et_U4 |]
+                    elif elemTy = typeof<uint64> then [| et_U8 |]
+                    elif elemTy = typeof<single> then [| et_R4 |]
+                    elif elemTy = typeof<double> then [| et_R8 |]
+                    elif elemTy = typeof<obj> then [| 0x51uy |] // OBJECT
+                    else failwithf "encodeCustomAttrElemTypeForObject: unsupported array element type %O" elemTy
+                [| yield et_SZARRAY; yield! elemTypeCode |]
             | _   -> failwith "unexpected value in custom attribute" 
 
         /// Given a custom attribute element, encode it to a binary representation according to the rules in Ecma 335 Partition II.
@@ -15642,13 +15661,13 @@ namespace ProviderImplementation.ProvidedTypes
 
         let defineCustomAttrs f (cattrs: IList<CustomAttributeData>) =
             for attr in cattrs do
-                let constructorArgs = [ for x in attr.ConstructorArguments -> x.Value ]
                 let transValue (o:obj) = 
                     match o with 
                     | :? Type as t -> box (transType t)
                     | v -> v
-                let namedProps = [ for x in attr.NamedArguments do match x.MemberInfo with :? PropertyInfo as pi -> yield ILCustomAttrNamedArg(pi.Name, transType x.TypedValue.ArgumentType, x.TypedValue.Value) | _ -> () ] 
-                let namedFields = [ for x in attr.NamedArguments do match x.MemberInfo with :? FieldInfo as pi -> yield ILCustomAttrNamedArg(pi.Name, transType x.TypedValue.ArgumentType, x.TypedValue.Value) | _ -> () ] 
+                let constructorArgs = [ for x in attr.ConstructorArguments -> transValue x.Value ]
+                let namedProps = [ for x in attr.NamedArguments do match x.MemberInfo with :? PropertyInfo as pi -> yield ILCustomAttrNamedArg(pi.Name, transType x.TypedValue.ArgumentType, transValue x.TypedValue.Value) | _ -> () ] 
+                let namedFields = [ for x in attr.NamedArguments do match x.MemberInfo with :? FieldInfo as pi -> yield ILCustomAttrNamedArg(pi.Name, transType x.TypedValue.ArgumentType, transValue x.TypedValue.Value) | _ -> () ] 
                 let ca = mkILCustomAttribMethRef (transCtorSpec attr.Constructor, constructorArgs, namedProps, namedFields)
                 f ca
 
