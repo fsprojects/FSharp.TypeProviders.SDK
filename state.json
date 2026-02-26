@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-02-26T08:26:28Z",
-    "last_run_id": "22433880921",
+    "last_run": "2026-02-26T08:39:19Z",
+    "last_run_id": "22434297462",
     "tasks_last_run": {
         "task1_triage": "2026-02-25",
         "task2_fix_issues": "2026-02-25",
@@ -60,6 +60,11 @@
         "99": {
             "date": "2026-02-25",
             "topic": "investigated equality/comparison on generative provided types per dsyme's direct request; confirmed all 4 approaches work; created PR #444"
+        },
+        "442": {
+            "date": "2026-02-26",
+            "topic": "fixed build error - stray containersType assertion removed from ProvidedField test",
+            "type": "pr"
         }
     },
     "labels_applied": {
@@ -86,7 +91,7 @@
         "365": { "date": "2026-02-24", "type": "pr_merged", "pr": 432 },
         "436": { "date": "2026-02-25", "type": "pr_merged", "pr": 437 },
         "341": { "date": "2026-02-25", "type": "pr_open", "pr": 443, "branch": "repo-assist/improve-transtype-memoization", "ci": "passed" },
-        "424": { "date": "2026-02-25", "type": "pr_open", "pr": 442, "branch": "repo-assist/fix-issue-424-coverage-0f634663b848668c", "ci": "passed" },
+        "424": { "date": "2026-02-25", "type": "pr_open", "pr": 442, "branch": "repo-assist/fix-issue-424-coverage-0f634663b848668c", "ci": "fixed-2026-02-26" },
         "99": { "date": "2026-02-25", "type": "pr_open", "pr": 444, "branch": "repo-assist/improve-equality-comparison-tests", "ci": "passed" },
         "170": { "date": "2026-02-25", "type": "pr_open", "pr": 445, "branch": "repo-assist/docs-nonNullable-customAttrs-measureBuilder-170-67", "ci": "passed" },
         "67": { "date": "2026-02-25", "type": "pr_open", "pr": 445, "branch": "repo-assist/docs-nonNullable-customAttrs-measureBuilder-170-67", "ci": "passed" },
@@ -113,5 +118,5 @@
         "99": "investigate equality/comparison on generative types - DONE (PR #444)",
         "341": "profile SwaggerProvider perf - DONE (PR #443)"
     },
-    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PRs #442, #443, #444, #445 all open. PR #446 merged by dsyme 2026-02-26. Issue #441 is no-op runs issue - avoid engaging. Issue #447 is failed run report - avoid engaging. Older issues not yet engaged: #384 (dsyme said he'd look at it, no workaround), #336 (workaround linked by member), #325 (compiler issue), #299 (long-term arch issue by dsyme). ProvidedConstructor does NOT have AddCustomAttribute (only AddObsoleteAttribute). CI passes for all 4 open PRs as of 2026-02-25. Last run was a noop; this run noted PR #446 merge."
+    "notes": "Maintainer (dsyme) has -1 reaction on monthly activity issue #421 - be conservative about run frequency. PRs #442, #443, #444, #445 all open. PR #446 merged by dsyme 2026-02-26. Issue #441 is no-op runs issue - avoid engaging. Issue #447 is failed run report - avoid engaging. Older issues not yet engaged: #384 (dsyme said he'd look at it, no workaround), #336 (workaround linked by member), #325 (compiler issue), #299 (long-term arch issue by dsyme). ProvidedConstructor does NOT have AddCustomAttribute (only AddObsoleteAttribute). PR #442 had build error - stray containersType assert - fixed 2026-02-26."
 }
