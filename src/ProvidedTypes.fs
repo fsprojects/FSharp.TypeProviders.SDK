@@ -15437,6 +15437,7 @@ namespace ProviderImplementation.ProvidedTypes
         let ctorMap = Dictionary<ProvidedConstructor, ILMethodBuilder>(HashIdentity.Reference)
         let methMap = Dictionary<ProvidedMethod, ILMethodBuilder>(HashIdentity.Reference)
         let fieldMap = Dictionary<FieldInfo, ILFieldBuilder>(HashIdentity.Reference)
+        let transTypeCache = Dictionary<Type, ILType>()
         let genUniqueTypeName() =
             // lambda name should be unique across all types that all type provider might contribute in result assembly
             sprintf "Lambda%O" (Guid.NewGuid())
@@ -15460,20 +15461,26 @@ namespace ProviderImplementation.ProvidedTypes
             | _ -> ()
 
         let rec transType (ty:Type) =
+            match transTypeCache.TryGetValue(ty) with
+            | true, ilTy -> ilTy
+            | false, _ ->
             if (match ty with :? ProvidedTypeDefinition as ty -> not ty.BelongsToTargetModel | _ -> false) then failwithf "expected '%O' to belong to the target model" ty
-            if ty.IsGenericParameter then ILType.Var ty.GenericParameterPosition
-            elif ty.HasElementType then
-                let ety = transType (ty.GetElementType())
-                if ty.IsArray then
-                    let rank = ty.GetArrayRank()
-                    if rank = 1 then ILType.Array(ILArrayShape.SingleDimensional, ety)
-                    else ILType.Array(ILArrayShape.FromRank rank, ety)
-                elif ty.IsPointer then ILType.Ptr ety
-                elif ty.IsByRef then ILType.Byref ety
-                else failwith "unexpected type with element type"
-            elif ty.Namespace = "System" && ty.Name = "Void" then ILType.Void
-            elif ty.IsValueType then ILType.Value (transTypeSpec ty)
-            else ILType.Boxed (transTypeSpec ty)
+            let ilTy =
+                if ty.IsGenericParameter then ILType.Var ty.GenericParameterPosition
+                elif ty.HasElementType then
+                    let ety = transType (ty.GetElementType())
+                    if ty.IsArray then
+                        let rank = ty.GetArrayRank()
+                        if rank = 1 then ILType.Array(ILArrayShape.SingleDimensional, ety)
+                        else ILType.Array(ILArrayShape.FromRank rank, ety)
+                    elif ty.IsPointer then ILType.Ptr ety
+                    elif ty.IsByRef then ILType.Byref ety
+                    else failwith "unexpected type with element type"
+                elif ty.Namespace = "System" && ty.Name = "Void" then ILType.Void
+                elif ty.IsValueType then ILType.Value (transTypeSpec ty)
+                else ILType.Boxed (transTypeSpec ty)
+            transTypeCache.[ty] <- ilTy
+            ilTy
 
         and transTypeSpec (ty: Type) =
             if ty.IsGenericType then 
