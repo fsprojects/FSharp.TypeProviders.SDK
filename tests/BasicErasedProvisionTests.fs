@@ -593,6 +593,7 @@ let ``check on-demand production of members``() =
     Assert.Equal(5, containersType.GetMethods(bindAll).Length) // 5 properties, 5 getters for properties
     Assert.Equal(5, containersType.GetProperties(bindAll).Length) // 5 properties, 5 getters for properties
     Assert.Equal(0, containersType.GetFields(bindAll).Length) // 5 properties, 5 getters for properties
+    Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
 
 // Tests for ProvidedMeasureBuilder arithmetic operations
 [<Fact>]
@@ -672,3 +673,127 @@ let ``test ProvidedField SetFieldAttributes``() =
     Assert.Equal(FieldAttributes.Private, f.Attributes)
     f.SetFieldAttributes(FieldAttributes.Public)
     Assert.Equal(FieldAttributes.Public, f.Attributes)
+    Assert.Equal(0, containersType.GetEvents(bindAll).Length) // 5 properties, 5 getters for properties
+
+// ---------------------------------------------------------------------------
+// Tests for type definition properties: nonNullable, hideObjectMethods
+// Addresses https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/170
+// ---------------------------------------------------------------------------
+
+[<Fact>]
+let ``nonNullable=true sets NonNullable property and adds AllowNullLiteralAttribute``() =
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let config = Testing.MakeSimulatedTypeProviderConfig(resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+    use _tp = new TypeProviderForNamespaces(config)
+    let asm = Assembly.GetExecutingAssembly()
+
+    let t = ProvidedTypeDefinition(asm, "Test.Namespace", "NonNullableType", Some typeof<obj>, nonNullable = true)
+    Assert.True(t.NonNullable, "NonNullable property should be true")
+    let attrs = t.GetCustomAttributesData()
+    Assert.True(
+        attrs |> Seq.exists (fun a -> a.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name),
+        "Expected AllowNullLiteralAttribute to be present when nonNullable=true")
+
+[<Fact>]
+let ``nonNullable=false (default) does not add AllowNullLiteralAttribute``() =
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let config = Testing.MakeSimulatedTypeProviderConfig(resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+    use _tp = new TypeProviderForNamespaces(config)
+    let asm = Assembly.GetExecutingAssembly()
+
+    let t = ProvidedTypeDefinition(asm, "Test.Namespace", "NullableType", Some typeof<obj>)
+    Assert.False(t.NonNullable, "NonNullable property should default to false")
+    let attrs = t.GetCustomAttributesData()
+    Assert.False(
+        attrs |> Seq.exists (fun a -> a.Constructor.DeclaringType.Name = typeof<AllowNullLiteralAttribute>.Name),
+        "AllowNullLiteralAttribute should not be present when nonNullable is not set")
+
+[<Fact>]
+let ``hideObjectMethods=true sets HideObjectMethods property``() =
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let config = Testing.MakeSimulatedTypeProviderConfig(resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+    use _tp = new TypeProviderForNamespaces(config)
+    let asm = Assembly.GetExecutingAssembly()
+
+    let t = ProvidedTypeDefinition(asm, "Test.Namespace", "HiddenObjectType", Some typeof<obj>, hideObjectMethods = true)
+    Assert.True(t.HideObjectMethods, "HideObjectMethods should be true when hideObjectMethods=true")
+
+[<Fact>]
+let ``hideObjectMethods=false (default) leaves HideObjectMethods false``() =
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let config = Testing.MakeSimulatedTypeProviderConfig(resolutionFolder=__SOURCE_DIRECTORY__, runtimeAssembly="whatever.dll", runtimeAssemblyRefs=refs)
+    use _tp = new TypeProviderForNamespaces(config)
+    let asm = Assembly.GetExecutingAssembly()
+
+    let t = ProvidedTypeDefinition(asm, "Test.Namespace", "NormalType", Some typeof<obj>)
+    Assert.False(t.HideObjectMethods, "HideObjectMethods should default to false")
+
+[<Fact>]
+let ``AddCustomAttribute on method is visible``() =
+    let asm = Assembly.GetExecutingAssembly()
+    let t = ProvidedTypeDefinition(asm, "Test.Namespace", "TypeWithAttrMethod", Some typeof<obj>)
+    let m = ProvidedMethod("OldMethod", [], typeof<unit>, invokeCode = fun _ -> <@@ () @@>)
+    m.AddCustomAttribute {
+        new CustomAttributeData() with
+            member _.Constructor = typeof<ObsoleteAttribute>.GetConstructor([| typeof<string> |])
+            member _.ConstructorArguments = [| CustomAttributeTypedArgument(typeof<string>, "use NewMethod" :> obj) |] :> _
+            member _.NamedArguments = [||] :> _
+    }
+    t.AddMember m
+    let mi = t.GetMethod("OldMethod")
+    Assert.NotNull(mi)
+    let methodAttrs = mi.GetCustomAttributesData()
+    Assert.True(
+        methodAttrs |> Seq.exists (fun a -> a.Constructor.DeclaringType.Name = typeof<ObsoleteAttribute>.Name),
+        "Expected ObsoleteAttribute on method")
+
+// ---------------------------------------------------------------------------
+// Tests for ProvidedMeasureBuilder: SI units, compound units, annotation
+// Addresses https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/67
+// ---------------------------------------------------------------------------
+
+[<Fact>]
+let ``ProvidedMeasureBuilder SI symbol creates a FSharpTypeAbbreviation``() =
+    let kg = ProvidedMeasureBuilder.SI "kg"
+    match kg with
+    | :? ProvidedTypeSymbol as sym ->
+        Assert.True(sym.IsFSharpTypeAbbreviation, "SI 'kg' should be a FSharpTypeAbbreviation")
+    | _ -> failwith "Expected ProvidedTypeSymbol for 'kg'"
+
+[<Fact>]
+let ``ProvidedMeasureBuilder AnnotateType produces IsFSharpUnitAnnotated``() =
+    let kg = ProvidedMeasureBuilder.SI "kg"
+    let floatKg = ProvidedMeasureBuilder.AnnotateType(typeof<float>, [ kg ])
+    match floatKg with
+    | :? ProvidedTypeSymbol as sym ->
+        Assert.True(sym.IsFSharpUnitAnnotated, "float<kg> should be IsFSharpUnitAnnotated")
+    | _ -> failwith "Expected ProvidedTypeSymbol for annotated type"
+
+[<Fact>]
+let ``ProvidedMeasureBuilder compound units Product, Ratio, Square, Inverse, One are non-null``() =
+    let kg = ProvidedMeasureBuilder.SI "kg"
+    let m  = ProvidedMeasureBuilder.SI "m"
+    let s  = ProvidedMeasureBuilder.SI "s"
+
+    Assert.NotNull(ProvidedMeasureBuilder.Product(kg, m))
+    Assert.NotNull(ProvidedMeasureBuilder.Ratio(kg, m))
+    Assert.NotNull(ProvidedMeasureBuilder.Square(m))
+    Assert.NotNull(ProvidedMeasureBuilder.Inverse(s))
+    Assert.NotNull(ProvidedMeasureBuilder.One)
+
+    // float<m/s²> annotated type should also be IsFSharpUnitAnnotated
+    let accel = ProvidedMeasureBuilder.Ratio(m, ProvidedMeasureBuilder.Square(s))
+    let floatAccel = ProvidedMeasureBuilder.AnnotateType(typeof<float>, [ accel ])
+    match floatAccel with
+    | :? ProvidedTypeSymbol as sym ->
+        Assert.True(sym.IsFSharpUnitAnnotated, "float<m/s²> should be IsFSharpUnitAnnotated")
+    | _ -> failwith "Expected ProvidedTypeSymbol for float<m/s²>"
+
+[<Fact>]
+let ``ProvidedMeasureBuilder SI name (lowercase) creates a FSharpTypeAbbreviation``() =
+    let kelvin = ProvidedMeasureBuilder.SI "kelvin"
+    Assert.NotNull(kelvin)
+    match kelvin with
+    | :? ProvidedTypeSymbol as sym ->
+        Assert.True(sym.IsFSharpTypeAbbreviation, "SI 'kelvin' should be a FSharpTypeAbbreviation")
+    | _ -> failwith "Expected ProvidedTypeSymbol for 'kelvin'"
