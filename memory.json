@@ -1,15 +1,15 @@
 {
-    "last_run": "2026-02-26T16:18:26Z",
-    "last_run_id": "22450741398",
+    "last_run": "2026-02-27T08:24:15Z",
+    "last_run_id": "22478547264",
     "tasks_last_run": {
         "task1_triage": "2026-02-26",
         "task2_fix_issues": "2026-02-26",
-        "task5_maintain_prs": "2026-02-26",
+        "task5_maintain_prs": "2026-02-27",
         "task6_stale_pr_nudge": "2026-02-24",
         "task7_labels": "2026-02-26",
         "task8_release_prep": "2026-02-26",
-        "task10_forward": "2026-02-26",
-        "task11_monthly_summary": "2026-02-26"
+        "task10_forward": "2026-02-27",
+        "task11_monthly_summary": "2026-02-27"
     },
     "issue_triage_cursor": 0,
     "label_cursor": 461,
@@ -173,7 +173,7 @@
         }
     },
     "improvement_ideas": [
-        "Add isStruct support to ProvidedTypeDefinition (currently only class/interface/abstract/sealed/enum supported)"
+        "Add isStruct convenience parameter to ProvidedTypeDefinition - analysis shows struct support already works by setting baseType=Some typeof<System.ValueType>; adding isStruct param, TypeAttributes.SequentialLayout, and test coverage would be a clean enhancement"
     ],
     "welcomed_contributors": [],
     "release_prep": {
@@ -188,5 +188,5 @@
         {"number": 463, "title": "Fix custom attribute encoding for generative type providers", "created": "2026-02-26"}
     ],
     "merged_this_month": [422, 426, 428, 430, 431, 432, 437, 442, 443, 444, 445, 446, 455, 457, 458, 459],
-    "notes": "All open issues (#298, #299, #300, #384) now have RA comments. Two open draft PRs (#462 release, #463 custom attr fix) await maintainer review. Monthly activity #421 up to date. Maintainer (dsyme) has -1 reaction on monthly activity issue - be conservative. Issue #460 tracks no-op runs (auto-generated). Issue #461 is RA failure report (auto-generated, expires Mar 5). All triage and labeling complete for current issues. Next substantive work: wait for maintainer to review/merge PRs or new issues/activity to appear."
+    "notes": "Schedule is DAILY at 08:08 UTC. All open issues (#298, #299, #300, #384) have RA comments. Two open draft PRs (#462 release, #463 custom attr fix) await maintainer review. Monthly activity #421 up to date. Maintainer (dsyme) has -1 reaction on monthly activity issue - be conservative. No new issues or activity since 2026-02-26. Next actionable task: if PRs merge, update release notes or add struct test. Otherwise continue to monitor for new issues."
 }
