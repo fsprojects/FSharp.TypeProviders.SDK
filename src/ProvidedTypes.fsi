@@ -269,10 +269,10 @@ type ProvidedTypeDefinition =
     inherit TypeDelegator
 
     /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-    new: className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool * ?isSealed: bool * ?isInterface: bool * ?isAbstract: bool -> ProvidedTypeDefinition
+    new: className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool * ?isSealed: bool * ?isInterface: bool * ?isAbstract: bool * ?isStruct: bool -> ProvidedTypeDefinition
 
     /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-    new: assembly: Assembly * namespaceName: string * className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool * ?isSealed: bool * ?isInterface: bool * ?isAbstract: bool -> ProvidedTypeDefinition
+    new: assembly: Assembly * namespaceName: string * className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool * ?isSealed: bool * ?isInterface: bool * ?isAbstract: bool * ?isStruct: bool -> ProvidedTypeDefinition
 
     /// Add the given type as an implemented interface.
     member AddInterfaceImplementation: interfaceType: Type -> unit
