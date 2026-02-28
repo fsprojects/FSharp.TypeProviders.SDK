@@ -1,7 +1,7 @@
 # Repo Assist Memory
 
 ## Last Updated
-2026-02-26
+2026-02-28
 
 ## Merged PRs (this month)
 - PR #422: Release 8.2.0 preparation (merged 2026-02-24)
@@ -21,10 +21,11 @@
 - PR #459: Fix mutable variable captures in QuotationSimplifier (merged 2026-02-26)
 
 ## Open PRs
-- PR #462: Release 8.3.0 preparation (repo-assist, created 2026-02-26, draft) - CI passing
-- PR #463: Fix custom attribute encoding (repo-assist, created 2026-02-26, draft) - CI passing
+- PR #462: Release 8.3.0 preparation (repo-assist, created 2026-02-26, draft) - CI pending
+- PR #463: Fix custom attribute encoding (repo-assist, created 2026-02-26, draft) - CI pending
+- PR #464: Add isStruct convenience parameter (repo-assist, created 2026-02-28, draft) - CI pending
 
-## Open Issues (as of 2026-02-26)
+## Open Issues (as of 2026-02-28)
 - #298: Binary reader removal - Repo Assist commented 2026-02-26 (SRM migration approach)
 - #299: Binary writer removal - Repo Assist commented 2026-02-26 (PersistedAssemblyBuilder)
 - #300: Quotation reflection hack removal - Repo Assist commented 2026-02-26 (needs FSharp.Core fix)
@@ -50,6 +51,6 @@
 - Release 8.3.0 prepared 2026-02-26 with RELEASE_NOTES.md update; PR #462 created
 - Custom attr encoding fix: implemented obj[] support in encodeCustomAttrElemTypeForObject (was failwith "TODO"); applied transValue to constructorArgs and namedProps/namedFields in defineCustomAttrs (was dead code). 104 tests pass. PR #463 created.
 - Issues #342, #294, #325 are now closed (removed from Suggested Actions in Monthly Activity)
-- Last run at 16:08 UTC: status check — no new work; noted struct type support gap; updated Monthly Activity issue
-- ProvidedTypeDefinition has no isStruct parameter - SDK cannot generate struct value types (potential future work)
+- isStruct parameter added to ProvidedTypeDefinition (PR #464): adds SequentialLayout, defaults base to ValueType; 108/108 tests pass
 - TODO at line 6735/6740: decodeILCustomAttribData returns null for System.Type custom attr args (low priority)
+- ProvidedConstructor invokeCode for struct ctors should use Expr.FieldSetUnchecked from UncheckedQuotations (not return values)
