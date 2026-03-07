@@ -355,3 +355,92 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for ho
 
     // TESTING TODO: Register binary
     // TESTING TODO: field defs
+
+// Provider for testing custom attribute encoding fixes:
+// Fix 1: encoding obj[] in an object-typed constructor parameter slot (previously threw "TODO: can't yet emit arrays in attrs")
+// Fix 2: applying transValue to constructor args and named properties so System.Type values are correctly encoded
+[<TypeProvider>]
+type GenerativeProviderWithCustomAttrEncoding (config : TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces (config)
+
+    let ns = "CustomAttrEncoding.Provided"
+    let tempAssembly = ProvidedAssembly()
+    let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
+
+    do
+        // Fix 1: property with DefaultValueAttribute(object) where value is a string[] (array in object slot)
+        let defaultValueCtorObj = typeof<System.ComponentModel.DefaultValueAttribute>.GetConstructor([|typeof<obj>|])
+        let propWithArrayAttr = ProvidedProperty("PropWithArrayAttr", typeof<string>, isStatic = false,
+                                    getterCode = fun _ -> <@@ "hello" @@>)
+        propWithArrayAttr.AddCustomAttribute {
+            new CustomAttributeData() with
+                member _.Constructor = defaultValueCtorObj
+                member _.ConstructorArguments = upcast [| CustomAttributeTypedArgument(typeof<obj>, box [| "a"; "b"; "c" |]) |]
+                member _.NamedArguments = upcast [||] }
+
+        // Fix 2: property with DefaultValueAttribute(object) where value is a System.Type
+        let propWithTypeAttr = ProvidedProperty("PropWithTypeAttr", typeof<string>, isStatic = false,
+                                    getterCode = fun _ -> <@@ "world" @@>)
+        propWithTypeAttr.AddCustomAttribute {
+            new CustomAttributeData() with
+                member _.Constructor = defaultValueCtorObj
+                member _.ConstructorArguments = upcast [| CustomAttributeTypedArgument(typeof<obj>, box typeof<System.Int32>) |]
+                member _.NamedArguments = upcast [||] }
+
+        container.AddMembers [ (propWithArrayAttr :> MemberInfo); (propWithTypeAttr :> MemberInfo) ]
+        container.AddMember (ProvidedConstructor([], invokeCode = fun _ -> <@@ () @@>))
+        tempAssembly.AddTypes [container]
+        this.AddNamespace(ns, [container])
+
+[<Fact>]
+let ``Generative custom attribute with array argument in object slot encodes correctly``() =
+    // Regression test for Fix 1: encoding obj[] in an object-typed constructor parameter slot
+    // Before fix: GetGeneratedAssemblyContents would throw failwith "TODO: can't yet emit arrays in attrs"
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs)
+    let tp = GenerativeProviderWithCustomAttrEncoding cfg :> TypeProviderForNamespaces
+    let providedNamespace = tp.Namespaces.[0]
+    let providedTypes = providedNamespace.GetTypes()
+    let providedType = providedTypes.[0]
+
+    // Must not throw (before fix, this threw on the array arg)
+    let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+    Assert.NotEqual(0, assemContents.Length)
+
+    let assem = Assembly.Load assemContents
+    let containerType = assem.GetType("CustomAttrEncoding.Provided.Container")
+    Assert.NotNull(containerType)
+
+    let prop = containerType.GetProperty("PropWithArrayAttr")
+    Assert.NotNull(prop)
+
+    let attrData = prop.GetCustomAttributesData()
+    let defaultValueAttr = attrData |> Seq.tryFind (fun a -> a.Constructor.DeclaringType.Name = "DefaultValueAttribute")
+    Assert.True(defaultValueAttr.IsSome, "DefaultValueAttribute should be present on PropWithArrayAttr")
+
+[<Fact>]
+let ``Generative custom attribute with Type argument in object slot encodes correctly``() =
+    // Regression test for Fix 2: applying transValue so System.Type args are correctly encoded
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs)
+    let tp = GenerativeProviderWithCustomAttrEncoding cfg :> TypeProviderForNamespaces
+    let providedNamespace = tp.Namespaces.[0]
+    let providedTypes = providedNamespace.GetTypes()
+    let providedType = providedTypes.[0]
+
+    // Must not throw
+    let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+    Assert.NotEqual(0, assemContents.Length)
+
+    let assem = Assembly.Load assemContents
+    let containerType = assem.GetType("CustomAttrEncoding.Provided.Container")
+    Assert.NotNull(containerType)
+
+    let prop = containerType.GetProperty("PropWithTypeAttr")
+    Assert.NotNull(prop)
+
+    let attrData = prop.GetCustomAttributesData()
+    let defaultValueAttr = attrData |> Seq.tryFind (fun a -> a.Constructor.DeclaringType.Name = "DefaultValueAttribute")
+    Assert.True(defaultValueAttr.IsSome, "DefaultValueAttribute should be present on PropWithTypeAttr")
