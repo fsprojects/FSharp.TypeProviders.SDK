@@ -22,7 +22,8 @@ dotnet test -c Release
 
 | | |
 |---|---|
-| [**Complete Guide**](guide.html) | Introduction, project setup, first erased provider, testing, debugging, and packaging overview. |
+| [**Quick Start**](quick-start.html) | Install the template, understand the project structure, and build your first erased type provider with a constructor, property, and method. |
+| [**Complete Guide**](guide.html) | Erased vs generative providers, testing, debugging, and packaging overview. |
 | [**Providing Types, Members, and Features**](providing-types.html) | Static parameters, quotations, generative providers, all member kinds, interfaces, enumerations, nested types, XML docs, custom attributes, units of measure, non-nullability, and abstract classes. |
 | [**Packaging**](packaging.html) | NuGet package layout, how `IsFSharpDesignTimeProvider` automates packaging and build-time tool collection, bundling dependencies, and the assembly replacement map. |
 | [**Units of Measure**](units-of-measure.html) | SI units, compound units, custom units, and annotating numeric types with `ProvidedMeasureBuilder`. |

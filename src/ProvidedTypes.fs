@@ -2957,7 +2957,7 @@ module internal AssemblyReader =
         member x.IsStatic = x.Attributes &&& FieldAttributes.Static <> enum 0
         member x.IsInitOnly = x.Attributes &&& FieldAttributes.InitOnly <> enum 0
         member x.IsLiteral = x.Attributes &&& FieldAttributes.Literal <> enum 0
-#if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+#if NET5_0_OR_GREATER
         [<System.Obsolete(DiagnosticId = "SYSLIB0051")>] 
 #endif
         member x.NotSerialized = x.Attributes &&& FieldAttributes.NotSerialized <> enum 0
@@ -3064,7 +3064,7 @@ module internal AssemblyReader =
         member x.IsDelegate =  (match x.Kind with ILTypeDefKind.Delegate -> true | _ -> false)
         member x.IsAbstract= (x.Attributes &&& TypeAttributes.Abstract) <> enum 0
         member x.IsSealed= (x.Attributes &&& TypeAttributes.Sealed) <> enum 0
-#if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+#if NET5_0_OR_GREATER
         [<System.Obsolete(DiagnosticId = "SYSLIB0051")>] 
 #endif
         member x.IsSerializable= (x.Attributes &&& TypeAttributes.Serializable) <> enum 0

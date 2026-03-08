@@ -5,16 +5,16 @@ open NUnit.Framework
 
 [<Test>]
 let ``Default constructor should create instance`` () =
-    Assert.AreEqual("My internal state", MyType().InnerState)
+    Assert.That(MyType().InnerState, Is.EqualTo("My internal state"))
 
 [<Test>]
 let ``Constructor with parameter should create instance`` () =
-    Assert.AreEqual("override", MyType("override").InnerState)
+    Assert.That(MyType("override").InnerState, Is.EqualTo("override"))
 
 [<Test>]
 let ``Method with ReflectedDefinition parameter should get its name`` () =
     let myValue = 2
-    Assert.AreEqual("myValue", MyType.NameOf(myValue))
+    Assert.That(MyType.NameOf(myValue), Is.EqualTo("myValue"))
 
 type Generative2 = MyProvider.GenerativeProvider<2>
 type Generative4 = MyProvider.GenerativeProvider<4>
@@ -22,14 +22,14 @@ type Generative4 = MyProvider.GenerativeProvider<4>
 [<Test>]
 let ``Can access properties of generative provider 2`` () =
     let obj = Generative2()
-    Assert.AreEqual(obj.Property1, 1)
-    Assert.AreEqual(obj.Property2, 2)
+    Assert.That(obj.Property1, Is.EqualTo(1))
+    Assert.That(obj.Property2, Is.EqualTo(2))
 
 [<Test>]
 let ``Can access properties of generative provider 4`` () =
     let obj = Generative4()
-    Assert.AreEqual(obj.Property1, 1)
-    Assert.AreEqual(obj.Property2, 2)
-    Assert.AreEqual(obj.Property3, 3)
-    Assert.AreEqual(obj.Property4, 4)
+    Assert.That(obj.Property1, Is.EqualTo(1))
+    Assert.That(obj.Property2, Is.EqualTo(2))
+    Assert.That(obj.Property3, Is.EqualTo(3))
+    Assert.That(obj.Property4, Is.EqualTo(4))
 
