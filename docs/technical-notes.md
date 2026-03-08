@@ -1,4 +1,7 @@
 ---
+title: Technical Notes
+category: Documentation
+categoryindex: 1
 index: 7
 ---
 # Technical Notes
@@ -6,7 +9,7 @@ index: 7
 A type provider is simultaneously a tool and a library. There is a component that runs at compile-time (also called "design-time") and a component
 that runs at runtime. F# type providers are hosted by applications using FSharp.Compiler.Service.
 
-First, some terminology: 
+First, some terminology:
 
 * The **Type Provider Run Time Component (TPRTC)** is the component referenced by ``#r`` or ``-r:`` on the command line or other configuration of a host tool, e.g. ``FSharp.Data.dll``.
 
@@ -32,7 +35,7 @@ See [Loading type providers](https://github.com/Microsoft/visualfsharp/issues/37
 
 ## Naming Conventions
 
-The following guidance extends https://fsharp.github.io/2014/09/19/fsharp-libraries.html.
+The following guidance extends <https://fsharp.github.io/2014/09/19/fsharp-libraries.html>.
 
 * A type provider for a data source or schema format XYZ can often be placed in `FSharp.Data`, e.g. “FSharp.Data.XYZ”.
 
@@ -55,10 +58,10 @@ Here are some examples of existing type providers that aren't too bad (they are 
 ## Lifetime of type provider instantiations
 
 F# type providers are hosted by applications using FSharp.Compiler.Service.
-These notes describe the lifetime and typical resource usage of type provider instances for applications that incorporate 
+These notes describe the lifetime and typical resource usage of type provider instances for applications that incorporate
 FSharp.Compiler.Service (the host).  
 
-Each time the host application (e.g. devenv.exe) checks a file using type providers (e.g. containing `JsonProvider<"...">`), one or more new TP instantiations may be created, along with subsequent calls to `ApplyStaticArguments`.   
+Each time the host application (e.g. devenv.exe) checks a file using type providers (e.g. containing `JsonProvider<"...">`), one or more new TP instantiations may be created, along with subsequent calls to `ApplyStaticArguments`.
 
 * The F# compiler service doesn't try to cache these (except where it caches the TAST structures that results of checking a file or project).
 
@@ -74,7 +77,7 @@ The lifetime of TAST structures is as long as they are held in the IncrementalBu
 
 Some type providers need to build code via explicit calls to `FSharp.Quotations.Expr.*` rather than via quotation
 literals. Frequently, this is needed when code must instantiate generic methods or types.  However, in some cases limitations
-of the F# quotations API are reached. 
+of the F# quotations API are reached.
 
 In these cases, follow these rules
 
@@ -88,11 +91,8 @@ If you don't do this you may get errors like
     The type provider 'FSharp.Configuration.ConfigTypeProvider+FSharpConfigurationProvider' reported an error: Type mismatch when building 'args': invalid parameter for a method or indexer property. Expected 'System.Collections.Generic.IEnumerable`1[System.String]', but received type 'System.Collections.Generic.IEnumerable`1[System.String]'.�Parameter name: receivedType
 ```
 
-or 
+or
 
 ```text
     System.InvalidOperationException: the operation is not valid due to the current state of the object. at System.Reflection.MemberInfo.get_MetadataToken() in f:\dd\ndp\clr\src\BCL\system\reflection\memberinfo.cs:line 65
 ```
-
-
-

@@ -1,4 +1,7 @@
 ---
+title: Units of Measure
+category: Documentation
+categoryindex: 1
 index: 5
 ---
 # Units of Measure in F# Type Providers

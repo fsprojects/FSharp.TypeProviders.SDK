@@ -1,4 +1,7 @@
 ---
+title: Providing Types, Members, and Features
+category: Documentation
+categoryindex: 1
 index: 3
 ---
 # Providing Types, Members, and Features

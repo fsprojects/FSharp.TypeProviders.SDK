@@ -1,4 +1,7 @@
 ---
+title: Debugging
+category: Documentation
+categoryindex: 1
 index: 6
 ---
 # Debugging a Type Provider

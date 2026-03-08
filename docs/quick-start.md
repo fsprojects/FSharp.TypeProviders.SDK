@@ -1,4 +1,7 @@
 ---
+title: Quick Start
+category: Documentation
+categoryindex: 1
 index: 1
 ---
 # Quick Start: Your First F# Type Provider
