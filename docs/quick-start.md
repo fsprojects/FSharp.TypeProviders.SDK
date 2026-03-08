@@ -229,7 +229,46 @@ parameter. For static methods (`isStatic = true`), `args.[0]` is the first expli
 
 ---
 
-## Step 7 — Build and Test
+## Step 8 — Pack as a NuGet Package
+
+The template includes a `paket.template` in `src/MyProvider.Runtime/` that defines the NuGet package
+layout. At its core, it maps:
+
+```text
+bin/Release/netstandard2.0/MyProvider.Runtime.*
+    → lib/netstandard2.0/                          (the DLL users reference)
+
+bin/Release/typeproviders/fsharp41/netstandard2.0/*.dll
+    → typeproviders/fsharp41/netstandard2.0/       (the design-time DLL the compiler loads)
+```
+
+The `typeproviders/fsharp41/…` path is populated automatically during `dotnet build` by the
+`IsFSharpDesignTimeProvider` MSBuild plumbing in `MyProvider.Runtime.fsproj`. You do not need to
+copy any files manually.
+
+To produce the package file, run:
+
+```text
+dotnet build -c Release
+dotnet paket pack output/
+```
+
+Before publishing, edit `src/MyProvider.Runtime/paket.template` to set your own `id`, `authors`,
+`projectUrl`, and `licenseUrl`. The `dependencies` line uses `LOCKEDVERSION`, which Paket replaces
+with the exact FSharp.Core version from `paket.lock` — the result is a pinned minimum version in
+the emitted `.nuspec`.
+
+> If you prefer SDK-style packing (`dotnet pack`) instead of Paket, set `<GeneratePackageOnBuild>` or
+> run `dotnet pack -c Release` from the Runtime project directory. Because `IsFSharpDesignTimeProvider`
+> hooks into `TargetsForTfmSpecificContentInPackage`, the design-time DLL is included automatically in
+> the resulting `.nupkg` without any additional configuration.
+
+See [Packaging](packaging.html) for the full NuGet layout reference, how to bundle extra
+design-time dependencies, the assembly replacement map, and common pitfalls.
+
+---
+
+## Step 9 — Build and Test
 
 ```text
 dotnet build -c Release
