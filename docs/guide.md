@@ -33,149 +33,18 @@ used when inheritance, serialization, or other runtime reflection is required.
 
 ---
 
-## Setting Up a Type Provider Project
+## Quick Start
 
-### Using the Template (Recommended)
-
-```text
-dotnet new -i FSharp.TypeProviders.Templates
-dotnet new typeprovider -n MyProvider -lang F#
-cd MyProvider
-dotnet tool restore
-dotnet paket update
-dotnet build -c Release
-dotnet test -c Release
-```
-
-This creates a project with a design-time component, a runtime component, and a test project, all wired together correctly.
-
-### Project Structure
-
-A typical type provider solution has three projects:
-
-```text
-MyProvider.sln
-  MyProvider.Runtime/          ← TPRTC: the runtime component
-  MyProvider.DesignTime/       ← TPDTC: the design-time component (includes ProvidedTypes.fs)
-  MyProvider.Tests/            ← unit tests for the design-time logic
-```
-
-The **runtime component** (`MyProvider.Runtime`) is the DLL that end-users reference. It carries the
-`[<TypeProviderAssembly("MyProvider.DesignTime.dll")>]` attribute to tell the F# compiler where to find the
-design-time component.
-
-The **design-time component** (`MyProvider.DesignTime`) contains your type provider implementation plus the
-source-included files `ProvidedTypes.fs` and `ProvidedTypes.fsi` from this SDK. It is loaded into the compiler
-(or IDE) at compile time.
+See [Quick Start: Your First F# Type Provider](quick-start.html) for a step-by-step walkthrough: installing
+the template, understanding the project structure (including how `IsFSharpDesignTimeProvider` wires the
+runtime and design-time components together), and building a minimal erased provider with a constructor,
+property, and method.
 
 ---
 
-## Your First Erased Type Provider
+## Providing Types, Members, and Other Features
 
-### Minimal Provider
-
-```fsharp
-namespace MyProvider.DesignTime
-
-open System.Reflection
-open ProviderImplementation.ProvidedTypes
-open Microsoft.FSharp.Core.CompilerServices
-
-[<TypeProvider>]
-type MyErasingProvider(config: TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces(
-        config,
-        assemblyReplacementMap = [("MyProvider.DesignTime", "MyProvider.Runtime")],
-        addDefaultProbingLocation = true)
-
-    let ns  = "MyProvider.Provided"
-    let asm = Assembly.GetExecutingAssembly()
-
-    let createTypes () =
-        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        [myType]
-
-    do
-        this.AddNamespace(ns, createTypes())
-```
-
-Key points:
-- `[<TypeProvider>]` registers the class with the F# compiler.
-- Inherit `TypeProviderForNamespaces` (not `ITypeProvider` directly).
-- `assemblyReplacementMap` rewrites assembly names in quotation code so that runtime references land in the
-  runtime component, not the design-time component.
-- `addDefaultProbingLocation = true` adds the design-time DLL's directory to the assembly probing path.
-- `Some typeof<obj>` is the *erased base type*. All values of `MyType` are represented as `obj` at runtime.
-
-### Adding a Property
-
-```fsharp
-let myProp =
-    ProvidedProperty(
-        "Greeting",
-        typeof<string>,
-        isStatic = true,
-        getterCode = fun _args -> <@@ "Hello, world!" @@>)
-myType.AddMember myProp
-```
-
-The `getterCode` function receives a list of `Expr` arguments (`args.[0]` is `this` for instance members).
-The returned quotation is *spliced* into the caller's code at compile time.
-
-> **Test coverage**: `ErasingProvider` in `tests/BasicErasedProvisionTests.fs` demonstrates static and instance
-> properties with getter and setter code.
-
-### Adding an Instance Property with State
-
-An erased type stores its state as the *erased base type* at runtime. The common pattern is to box state into
-the base type in the constructor and unbox it in properties:
-
-```fsharp
-let myType =
-    ProvidedTypeDefinition(asm, ns, "Connection", Some typeof<obj>, hideObjectMethods = true)
-
-// Default constructor – stores the connection string as the erased representation
-let ctor =
-    ProvidedConstructor(
-        [ ProvidedParameter("connectionString", typeof<string>) ],
-        invokeCode = fun args -> <@@ (%%(args.[0]) : string) :> obj @@>)
-myType.AddMember ctor
-
-// Property reads back the stored value
-let connStrProp =
-    ProvidedProperty(
-        "ConnectionString",
-        typeof<string>,
-        getterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string @@>)
-myType.AddMember connStrProp
-```
-
-`hideObjectMethods = true` hides `Equals`, `GetHashCode`, and `ToString` from IntelliSense – useful for
-types that represent an opaque handle.
-
-> **Test coverage**: `ErasingConstructorProvider` in `tests/BasicErasedProvisionTests.fs`.
-
-### Adding a Method
-
-```fsharp
-let greetMethod =
-    ProvidedMethod(
-        "Greet",
-        [ ProvidedParameter("name", typeof<string>) ],
-        typeof<string>,
-        invokeCode = fun args ->
-            <@@ sprintf "Hello, %s!" (%%(args.[1]) : string) @@>)
-greetMethod.AddXmlDoc "Returns a greeting for the given name."
-myType.AddMember greetMethod
-```
-
-`args.[0]` is `this`; `args.[1]` is the first explicit parameter.
-
-For static methods, use `isStatic = true` and note that `args.[0]` is the first explicit parameter.
-
----
-
-See [Providing Types, Members, and Features](providing-types.html) for static parameters, quotations, generative providers, constructors, events, fields, delayed members, interfaces, enumerations, nested types, XML documentation, custom attributes, units of measure, non-nullability, and abstract classes.
+See [Providing Types, Members, and Features](providing-types.html) for technical details and examples of providing static parameters, constructors, events, fields, delayed members, interfaces, enumerations, nested types, XML documentation, custom attributes, units of measure, non-nullability, and abstract classes.
 
 ---
 
