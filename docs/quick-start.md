@@ -4,6 +4,7 @@ category: Documentation
 categoryindex: 1
 index: 1
 ---
+# Quick Start: Your First F# Type Provider
 
 This guide takes you from zero to a working, testable F# type provider in a few minutes using the
 official project template. By the end you will have an erased provider that exposes a custom type with

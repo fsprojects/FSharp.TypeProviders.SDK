@@ -4,6 +4,7 @@ category: Documentation
 categoryindex: 1
 index: 4
 ---
+# Packaging F# Type Providers
 
 ## NuGet Package Layout
 
