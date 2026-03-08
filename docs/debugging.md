@@ -1,3 +1,6 @@
+---
+index: 6
+---
 # Debugging a Type Provider
 
 Debugging a type provider can be difficult because it is a program run at compile-time and editing-time in host compilation tools including

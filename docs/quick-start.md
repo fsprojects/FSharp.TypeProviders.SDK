@@ -1,3 +1,6 @@
+---
+index: 1
+---
 # Quick Start: Your First F# Type Provider
 
 This guide takes you from zero to a working, testable F# type provider in a few minutes using the
@@ -242,6 +245,83 @@ ones.
 
 For a richer testing approach — including snapshot tests that catch accidental API changes — see
 [Testing](guide.html#testing-your-type-provider) in the complete guide.
+
+---
+
+## Step 8 — Pack as a NuGet Package
+
+The template includes a `paket.template` in `src/MyProvider.Runtime/` that defines the NuGet package
+layout. At its core, it maps:
+
+```text
+bin/Release/netstandard2.0/MyProvider.Runtime.*
+    → lib/netstandard2.0/                          (the DLL users reference)
+
+bin/Release/typeproviders/fsharp41/netstandard2.0/*.dll
+    → typeproviders/fsharp41/netstandard2.0/       (the design-time DLL the compiler loads)
+```
+
+The `typeproviders/fsharp41/…` path is populated automatically during `dotnet build` by the
+`IsFSharpDesignTimeProvider` MSBuild plumbing in `MyProvider.Runtime.fsproj`. You do not need to
+copy any files manually.
+
+To produce the package file, run:
+
+```text
+dotnet build -c Release
+dotnet paket pack output/
+```
+
+Before publishing, edit `src/MyProvider.Runtime/paket.template` to set your own `id`, `authors`,
+`projectUrl`, and `licenseUrl`. The `dependencies` line uses `LOCKEDVERSION`, which Paket replaces
+with the exact FSharp.Core version from `paket.lock` — the result is a pinned minimum version in
+the emitted `.nuspec`.
+
+> If you prefer SDK-style packing (`dotnet pack`) instead of Paket, set `<GeneratePackageOnBuild>` or
+> run `dotnet pack -c Release` from the Runtime project directory. Because `IsFSharpDesignTimeProvider`
+> hooks into `TargetsForTfmSpecificContentInPackage`, the design-time DLL is included automatically in
+> the resulting `.nupkg` without any additional configuration.
+
+See [Packaging](packaging.html) for the full NuGet layout reference, how to bundle extra
+design-time dependencies, the assembly replacement map, and common pitfalls.
+
+---
+
+## Removing Paket
+
+The template uses [Paket](https://fsprojects.github.io/Paket/) to fetch `ProvidedTypes.fs` and
+`ProvidedTypes.fsi` from this SDK's GitHub repository. This is the recommended approach because it
+always picks up the latest published source. If you prefer plain `PackageReference` you can switch as
+follows.
+
+**1. In `MyProvider.DesignTime.fsproj`**, replace the two `<Compile>` items that reference paket-files
+with a package reference:
+
+```xml
+<!-- Remove these: -->
+<!-- <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.SDK\src\ProvidedTypes.fsi" /> -->
+<!-- <Compile Include="..\..\paket-files\fsprojects\FSharp.TypeProviders.SDK\src\ProvidedTypes.fs" /> -->
+
+<!-- Add this instead: -->
+<PackageReference Include="FSharp.TypeProviders.SDK" Version="*">
+  <PrivateAssets>all</PrivateAssets>
+</PackageReference>
+```
+
+And change the compile items to refer to the NuGet cache paths, or — more simply — tick the
+`<GeneratePathProperty>true</GeneratePathProperty>` flag and use:
+
+```xml
+<Compile Include="$(PkgFSharp_TypeProviders_SDK)\src\ProvidedTypes.fsi" />
+<Compile Include="$(PkgFSharp_TypeProviders_SDK)\src\ProvidedTypes.fs" />
+```
+
+**2. Remove Paket artefacts** — delete `paket.dependencies`, `paket.lock`, `paket-files/`, the
+`.config/dotnet-tools.json` Paket entry, and the `<Import>` of `Paket.Restore.targets` from each
+`.fsproj`.
+
+**3. Remove the paket.template** and use `dotnet pack` for packaging instead (it works out of the box
+because `IsFSharpDesignTimeProvider` hooks directly into `TargetsForTfmSpecificContentInPackage`).
 
 ---
 

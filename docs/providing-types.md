@@ -1,3 +1,6 @@
+---
+index: 3
+---
 # Providing Types, Members, and Features
 
 ## Static Parameters

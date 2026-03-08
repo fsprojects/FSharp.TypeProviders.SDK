@@ -1,3 +1,6 @@
+---
+index: 4
+---
 # Packaging F# Type Providers
 
 ## NuGet Package Layout

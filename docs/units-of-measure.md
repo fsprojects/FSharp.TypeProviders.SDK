@@ -1,3 +1,6 @@
+---
+index: 5
+---
 # Units of Measure in F# Type Providers
 
 Use `ProvidedMeasureBuilder` to annotate numeric types exposed by a type provider with F# units of measure (e.g. `float<kg>`).

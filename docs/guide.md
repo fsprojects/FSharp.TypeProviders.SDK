@@ -1,3 +1,6 @@
+---
+index: 2
+---
 # Creating F# Type Providers: A Complete Guide
 
 This guide covers everything you need to know to build a production-quality F# type provider using the Type Provider SDK (TPSDK).
