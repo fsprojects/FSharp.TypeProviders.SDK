@@ -4,7 +4,6 @@ category: Documentation
 categoryindex: 1
 index: 7
 ---
-# Technical Notes
 
 A type provider is simultaneously a tool and a library. There is a component that runs at compile-time (also called "design-time") and a component
 that runs at runtime. F# type providers are hosted by applications using FSharp.Compiler.Service.
