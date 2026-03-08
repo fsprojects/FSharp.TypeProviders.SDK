@@ -22,7 +22,10 @@ dotnet test -c Release
 
 | | |
 |---|---|
-| [**Complete Guide**](guide.html) | Step-by-step guide covering erased and generative providers, static parameters, quotations, interfaces, enumerations, units of measure, testing, and packaging. |
+| [**Complete Guide**](guide.html) | Introduction, project setup, first erased provider, testing, debugging, and packaging overview. |
+| [**Providing Types, Members, and Features**](providing-types.html) | Static parameters, quotations, generative providers, all member kinds, interfaces, enumerations, nested types, XML docs, custom attributes, units of measure, non-nullability, and abstract classes. |
+| [**Packaging**](packaging.html) | NuGet package layout, how `IsFSharpDesignTimeProvider` automates packaging and build-time tool collection, bundling dependencies, and the assembly replacement map. |
+| [**Units of Measure**](units-of-measure.html) | SI units, compound units, custom units, and annotating numeric types with `ProvidedMeasureBuilder`. |
 | [**Technical Notes**](technical-notes.html) | Design-time vs runtime components, naming conventions, NuGet package layout, lifetime of type provider instances, quotation construction, and API reference for key features. |
 | [**Debugging**](debugging.html) | How to debug a type provider running inside `fsc.exe`, `dotnet fsi`, Visual Studio, or Ionide. |
 

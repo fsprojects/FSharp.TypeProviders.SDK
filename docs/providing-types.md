@@ -1,185 +1,8 @@
-# Creating F# Type Providers: A Complete Guide
+# Providing Types, Members, and Features
 
-This guide covers everything you need to know to build a production-quality F# type provider using the Type Provider SDK (TPSDK).
+## Static Parameters
 
-## What Is a Type Provider?
-
-A type provider is a compile-time component that supplies types, properties, and methods to F# programs. The consumer sees
-real types with IntelliSense, auto-completion, and type-safe access. Under the hood, the provider generates those types
-on demand from an external data source, schema, or configuration.
-
-Classic examples:
-- **FSharp.Data.JsonProvider** – given a sample JSON string, provides F# record types matching the structure.
-- **SQLProvider** – connects to a database at design time and provides typed tables, columns, and queries.
-
-## Erased vs Generative Type Providers
-
-There are two fundamentally different kinds of type providers:
-
-| | Erased | Generative |
-|---|---|---|
-| Types exist at runtime? | No – erased to a base type | Yes – emitted as real .NET IL |
-| Can be inherited or serialized? | No | Yes |
-| Performance overhead | Lower | Higher (IL generation) |
-| Use case | Schema-driven data access | Code generation scenarios |
-
-**Erased** providers are by far the most common. The provided types exist only at compile time; at runtime every erased
-type is replaced by a designated *erased base type* (typically `obj`). All method bodies are given as F# quotations that
-are spliced in at the call site.
-
-**Generative** providers emit real IL into a `ProvidedAssembly` whose bytes are injected into the compilation. The result
-is a genuine .NET type that persists at runtime. Because of the additional complexity, generative providers should only be
-used when inheritance, serialization, or other runtime reflection is required.
-
----
-
-## Setting Up a Type Provider Project
-
-### Using the Template (Recommended)
-
-```text
-dotnet new -i FSharp.TypeProviders.Templates
-dotnet new typeprovider -n MyProvider -lang F#
-cd MyProvider
-dotnet tool restore
-dotnet paket update
-dotnet build -c Release
-dotnet test -c Release
-```
-
-This creates a project with a design-time component, a runtime component, and a test project, all wired together correctly.
-
-### Project Structure
-
-A typical type provider solution has three projects:
-
-```text
-MyProvider.sln
-  MyProvider.Runtime/          ← TPRTC: the runtime component
-  MyProvider.DesignTime/       ← TPDTC: the design-time component (includes ProvidedTypes.fs)
-  MyProvider.Tests/            ← unit tests for the design-time logic
-```
-
-The **runtime component** (`MyProvider.Runtime`) is the DLL that end-users reference. It carries the
-`[<TypeProviderAssembly("MyProvider.DesignTime.dll")>]` attribute to tell the F# compiler where to find the
-design-time component.
-
-The **design-time component** (`MyProvider.DesignTime`) contains your type provider implementation plus the
-source-included files `ProvidedTypes.fs` and `ProvidedTypes.fsi` from this SDK. It is loaded into the compiler
-(or IDE) at compile time.
-
----
-
-## Your First Erased Type Provider
-
-### Minimal Provider
-
-```fsharp
-namespace MyProvider.DesignTime
-
-open System.Reflection
-open ProviderImplementation.ProvidedTypes
-open Microsoft.FSharp.Core.CompilerServices
-
-[<TypeProvider>]
-type MyErasingProvider(config: TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces(
-        config,
-        assemblyReplacementMap = [("MyProvider.DesignTime", "MyProvider.Runtime")],
-        addDefaultProbingLocation = true)
-
-    let ns  = "MyProvider.Provided"
-    let asm = Assembly.GetExecutingAssembly()
-
-    let createTypes () =
-        let myType = ProvidedTypeDefinition(asm, ns, "MyType", Some typeof<obj>)
-        [myType]
-
-    do
-        this.AddNamespace(ns, createTypes())
-```
-
-Key points:
-- `[<TypeProvider>]` registers the class with the F# compiler.
-- Inherit `TypeProviderForNamespaces` (not `ITypeProvider` directly).
-- `assemblyReplacementMap` rewrites assembly names in quotation code so that runtime references land in the
-  runtime component, not the design-time component.
-- `addDefaultProbingLocation = true` adds the design-time DLL's directory to the assembly probing path.
-- `Some typeof<obj>` is the *erased base type*. All values of `MyType` are represented as `obj` at runtime.
-
-### Adding a Property
-
-```fsharp
-let myProp =
-    ProvidedProperty(
-        "Greeting",
-        typeof<string>,
-        isStatic = true,
-        getterCode = fun _args -> <@@ "Hello, world!" @@>)
-myType.AddMember myProp
-```
-
-The `getterCode` function receives a list of `Expr` arguments (`args.[0]` is `this` for instance members).
-The returned quotation is *spliced* into the caller's code at compile time.
-
-> **Test coverage**: `ErasingProvider` in `tests/BasicErasedProvisionTests.fs` demonstrates static and instance
-> properties with getter and setter code.
-
-### Adding an Instance Property with State
-
-An erased type stores its state as the *erased base type* at runtime. The common pattern is to box state into
-the base type in the constructor and unbox it in properties:
-
-```fsharp
-let myType =
-    ProvidedTypeDefinition(asm, ns, "Connection", Some typeof<obj>, hideObjectMethods = true)
-
-// Default constructor – stores the connection string as the erased representation
-let ctor =
-    ProvidedConstructor(
-        [ ProvidedParameter("connectionString", typeof<string>) ],
-        invokeCode = fun args -> <@@ (%%(args.[0]) : string) :> obj @@>)
-myType.AddMember ctor
-
-// Property reads back the stored value
-let connStrProp =
-    ProvidedProperty(
-        "ConnectionString",
-        typeof<string>,
-        getterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string @@>)
-myType.AddMember connStrProp
-```
-
-`hideObjectMethods = true` hides `Equals`, `GetHashCode`, and `ToString` from IntelliSense – useful for
-types that represent an opaque handle.
-
-> **Test coverage**: `ErasingConstructorProvider` in `tests/BasicErasedProvisionTests.fs`.
-
-### Adding a Method
-
-```fsharp
-let greetMethod =
-    ProvidedMethod(
-        "Greet",
-        [ ProvidedParameter("name", typeof<string>) ],
-        typeof<string>,
-        invokeCode = fun args ->
-            <@@ sprintf "Hello, %s!" (%%(args.[1]) : string) @@>)
-greetMethod.AddXmlDoc "Returns a greeting for the given name."
-myType.AddMember greetMethod
-```
-
-`args.[0]` is `this`; `args.[1]` is the first explicit parameter.
-
-For static methods, use `isStatic = true` and note that `args.[0]` is the first explicit parameter.
-
----
-
-See [Providing Types, Members, and Features](providing-types.html) for static parameters, quotations, generative providers, constructors, events, fields, delayed members, interfaces, enumerations, nested types, XML documentation, custom attributes, units of measure, non-nullability, and abstract classes.
-
----
-
-## Testing Your Type Provider
+Static parameters let consumers specialise a type at compile time:
 
 ```fsharp
 type MyParameterisedProvider(config: TypeProviderConfig) as this =
@@ -237,8 +60,6 @@ containerType.DefineStaticParameters(
 
 ## Quotations in Type Providers
 
-### Quotation Literals
-
 Quotation literals (`<@@ ... @@>`) are the primary way to specify the runtime behaviour of erased members.
 The F# compiler splices the quotation body at the call site.
 
@@ -250,6 +71,8 @@ let prop =
             // args.[0] is 'this', typed as the erased base type
             <@@ (%%(args.[0]) :> obj :?> System.Collections.Generic.List<int>).Count @@>)
 ```
+
+For cross-targeting rules and `UncheckedQuotations` see [Technical Notes](technical-notes.html#explicit-construction-of-code-makegenerictype-makegenericmethod-and-uncheckedquotations).
 
 ---
 
@@ -449,12 +272,13 @@ myProp.AddXmlDocDelayed(fun () ->
 Attach arbitrary custom attributes to provided members using `AddCustomAttribute`:
 
 ```fsharp
+open System
 open System.Reflection
 
 // Mark a type as [<Obsolete("use NewType instead")>]
 myType.AddCustomAttribute {
     new CustomAttributeData() with
-        member _.Constructor = typeof<System.ObsoleteAttribute>.GetConstructor([| typeof<string> |])
+        member _.Constructor = typeof<ObsoleteAttribute>.GetConstructor([| typeof<string> |])
         member _.ConstructorArguments =
             [| CustomAttributeTypedArgument(typeof<string>, "use NewType instead" :> obj) |] :> _
         member _.NamedArguments = [||] :> _
@@ -471,7 +295,13 @@ param.AddCustomAttribute {
 ```
 
 `AddCustomAttribute` is available on `ProvidedTypeDefinition`, `ProvidedMethod`, `ProvidedProperty`,
-and `ProvidedParameter`. `ProvidedConstructor` does not support it; use `AddObsoleteAttribute` instead.
+and `ProvidedParameter`. `ProvidedConstructor` does not support it; use `AddObsoleteAttribute` for
+the common case of marking a constructor as obsolete.
+
+When using cross-targeting (the normal mode), custom attributes whose types exist in the target
+reference assemblies will appear in `GetCustomAttributesData()` on the translated (target) type.
+Attributes whose types are not present in the target assemblies are silently omitted from the
+cross-targeted model.
 
 > **Test coverage**: `GenerativeEnumsProvisionTests.fs` (enum field attributes);
 > `tests/BasicErasedProvisionTests.fs` (parameter custom attributes in the `NameOf` example).
@@ -484,25 +314,32 @@ See [Units of Measure in F# Type Providers](units-of-measure.html) for SI units,
 
 ---
 
-## Type Provider Non-Nullability and HideObjectMethods
+## Non-Nullability and HideObjectMethods
 
 ### `nonNullable`
 
-Set `nonNullable = true` to prevent the F# `null` literal from being used with the type:
+Set `nonNullable = true` when constructing a `ProvidedTypeDefinition` to mark the type with
+`[<AllowNullLiteral(false)>]`. This prevents the F# `null` literal from being used with the
+provided type, which is the standard F# behaviour for non-nullable reference types.
 
 ```fsharp
 let myType = ProvidedTypeDefinition(asm, ns, "Row", Some typeof<obj>, nonNullable = true)
+// myType.NonNullable = true
+// myType.GetCustomAttributesData() contains AllowNullLiteralAttribute
 ```
 
-This adds `[<AllowNullLiteral(false)>]` to the provided type.
+The `NonNullable` property can be read back to check whether the flag was set.
 
 ### `hideObjectMethods`
 
-Set `hideObjectMethods = true` to remove `Equals`, `GetHashCode`, and `ToString` from IntelliSense:
+Set `hideObjectMethods = true` to suppress the standard .NET `Object` methods (`ToString`,
+`GetHashCode`, `Equals`) from appearing in IntelliSense for instances of the provided type.
+This is useful for simple record-like or data types where the inherited methods add noise.
 
 ```fsharp
 let myType =
     ProvidedTypeDefinition(asm, ns, "Connection", Some typeof<obj>, hideObjectMethods = true)
+// myType.HideObjectMethods = true
 ```
 
 ---
@@ -536,77 +373,3 @@ provAsm.AddTypes [baseType; derivedType]
 ```
 
 > **Test coverage**: `GenerativeAbstractClassesTests.fs`.
-
----
-
-## Testing Your Type Provider
-
-The SDK ships a `ProvidedTypesTesting` module (in `tests/ProvidedTypesTesting.fs`) that provides utilities
-for unit-testing type providers without invoking the full F# compiler:
-
-```fsharp
-open ProviderImplementation.ProvidedTypesTesting
-
-// Create a simulated TypeProviderConfig that points at .NET Standard 2.0 references
-let refs = Targets.DotNetStandard20FSharpRefs()
-let cfg  = Testing.MakeSimulatedTypeProviderConfig(__SOURCE_DIRECTORY__, refs.[0], refs)
-
-// Instantiate your provider
-let tp = MyProvider(cfg) :> TypeProviderForNamespaces
-
-// Navigate the namespace and types
-let providedNs   = tp.Namespaces.[0]
-let providedType = providedNs.GetTypes().[0]
-
-// Apply static parameters
-let instantiated =
-    (tp :> Microsoft.FSharp.Core.CompilerServices.ITypeProvider)
-        .ApplyStaticArguments(providedType, [| "MyType,\"5\"" |], [| box 5 |])
-
-// For generative providers – get the IL bytes and load the assembly
-let bytes = (tp :> Microsoft.FSharp.Core.CompilerServices.ITypeProvider)
-                .GetGeneratedAssemblyContents(instantiated.Assembly)
-let asm = System.Reflection.Assembly.Load(bytes)
-let t   = asm.GetType("MyProvider.Provided.MyType,\"5\"")
-```
-
-### Cross-Targeting Snapshot Tests
-
-The `Testing.FormatProvidedType` helper renders a type's members as text, which you can use in
-approval-style snapshot tests:
-
-```fsharp
-let tp, t = Testing.GenerateProvidedTypeInstantiation(
-                __SOURCE_DIRECTORY__, refs.[0], refs,
-                (fun cfg -> MyProvider(cfg) :> _), [| box 3 |])
-let snapshot = Testing.FormatProvidedType(tp, t, useQualifiedNames = true)
-Assert.Equal(expectedSnapshot, snapshot.Trim())
-```
-
-These tests catch accidental API changes in your provided types.
-
----
-
-## Debugging
-
-See [Debugging Type Providers](debugging.html) for techniques to debug your provider when it is loaded by
-`fsc.exe`, `dotnet fsi`, Visual Studio, or Ionide.
-
----
-
-## Packaging
-
-See [Packaging F# Type Providers](packaging.html) for NuGet package layout, how `IsFSharpDesignTimeProvider` automates packaging and build-time tool collection, bundling design-time dependencies, and the assembly replacement map.
-
----
-
-## Summary: Common Pitfalls
-
-| Pitfall | Fix |
-|---|---|
-| Using `type.MakeGenericType(...)` in quotations | Use `ProvidedTypeBuilder.MakeGenericType(...)` |
-| Forgetting `provAsm.AddTypes [myType]` | Required for all generative types |
-| Missing constructor on generative type | Add at least one `ProvidedConstructor` |
-| Design-time dependency not found at runtime | Bundle all design-time DLLs next to the TPDTC |
-| `args.[0]` confusion (erased vs generative) | Erased: first param; Generative: `this` |
-| All static params have defaults | Intentional SDK warning – expected behaviour |
