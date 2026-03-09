@@ -1,6 +1,6 @@
 {
-    "last_run": "2026-03-05T08:22:29Z",
-    "last_run_id": "22708856743",
+    "last_run": "2026-03-09T00:31:14Z",
+    "last_run_id": "22833465937",
     "tasks_last_run": {
         "task1_triage": "2026-02-26",
         "task2_fix_issues": "2026-02-26",
@@ -12,7 +12,7 @@
         "task11_monthly_summary": "2026-03-05"
     },
     "issue_triage_cursor": 0,
-    "label_cursor": 461,
+    "label_cursor": 467,
     "monthly_activity_issue": {
         "month": "2026-03",
         "number": 465
@@ -86,20 +86,87 @@
         }
     },
     "labels_applied": {
-        "387": {"date": "2026-02-24", "labels": ["bug", "needs triage"]},
-        "391": {"date": "2026-02-24", "labels": ["bug", "needs investigation"]},
-        "395": {"date": "2026-02-24", "labels": ["bug"]},
-        "400": {"date": "2026-02-24", "labels": ["question", "documentation"]},
-        "405": {"date": "2026-02-24", "labels": ["enhancement"]},
-        "408": {"date": "2026-02-24", "labels": ["needs investigation"]},
-        "423": {"date": "2026-02-24", "labels": ["enhancement", "documentation"]},
-        "424": {"date": "2026-02-24", "labels": ["enhancement"]},
-        "425": {"date": "2026-02-24", "labels": ["enhancement"]},
-        "427": {"date": "2026-02-24", "labels": ["enhancement"]},
-        "436": {"date": "2026-02-25", "labels": ["enhancement"]}
+        "387": {
+            "date": "2026-02-24",
+            "labels": [
+                "bug",
+                "needs triage"
+            ]
+        },
+        "391": {
+            "date": "2026-02-24",
+            "labels": [
+                "bug",
+                "needs investigation"
+            ]
+        },
+        "395": {
+            "date": "2026-02-24",
+            "labels": [
+                "bug"
+            ]
+        },
+        "400": {
+            "date": "2026-02-24",
+            "labels": [
+                "question",
+                "documentation"
+            ]
+        },
+        "405": {
+            "date": "2026-02-24",
+            "labels": [
+                "enhancement"
+            ]
+        },
+        "408": {
+            "date": "2026-02-24",
+            "labels": [
+                "needs investigation"
+            ]
+        },
+        "423": {
+            "date": "2026-02-24",
+            "labels": [
+                "enhancement",
+                "documentation"
+            ]
+        },
+        "424": {
+            "date": "2026-02-24",
+            "labels": [
+                "enhancement"
+            ]
+        },
+        "425": {
+            "date": "2026-02-24",
+            "labels": [
+                "enhancement"
+            ]
+        },
+        "427": {
+            "date": "2026-02-24",
+            "labels": [
+                "enhancement"
+            ]
+        },
+        "436": {
+            "date": "2026-02-25",
+            "labels": [
+                "enhancement"
+            ]
+        },
+        "467": {
+            "date": "2026-03-09",
+            "labels": [
+                "enhancement"
+            ]
+        }
     },
     "pr_nudges": {
-        "416": {"date": "2026-02-24"}
+        "416": {
+            "date": "2026-02-24"
+        }
     },
     "fix_attempts": {
         "298": {
@@ -185,10 +252,37 @@
         "notes": "Release PR #462 (8.3.0) is open as draft. Also PR #463 (custom attr encoding fix) and PR #464 (isStruct) open as draft."
     },
     "open_repo_assist_prs": [
-        {"number": 462, "title": "Prepare release 8.3.0", "created": "2026-02-26", "mergeable_state": "clean"},
-        {"number": 463, "title": "Fix custom attribute encoding for generative type providers", "created": "2026-02-26", "mergeable_state": "clean"},
-        {"number": 464, "title": "Add isStruct convenience parameter to ProvidedTypeDefinition", "created": "2026-02-28", "mergeable_state": "clean"}
+        {
+            "branch": "repo-assist/improve-enum-underlying-type-20260309",
+            "title": "Fix GetEnumUnderlyingType+tests",
+            "created": "2026-03-09"
+        }
     ],
-    "merged_this_month": [422, 426, 428, 430, 431, 432, 437, 442, 443, 444, 445, 446, 455, 457, 458, 459],
-    "notes": "Schedule is DAILY at 08:08 UTC. All open issues (#298, #299, #300, #384) have RA comments. Three open draft PRs (#462 release, #463 custom attr fix, #464 isStruct) await maintainer review - all mergeable_state: clean. Monthly activity #465 up to date. Master advanced to b4721c1 (workflow-only changes). No new issues or activity since 2026-02-26. Maintainer (dsyme) has -1 reaction on monthly activity issue - be conservative."
+    "merged_this_month": [
+        422,
+        426,
+        428,
+        430,
+        431,
+        432,
+        437,
+        442,
+        443,
+        444,
+        445,
+        446,
+        455,
+        457,
+        458,
+        459,
+        462,
+        463,
+        464
+    ],
+    "notes": "Daily 08:08 UTC. PRs #462/#463/#464 merged 2026-03-07. #467 labelled. New PR: fix GetEnumUnderlyingType+tests branch repo-assist/improve-enum-underlying-type-20260309.",
+    "maintainer_checked_off": {
+        "462": "2026-03-07",
+        "463": "2026-03-07",
+        "464": "2026-03-07"
+    }
 }
