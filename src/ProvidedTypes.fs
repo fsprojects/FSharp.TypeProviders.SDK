@@ -7968,6 +7968,17 @@ namespace ProviderImplementation.ProvidedTypes
 
         let isNested = declTyOpt.IsSome
 
+        // Cache member wrapper arrays so wrapper objects are created once per type instance.
+        // GetXxx(bindingFlags) can be called many times during compilation; the bindingFlags
+        // filter is cheap and applied on the fly, while the potentially-expensive wrapper
+        // construction is amortised across all calls.
+        let ctorDefs    = lazy (inp.Methods.Entries |> Array.filter (fun x -> x.Name = ".ctor" || x.Name = ".cctor") |> Array.map (txILConstructorDef this))
+        let methDefs    = lazy (inp.Methods.Entries |> Array.filter (fun x -> x.Name <> ".ctor" && x.Name <> ".cctor") |> Array.map (txILMethodDef this))
+        let fieldDefs   = lazy (inp.Fields.Entries   |> Array.map (txILFieldDef this))
+        let eventDefs   = lazy (inp.Events.Entries   |> Array.map (txILEventDef this))
+        let propDefs    = lazy (inp.Properties.Entries |> Array.map (txILPropertyDef this))
+        let nestedDefs  = lazy (inp.NestedTypes.Entries |> Array.map (asm.TxILTypeDef (Some (this :> Type))))
+
         do this.typeImpl <- this
         override __.Name = inp.Name
         override __.Assembly = (asm :> Assembly)
@@ -7988,37 +7999,23 @@ namespace ProviderImplementation.ProvidedTypes
         override __.BaseType = inp.Extends |> Option.map (txILType (gps, [| |])) |> Option.toObj
         override __.GetInterfaces() = inp.Implements |> Array.map (txILType (gps, [| |]))
 
-        override this.GetConstructors(bindingFlags) =
-            inp.Methods.Entries
-            |> Array.filter (fun x -> x.Name = ".ctor" || x.Name = ".cctor")
-            |> Array.map (txILConstructorDef this)
-            |> Array.filter (canBindConstructor bindingFlags)
+        override __.GetConstructors(bindingFlags) =
+            ctorDefs.Force() |> Array.filter (canBindConstructor bindingFlags)
 
-        override this.GetMethods(bindingFlags) =
-            inp.Methods.Entries
-            |> Array.filter (fun x -> x.Name <> ".ctor" && x.Name <> ".cctor")
-            |> Array.map (txILMethodDef this)
-            |> Array.filter (canBindMethod bindingFlags)
+        override __.GetMethods(bindingFlags) =
+            methDefs.Force() |> Array.filter (canBindMethod bindingFlags)
 
-        override this.GetFields(bindingFlags) =
-            inp.Fields.Entries
-            |> Array.map (txILFieldDef this)
-            |> Array.filter (canBindField bindingFlags)
+        override __.GetFields(bindingFlags) =
+            fieldDefs.Force() |> Array.filter (canBindField bindingFlags)
 
-        override this.GetEvents(bindingFlags) =
-            inp.Events.Entries
-            |> Array.map (txILEventDef this)
-            |> Array.filter (canBindEvent bindingFlags)
+        override __.GetEvents(bindingFlags) =
+            eventDefs.Force() |> Array.filter (canBindEvent bindingFlags)
 
-        override this.GetProperties(bindingFlags) =
-            inp.Properties.Entries
-            |> Array.map (txILPropertyDef this)
-            |> Array.filter (canBindProperty bindingFlags)
+        override __.GetProperties(bindingFlags) =
+            propDefs.Force() |> Array.filter (canBindProperty bindingFlags)
 
-        override this.GetNestedTypes(bindingFlags) =
-            inp.NestedTypes.Entries
-            |> Array.map (asm.TxILTypeDef (Some (this :> Type)))
-            |> Array.filter (canBindNestedType bindingFlags)
+        override __.GetNestedTypes(bindingFlags) =
+            nestedDefs.Force() |> Array.filter (canBindNestedType bindingFlags)
 
         override this.GetConstructorImpl(_bindingFlags, _binder, _callConvention, types, _modifiers)          =
             let md = 
