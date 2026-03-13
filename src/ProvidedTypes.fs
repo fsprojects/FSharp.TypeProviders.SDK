@@ -6703,7 +6703,7 @@ module internal AssemblyReader =
                 let s, sigptr = sigptr_get_string len bytes sigptr
                 Some(s), sigptr
 
-        let decodeILCustomAttribData ilg (ca: ILCustomAttribute) =
+        let decodeILCustomAttribData ilg (resolveEnumUnderlyingILType: ILType -> ILType) (ca: ILCustomAttribute) =
             let bytes = ca.Data
             let sigptr = 0
             let bb0, sigptr = sigptr_get_byte bytes sigptr
@@ -6781,9 +6781,10 @@ module internal AssemblyReader =
                     let elems, sigptr = parseElems [] n sigptr 
                     let elems = elems |> List.map snd |> List.toArray
                     (argty, box elems), sigptr
-                | ILType.Value _ ->  (* assume it is an enumeration *)
-                    let n, sigptr = sigptr_get_i32 bytes sigptr
-                    (argty, box n), sigptr
+                | ILType.Value _ ->  (* it is an enumeration - read using the correct underlying type *)
+                    let underlyingTy = resolveEnumUnderlyingILType argty
+                    let (_, v), sigptr = parseVal underlyingTy sigptr
+                    (argty, v), sigptr
                 | _ ->  failwith "decodeILCustomAttribData: attribute data involves an enum or System.Type value"
 
             let rec parseFixed argtys sigptr =
@@ -7688,7 +7689,26 @@ namespace ProviderImplementation.ProvidedTypes
             CustomAttributeTypedArgument(txILType ([| |], [| |]) ty, v)
 
         and txCustomAttributesDatum (inp: ILCustomAttribute) =
-             let args, namedArgs = decodeILCustomAttribData ilGlobals inp
+             let resolveEnumUnderlyingILType (ty: ILType) =
+                 match ty with
+                 | ILType.Value _ ->
+                     try
+                         let resolvedType = txILType ([| |], [| |]) ty
+                         if resolvedType.IsEnum then
+                             match Enum.GetUnderlyingType(resolvedType).FullName with
+                             | "System.SByte"  -> ilGlobals.typ_SByte
+                             | "System.Byte"   -> ilGlobals.typ_Byte
+                             | "System.Int16"  -> ilGlobals.typ_Int16
+                             | "System.UInt16" -> ilGlobals.typ_UInt16
+                             | "System.Int32"  -> ilGlobals.typ_Int32
+                             | "System.UInt32" -> ilGlobals.typ_UInt32
+                             | "System.Int64"  -> ilGlobals.typ_Int64
+                             | "System.UInt64" -> ilGlobals.typ_UInt64
+                             | _ -> ilGlobals.typ_Int32
+                         else ilGlobals.typ_Int32
+                     with _ -> ilGlobals.typ_Int32
+                 | _ -> ilGlobals.typ_Int32
+             let args, namedArgs = decodeILCustomAttribData ilGlobals resolveEnumUnderlyingILType inp
              { new CustomAttributeData () with
                 member __.Constructor =  txILConstructorRef inp.Method.MethodRef
                 member __.ConstructorArguments = [| for arg in args -> txCustomAttributesArg arg |] :> IList<_>
