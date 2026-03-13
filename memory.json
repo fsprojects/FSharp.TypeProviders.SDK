@@ -1,15 +1,17 @@
 {
-    "last_run": "2026-03-09T00:31:14Z",
-    "last_run_id": "22833465937",
+    "last_run": "2026-03-13T00:30:55Z",
+    "last_run_id": "23030470009",
     "tasks_last_run": {
         "task1_triage": "2026-02-26",
         "task2_fix_issues": "2026-02-26",
+        "task4_engineering": "2026-03-13",
+        "task5_coding": "2026-03-13",
         "task5_maintain_prs": "2026-03-05",
         "task6_stale_pr_nudge": "2026-02-24",
         "task7_labels": "2026-02-26",
         "task8_release_prep": "2026-02-26",
         "task10_forward": "2026-02-27",
-        "task11_monthly_summary": "2026-03-05"
+        "task11_monthly_summary": "2026-03-13"
     },
     "issue_triage_cursor": 0,
     "label_cursor": 467,
@@ -30,30 +32,6 @@
             "date": "2026-02-26",
             "topic": "current status of UncheckedQuotations hack and path to FSharp.Core fix"
         },
-        "323": {
-            "date": "2026-02-26",
-            "topic": "root cause analysis + link to fix PR #459"
-        },
-        "325": {
-            "date": "2026-02-26",
-            "topic": "recent SDK perf improvements (PR #443, PR #457) address type-translation cost"
-        },
-        "336": {
-            "date": "2026-02-26",
-            "topic": "root cause analysis + link to fix PR #458"
-        },
-        "341": {
-            "date": "2026-02-26",
-            "topic": "performance investigation - link to PR #457"
-        },
-        "342": {
-            "date": "2026-02-26",
-            "topic": "summarised SDK communication patterns; pointed to new guide"
-        },
-        "365": {
-            "date": "2026-02-24",
-            "topic": "bug triage - CustomAttribute on nested erased types"
-        },
         "384": {
             "date": "2026-02-26",
             "topic": "ECMA-335 attribute blob root cause and workaround for typeof in generative TPs"
@@ -62,100 +40,17 @@
             "date": "2026-02-24",
             "topic": "bug triage - System.Private.CoreLib reference issue"
         },
-        "394": {
-            "date": "2026-02-26",
-            "topic": "summarised current TP error/warning approaches"
-        },
         "395": {
             "date": "2026-02-24",
             "topic": "bug triage - infinite loop in UoM type comparison"
         },
-        "408": {
-            "date": "2026-02-24",
-            "topic": "summary of .NET 8 TP design-time support status"
-        },
-        "416": {
-            "date": "2026-02-24",
-            "topic": "stale PR nudge - asked author about net8.0 plans",
-            "type": "pr"
-        },
         "426": {
             "date": "2026-02-25",
-            "topic": "confirmed tests pass - 84 passed, 1 skipped on net8.0",
+            "topic": "confirmed tests pass on net8.0",
             "type": "pr"
         }
     },
     "labels_applied": {
-        "387": {
-            "date": "2026-02-24",
-            "labels": [
-                "bug",
-                "needs triage"
-            ]
-        },
-        "391": {
-            "date": "2026-02-24",
-            "labels": [
-                "bug",
-                "needs investigation"
-            ]
-        },
-        "395": {
-            "date": "2026-02-24",
-            "labels": [
-                "bug"
-            ]
-        },
-        "400": {
-            "date": "2026-02-24",
-            "labels": [
-                "question",
-                "documentation"
-            ]
-        },
-        "405": {
-            "date": "2026-02-24",
-            "labels": [
-                "enhancement"
-            ]
-        },
-        "408": {
-            "date": "2026-02-24",
-            "labels": [
-                "needs investigation"
-            ]
-        },
-        "423": {
-            "date": "2026-02-24",
-            "labels": [
-                "enhancement",
-                "documentation"
-            ]
-        },
-        "424": {
-            "date": "2026-02-24",
-            "labels": [
-                "enhancement"
-            ]
-        },
-        "425": {
-            "date": "2026-02-24",
-            "labels": [
-                "enhancement"
-            ]
-        },
-        "427": {
-            "date": "2026-02-24",
-            "labels": [
-                "enhancement"
-            ]
-        },
-        "436": {
-            "date": "2026-02-25",
-            "labels": [
-                "enhancement"
-            ]
-        },
         "467": {
             "date": "2026-03-09",
             "labels": [
@@ -169,11 +64,6 @@
         }
     },
     "fix_attempts": {
-        "298": {
-            "date": "2026-02-26",
-            "type": "comment_only",
-            "description": "Described SRM migration path for binary reader replacement"
-        },
         "323": {
             "date": "2026-02-26",
             "type": "pr_merged",
@@ -192,12 +82,6 @@
             "description": "Cache transTypeRef and transMethRef in assembly compiler",
             "pr": 457
         },
-        "346": {
-            "date": "2026-02-24",
-            "type": "pr_merged",
-            "description": "Added warning when all static params optional",
-            "pr": 428
-        },
         "365": {
             "date": "2026-02-24",
             "type": "pr_merged",
@@ -207,55 +91,49 @@
         "384": {
             "date": "2026-02-26",
             "type": "comment_only",
-            "description": "Explained ECMA-335 attribute blob issue; fix needs dotnet/fsharp rewrite phase change"
-        },
-        "391": {
-            "date": "2026-02-24",
-            "type": "comment_only",
-            "description": "Investigated System.Private.CoreLib reference issue"
+            "description": "Explained ECMA-335 attribute blob issue"
         },
         "395": {
             "date": "2026-02-24",
             "type": "pr_merged",
             "description": "Fixed UoM infinite loop; regression test added",
             "pr": 426
-        },
-        "423": {
-            "date": "2026-02-24",
-            "type": "pr_merged",
-            "description": "Updated fsdocs from 11.4.3 to 11.5.1",
-            "pr": 430
-        },
-        "425": {
-            "date": "2026-02-24",
-            "type": "pr_merged",
-            "description": "Updated test projects and CI from .NET 8",
-            "pr": 431
-        },
-        "436": {
-            "date": "2026-02-25",
-            "type": "pr_merged",
-            "description": "Switch from fsharp.formatting.commandtool to fsdocs-tool 21.0.0",
-            "pr": 437
         }
     },
     "improvement_ideas": [
-        "Add isStruct convenience parameter to ProvidedTypeDefinition - PR #464 open",
-        "Fix TargetTypeDefinition.GetEnumUnderlyingType() to read actual value__ field type instead of hardcoding Int32"
+        "Fix TargetTypeDefinition.GetEnumUnderlyingType() - PR #470 open",
+        "Fix decodeILCustomAttribData enum byte-width - new PR 2026-03-13"
     ],
     "welcomed_contributors": [],
     "release_prep": {
         "proposed_version": "8.3.0",
         "date": "2026-02-26",
-        "status": "pr_open",
+        "status": "merged",
         "pr": 462,
-        "notes": "Release PR #462 (8.3.0) is open as draft. Also PR #463 (custom attr encoding fix) and PR #464 (isStruct) open as draft."
+        "notes": "PR #462/#463/#464 merged 2026-03-07."
     },
     "open_repo_assist_prs": [
         {
+            "pr": 470,
             "branch": "repo-assist/improve-enum-underlying-type-20260309",
             "title": "Fix GetEnumUnderlyingType+tests",
             "created": "2026-03-09"
+        },
+        {
+            "pr": 471,
+            "branch": "repo-assist/perf-cache-target-member-wrappers-20260311",
+            "title": "Perf: cache member wrappers in TargetTypeDefinition",
+            "created": "2026-03-11"
+        },
+        {
+            "branch": "repo-assist/fix-decode-enum-attr-size-20260313",
+            "title": "Fix decodeILCustomAttribData: non-int32 enum byte width",
+            "created": "2026-03-13"
+        },
+        {
+            "branch": "repo-assist/eng-update-ci-actions-20260313",
+            "title": "ci: update GitHub Actions v1 to v4",
+            "created": "2026-03-13"
         }
     ],
     "merged_this_month": [
@@ -279,7 +157,7 @@
         463,
         464
     ],
-    "notes": "Daily 08:08 UTC. PRs #462/#463/#464 merged 2026-03-07. #467 labelled. New PR: fix GetEnumUnderlyingType+tests branch repo-assist/improve-enum-underlying-type-20260309.",
+    "notes": "Daily 08:08 UTC. PRs #462/#463/#464 merged 2026-03-07. Run 2026-03-13: Task4=CI actions v1->v4, Task5=fix decodeILCustomAttribData enum byte-width. PRs #470/#471 await review.",
     "maintainer_checked_off": {
         "462": "2026-03-07",
         "463": "2026-03-07",
