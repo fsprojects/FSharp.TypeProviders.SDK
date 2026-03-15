@@ -1,17 +1,17 @@
 {
-    "last_run": "2026-03-13T00:30:55Z",
-    "last_run_id": "23030470009",
+    "last_run": "2026-03-15T00:36:24Z",
+    "last_run_id": "23099765816",
     "tasks_last_run": {
         "task1_triage": "2026-02-26",
         "task2_fix_issues": "2026-02-26",
         "task4_engineering": "2026-03-13",
         "task5_coding": "2026-03-13",
-        "task5_maintain_prs": "2026-03-05",
+        "task5_maintain_prs": "2026-03-15",
         "task6_stale_pr_nudge": "2026-02-24",
         "task7_labels": "2026-02-26",
         "task8_release_prep": "2026-02-26",
         "task10_forward": "2026-02-27",
-        "task11_monthly_summary": "2026-03-13"
+        "task11_monthly_summary": "2026-03-15"
     },
     "issue_triage_cursor": 0,
     "label_cursor": 467,
@@ -47,6 +47,11 @@
         "426": {
             "date": "2026-02-25",
             "topic": "confirmed tests pass on net8.0",
+            "type": "pr"
+        },
+        "472": {
+            "date": "2026-03-15",
+            "topic": "flagged as duplicate of #475, please close",
             "type": "pr"
         }
     },
@@ -157,7 +162,7 @@
         463,
         464
     ],
-    "notes": "Daily 08:08 UTC. PRs #462/#463/#464 merged 2026-03-07. Run 2026-03-13: Task4=CI actions v1->v4, Task5=fix decodeILCustomAttribData enum byte-width. PRs #470/#471 await review.",
+    "notes": "Daily 08:08 UTC. Run 2026-03-15: Task6=all PRs CI green, #472 dup of #475 (commented). Issues #473/#474=CI fallback. PRs #470/#471/#475 await review.",
     "maintainer_checked_off": {
         "462": "2026-03-07",
         "463": "2026-03-07",
