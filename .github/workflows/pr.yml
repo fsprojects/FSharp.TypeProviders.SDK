@@ -16,21 +16,20 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
 
     - name: Setup .NET Core
-      # Fix for https://github.com/actions/setup-dotnet/issues/29#issuecomment-548740241
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ matrix.dotnet }}
 
     - name: Setup .NET Core 6
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 6.0.425
 
     - name: Setup .NET Core 8
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.124
 
