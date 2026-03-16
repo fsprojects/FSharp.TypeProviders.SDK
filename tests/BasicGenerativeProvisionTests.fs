@@ -357,6 +357,34 @@ let ``GenerativeProviderWithRecursiveReferencesToGeneratedTypes generates for ho
     // TESTING TODO: field defs
 
 // Provider for testing custom attribute encoding fixes:
+// Enums with non-int32 underlying types used for testing decodeILCustomAttribData
+type ByteBackedEnum =
+    | ByteBackedEnumA = 1uy
+    | ByteBackedEnumB = 200uy
+
+type Int16BackedEnum =
+    | Int16BackedEnumA = 1s
+    | Int16BackedEnumB = 1000s
+
+type Int64BackedEnum =
+    | Int64BackedEnumA = 1L
+    | Int64BackedEnumB = 5000000000L
+
+[<System.AttributeUsage(System.AttributeTargets.All)>]
+type ByteEnumAttribute(v: ByteBackedEnum) =
+    inherit System.Attribute()
+    member _.Value = v
+
+[<System.AttributeUsage(System.AttributeTargets.All)>]
+type Int16EnumAttribute(v: Int16BackedEnum) =
+    inherit System.Attribute()
+    member _.Value = v
+
+[<System.AttributeUsage(System.AttributeTargets.All)>]
+type Int64EnumAttribute(v: Int64BackedEnum) =
+    inherit System.Attribute()
+    member _.Value = v
+
 // Fix 1: encoding obj[] in an object-typed constructor parameter slot (previously threw "TODO: can't yet emit arrays in attrs")
 // Fix 2: applying transValue to constructor args and named properties so System.Type values are correctly encoded
 [<TypeProvider>]
@@ -444,3 +472,134 @@ let ``Generative custom attribute with Type argument in object slot encodes corr
     let attrData = prop.GetCustomAttributesData()
     let defaultValueAttr = attrData |> Seq.tryFind (fun a -> a.Constructor.DeclaringType.Name = "DefaultValueAttribute")
     Assert.True(defaultValueAttr.IsSome, "DefaultValueAttribute should be present on PropWithTypeAttr")
+
+// Fix for decodeILCustomAttribData: non-int32-backed enum fixed args were decoded using
+// sigptr_get_i32 (always 4 bytes), corrupting the blob read position for any subsequent
+// arguments and/or causing IndexOutOfRangeException for small-backed enums.
+// Encoder path expects the value boxed as the underlying primitive type (e.g. byte, int16, int64),
+// NOT as the enum type itself.
+[<TypeProvider>]
+type GenerativeProviderWithNonInt32EnumAttrs (config: TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces (config)
+
+    let ns = "NonInt32EnumAttr.Provided"
+    let tempAssembly = ProvidedAssembly()
+    let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
+
+    do
+        let byteEnumCtor = typeof<ByteEnumAttribute>.GetConstructor([| typeof<ByteBackedEnum> |])
+        let typeWithByteEnum = ProvidedTypeDefinition("TypeWithByteEnumAttr", Some typeof<obj>, isErased = false)
+        typeWithByteEnum.AddCustomAttribute {
+            new CustomAttributeData() with
+                member _.Constructor = byteEnumCtor
+                // Value is boxed as the underlying type (byte), which is what encodeCustomAttrPrimValue needs
+                member _.ConstructorArguments = upcast [| CustomAttributeTypedArgument(typeof<ByteBackedEnum>, 200uy :> obj) |]
+                member _.NamedArguments = upcast [||] }
+        typeWithByteEnum.AddMember (ProvidedConstructor([], invokeCode = fun _ -> <@@ () @@>))
+
+        let int16EnumCtor = typeof<Int16EnumAttribute>.GetConstructor([| typeof<Int16BackedEnum> |])
+        let typeWithInt16Enum = ProvidedTypeDefinition("TypeWithInt16EnumAttr", Some typeof<obj>, isErased = false)
+        typeWithInt16Enum.AddCustomAttribute {
+            new CustomAttributeData() with
+                member _.Constructor = int16EnumCtor
+                member _.ConstructorArguments = upcast [| CustomAttributeTypedArgument(typeof<Int16BackedEnum>, 1000s :> obj) |]
+                member _.NamedArguments = upcast [||] }
+        typeWithInt16Enum.AddMember (ProvidedConstructor([], invokeCode = fun _ -> <@@ () @@>))
+
+        let int64EnumCtor = typeof<Int64EnumAttribute>.GetConstructor([| typeof<Int64BackedEnum> |])
+        let typeWithInt64Enum = ProvidedTypeDefinition("TypeWithInt64EnumAttr", Some typeof<obj>, isErased = false)
+        typeWithInt64Enum.AddCustomAttribute {
+            new CustomAttributeData() with
+                member _.Constructor = int64EnumCtor
+                member _.ConstructorArguments = upcast [| CustomAttributeTypedArgument(typeof<Int64BackedEnum>, 5000000000L :> obj) |]
+                member _.NamedArguments = upcast [||] }
+        typeWithInt64Enum.AddMember (ProvidedConstructor([], invokeCode = fun _ -> <@@ () @@>))
+
+        container.AddMembers [ typeWithByteEnum; typeWithInt16Enum; typeWithInt64Enum ]
+        container.AddMember (ProvidedConstructor([], invokeCode = fun _ -> <@@ () @@>))
+        tempAssembly.AddTypes [container]
+        this.AddNamespace(ns, [container])
+
+/// Create a type provider config that includes this test assembly in the reference list so that
+/// txILType (inside ReadRelatedAssembly) can resolve the enum types defined in this test assembly.
+let makeNonInt32EnumAttrProviderConfig () =
+    let thisAssemblyPath = Assembly.GetExecutingAssembly().Location
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs() @ [thisAssemblyPath]
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs)
+
+[<Fact>]
+let ``decodeILCustomAttribData decodes byte-backed enum custom attribute correctly``() =
+    // Regression test: before the fix, decodeILCustomAttribData always called sigptr_get_i32 for
+    // ILType.Value (enum) args, reading 4 bytes regardless of the enum's actual underlying type.
+    // For a byte-backed enum (1 byte in the blob), this over-read the blob, causing
+    // IndexOutOfRangeException (caught and re-thrown as a failwithf).
+    let cfg = makeNonInt32EnumAttrProviderConfig()
+    let tp = GenerativeProviderWithNonInt32EnumAttrs(cfg) :> TypeProviderForNamespaces
+    let providedType = tp.Namespaces.[0].GetTypes().[0]
+
+    let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+    Assert.NotEqual(0, assemContents.Length)
+
+    // ReadRelatedAssembly goes through the IL reader, which exercises decodeILCustomAttribData.
+    // Before the fix this would throw "FAILED decodeILCustomAttribData ..." due to blob over-read.
+    let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
+
+    let containerType = assem.GetType("NonInt32EnumAttr.Provided.Container")
+    Assert.NotNull(containerType)
+
+    let ty = containerType.GetNestedType("TypeWithByteEnumAttr")
+    Assert.NotNull(ty)
+
+    let attrData = ty.GetCustomAttributesData()
+    let attr = attrData |> Seq.tryFind (fun a -> a.Constructor.DeclaringType.Name = "ByteEnumAttribute")
+    Assert.True(attr.IsSome, "ByteEnumAttribute should be present on TypeWithByteEnumAttr")
+    Assert.Equal(1, attr.Value.ConstructorArguments.Count)
+    // Decoded value is the raw underlying byte (200uy), matching the encoded ByteBackedEnumB
+    Assert.Equal(200uy :> obj, attr.Value.ConstructorArguments.[0].Value)
+
+[<Fact>]
+let ``decodeILCustomAttribData decodes int16-backed enum custom attribute correctly``() =
+    // Int16-backed enum: blob contains 2 bytes; before fix, 4 bytes were read, corrupting the stream.
+    let cfg = makeNonInt32EnumAttrProviderConfig()
+    let tp = GenerativeProviderWithNonInt32EnumAttrs(cfg) :> TypeProviderForNamespaces
+    let providedType = tp.Namespaces.[0].GetTypes().[0]
+
+    let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+    let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
+
+    let containerType = assem.GetType("NonInt32EnumAttr.Provided.Container")
+    Assert.NotNull(containerType)
+
+    let ty = containerType.GetNestedType("TypeWithInt16EnumAttr")
+    Assert.NotNull(ty)
+
+    let attrData = ty.GetCustomAttributesData()
+    let attr = attrData |> Seq.tryFind (fun a -> a.Constructor.DeclaringType.Name = "Int16EnumAttribute")
+    Assert.True(attr.IsSome, "Int16EnumAttribute should be present on TypeWithInt16EnumAttr")
+    Assert.Equal(1, attr.Value.ConstructorArguments.Count)
+    // Decoded value is the raw underlying int16 (1000s), matching Int16BackedEnumB
+    Assert.Equal(1000s :> obj, attr.Value.ConstructorArguments.[0].Value)
+
+[<Fact>]
+let ``decodeILCustomAttribData decodes int64-backed enum custom attribute correctly``() =
+    // Int64-backed enum: blob contains 8 bytes; before fix, only 4 bytes were read, giving a wrong value.
+    let cfg = makeNonInt32EnumAttrProviderConfig()
+    let tp = GenerativeProviderWithNonInt32EnumAttrs(cfg) :> TypeProviderForNamespaces
+    let providedType = tp.Namespaces.[0].GetTypes().[0]
+
+    let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+    let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
+
+    let containerType = assem.GetType("NonInt32EnumAttr.Provided.Container")
+    Assert.NotNull(containerType)
+
+    let ty = containerType.GetNestedType("TypeWithInt64EnumAttr")
+    Assert.NotNull(ty)
+
+    let attrData = ty.GetCustomAttributesData()
+    let attr = attrData |> Seq.tryFind (fun a -> a.Constructor.DeclaringType.Name = "Int64EnumAttribute")
+    Assert.True(attr.IsSome, "Int64EnumAttribute should be present on TypeWithInt64EnumAttr")
+    Assert.Equal(1, attr.Value.ConstructorArguments.Count)
+    // Decoded value is the raw underlying int64 (5000000000L), matching Int64BackedEnumB
+    Assert.Equal(5000000000L :> obj, attr.Value.ConstructorArguments.[0].Value)

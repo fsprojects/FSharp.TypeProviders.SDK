@@ -8109,7 +8109,13 @@ namespace ProviderImplementation.ProvidedTypes
 
         override __.GetEnumUnderlyingType() =
             if this.IsEnum then
-                txILType ([| |], [| |]) ilGlobals.typ_Int32 // TODO: in theory the assumption of "Int32" is not accurate for all enums, however in practice .NET only uses enums with backing field Int32
+                // Read the underlying type from the 'value__' special field that the CLR emits for every enum.
+                let underlyingILType =
+                    inp.Fields.Entries
+                    |> Array.tryFind (fun f -> f.Name = "value__")
+                    |> Option.map (fun f -> f.FieldType)
+                    |> Option.defaultWith (fun () -> ilGlobals.typ_Int32)
+                txILType ([| |], [| |]) underlyingILType
             else failwithf "not enum type %O" this
 
         override __.IsArrayImpl() = false
