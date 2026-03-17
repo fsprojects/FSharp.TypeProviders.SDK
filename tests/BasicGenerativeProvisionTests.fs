@@ -392,6 +392,36 @@ type GenerativeProviderWithCustomAttrEncoding (config : TypeProviderConfig) as t
         tempAssembly.AddTypes [container]
         this.AddNamespace(ns, [container])
 
+// Provider for testing custom attribute named arguments (NamedArguments path in the assembly compiler).
+// Uses DebuggerDisplayAttribute(string) with the settable "Name" named property.
+[<TypeProvider>]
+type GenerativeProviderWithNamedArgAttrs (config : TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces (config)
+
+    let ns = "NamedArgAttrs.Provided"
+    let tempAssembly = ProvidedAssembly()
+    let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
+
+    do
+        // DebuggerDisplayAttribute has ctor(string) and a settable string property "Name".
+        // We use this to exercise the NamedArguments encoding path in defineCustomAttrs.
+        let debuggerDisplayCtor = typeof<System.Diagnostics.DebuggerDisplayAttribute>.GetConstructor([| typeof<string> |])
+        let debuggerDisplayNameProp = typeof<System.Diagnostics.DebuggerDisplayAttribute>.GetProperty("Name")
+
+        let propWithNamedArg = ProvidedProperty("PropWithNamedArg", typeof<int>, isStatic = false,
+                                    getterCode = fun _ -> <@@ 42 @@>)
+        propWithNamedArg.AddCustomAttribute {
+            new CustomAttributeData() with
+                member _.Constructor = debuggerDisplayCtor
+                member _.ConstructorArguments = upcast [| CustomAttributeTypedArgument(typeof<string>, box "{Value}") |]
+                member _.NamedArguments =
+                    upcast [| CustomAttributeNamedArgument(debuggerDisplayNameProp, CustomAttributeTypedArgument(typeof<string>, box "MyProp")) |] }
+
+        container.AddMember propWithNamedArg
+        container.AddMember (ProvidedConstructor([], invokeCode = fun _ -> <@@ () @@>))
+        tempAssembly.AddTypes [container]
+        this.AddNamespace(ns, [container])
+
 [<Fact>]
 let ``Generative custom attribute with array argument in object slot encodes correctly``() =
     // Regression test for Fix 1: encoding obj[] in an object-typed constructor parameter slot
@@ -444,3 +474,40 @@ let ``Generative custom attribute with Type argument in object slot encodes corr
     let attrData = prop.GetCustomAttributesData()
     let defaultValueAttr = attrData |> Seq.tryFind (fun a -> a.Constructor.DeclaringType.Name = "DefaultValueAttribute")
     Assert.True(defaultValueAttr.IsSome, "DefaultValueAttribute should be present on PropWithTypeAttr")
+
+[<Fact>]
+let ``Generative custom attribute with named property argument encodes and round-trips correctly``() =
+    // Tests the NamedArguments encoding path in defineCustomAttrs (lines 15696–15697 of ProvidedTypes.fs).
+    // Before this path was exercised: named property arguments could silently be dropped.
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs)
+    let tp = GenerativeProviderWithNamedArgAttrs cfg :> TypeProviderForNamespaces
+    let providedNamespace = tp.Namespaces.[0]
+    let providedTypes = providedNamespace.GetTypes()
+    let providedType = providedTypes.[0]
+
+    let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+    Assert.NotEqual(0, assemContents.Length)
+
+    let assem = Assembly.Load assemContents
+    let containerType = assem.GetType("NamedArgAttrs.Provided.Container")
+    Assert.NotNull(containerType)
+
+    let prop = containerType.GetProperty("PropWithNamedArg")
+    Assert.NotNull(prop)
+
+    let attrData = prop.GetCustomAttributesData()
+    let debugAttr = attrData |> Seq.tryFind (fun a -> a.Constructor.DeclaringType.Name = "DebuggerDisplayAttribute")
+    Assert.True(debugAttr.IsSome, "DebuggerDisplayAttribute should be present on PropWithNamedArg")
+
+    let attr = debugAttr.Value
+    // Verify the constructor argument "{Value}" round-tripped
+    Assert.Equal(1, attr.ConstructorArguments.Count)
+    Assert.Equal("{Value}", attr.ConstructorArguments.[0].Value :?> string)
+
+    // Verify the named argument "Name" = "MyProp" round-tripped
+    let namedArgs = attr.NamedArguments |> Seq.toList
+    Assert.Equal(1, namedArgs.Length)
+    Assert.Equal("Name", namedArgs.[0].MemberName)
+    Assert.Equal("MyProp", namedArgs.[0].TypedValue.Value :?> string)
