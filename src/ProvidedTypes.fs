@@ -1657,7 +1657,13 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
             let xs = this.GetNestedTypes bindingFlags |> Array.filter (fun m -> m.Name = name)
             if xs.Length > 0 then xs.[0] else null)
 
-    override __.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" this.Name
+    override __.GetInterface(name, ignoreCase) =
+        let sc = if ignoreCase then StringComparison.OrdinalIgnoreCase else StringComparison.Ordinal
+        this.GetInterfaces()
+        |> Array.tryFind (fun t ->
+            if name.Contains('.') then String.Equals(t.FullName, name, sc)
+            else String.Equals(t.Name, name, sc))
+        |> Option.toObj
 
     override __.GetInterfaces() = getInterfaces()  
 
@@ -8148,7 +8154,13 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetCustomAttributes(_inherited) = notRequired this "GetCustomAttributes" inp.Name
         override this.GetCustomAttributes(_attributeType, _inherited) = notRequired this "GetCustomAttributes" inp.Name
         override this.IsDefined(_attributeType, _inherited) = notRequired this "IsDefined" inp.Name
-        override this.GetInterface(_name, _ignoreCase) = notRequired this "GetInterface" inp.Name
+        override this.GetInterface(name, ignoreCase) =
+            let sc = if ignoreCase then StringComparison.OrdinalIgnoreCase else StringComparison.Ordinal
+            this.GetInterfaces()
+            |> Array.tryFind (fun t ->
+                if name.Contains('.') then String.Equals(t.FullName, name, sc)
+                else String.Equals(t.Name, name, sc))
+            |> Option.toObj
         override this.GetElementType() = notRequired this "GetElementType" inp.Name
         override this.InvokeMember(_name, _invokeAttr, _binder, _target, _args, _modifiers, _culture, _namedParameters) = notRequired this "InvokeMember" inp.Name
 
@@ -13971,6 +13983,7 @@ namespace ProviderImplementation.ProvidedTypes
         member __.DefineGenericParameter(name, attrs) =  let eb = ILGenericParameterBuilder(name, attrs) in gparams.Add eb; eb
         member __.DefineParameter(i, attrs, parameterName) =  ilParams.[i].SetData(attrs, parameterName) ; ilParams.[i]
         member __.SetCustomAttribute(ca) = cattrs.Add(ca)
+        member __.SetImplementationFlags(f: MethodImplAttributes) = implflags <- f
         member __.GetILGenerator() = let ilg = ILGenerator(methodName) in body <- Some ilg; ilg
         member __.FormalMethodRef = 
             let cc = (if ILMethodDef.ComputeIsStatic attrs then ILCallingConv.Static else ILCallingConv.Instance)
@@ -15767,6 +15780,7 @@ namespace ProviderImplementation.ProvidedTypes
                 match ptdT with
                 | None -> ()
                 | Some ptdT ->
+                    let isDelegateType = ptdT.BaseType <> null && ptdT.BaseType.FullName = "System.MulticastDelegate"
                     for cinfo in ptdT.GetConstructors(bindAll) do
                         match cinfo with
                         | :? ProvidedConstructor as pcinfo when not (ctorMap.ContainsKey pcinfo)  ->
@@ -15779,6 +15793,9 @@ namespace ProviderImplementation.ProvidedTypes
                                     for (i, p) in cinfo.GetParameters() |> Seq.mapi (fun i x -> (i, x)) do
                                         cb.DefineParameter(i+1, ParameterAttributes.None, p.Name) |> ignore
                                     cb
+                            // Delegate constructors use Runtime implementation; they have no IL body
+                            if isDelegateType then
+                                cb.SetImplementationFlags(MethodImplAttributes.Runtime ||| MethodImplAttributes.Managed)
                             ctorMap.[pcinfo] <- cb
                         | _ -> ()
 
@@ -15826,6 +15843,9 @@ namespace ProviderImplementation.ProvidedTypes
 
                                     pb.SetConstant p.RawDefaultValue
 
+                            // Delegate methods use Runtime implementation; they have no IL body
+                            if isDelegateType then
+                                mb.SetImplementationFlags(MethodImplAttributes.Runtime ||| MethodImplAttributes.Managed)
                             methMap.[pminfo] <- mb
 
                         | _ -> ()
@@ -15840,6 +15860,10 @@ namespace ProviderImplementation.ProvidedTypes
                 | Some ptdT ->
 
                     defineCustomAttrs tb.SetCustomAttribute (ptdT.GetCustomAttributesData())
+
+                    // Delegate types (base = System.MulticastDelegate) use Runtime implementation; their
+                    // constructor and Invoke/BeginInvoke/EndInvoke bodies are synthesised by the CLR.
+                    let isDelegateType = ptdT.BaseType <> null && ptdT.BaseType.FullName = "System.MulticastDelegate"
 
                     // Allow at most one constructor, and use its arguments as the fields of the type
                     let ctors =
@@ -15865,6 +15889,9 @@ namespace ProviderImplementation.ProvidedTypes
                         let cb = ctorMap.[pcinfo]
 
                         defineCustomAttrs cb.SetCustomAttribute (pcinfo.GetCustomAttributesData())
+
+                        // Delegate constructors have Runtime implementation; the CLR synthesises the body
+                        if isDelegateType then () else
 
                         let ilg = cb.GetILGenerator()
                         let ctorLocals = Dictionary<Var, ILLocalBuilder>()
@@ -15932,6 +15959,10 @@ namespace ProviderImplementation.ProvidedTypes
                             [ for v in parameterVars -> Expr.Var v ]
 
                         match pminfo.GetInvokeCode with
+                        | _ when isDelegateType ->
+                            // Delegate methods (Invoke, BeginInvoke, EndInvoke) have Runtime implementation;
+                            // the CLR synthesises their bodies. No IL is emitted.
+                            ()
                         | Some _ when ptdT.IsInterface ->
                             failwith "The provided type definition is an interface; therefore, it should not define an implementation for its members."
                         | Some _ when pminfo.IsAbstract ->
