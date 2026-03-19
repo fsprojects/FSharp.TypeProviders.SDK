@@ -1661,11 +1661,11 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
         let sc = if ignoreCase then StringComparison.OrdinalIgnoreCase else StringComparison.Ordinal
         this.GetInterfaces()
         |> Array.tryFind (fun t ->
-            if name.Contains('.') then String.Equals(t.FullName, name, sc)
+            if name.Contains(".") then String.Equals(t.FullName, name, sc)
             else String.Equals(t.Name, name, sc))
         |> Option.toObj
 
-    override __.GetInterfaces() = getInterfaces()  
+    override __.GetInterfaces() = getInterfaces()
 
 
     override __.MakeArrayType() = ProvidedTypeSymbol(ProvidedTypeSymbolKind.SDArray, [this], typeBuilder) :> Type
@@ -8158,7 +8158,7 @@ namespace ProviderImplementation.ProvidedTypes
             let sc = if ignoreCase then StringComparison.OrdinalIgnoreCase else StringComparison.Ordinal
             this.GetInterfaces()
             |> Array.tryFind (fun t ->
-                if name.Contains('.') then String.Equals(t.FullName, name, sc)
+                if name.Contains(".") then String.Equals(t.FullName, name, sc)
                 else String.Equals(t.Name, name, sc))
             |> Option.toObj
         override this.GetElementType() = notRequired this "GetElementType" inp.Name
