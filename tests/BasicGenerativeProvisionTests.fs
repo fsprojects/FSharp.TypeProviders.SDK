@@ -511,3 +511,46 @@ let ``Generative custom attribute with named property argument encodes and round
     Assert.Equal(1, namedArgs.Length)
     Assert.Equal("Name", namedArgs.[0].MemberName)
     Assert.Equal("MyProp", namedArgs.[0].TypedValue.Value :?> string)
+
+[<Fact>]
+let ``TargetTypeDefinition member-wrapper caches are thread-safe under parallel access``() =
+    // Regression test for https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/481
+    // PR #471 introduced lazy caches in TargetTypeDefinition.  When multiple threads call
+    // GetConstructors/GetMethods/etc. concurrently on the same generated type the underlying
+    // shared caches must not corrupt.  Run 8 parallel threads each interrogating every member
+    // kind on the same TargetTypeDefinition; if any internal collection races, the dictionaries
+    // will throw InvalidOperationException.
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    let cfg = Testing.MakeSimulatedTypeProviderConfig(__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs)
+    let staticArgs = [| box 5; box 6 |]
+    let tp = GenerativePropertyProviderWithStaticParams cfg :> TypeProviderForNamespaces
+    let providedNamespace = tp.Namespaces.[0]
+    let providedTypes = providedNamespace.GetTypes()
+    let providedType = providedTypes.[0]
+    let typeName = providedType.Name + (staticArgs |> Seq.map (fun s -> ",\"" + s.ToString() + "\"") |> Seq.reduce (+))
+    let t = (tp :> ITypeProvider).ApplyStaticArguments(providedType, [| typeName |], staticArgs)
+    let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(t.Assembly)
+    let assem = tp.TargetContext.ReadRelatedAssembly(assemContents)
+    let typeName2 = providedType.Namespace + "." + typeName
+    let targetType = assem.GetType(typeName2)
+    Assert.NotNull(targetType)
+
+    let bf = BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Instance ||| BindingFlags.Static
+    let errors = System.Collections.Concurrent.ConcurrentBag<exn>()
+    let threads =
+        [| for _ in 1..8 ->
+            System.Threading.Thread(fun () ->
+                try
+                    for _ in 1..50 do
+                        targetType.GetConstructors(bf) |> ignore
+                        targetType.GetMethods(bf)      |> ignore
+                        targetType.GetFields(bf)       |> ignore
+                        targetType.GetProperties(bf)   |> ignore
+                        targetType.GetEvents(bf)       |> ignore
+                        targetType.GetNestedTypes(bf)  |> ignore
+                with ex ->
+                    errors.Add(ex)) |]
+    for th in threads do th.Start()
+    for th in threads do th.Join()
+    Assert.True(errors.IsEmpty, sprintf "Thread-safety violations: %A" (errors |> Seq.toList))
