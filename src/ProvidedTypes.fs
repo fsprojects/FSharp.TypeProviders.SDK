@@ -7999,6 +7999,23 @@ namespace ProviderImplementation.ProvidedTypes
         let propDefs    = lazy (inp.Properties.Entries |> Array.map (txILPropertyDef this))
         let nestedDefs  = lazy (inp.NestedTypes.Entries |> Array.map (asm.TxILTypeDef (Some (this :> Type))))
 
+        // Cache derived properties that are computed from immutable input data.
+        // The F# compiler may call FullName, BaseType and GetInterfaces() many times per type
+        // during type-checking; caching avoids repeated string allocations and type-resolution work.
+        let fullName =
+            lazy (
+                match declTyOpt with
+                | None ->
+                    match inp.Namespace with
+                    | UNone -> inp.Name
+                    | USome nsp -> nsp + "." + inp.Name
+                | Some declTy ->
+                    declTy.FullName + "+" + inp.Name)
+
+        let baseType = lazy (inp.Extends |> Option.map (txILType (gps, [| |])) |> Option.toObj)
+
+        let interfaces = lazy (inp.Implements |> Array.map (txILType (gps, [| |])))
+
         do this.typeImpl <- this
         override __.Name = inp.Name
         override __.Assembly = (asm :> Assembly)
@@ -8006,18 +8023,11 @@ namespace ProviderImplementation.ProvidedTypes
         override __.MemberType = if isNested then MemberTypes.NestedType else MemberTypes.TypeInfo
         override __.MetadataToken = inp.Token
 
-        override __.FullName =
-            match declTyOpt with
-            | None ->
-                match inp.Namespace with
-                | UNone -> inp.Name
-                | USome nsp -> nsp + "." + inp.Name
-            | Some declTy ->
-                declTy.FullName + "+" + inp.Name
+        override __.FullName = fullName.Value
 
         override __.Namespace = inp.Namespace |> StructOption.toObj
-        override __.BaseType = inp.Extends |> Option.map (txILType (gps, [| |])) |> Option.toObj
-        override __.GetInterfaces() = inp.Implements |> Array.map (txILType (gps, [| |]))
+        override __.BaseType = baseType.Value
+        override __.GetInterfaces() = interfaces.Value
 
         override __.GetConstructors(bindingFlags) =
             ctorDefs.Force() |> Array.filter (canBindConstructor bindingFlags)
