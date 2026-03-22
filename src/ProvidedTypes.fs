@@ -4586,29 +4586,25 @@ module internal AssemblyReader =
 
         let mkCacheInt32 lowMem _infile _nm _sz  =
             if lowMem then (fun f x -> f x) else
-            let cache = Dictionary<int32, _>()
-            let syncObj = obj()
+            let cache = ConcurrentDictionary<int32, _>()
             fun f (idx:int32) ->
-                lock syncObj (fun () ->
-                    let mutable res = Unchecked.defaultof<_>
-                    if cache.TryGetValue(idx, &res) then res
-                    else
-                        let v = f idx
-                        cache.[idx] <- v
-                        v)
+                match cache.TryGetValue idx with
+                | true, v -> v
+                | false, _ ->
+                    let v = f idx
+                    cache.TryAdd(idx, v) |> ignore
+                    cache.[idx]
 
         let mkCacheGeneric lowMem _inbase _nm _sz  =
             if lowMem then (fun f x -> f x) else
-            let cache = Dictionary<'T, _>()
-            let syncObj = obj()
+            let cache = ConcurrentDictionary<'T, _>()
             fun f (idx :'T) ->
-                lock syncObj (fun () ->
-                    match cache.TryGetValue idx with
-                    | true, cached -> cached
-                    | false, _ ->
-                        let v = f idx
-                        cache.[idx] <- v
-                        v)
+                match cache.TryGetValue idx with
+                | true, v -> v
+                | false, _ ->
+                    let v = f idx
+                    cache.TryAdd(idx, v) |> ignore
+                    cache.[idx]
 
         let seekFindRow numRows rowChooser =
             let mutable i = 1
