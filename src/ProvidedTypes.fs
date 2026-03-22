@@ -2874,19 +2874,15 @@ module internal AssemblyReader =
 
     type ILMethodDefs(larr: Lazy<ILMethodDef[]>) =
 
-        let mutable lmap : Dictionary<string, ILMethodDef[]> = null
-        let syncObj = obj()
-        let getmap() =
-            lock syncObj (fun () ->
-                if isNull lmap then
-                    let m = Dictionary()
-                    for y in larr.Force() do
-                        let key = y.Name
-                        match m.TryGetValue key with
-                        | true, lmpak -> m.[key] <- Array.append [| y |] lmpak
-                        | false, _ -> m.[key] <- [| y |]
-                    lmap <- m
-                lmap)
+        let lmap = lazy (
+            let m = Dictionary()
+            for y in larr.Force() do
+                let key = y.Name
+                match m.TryGetValue key with
+                | true, lmpak -> m.[key] <- Array.append [| y |] lmpak
+                | false, _ -> m.[key] <- [| y |]
+            m)
+        let getmap() = lmap.Value
 
         member __.Entries = larr.Force()
         member __.FindByName nm =  
@@ -3100,16 +3096,12 @@ module internal AssemblyReader =
 
     and ILTypeDefs(larr: Lazy<(string uoption * string * Lazy<ILTypeDef>)[]>) =
 
-        let mutable lmap : Dictionary<string uoption * string, Lazy<ILTypeDef>> = null
-        let syncObj = obj()
-        let getmap() =
-            lock syncObj (fun () ->
-                if isNull lmap then
-                    let m = Dictionary()
-                    for (nsp, nm, ltd) in larr.Force() do
-                        m.[(nsp, nm)] <- ltd
-                    lmap <- m
-                lmap)
+        let lmap = lazy (
+            let m = Dictionary()
+            for (nsp, nm, ltd) in larr.Force() do
+                m.[(nsp, nm)] <- ltd
+            m)
+        let getmap() = lmap.Value
 
         member __.Entries =
             [| for (_, _, td) in larr.Force() -> td.Force() |]
@@ -3147,16 +3139,12 @@ module internal AssemblyReader =
         override x.ToString() = "fwd " + x.Name
 
     and ILExportedTypesAndForwarders(larr:Lazy<ILExportedTypeOrForwarder[]>) =
-        let mutable lmap : Dictionary<string uoption * string, ILExportedTypeOrForwarder> = null
-        let syncObj = obj()
-        let getmap() =
-            lock syncObj (fun () ->
-                if isNull lmap then
-                    let m = Dictionary()
-                    for ltd in larr.Force() do
-                        m.[(ltd.Namespace, ltd.Name)] <- ltd
-                    lmap <- m
-                lmap)
+        let lmap = lazy (
+            let m = Dictionary()
+            for ltd in larr.Force() do
+                m.[(ltd.Namespace, ltd.Name)] <- ltd
+            m)
+        let getmap() = lmap.Value
         member __.Entries = larr.Force()
         member __.TryFindByName (nsp, nm) = match getmap().TryGetValue ((nsp, nm)) with true, v -> Some v | false, _ -> None
 
