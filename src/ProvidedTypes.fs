@@ -2874,16 +2874,15 @@ module internal AssemblyReader =
 
     type ILMethodDefs(larr: Lazy<ILMethodDef[]>) =
 
-        let mutable lmap = null
-        let getmap() =
-            if isNull lmap then
-                lmap <- Dictionary()
-                for y in larr.Force() do
-                    let key = y.Name
-                    match lmap.TryGetValue key with
-                    | true, lmpak -> lmap.[key] <- Array.append [| y |] lmpak
-                    | false, _ -> lmap.[key] <- [| y |]
-            lmap
+        let lmap = lazy (
+            let m = Dictionary()
+            for y in larr.Force() do
+                let key = y.Name
+                match m.TryGetValue key with
+                | true, lmpak -> m.[key] <- Array.append [| y |] lmpak
+                | false, _ -> m.[key] <- [| y |]
+            m)
+        let getmap() = lmap.Value
 
         member __.Entries = larr.Force()
         member __.FindByName nm =  
@@ -3097,14 +3096,12 @@ module internal AssemblyReader =
 
     and ILTypeDefs(larr: Lazy<(string uoption * string * Lazy<ILTypeDef>)[]>) =
 
-        let mutable lmap = null
-        let getmap() =
-            if isNull lmap then
-                lmap <- Dictionary()
-                for (nsp, nm, ltd) in larr.Force() do
-                    let key = nsp, nm
-                    lmap.[key] <- ltd
-            lmap
+        let lmap = lazy (
+            let m = Dictionary()
+            for (nsp, nm, ltd) in larr.Force() do
+                m.[(nsp, nm)] <- ltd
+            m)
+        let getmap() = lmap.Value
 
         member __.Entries =
             [| for (_, _, td) in larr.Force() -> td.Force() |]
@@ -3142,14 +3139,12 @@ module internal AssemblyReader =
         override x.ToString() = "fwd " + x.Name
 
     and ILExportedTypesAndForwarders(larr:Lazy<ILExportedTypeOrForwarder[]>) =
-        let mutable lmap = null
-        let getmap() =
-            if isNull lmap then
-                lmap <- Dictionary()
-                for ltd in larr.Force() do
-                    let key = ltd.Namespace, ltd.Name
-                    lmap.[key] <- ltd
-            lmap
+        let lmap = lazy (
+            let m = Dictionary()
+            for ltd in larr.Force() do
+                m.[(ltd.Namespace, ltd.Name)] <- ltd
+            m)
+        let getmap() = lmap.Value
         member __.Entries = larr.Force()
         member __.TryFindByName (nsp, nm) = match getmap().TryGetValue ((nsp, nm)) with true, v -> Some v | false, _ -> None
 
@@ -4579,34 +4574,25 @@ module internal AssemblyReader =
 
         let mkCacheInt32 lowMem _infile _nm _sz  =
             if lowMem then (fun f x -> f x) else
-            let cache = ref null
+            let cache = ConcurrentDictionary<int32, _>()
             fun f (idx:int32) ->
-                let cache =
-                    match !cache with
-                    | null -> cache :=  new Dictionary<int32, _>(11)
-                    | _ -> ()
-                    !cache
-                let mutable res = Unchecked.defaultof<_>
-                let ok = cache.TryGetValue(idx, &res)
-                if ok then
-                    res
-                else
-                    let res = f idx
-                    cache.[idx] <- res;
-                    res
+                match cache.TryGetValue idx with
+                | true, v -> v
+                | false, _ ->
+                    let v = f idx
+                    cache.TryAdd(idx, v) |> ignore
+                    cache.[idx]
 
         let mkCacheGeneric lowMem _inbase _nm _sz  =
             if lowMem then (fun f x -> f x) else
-            let cache = ref null
+            let cache = ConcurrentDictionary<'T, _>()
             fun f (idx :'T) ->
-                let cache =
-                    match !cache with
-                    | null -> cache := new Dictionary<_, _>(11 (* sz:int *) )
-                    | _ -> ()
-                    !cache
                 match cache.TryGetValue idx with
-                | true, cached -> cached
-                | false, _ -> let res = f idx in cache.[idx] <- res; res
+                | true, v -> v
+                | false, _ ->
+                    let v = f idx
+                    cache.TryAdd(idx, v) |> ignore
+                    cache.[idx]
 
         let seekFindRow numRows rowChooser =
             let mutable i = 1
@@ -7000,6 +6986,7 @@ namespace ProviderImplementation.ProvidedTypes
 
     open System
     open System.IO
+    open System.Collections.Concurrent
     open System.Collections.Generic
     open System.Reflection
     open ProviderImplementation.ProvidedTypes.AssemblyReader
@@ -7012,14 +6999,10 @@ namespace ProviderImplementation.ProvidedTypes
         // Unique wrapped type definition objects must be translated to unique wrapper objects, based
         // on object identity.
         type TxTable<'T2>() =
-            let tab = Dictionary<int, 'T2>()
+            let tab = ConcurrentDictionary<int, Lazy<'T2>>()
             member __.Get inp f =
-                match tab.TryGetValue inp with
-                | true, tabVal -> tabVal
-                | false, _ ->
-                    let res = f()
-                    tab.[inp] <- res
-                    res
+                let lazyVal = tab.GetOrAdd(inp, fun _ -> lazy (f()))
+                lazyVal.Value
 
             member __.ContainsKey inp = tab.ContainsKey inp
 
