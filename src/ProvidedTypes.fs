@@ -6986,6 +6986,7 @@ namespace ProviderImplementation.ProvidedTypes
 
     open System
     open System.IO
+    open System.Collections.Concurrent
     open System.Collections.Generic
     open System.Reflection
     open ProviderImplementation.ProvidedTypes.AssemblyReader
@@ -6998,7 +6999,7 @@ namespace ProviderImplementation.ProvidedTypes
         // Unique wrapped type definition objects must be translated to unique wrapper objects, based
         // on object identity.
         type TxTable<'T2>() =
-            let tab = System.Collections.Concurrent.ConcurrentDictionary<int, Lazy<'T2>>()
+            let tab = ConcurrentDictionary<int, Lazy<'T2>>()
             member __.Get inp f =
                 let lazyVal = tab.GetOrAdd(inp, fun _ -> lazy (f()))
                 lazyVal.Value
