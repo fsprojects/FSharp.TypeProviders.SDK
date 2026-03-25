@@ -41,6 +41,24 @@ type GenerativeInterfacesProvider (config: TypeProviderConfig) as this =
         let contract = createInterface "IContract" members
         container.AddMember contract
 
+        // IExtended inherits from IContract and adds an extra method
+        let extended = createInterface "IExtended" [ "GetLength", [("s", typeof<string>)], typeof<int> ]
+        extended.AddInterfaceImplementation(contract)
+        container.AddMember extended
+
+        // Impl is a concrete class that implements both IMarker and IContract
+        let impl = ProvidedTypeDefinition("Impl", Some typeof<obj>, isErased = false)
+        let getString = ProvidedMethod("GetString", [], typeof<string>, invokeCode = fun _args -> <@@ "hello" @@>)
+        getString.AddMethodAttrs(MethodAttributes.Virtual)
+        let sum = ProvidedMethod("Sum", [ProvidedParameter("x", typeof<int>); ProvidedParameter("y", typeof<int>)], typeof<int>,
+                                 invokeCode = fun args -> <@@ (%%args.[1] : int) + (%%args.[2] : int) @@>)
+        sum.AddMethodAttrs(MethodAttributes.Virtual)
+        impl.AddMember getString
+        impl.AddMember sum
+        impl.AddInterfaceImplementation(marker)
+        impl.AddInterfaceImplementation(contract)
+        container.AddMember impl
+
         tempAssembly.AddTypes [container]
         this.AddNamespace(container.Namespace, [container])
 
@@ -88,4 +106,54 @@ let ``Interfaces with methods are generated correctly``() =
         Assert.NotNull contractSum
         Assert.True(contractSum.IsAbstract, "Expected Sum method to be abstract")
         Assert.True(contractSum.IsVirtual, "Expected Sum method to be virtual")
+
+[<Fact>]
+let ``Interface inheritance: IExtended extends IContract``() =
+    testProvidedAssembly <| fun container ->
+        let extended = container.GetNestedType "IExtended"
+        Assert.NotNull(extended)
+        Assert.True(extended.IsInterface, "Expected IExtended to be an interface")
+
+        // IExtended declares its own method
+        let getLength = extended.GetMethod("GetLength")
+        Assert.NotNull(getLength)
+        Assert.True(getLength.IsAbstract, "Expected GetLength to be abstract")
+
+        // IExtended inherits IContract
+        let ifaces = extended.GetInterfaces()
+        let hasIContract = ifaces |> Array.exists (fun i -> i.Name = "IContract")
+        Assert.True(hasIContract, "Expected IExtended to implement IContract")
+
+[<Fact>]
+let ``Concrete class implementing interfaces is generated correctly``() =
+    testProvidedAssembly <| fun container ->
+        let impl = container.GetNestedType "Impl"
+        Assert.NotNull(impl)
+        Assert.False(impl.IsInterface, "Impl should not be an interface")
+        Assert.False(impl.IsAbstract, "Impl should not be abstract")
+
+        // Impl implements both IMarker and IContract
+        let ifaces = impl.GetInterfaces()
+        let hasIMarker  = ifaces |> Array.exists (fun i -> i.Name = "IMarker")
+        let hasIContract = ifaces |> Array.exists (fun i -> i.Name = "IContract")
+        Assert.True(hasIMarker,   "Expected Impl to implement IMarker")
+        Assert.True(hasIContract, "Expected Impl to implement IContract")
+
+[<Fact>]
+let ``Concrete class methods satisfy interface contract``() =
+    testProvidedAssembly <| fun container ->
+        let impl = container.GetNestedType "Impl"
+        Assert.NotNull(impl)
+
+        let getString = impl.GetMethod("GetString")
+        Assert.NotNull(getString)
+        Assert.False(getString.IsAbstract, "GetString on Impl should not be abstract")
+
+        let sum = impl.GetMethod("Sum")
+        Assert.NotNull(sum)
+        let ps = sum.GetParameters()
+        Assert.Equal(2, ps.Length)
+        Assert.Equal(typeof<int>, ps.[0].ParameterType)
+        Assert.Equal(typeof<int>, ps.[1].ParameterType)
+        Assert.Equal(typeof<int>, sum.ReturnType)
 
