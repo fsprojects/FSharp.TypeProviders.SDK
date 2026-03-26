@@ -175,7 +175,7 @@ steps:
           json.dump(result, f, indent=2)
       EOF
 
-source: githubnext/agentics/workflows/repo-assist.md@410f8f4fdfbd7d855fc58c2df6438d2ebfa7c93e
+source: githubnext/agentics/workflows/repo-assist.md@1f672aef974f4246124860fc532f82fe8a93a57e
 ---
 
 # Repo Assist
