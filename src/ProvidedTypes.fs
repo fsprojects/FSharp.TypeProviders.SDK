@@ -6695,7 +6695,7 @@ module internal AssemblyReader =
                 let s, sigptr = sigptr_get_string len bytes sigptr
                 Some(s), sigptr
 
-        let decodeILCustomAttribData ilg (resolveEnumUnderlyingILType: ILType -> ILType) (ca: ILCustomAttribute) =
+        let decodeILCustomAttribData ilg (resolveEnumUnderlyingILType: ILType -> ILType) (resolveILType: ILType -> Type) (ca: ILCustomAttribute) =
             let bytes = ca.Data
             let sigptr = 0
             let bb0, sigptr = sigptr_get_byte bytes sigptr
@@ -6748,12 +6748,13 @@ module internal AssemblyReader =
                 | ILType.Boxed tspec when tspec.Namespace = USome "System" && tspec.Name = "Type" ->
                     let nOpt, sigptr = sigptr_get_serstring_possibly_null bytes sigptr
                     match nOpt with
-                    | None -> (argty, box null) , sigptr // TODO: read System.Type attrs
+                    | None -> (argty, box null), sigptr
                     | Some n ->
                     try
                         let parser = ILTypeSigParser(n)
-                        parser.ParseType() |> ignore
-                        (argty, box null) , sigptr // TODO: read System.Type attributes
+                        let ilty = parser.ParseType()
+                        let resolvedType = try resolveILType ilty with _ -> null
+                        (argty, box resolvedType), sigptr
                     with e ->
                         failwithf "decodeILCustomAttribData: error parsing type in custom attribute blob: %s" e.Message
                 | ILType.Boxed tspec when tspec.Namespace = USome "System" && tspec.Name = "Object" ->
@@ -7697,7 +7698,7 @@ namespace ProviderImplementation.ProvidedTypes
                          else ilGlobals.typ_Int32
                      with _ -> ilGlobals.typ_Int32
                  | _ -> ilGlobals.typ_Int32
-             let args, namedArgs = decodeILCustomAttribData ilGlobals resolveEnumUnderlyingILType inp
+             let args, namedArgs = decodeILCustomAttribData ilGlobals resolveEnumUnderlyingILType (txILType ([| |], [| |])) inp
              { new CustomAttributeData () with
                 member __.Constructor =  txILConstructorRef inp.Method.MethodRef
                 member __.ConstructorArguments = [| for arg in args -> txCustomAttributesArg arg |] :> IList<_>
