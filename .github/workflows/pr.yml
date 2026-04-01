@@ -28,6 +28,22 @@ jobs:
       with:
         dotnet-version: 6.0.425
 
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('paket.lock', '.config/dotnet-tools.json') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Cache FAKE build artifacts
+      uses: actions/cache@v4
+      with:
+        path: .fake
+        key: ${{ runner.os }}-fake-${{ hashFiles('build.fsx', 'build.fsx.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-fake-
+
     - name: Build on Windows
       if: matrix.os == 'windows-latest'
       run: .\build.cmd
