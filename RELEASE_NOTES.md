@@ -1,3 +1,15 @@
+#### 8.4.0 - March 31, 2026
+
+- Bug fix: Fix `GetEnumUnderlyingType()` to correctly handle non-Int32 enum underlying types #470
+- Bug fix: Fix `decodeILCustomAttribData` to read correct byte-width for non-Int32 enum fixed arguments (ECMA-335) #475
+- Bug fix: Fix generative delegate type support; implement `GetInterface` on `ProvidedTypeDefinition` and `TargetTypeDefinition` #479
+- Bug fix: Fix thread-safety races in `TargetTypeDefinition` member-wrapper caches #482
+- Bug fix: Fix `decodeILCustomAttribData` to resolve `System.Type` custom attribute arguments (previously always returned null)
+- Performance: Cache member wrapper objects in `TargetTypeDefinition` to avoid repeated allocations #471
+- Performance: Cache `FullName`, `BaseType` and `GetInterfaces()` in `TargetTypeDefinition` #485
+- Refactor: Simplify `mkCacheInt32`/`mkCacheGeneric` to use `ConcurrentDictionary` #486
+- CI: Update GitHub Actions from v1 to v4 #476
+
 #### 8.3.0 - February 26, 2026
 
 - Performance: Memoize `transType` in `AssemblyCompiler` to reduce redundant type translation #443
