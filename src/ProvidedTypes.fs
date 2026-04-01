@@ -9196,6 +9196,8 @@ namespace ProviderImplementation.ProvidedTypes
                         ) |> ignore
             sourceAssemblies_
 
+        let getSourceAssembliesTable() = getSourceAssemblies() |> ignore; sourceAssembliesTable_
+
         /// When translating quotations, Expr.Var's are translated to new variable respecting reference equality.
         let varTableFwd = Dictionary<Var, Var>()
         let varTableBwd = Dictionary<Var, Var>()
@@ -9254,10 +9256,22 @@ namespace ProviderImplementation.ProvidedTypes
                 | _ -> 
                 let asms = (if toTgt then getTargetAssemblies() else getSourceAssemblies())
                 let fullName = fixName t.FullName
+                let asmSimpleName = t.Assembly.GetName().Name
 
-                let bestGuess = 
-                    asms |> Seq.tryFind(fun a -> a.FullName = t.Assembly.FullName)
-                    |> Option.bind(fun a -> tryGetTypeFromAssembly toTgt t.Assembly.FullName fullName a)
+                // Use the assembly-name dictionary (O(1)) rather than a sequential scan.
+                // Fall through to None if the assembly isn't in the table, which lets the
+                // linear fallback below handle cross-assembly type forwarding edge cases.
+                let bestGuess =
+                    if toTgt then
+                        let table = getTargetAssembliesTable()
+                        match table.TryGetValue(asmSimpleName) with
+                        | true, Choice1Of2 asm -> tryGetTypeFromAssembly toTgt t.Assembly.FullName fullName asm
+                        | _ -> None
+                    else
+                        let table = getSourceAssembliesTable()
+                        match table.TryGetValue(asmSimpleName) with
+                        | true, asm -> tryGetTypeFromAssembly toTgt t.Assembly.FullName fullName asm
+                        | _ -> None
 
                 match bestGuess with
                 | Some (newT, canSave) ->
