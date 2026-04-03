@@ -2881,12 +2881,16 @@ module internal AssemblyReader =
     type ILMethodDefs(larr: Lazy<ILMethodDef[]>) =
 
         let lmap = lazy (
-            let m = Dictionary()
+            // Use ResizeArray during construction to avoid O(n^2) allocations when
+            // building per-name buckets for overloaded methods.
+            let tmp = Dictionary<string, ResizeArray<ILMethodDef>>()
             for y in larr.Force() do
                 let key = y.Name
-                match m.TryGetValue key with
-                | true, lmpak -> m.[key] <- Array.append [| y |] lmpak
-                | false, _ -> m.[key] <- [| y |]
+                match tmp.TryGetValue key with
+                | true, ra -> ra.Add y
+                | false, _ -> tmp.[key] <- ResizeArray [y]
+            let m = Dictionary<string, ILMethodDef[]>(tmp.Count)
+            for kvp in tmp do m.[kvp.Key] <- kvp.Value.ToArray()
             m)
         let getmap() = lmap.Value
 
@@ -8058,19 +8062,13 @@ namespace ProviderImplementation.ProvidedTypes
             md |> Option.map (txILMethodDef this) |> Option.toObj
 
         override this.GetField(name, _bindingFlags) =
-            inp.Fields.Entries
-            |> Array.tryPick (fun p -> if p.Name = name then Some (txILFieldDef this p) else None)
-            |> Option.toObj
+            fieldDefs.Force() |> Array.tryFind (fun f -> f.Name = name) |> Option.toObj
 
         override this.GetPropertyImpl(name, _bindingFlags, _binder, _returnType, _types, _modifiers) =
-            inp.Properties.Entries
-            |> Array.tryPick (fun p -> if p.Name = name then Some (txILPropertyDef this p) else None)
-            |> Option.toObj
+            propDefs.Force() |> Array.tryFind (fun p -> p.Name = name) |> Option.toObj
 
         override this.GetEvent(name, _bindingFlags) =
-            inp.Events.Entries
-            |> Array.tryPick (fun ev -> if ev.Name = name then Some (txILEventDef this ev) else None)
-            |> Option.toObj
+            eventDefs.Force() |> Array.tryFind (fun ev -> ev.Name = name) |> Option.toObj
 
         override this.GetNestedType(name, _bindingFlags) =
             inp.NestedTypes.TryFindByName(UNone, name) |> Option.map (asm.TxILTypeDef (Some (this :> Type))) |> Option.toObj
