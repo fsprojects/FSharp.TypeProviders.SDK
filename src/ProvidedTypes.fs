@@ -1619,43 +1619,41 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
         if xs.Length > 0 then xs.[0] else null
 
     override __.GetMethodImpl(name, bindingFlags, _binderBinder, _callConvention, _types, _modifiers): MethodInfo =
-        (//save ("methimpl", bindingFlags, Some name) (fun () -> 
-            // This is performance critical for large spaces of provided methods and properties
-            // Save a table of the methods grouped by name
-            let table = 
-                save (bindingFlags ||| BindingFlags.InvokeMethod) (fun () -> 
-                    let methods = this.GetMethods bindingFlags
-                    methods |> Seq.groupBy (fun m -> m.Name) |> Seq.map (fun (k, v) -> k, Seq.toArray v) |> dict)
-                
-            let xs = match table.TryGetValue name with | true, tn -> tn | false, _ -> [| |]
-            //let xs = this.GetMethods bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 1 then failwithf "GetMethodImpl. not support overloads, name = '%s', methods - '%A', callstack = '%A'" name xs Environment.StackTrace
-            if xs.Length > 0 then xs.[0] else null)
+        // This is performance critical for large spaces of provided methods and properties.
+        // Build a name→methods table once per bindingFlags combination and cache it.
+        let table =
+            save (bindingFlags ||| BindingFlags.InvokeMethod) (fun () ->
+                let methods = this.GetMethods bindingFlags
+                methods |> Seq.groupBy (fun m -> m.Name) |> Seq.map (fun (k, v) -> k, Seq.toArray v) |> dict)
+        let xs = match table.TryGetValue name with | true, tn -> tn | false, _ -> [| |]
+        if xs.Length > 1 then failwithf "GetMethodImpl. not support overloads, name = '%s', methods - '%A', callstack = '%A'" name xs Environment.StackTrace
+        if xs.Length > 0 then xs.[0] else null
 
     override this.GetField(name, bindingFlags) =
-        (//save ("field1", bindingFlags, Some name) (fun () -> 
-            let xs = this.GetFields bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 0 then xs.[0] else null)
+        let table =
+            save (bindingFlags ||| BindingFlags.GetField) (fun () ->
+                this.GetFields bindingFlags |> Seq.map (fun f -> f.Name, f) |> dict)
+        match table.TryGetValue name with | true, f -> f | false, _ -> null
 
     override __.GetPropertyImpl(name, bindingFlags, _binder, _returnType, _types, _modifiers) =
-        (//save ("prop1", bindingFlags, Some name) (fun () -> 
-            let table = 
-                save (bindingFlags ||| BindingFlags.GetProperty) (fun () -> 
-                    let methods = this.GetProperties bindingFlags
-                    methods |> Seq.groupBy (fun m -> m.Name) |> Seq.map (fun (k, v) -> k, Seq.toArray v) |> dict)
-            let xs = match table.TryGetValue name with | true, tn -> tn | false, _ -> [| |]
-            //let xs = this.GetProperties bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 0 then xs.[0] else null)
+        let table =
+            save (bindingFlags ||| BindingFlags.GetProperty) (fun () ->
+                let methods = this.GetProperties bindingFlags
+                methods |> Seq.groupBy (fun m -> m.Name) |> Seq.map (fun (k, v) -> k, Seq.toArray v) |> dict)
+        let xs = match table.TryGetValue name with | true, tn -> tn | false, _ -> [| |]
+        if xs.Length > 0 then xs.[0] else null
 
     override __.GetEvent(name, bindingFlags) =
-        (//save ("event1", bindingFlags, Some name) (fun () -> 
-            let xs = this.GetEvents bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 0 then xs.[0] else null)
+        let table =
+            save (bindingFlags ||| BindingFlags.SetField) (fun () ->
+                this.GetEvents bindingFlags |> Seq.map (fun e -> e.Name, e) |> dict)
+        match table.TryGetValue name with | true, e -> e | false, _ -> null
 
     override __.GetNestedType(name, bindingFlags) =
-        (//save ("nested1", bindingFlags, Some name) (fun () -> 
-            let xs = this.GetNestedTypes bindingFlags |> Array.filter (fun m -> m.Name = name)
-            if xs.Length > 0 then xs.[0] else null)
+        let table =
+            save (bindingFlags ||| BindingFlags.SetProperty) (fun () ->
+                this.GetNestedTypes bindingFlags |> Seq.map (fun t -> t.Name, t) |> dict)
+        match table.TryGetValue name with | true, t -> t | false, _ -> null
 
     override __.GetInterface(name, ignoreCase) =
         let sc = if ignoreCase then StringComparison.OrdinalIgnoreCase else StringComparison.Ordinal
@@ -3133,9 +3131,12 @@ module internal AssemblyReader =
         override x.ToString() = "nested fwd " + x.Name
 
     and ILNestedExportedTypesAndForwarders(larr:Lazy<ILNestedExportedType[]>) =
-        let lmap = lazy ((Map.empty, larr.Force()) ||> Array.fold (fun m x -> m.Add(x.Name, x)))
+        let lmap = lazy (
+            let m = Dictionary()
+            for x in larr.Force() do m.[x.Name] <- x
+            m)
         member __.Entries = larr.Force()
-        member __.TryFindByName nm = lmap.Force().TryFind nm
+        member __.TryFindByName nm = match lmap.Force().TryGetValue nm with true, v -> Some v | false, _ -> None
 
     and [<NoComparison; NoEquality>]
         ILExportedTypeOrForwarder =
