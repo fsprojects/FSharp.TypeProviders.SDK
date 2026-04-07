@@ -1,3 +1,10 @@
+#### 8.5.0 - April 7, 2026
+
+- Performance: O(1) assembly-name dictionary lookup in `convTypeRef` #493
+- Performance: Avoid O(n²) allocations in `ILMethodDefs` name index construction; use lazy caches in `TargetTypeDefinition` for `GetField`/`GetPropertyImpl`/`GetEvent` #497
+- Refactor: Add `save`-based caching to `GetField`/`GetEvent`/`GetNestedType` on `ProvidedTypeDefinition`; use `Dictionary` in `ILNestedExportedTypesAndForwarders` #498
+- CI: Add NuGet and FAKE build caching to CI workflows #495
+
 #### 8.4.0 - March 31, 2026
 
 - Bug fix: Fix `GetEnumUnderlyingType()` to correctly handle non-Int32 enum underlying types #470
