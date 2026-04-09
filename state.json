@@ -1,14 +1,14 @@
 {
-    "last_run": "2026-04-07T00:36:29Z",
-    "last_run_id": "24058266578",
+    "last_run": "2026-04-09T00:30:53Z",
+    "last_run_id": "24165916140",
     "monthly_activity_issue": {"month": "2026-04", "number": 494},
     "label_cursor": 494,
     "open_repo_assist_prs": [
-        {"branch": "repo-assist/release-8.5.0", "title": "Prepare release 8.5.0", "created": "2026-04-07"}
+        {"branch": "repo-assist/improve-il-collection-dicts-20260409", "title": "perf/refactor: ILFieldDefs/ILEventDefs/ILPropertyDefs dict caches + Dependabot", "created": "2026-04-09"}
     ],
-    "merged_this_month": [490, 491, 493, 495, 497, 498],
+    "merged_this_month": [490, 491, 493, 495, 497, 498, 499],
     "comments_made": {
         "298": "2026-02-26", "299": "2026-02-26", "300": "2026-02-26", "384": "2026-02-26"
     },
-    "notes": "Daily 08:08 UTC. All open issues (#298, #299, #300, #384) have Repo Assist comments. No new human comments since last run. PR #498 (save-based caching) merged on Apr 6. Created release 8.5.0 PR this run (Task 10). 126 tests pass."
+    "notes": "Daily run. PR 499 (release 8.5.0) merged Apr 7. Created PR for ILFieldDefs/ILEventDefs/ILPropertyDefs dict cache improvement + Dependabot config. 126 tests pass."
 }
