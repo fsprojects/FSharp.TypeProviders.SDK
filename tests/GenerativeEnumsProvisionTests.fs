@@ -145,6 +145,12 @@ let makeAssembly (tp: TypeProviderForNamespaces) =
     let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
     Assembly.Load assemContents
 
+let makeTargetAssembly (tp: TypeProviderForNamespaces) =
+    let ns = tp.Namespaces.[0]
+    let providedType = ns.GetTypes().[0]
+    let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+    tp.TargetContext.ReadRelatedAssembly(assemContents)
+
 [<Fact>]
 let ``Generative enum with byte underlying type is generated correctly``() =
     let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
@@ -185,3 +191,41 @@ let ``Generative enum with int64 underlying type is generated correctly``() =
     let values = Enum.GetValues(int64Enum) |> Seq.cast<int64> |> Seq.zip (Enum.GetNames(int64Enum)) |> Seq.toList
     Assert.Equal<(string * int64) list>([("Zero", 0L); ("One", 1L); ("BigVal", 3000000000L)], values)
 
+// ---------------------------------------------------------------------------
+// Tests that read enums back via TargetContext.ReadRelatedAssembly (the IL binary
+// reader path through TargetTypeDefinition), exercising GetEnumUnderlyingType()
+// on non-Int32 enum types via the target context.
+// ---------------------------------------------------------------------------
+
+[<Fact>]
+let ``Byte enum underlying type is correct when read via target context (ReadRelatedAssembly)``() =
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs)
+    let tp = GenerativeByteEnumsProvider(cfg) :> TypeProviderForNamespaces
+    let targetAssem = makeTargetAssembly tp
+
+    let container = targetAssem.GetType("ByteEnums.Provided.Container")
+    Assert.NotNull(container)
+
+    let byteEnum = container.GetNestedType("ByteEnum", BindingFlags.Public ||| BindingFlags.NonPublic)
+    Assert.NotNull(byteEnum)
+    Assert.True(byteEnum.IsEnum, "ByteEnum should be recognised as an enum via target context")
+    // GetEnumUnderlyingType on a TargetTypeDefinition reads the "value__" field type from IL.
+    Assert.Equal("System.Byte", byteEnum.GetEnumUnderlyingType().FullName)
+
+[<Fact>]
+let ``Int64 enum underlying type is correct when read via target context (ReadRelatedAssembly)``() =
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs)
+    let tp = GenerativeInt64EnumsProvider(cfg) :> TypeProviderForNamespaces
+    let targetAssem = makeTargetAssembly tp
+
+    let container = targetAssem.GetType("Int64Enums.Provided.Container")
+    Assert.NotNull(container)
+
+    let int64Enum = container.GetNestedType("Int64Enum", BindingFlags.Public ||| BindingFlags.NonPublic)
+    Assert.NotNull(int64Enum)
+    Assert.True(int64Enum.IsEnum, "Int64Enum should be recognised as an enum via target context")
+    Assert.Equal("System.Int64", int64Enum.GetEnumUnderlyingType().FullName)

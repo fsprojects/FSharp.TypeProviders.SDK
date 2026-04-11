@@ -811,3 +811,60 @@ let ``GetUnionCases works on option of provided type`` () =
     Assert.Equal(2, cases.Length)
     Assert.Equal("None", cases.[0].Name)
     Assert.Equal("Some", cases.[1].Name)
+
+// ---------------------------------------------------------------------------
+// Tests for DefineStaticParameters warning: all optional parameters
+// Addresses PR #428 — warn when every static param has a default value.
+// ---------------------------------------------------------------------------
+
+[<Fact>]
+let ``DefineStaticParameters warns when all static parameters have defaults``() =
+    let warnings = System.Collections.Generic.List<string>()
+    let prevLogger = !ProvidedTypeDefinition.Logger
+    ProvidedTypeDefinition.Logger := Some warnings.Add
+    try
+        let asm = Assembly.GetExecutingAssembly()
+        let t = ProvidedTypeDefinition(asm, "Test.Warning", "AllOptionalType", Some typeof<obj>)
+        warnings.Clear() // discard the "Creating..." trace message from the ctor
+        let p1 = ProvidedStaticParameter("X", typeof<int>, 0)
+        let p2 = ProvidedStaticParameter("Y", typeof<string>, "default")
+        t.DefineStaticParameters([p1; p2], fun typeName _args ->
+            ProvidedTypeDefinition(asm, "Test.Warning", typeName, Some typeof<obj>))
+        let w = warnings |> Seq.tryFind (fun msg -> msg.Contains("AllOptionalType") && msg.Contains("optional"))
+        Assert.True(w.IsSome, sprintf "Expected all-optional-params warning, got: %A" (warnings |> Seq.toList))
+    finally
+        ProvidedTypeDefinition.Logger := prevLogger
+
+[<Fact>]
+let ``DefineStaticParameters does not warn when at least one parameter has no default``() =
+    let warnings = System.Collections.Generic.List<string>()
+    let prevLogger = !ProvidedTypeDefinition.Logger
+    ProvidedTypeDefinition.Logger := Some warnings.Add
+    try
+        let asm = Assembly.GetExecutingAssembly()
+        let t = ProvidedTypeDefinition(asm, "Test.Warning", "MixedParamsType", Some typeof<obj>)
+        warnings.Clear()
+        let required = ProvidedStaticParameter("Required", typeof<int>)
+        let optional = ProvidedStaticParameter("Optional", typeof<string>, "default")
+        t.DefineStaticParameters([required; optional], fun typeName _args ->
+            ProvidedTypeDefinition(asm, "Test.Warning", typeName, Some typeof<obj>))
+        let w = warnings |> Seq.tryFind (fun msg -> msg.Contains("MixedParamsType") && msg.Contains("optional"))
+        Assert.True(w.IsNone, sprintf "No all-optional warning expected for mixed params, got: %A" (warnings |> Seq.toList))
+    finally
+        ProvidedTypeDefinition.Logger := prevLogger
+
+[<Fact>]
+let ``DefineStaticParameters does not warn when there are no static parameters``() =
+    let warnings = System.Collections.Generic.List<string>()
+    let prevLogger = !ProvidedTypeDefinition.Logger
+    ProvidedTypeDefinition.Logger := Some warnings.Add
+    try
+        let asm = Assembly.GetExecutingAssembly()
+        let t = ProvidedTypeDefinition(asm, "Test.Warning", "NoParamsType", Some typeof<obj>)
+        warnings.Clear()
+        t.DefineStaticParameters([], fun typeName _args ->
+            ProvidedTypeDefinition(asm, "Test.Warning", typeName, Some typeof<obj>))
+        let w = warnings |> Seq.tryFind (fun msg -> msg.Contains("NoParamsType") && msg.Contains("optional"))
+        Assert.True(w.IsNone, "No all-optional warning expected for empty parameter list")
+    finally
+        ProvidedTypeDefinition.Logger := prevLogger
