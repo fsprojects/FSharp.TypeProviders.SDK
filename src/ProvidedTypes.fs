@@ -2923,8 +2923,15 @@ module internal AssemblyReader =
         member x.IsRTSpecialName = (x.Attributes &&& EventAttributes.RTSpecialName) <> enum<_>(0)
         override x.ToString() = "event " + x.Name
 
-    type ILEventDefs =
-        abstract Entries: ILEventDef[]
+    type ILEventDefs(larr: Lazy<ILEventDef[]>) =
+        let lmap = lazy (
+            let d = Dictionary<string, ILEventDef>()
+            for e in larr.Force() do d.[e.Name] <- e
+            d)
+        member __.Entries = larr.Force()
+        member __.TryFindByName nm =
+            let scc, v = lmap.Value.TryGetValue(nm)
+            if scc then Some v else None
 
     [<NoComparison; NoEquality>]
     type ILPropertyDef =
@@ -2950,8 +2957,15 @@ module internal AssemblyReader =
         member x.IsRTSpecialName = x.Attributes &&& PropertyAttributes.RTSpecialName <> enum 0
         override x.ToString() = "property " + x.Name
 
-    type ILPropertyDefs =
-        abstract Entries: ILPropertyDef[]
+    type ILPropertyDefs(larr: Lazy<ILPropertyDef[]>) =
+        let lmap = lazy (
+            let d = Dictionary<string, ILPropertyDef>()
+            for p in larr.Force() do d.[p.Name] <- p
+            d)
+        member __.Entries = larr.Force()
+        member __.TryFindByName nm =
+            let scc, v = lmap.Value.TryGetValue(nm)
+            if scc then Some v else None
 
     [<NoComparison; NoEquality>]
     type ILFieldDef =
@@ -2983,8 +2997,15 @@ module internal AssemblyReader =
         override x.ToString() = "field " + x.Name
 
 
-    type ILFieldDefs =
-        abstract Entries: ILFieldDef[]
+    type ILFieldDefs(larr: Lazy<ILFieldDef[]>) =
+        let lmap = lazy (
+            let d = Dictionary<string, ILFieldDef>()
+            for f in larr.Force() do d.[f.Name] <- f
+            d)
+        member __.Entries = larr.Force()
+        member __.TryFindByName nm =
+            let scc, v = lmap.Value.TryGetValue(nm)
+            if scc then Some v else None
 
     type ILMethodImplDef =
         { Overrides: ILOverridesSpec
@@ -4695,14 +4716,14 @@ module internal AssemblyReader =
             let td = ltd.Force()
             (td.Name, ltd)
 
-        let emptyILEvents = { new ILEventDefs with member __.Entries = [| |] }
-        let emptyILProperties = { new ILPropertyDefs with member __.Entries = [| |] }
+        let emptyILEvents = ILEventDefs(lazy [| |])
+        let emptyILProperties = ILPropertyDefs(lazy [| |])
         let emptyILTypeDefs = ILTypeDefs (lazy [| |])
         let emptyILCustomAttrs =  { new ILCustomAttrs with member __.Entries = [| |] }
         let mkILCustomAttrs x = { new ILCustomAttrs with member __.Entries = x }
         let emptyILMethodImpls = { new ILMethodImplDefs with member __.Entries = [| |] }
         let emptyILMethods = ILMethodDefs (lazy [| |])
-        let emptyILFields = { new ILFieldDefs with member __.Entries = [| |] }
+        let emptyILFields = ILFieldDefs(lazy [| |])
 
         let mkILTy boxed tspec =
             match boxed with
@@ -5774,10 +5795,7 @@ module internal AssemblyReader =
                    Token = idx }
 
             and seekReadFields (numtypars, hasLayout) fidx1 fidx2 =
-                { new ILFieldDefs with
-                   member __.Entries =
-                       [| for i = fidx1 to fidx2 - 1 do
-                           yield seekReadField (numtypars, hasLayout) i |] }
+                ILFieldDefs(lazy [| for i = fidx1 to fidx2 - 1 do yield seekReadField (numtypars, hasLayout) i |])
 
             and seekReadMethods numtypars midx1 midx2 =
                 ILMethodDefs
@@ -6103,8 +6121,8 @@ module internal AssemblyReader =
                  Token = idx}
 
             and seekReadEvents numtypars tidx =
-               { new ILEventDefs with
-                    member __.Entries =
+               let entries =
+                   lazy (
                        match seekReadOptionalIndexedRow (getNumRows ILTableNames.EventMap, (fun i -> i, seekReadEventMapRow i), (fun (_, row) -> fst row), compare tidx, false, (fun (i, row) -> (i, snd row))) with
                        | None -> [| |]
                        | Some (rowNum, beginEventIdx) ->
@@ -6114,9 +6132,9 @@ module internal AssemblyReader =
                                else
                                    let (_, endEventIdx) = seekReadEventMapRow (rowNum + 1)
                                    endEventIdx
-
                            [| for i in beginEventIdx .. endEventIdx - 1 do
-                               yield seekReadEvent numtypars i |] }
+                               yield seekReadEvent numtypars i |])
+               ILEventDefs(entries)
 
             and seekReadProperty numtypars idx =
                let (flags, nameIdx, typIdx) = seekReadPropertyRow idx
@@ -6142,8 +6160,8 @@ module internal AssemblyReader =
                  Token = idx }
 
             and seekReadProperties numtypars tidx =
-               { new ILPropertyDefs with
-                  member __.Entries =
+               let entries =
+                   lazy (
                        match seekReadOptionalIndexedRow (getNumRows ILTableNames.PropertyMap, (fun i -> i, seekReadPropertyMapRow i), (fun (_, row) -> fst row), compare tidx, false, (fun (i, row) -> (i, snd row))) with
                        | None -> [| |]
                        | Some (rowNum, beginPropIdx) ->
@@ -6154,7 +6172,8 @@ module internal AssemblyReader =
                                    let (_, endPropIdx) = seekReadPropertyMapRow (rowNum + 1)
                                    endPropIdx
                            [| for i in beginPropIdx .. endPropIdx - 1 do
-                                 yield seekReadProperty numtypars i |] }
+                                 yield seekReadProperty numtypars i |])
+               ILPropertyDefs(entries)
 
 
             and seekReadCustomAttrs idx =
@@ -7517,7 +7536,7 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetField(name, bindingFlags) = 
             match kind with
             | TypeSymbolKind.TargetGeneric gtd ->
-                gtd.Metadata.Fields.Entries |> Array.tryFind (fun md -> md.Name = name)
+                gtd.Metadata.Fields.TryFindByName(name)
                 |> Option.map (gtd.MakeFieldInfo this) 
                 |> Option.toObj
             | TypeSymbolKind.OtherGeneric gtd ->
@@ -7531,8 +7550,7 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetPropertyImpl(name, bindingFlags, _binder, _returnType, _types, _modifiers) = 
             match kind with
             | TypeSymbolKind.TargetGeneric gtd ->
-                gtd.Metadata.Properties.Entries
-                |> Array.tryFind (fun md -> md.Name = name)
+                gtd.Metadata.Properties.TryFindByName(name)
                 |> Option.map (gtd.MakePropertyInfo this) 
                 |> Option.toObj
             | TypeSymbolKind.OtherGeneric gtd ->
@@ -7546,8 +7564,7 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetEvent(name, bindingFlags) = 
             match kind with
             | TypeSymbolKind.TargetGeneric gtd ->
-                gtd.Metadata.Events.Entries
-                |> Array.tryFind (fun md -> md.Name = name)
+                gtd.Metadata.Events.TryFindByName(name)
                 |> Option.map (gtd.MakeEventInfo this) 
                 |> Option.toObj
             | TypeSymbolKind.OtherGeneric gtd ->
@@ -7997,6 +8014,20 @@ namespace ProviderImplementation.ProvidedTypes
         let propDefs    = lazy (inp.Properties.Entries |> Array.map (txILPropertyDef this))
         let nestedDefs  = lazy (inp.NestedTypes.Entries |> Array.map (asm.TxILTypeDef (Some (this :> Type))))
 
+        // O(1) name-lookup dicts for GetField/GetPropertyImpl/GetEvent
+        let fieldDefsMap =
+            lazy (let d = Dictionary<string,FieldInfo>()
+                  for f in fieldDefs.Force() do d.[f.Name] <- f
+                  d)
+        let propDefsMap =
+            lazy (let d = Dictionary<string,PropertyInfo>()
+                  for p in propDefs.Force() do d.[p.Name] <- p
+                  d)
+        let eventDefsMap =
+            lazy (let d = Dictionary<string,EventInfo>()
+                  for e in eventDefs.Force() do d.[e.Name] <- e
+                  d)
+
         // Cache derived properties that are computed from immutable input data.
         // The F# compiler may call FullName, BaseType and GetInterfaces() many times per type
         // during type-checking; caching avoids repeated string allocations and type-resolution work.
@@ -8066,13 +8097,13 @@ namespace ProviderImplementation.ProvidedTypes
             md |> Option.map (txILMethodDef this) |> Option.toObj
 
         override this.GetField(name, _bindingFlags) =
-            fieldDefs.Force() |> Array.tryFind (fun f -> f.Name = name) |> Option.toObj
+            let scc, f = fieldDefsMap.Value.TryGetValue(name) in if scc then f else null
 
         override this.GetPropertyImpl(name, _bindingFlags, _binder, _returnType, _types, _modifiers) =
-            propDefs.Force() |> Array.tryFind (fun p -> p.Name = name) |> Option.toObj
+            let scc, p = propDefsMap.Value.TryGetValue(name) in if scc then p else null
 
         override this.GetEvent(name, _bindingFlags) =
-            eventDefs.Force() |> Array.tryFind (fun ev -> ev.Name = name) |> Option.toObj
+            let scc, e = eventDefsMap.Value.TryGetValue(name) in if scc then e else null
 
         override this.GetNestedType(name, _bindingFlags) =
             inp.NestedTypes.TryFindByName(UNone, name) |> Option.map (asm.TxILTypeDef (Some (this :> Type))) |> Option.toObj
@@ -8110,7 +8141,7 @@ namespace ProviderImplementation.ProvidedTypes
             if this.IsEnum then
                 // Read the underlying type from the special "value__" field that the compiler emits for every enum.
                 // This correctly handles non-Int32 backing types (byte, int16, int64, etc.).
-                let valueField = inp.Fields.Entries |> Array.tryFind (fun f -> f.Name = "value__")
+                let valueField = inp.Fields.TryFindByName("value__")
                 match valueField with
                 | Some f -> txILType ([| |], [| |]) f.FieldType
                 | None -> txILType ([| |], [| |]) ilGlobals.typ_Int32
@@ -14114,9 +14145,9 @@ namespace ProviderImplementation.ProvidedTypes
             //SecurityDecls=emptyILSecurityDecls; 
             //HasSecurity=false;
               NestedTypes = ILTypeDefs( lazy [| for x in nestedTypes -> let td = x.Content in td.Namespace, td.Name, lazy td |] ) 
-              Fields = { new ILFieldDefs with member __.Entries = [| for x in fields -> x.Content |] } 
-              Properties = { new ILPropertyDefs with member __.Entries = [| for x in props -> x.Content |] } 
-              Events = { new ILEventDefs with member __.Entries = [| for x in events -> x.Content |] } 
+              Fields = ILFieldDefs(lazy [| for x in fields -> x.Content |])
+              Properties = ILPropertyDefs(lazy [| for x in props -> x.Content |])
+              Events = ILEventDefs(lazy [| for x in events -> x.Content |])
               Methods = ILMethodDefs (lazy [| for x in methods -> x.Content |])
               MethodImpls = { new ILMethodImplDefs  with member __.Entries = methodImpls.ToArray() } 
               CustomAttrs = mkILCustomAttrs (cattrs.ToArray()) 
