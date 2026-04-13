@@ -1,15 +1,15 @@
 {
-    "last_run": "2026-04-11T00:34:56Z",
-    "last_run_id": "24270385678",
+    "last_run": "2026-04-13T00:39:29Z",
+    "last_run_id": "24320373239",
     "monthly_activity_issue": {"month": "2026-04", "number": 494},
     "label_cursor": 494,
     "open_repo_assist_prs": [
-        {"branch": "repo-assist/improve-il-collection-dicts-20260409", "pr": 500, "title": "perf/refactor: ILFieldDefs/ILEventDefs/ILPropertyDefs dict caches + Dependabot", "created": "2026-04-09"},
-        {"branch": "repo-assist/test-improvements-logger-enum-20260411", "title": "fix: ProvidedTypeDefinition.Logger + tests for all-optional warning and enum target-context round-trip", "created": "2026-04-11"}
+        {"branch": "repo-assist/test-improvements-logger-enum-20260411-5b12cad7f2310ece", "pr": 501, "title": "fix: ProvidedTypeDefinition.Logger broken + 5 tests", "created": "2026-04-11"},
+        {"branch": "repo-assist/improve-il-defs-caches-20260413", "title": "perf/refactor: ILFieldDefs/ILEventDefs/ILPropertyDefs concrete classes with lazy caches", "created": "2026-04-13"}
     ],
     "merged_this_month": [490, 491, 493, 495, 497, 498, 499],
     "comments_made": {
         "298": "2026-02-26", "299": "2026-02-26", "300": "2026-02-26", "384": "2026-02-26"
     },
-    "notes": "Daily run. Logger bug fixed (static member was creating new ref each call). Added 5 new tests. 131 tests pass. PR #500 still open."
+    "notes": "Issue #500 is a blocked PR issue (ILFieldDefs etc.) superseded by new branch repo-assist/improve-il-defs-caches-20260413. PR #501 has CI passing. Both PRs open pending review."
 }
