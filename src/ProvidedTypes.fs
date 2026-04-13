@@ -1390,6 +1390,9 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
         | TypeContainer.Namespace _, Some logger when not isTgt -> logger (sprintf "Creating ProvidedTypeDefinition %s [%d]" className (System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode this))
         | _ -> ()
 
+    // Shared mutable logger cell; must be a static let so the same ref is returned on every access.
+    static let loggerRef: (string -> unit) option ref = ref None
+
     static let defaultAttributes (isErased, isSealed, isInterface, isAbstract, isStruct) =
         TypeAttributes.Public ||| 
         (if isInterface then TypeAttributes.Interface ||| TypeAttributes.Abstract
@@ -1940,7 +1943,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
         | :? ProvidedField as l -> l.PatchDeclaringType this
         | _ -> ()
 
-    static member Logger: (string -> unit) option ref = ref None
+    static member Logger: (string -> unit) option ref = loggerRef
 
 
 //====================================================================================================
