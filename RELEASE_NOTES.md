@@ -1,3 +1,9 @@
+#### 8.6.0 - April 15, 2026
+
+- Bug fix: Fix `ProvidedTypeDefinition.Logger` creating a new delegate reference on each call #501
+- Refactor/Performance: Convert `ILFieldDefs`/`ILEventDefs`/`ILPropertyDefs` to concrete classes with lazy `O(1)` name-lookup caches #502
+- Tests: Add `GenerativePropertiesTests` covering instance/static/read-write properties and name-lookup
+
 #### 8.5.0 - April 7, 2026
 
 - Performance: O(1) assembly-name dictionary lookup in `convTypeRef` #493
