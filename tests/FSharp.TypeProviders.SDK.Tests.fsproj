@@ -23,6 +23,7 @@
     <Compile Include="GenerativeEventsTests.fs" />
     <Compile Include="GenerativePropertiesTests.fs" />
     <Compile Include="GenerativeDelegateTests.fs" />
+    <Compile Include="GenerativeMethodsTests.fs" />
     <Compile Include="ReferencedAssemblies.fs" />
   </ItemGroup>
   <ItemGroup>
