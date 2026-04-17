@@ -21,6 +21,7 @@
     <Compile Include="GenerativeEqualityComparisonTests.fs" />
     <Compile Include="GenerativeStructProvisionTests.fs" />
     <Compile Include="GenerativeEventsTests.fs" />
+    <Compile Include="GenerativePropertiesTests.fs" />
     <Compile Include="GenerativeDelegateTests.fs" />
     <Compile Include="ReferencedAssemblies.fs" />
   </ItemGroup>
