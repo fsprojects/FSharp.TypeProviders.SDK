@@ -1,14 +1,15 @@
 {
-    "last_run": "2026-04-15T00:41:21Z",
-    "last_run_id": "24430249769",
+    "last_run": "2026-04-17T00:40:09Z",
+    "last_run_id": "24541555872",
     "monthly_activity_issue": {"month": "2026-04", "number": 494},
     "label_cursor": 494,
     "open_repo_assist_prs": [
-        {"branch": "repo-assist/tests-properties-release-8-6-20260415", "title": "tests: add GenerativePropertiesTests; prepare release 8.6.0", "created": "2026-04-15"}
+        {"branch": "repo-assist/tests-properties-release-8-6-20260415-29b70356b30900c0", "pr": 504, "title": "tests: add GenerativePropertiesTests; prepare release 8.6.0", "created": "2026-04-15"},
+        {"branch": "repo-assist/tests-generative-methods-20260417", "title": "tests: add GenerativeMethodsTests (6 focused method tests)", "created": "2026-04-17"}
     ],
     "merged_this_month": [490, 491, 493, 495, 497, 498, 499, 501, 502],
     "comments_made": {
         "298": "2026-02-26", "299": "2026-02-26", "300": "2026-02-26", "384": "2026-02-26"
     },
-    "notes": "PR #501 (Logger fix) and PR #502 (ILFieldDefs/ILEventDefs/ILPropertyDefs lazy caches) both merged. New PR branch repo-assist/tests-properties-release-8-6-20260415 open: 5 new GenerativePropertiesTests + release 8.6.0 prep. 136/136 tests pass. Issue #500 should be closed (superseded by #502)."
+    "notes": "Issue #500 is closed. PR #504 open (GenerativePropertiesTests + release 8.6.0). New PR branch repo-assist/tests-generative-methods-20260417 created: 6 new GenerativeMethodsTests (Greet/Add/Create methods, GetMethod lookup, count); 137/137 tests pass."
 }
