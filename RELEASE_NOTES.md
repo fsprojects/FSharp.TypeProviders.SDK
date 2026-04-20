@@ -1,3 +1,8 @@
+#### 8.7.0 - April 19, 2026
+
+- Tests: Add `GenerativeMethodsTests` covering instance/static methods and method-count in generative types #505
+- Tests: Add `GenerativeCustomAttributeTests` — 5 regression tests for custom attribute encoding on types, methods, and properties (string, bool, enum arguments; multiple attributes per member)
+
 #### 8.6.0 - April 15, 2026
 
 - Bug fix: Fix `ProvidedTypeDefinition.Logger` creating a new delegate reference on each call #501
