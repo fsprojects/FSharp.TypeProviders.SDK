@@ -1,3 +1,7 @@
+#### 8.8.0 - April 21, 2026
+
+- Tests: Add `GenerativeInheritanceTests` — 5 tests for generative type inheritance: abstract base class, concrete derived classes, virtual method override dispatch verified at runtime
+
 #### 8.7.0 - April 19, 2026
 
 - Tests: Add `GenerativeMethodsTests` covering instance/static methods and method-count in generative types #505
