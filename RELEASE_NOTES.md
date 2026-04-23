@@ -1,3 +1,8 @@
+#### 8.9.0 - April 23, 2026
+
+- Tests: Add `GenerativeNestedTypesTests` — 5 tests for generative nested types: constructors, instance/static properties, instance methods inside nested classes
+- Refactor: `GetNestedTypes`/`GetMembers` on `ProvidedTypeDefinition` now use `canBindNestedType` for consistent BindingFlags-aware filtering of nested types
+
 #### 8.8.0 - April 21, 2026
 
 - Tests: Add `GenerativeInheritanceTests` — 5 tests for generative type inheritance: abstract base class, concrete derived classes, virtual method override dispatch verified at runtime

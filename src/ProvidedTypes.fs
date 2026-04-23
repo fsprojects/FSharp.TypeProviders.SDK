@@ -1613,7 +1613,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     override __.GetNestedTypes bindingFlags =
         (//save ("nested", bindingFlags, None) (fun () -> 
             getMembers() 
-            |> Array.choose (function :? Type as m when memberBinds true bindingFlags false m.IsPublic || m.IsNestedPublic -> Some m | _ -> None)
+            |> Array.choose (function :? Type as m when canBindNestedType bindingFlags m -> Some m | _ -> None)
             |> (if hasFlag bindingFlags BindingFlags.DeclaredOnly || isNull this.BaseType then id else (fun mems -> Array.append mems (this.ErasedBaseType.GetNestedTypes(bindingFlags)))))
 
     override this.GetConstructorImpl(bindingFlags, _binder, _callConventions, _types, _modifiers) = 
@@ -1687,7 +1687,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
                 | :? FieldInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> yield (m :> _)
                 | :? PropertyInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> yield (m :> _)
                 | :? EventInfo as m when memberBinds false bindingFlags m.IsStatic m.IsPublic -> yield (m :> _)
-                | :? Type as m when memberBinds true bindingFlags false m.IsPublic || m.IsNestedPublic -> yield (m :> _) 
+                | :? Type as m when canBindNestedType bindingFlags m -> yield (m :> _) 
                 | _ -> () |]
 
     override this.GetMember(name, mt, _bindingFlags) =
