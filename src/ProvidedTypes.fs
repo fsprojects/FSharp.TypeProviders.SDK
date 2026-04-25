@@ -278,23 +278,32 @@ module Utils =
             else
                 m 
 
+    /// True when both Public and NonPublic visibility flags are set — every member passes the canBind* filter.
+    /// Used to short-circuit the Array.filter allocation on the common bindAll path.
+    let inline isVisibilityBindAll (bindingFlags: BindingFlags) =
+        hasFlag bindingFlags BindingFlags.Public && hasFlag bindingFlags BindingFlags.NonPublic
+
+    /// Shared visibility predicate used by the typed canBind* helpers below.
+    let inline canBindByVisibility (bindingFlags: BindingFlags) (isPublic: bool) =
+        hasFlag bindingFlags BindingFlags.Public && isPublic || hasFlag bindingFlags BindingFlags.NonPublic && not isPublic
+
     let canBindConstructor (bindingFlags: BindingFlags) (c: ConstructorInfo) =
-            hasFlag bindingFlags BindingFlags.Public && c.IsPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsPublic
+        canBindByVisibility bindingFlags c.IsPublic
 
     let canBindMethod (bindingFlags: BindingFlags) (c: MethodInfo) =
-            hasFlag bindingFlags BindingFlags.Public && c.IsPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsPublic
+        canBindByVisibility bindingFlags c.IsPublic
 
     let canBindProperty (bindingFlags: BindingFlags) (c: PropertyInfo) =
-            hasFlag bindingFlags BindingFlags.Public && c.IsPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsPublic
+        canBindByVisibility bindingFlags c.IsPublic
 
     let canBindField (bindingFlags: BindingFlags) (c: FieldInfo) =
-            hasFlag bindingFlags BindingFlags.Public && c.IsPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsPublic
+        canBindByVisibility bindingFlags c.IsPublic
 
     let canBindEvent (bindingFlags: BindingFlags) (c: EventInfo) =
-            hasFlag bindingFlags BindingFlags.Public && c.IsPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsPublic
+        canBindByVisibility bindingFlags c.IsPublic
 
     let canBindNestedType (bindingFlags: BindingFlags) (c: Type) =
-            hasFlag bindingFlags BindingFlags.Public && c.IsNestedPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsNestedPublic
+        hasFlag bindingFlags BindingFlags.Public && c.IsNestedPublic || hasFlag bindingFlags BindingFlags.NonPublic && not c.IsNestedPublic
 
     // We only want to return source types "typeof<Void>" values as _target_ types in one very specific location due to a limitation in the
     // F# compiler code for multi-targeting.
@@ -7442,10 +7451,11 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetConstructors bindingFlags = 
             match kind with
             | TypeSymbolKind.TargetGeneric gtd -> 
-                gtd.Metadata.Methods.Entries 
-                |> Array.filter (fun md -> md.Name = ".ctor" || md.Name = ".cctor")  
-                |> Array.map (gtd.MakeConstructorInfo this) 
-                |> Array.filter (canBindConstructor bindingFlags)
+                let arr =
+                    gtd.Metadata.Methods.Entries 
+                    |> Array.filter (fun md -> md.Name = ".ctor" || md.Name = ".cctor")  
+                    |> Array.map (gtd.MakeConstructorInfo this)
+                if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindConstructor bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetConstructors(bindingFlags) 
                 |> Array.map (ConstructorSymbol.Make typeBuilder this) 
@@ -7454,10 +7464,11 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetMethods bindingFlags = 
             match kind with
             | TypeSymbolKind.TargetGeneric gtd -> 
-                gtd.Metadata.Methods.Entries 
-                |> Array.filter (fun md -> md.Name <> ".ctor" && md.Name <> ".cctor")  
-                |> Array.map (gtd.MakeMethodInfo this) 
-                |> Array.filter (canBindMethod bindingFlags)
+                let arr =
+                    gtd.Metadata.Methods.Entries 
+                    |> Array.filter (fun md -> md.Name <> ".ctor" && md.Name <> ".cctor")  
+                    |> Array.map (gtd.MakeMethodInfo this)
+                if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindMethod bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetMethods(bindingFlags) 
                 |> Array.map (MethodSymbol.Make typeBuilder this) 
@@ -7466,9 +7477,8 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetFields bindingFlags = 
             match kind with
             | TypeSymbolKind.TargetGeneric gtd -> 
-                gtd.Metadata.Fields.Entries 
-                |> Array.map (gtd.MakeFieldInfo this) 
-                |> Array.filter (canBindField bindingFlags)
+                let arr = gtd.Metadata.Fields.Entries |> Array.map (gtd.MakeFieldInfo this)
+                if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindField bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetFields(bindingFlags) 
                 |> Array.map (FieldSymbol.Make typeBuilder this) 
@@ -7477,9 +7487,8 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetProperties bindingFlags = 
             match kind with
             | TypeSymbolKind.TargetGeneric gtd -> 
-                gtd.Metadata.Properties.Entries 
-                |> Array.map (gtd.MakePropertyInfo this) 
-                |> Array.filter (canBindProperty bindingFlags)
+                let arr = gtd.Metadata.Properties.Entries |> Array.map (gtd.MakePropertyInfo this)
+                if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindProperty bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetProperties(bindingFlags) 
                 |> Array.map (PropertySymbol.Make typeBuilder this) 
@@ -7488,9 +7497,8 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetEvents bindingFlags = 
             match kind with
             | TypeSymbolKind.TargetGeneric gtd -> 
-                gtd.Metadata.Events.Entries 
-                |> Array.map (gtd.MakeEventInfo this) 
-                |> Array.filter (canBindEvent bindingFlags)
+                let arr = gtd.Metadata.Events.Entries |> Array.map (gtd.MakeEventInfo this)
+                if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindEvent bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetEvents(bindingFlags) 
                 |> Array.map (EventSymbol.Make typeBuilder this) 
@@ -7499,9 +7507,8 @@ namespace ProviderImplementation.ProvidedTypes
         override this.GetNestedTypes bindingFlags = 
             match kind with
             | TypeSymbolKind.TargetGeneric gtd -> 
-                gtd.Metadata.NestedTypes.Entries 
-                |> Array.map (gtd.MakeNestedTypeInfo this) 
-                |> Array.filter (canBindNestedType bindingFlags)
+                let arr = gtd.Metadata.NestedTypes.Entries |> Array.map (gtd.MakeNestedTypeInfo this)
+                if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindNestedType bindingFlags)
             | TypeSymbolKind.OtherGeneric gtd -> 
                 gtd.GetNestedTypes(bindingFlags) 
             | _ -> notRequired this "GetNestedTypes" this.Name
@@ -8059,22 +8066,28 @@ namespace ProviderImplementation.ProvidedTypes
         override __.GetInterfaces() = interfaces.Value
 
         override __.GetConstructors(bindingFlags) =
-            ctorDefs.Force() |> Array.filter (canBindConstructor bindingFlags)
+            let arr = ctorDefs.Force()
+            if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindConstructor bindingFlags)
 
         override __.GetMethods(bindingFlags) =
-            methDefs.Force() |> Array.filter (canBindMethod bindingFlags)
+            let arr = methDefs.Force()
+            if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindMethod bindingFlags)
 
         override __.GetFields(bindingFlags) =
-            fieldDefs.Force() |> Array.filter (canBindField bindingFlags)
+            let arr = fieldDefs.Force()
+            if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindField bindingFlags)
 
         override __.GetEvents(bindingFlags) =
-            eventDefs.Force() |> Array.filter (canBindEvent bindingFlags)
+            let arr = eventDefs.Force()
+            if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindEvent bindingFlags)
 
         override __.GetProperties(bindingFlags) =
-            propDefs.Force() |> Array.filter (canBindProperty bindingFlags)
+            let arr = propDefs.Force()
+            if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindProperty bindingFlags)
 
         override __.GetNestedTypes(bindingFlags) =
-            nestedDefs.Force() |> Array.filter (canBindNestedType bindingFlags)
+            let arr = nestedDefs.Force()
+            if isVisibilityBindAll bindingFlags then arr else arr |> Array.filter (canBindNestedType bindingFlags)
 
         override this.GetConstructorImpl(_bindingFlags, _binder, _callConvention, types, _modifiers)          =
             let md = 
