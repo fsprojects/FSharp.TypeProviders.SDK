@@ -1,3 +1,8 @@
+#### 8.10.0 - April 27, 2026
+
+- Bug fix: `defineCustomAttrs` in the generative assembly compiler now correctly handles array-typed constructor arguments whose values are `IReadOnlyList<CustomAttributeTypedArgument>` — the format that `GetCustomAttributesData()` returns for array-typed constructor parameters. Previously, propagating real reflected `CustomAttributeData` with array constructor args to a provided type would crash the assembly compiler.
+- Tests: Add regression test for `IReadOnlyList<CustomAttributeTypedArgument>` array constructor arg round-trip
+
 #### 8.9.0 - April 23, 2026
 
 - Tests: Add `GenerativeNestedTypesTests` — 5 tests for generative nested types: constructors, instance/static properties, instance methods inside nested classes
