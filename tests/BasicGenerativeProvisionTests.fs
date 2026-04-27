@@ -554,3 +554,83 @@ let ``TargetTypeDefinition member-wrapper caches are thread-safe under parallel 
     for th in threads do th.Start()
     for th in threads do th.Join()
     Assert.True(errors.IsEmpty, sprintf "Thread-safety violations: %A" (errors |> Seq.toList))
+
+// Provider for testing that IReadOnlyList<CustomAttributeTypedArgument> values — the format that
+// real .NET reflection (GetCustomAttributesData()) uses for array-typed constructor arguments —
+// are correctly unwrapped by transValue in defineCustomAttrs.
+//
+// TupleElementNamesAttribute(string[]) is a BCL attribute whose sole constructor takes string[].
+// When such an attribute's data is obtained via reflection, the Value of the string[] argument
+// is a ReadOnlyCollection<CustomAttributeTypedArgument>, not a plain obj[].  This test exercises
+// that exact path.
+[<TypeProvider>]
+type GenerativeProviderWithReflectionArrayAttr (config: TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces (config)
+
+    let ns = "ReflectionArrayAttr.Provided"
+    let tempAssembly = ProvidedAssembly()
+    let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
+
+    do
+        // TupleElementNamesAttribute(string[]) — constructor takes a direct string[] parameter,
+        // so the encoding path goes through ILType.Array, not ILType.Boxed "Object".
+        let tupleNamesAttrCtor =
+            typeof<System.Runtime.CompilerServices.TupleElementNamesAttribute>
+                .GetConstructor([| typeof<string[]> |])
+
+        // Simulate what .NET reflection returns for array constructor arguments:
+        // CustomAttributeTypedArgument.Value for an array-typed arg is a
+        // ReadOnlyCollection<CustomAttributeTypedArgument> (implements IReadOnlyList<>).
+        let arrayValue =
+            System.Collections.ObjectModel.ReadOnlyCollection<CustomAttributeTypedArgument>(
+                [| CustomAttributeTypedArgument(typeof<string>, box "x")
+                   CustomAttributeTypedArgument(typeof<string>, box "y")
+                   CustomAttributeTypedArgument(typeof<string>, box "z") |])
+
+        let prop = ProvidedProperty("MyProp", typeof<int>, isStatic = false, getterCode = fun _ -> <@@ 0 @@>)
+        prop.AddCustomAttribute {
+            new CustomAttributeData() with
+                member _.Constructor = tupleNamesAttrCtor
+                member _.ConstructorArguments =
+                    upcast [| CustomAttributeTypedArgument(typeof<string[]>, box arrayValue) |]
+                member _.NamedArguments = upcast [||] }
+
+        container.AddMember prop
+        container.AddMember (ProvidedConstructor([], invokeCode = fun _ -> <@@ () @@>))
+        tempAssembly.AddTypes [container]
+        this.AddNamespace(ns, [container])
+
+[<Fact>]
+let ``Generative custom attribute with string-array arg from IReadOnlyList round-trips correctly``() =
+    // Regression test: before the fix, transValue in defineCustomAttrs silently passed
+    // IReadOnlyList<CustomAttributeTypedArgument> through unchanged, causing encodeCustomAttrValue
+    // to fail because it expected obj[] not IReadOnlyList<>.
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs)
+    let tp = GenerativeProviderWithReflectionArrayAttr cfg :> TypeProviderForNamespaces
+    let providedNamespace = tp.Namespaces.[0]
+    let providedType = providedNamespace.GetTypes().[0]
+
+    // Before fix this threw; now it must succeed.
+    let assemContents = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+    Assert.NotEqual(0, assemContents.Length)
+
+    let assem = Assembly.Load assemContents
+    let containerType = assem.GetType("ReflectionArrayAttr.Provided.Container")
+    Assert.NotNull(containerType)
+    let prop = containerType.GetProperty("MyProp")
+    Assert.NotNull(prop)
+
+    // The TupleElementNamesAttribute should survive the binary round-trip.
+    let attrs = prop.GetCustomAttributesData()
+    let tupleAttr =
+        attrs
+        |> Seq.tryFind (fun a ->
+            a.Constructor.DeclaringType.Name = "TupleElementNamesAttribute")
+    Assert.True(tupleAttr.IsSome, "TupleElementNamesAttribute should be present on MyProp")
+
+    // The constructor takes string[], which the binary reader re-surfaces as the first
+    // ConstructorArgument.  Verify the element count is preserved.
+    let ctorArgs = tupleAttr.Value.ConstructorArguments
+    Assert.Equal(1, ctorArgs.Count)
