@@ -1,16 +1,17 @@
 {
-    "last_run": "2026-04-29T00:46:28Z",
-    "last_run_id": "25085230334",
-    "monthly_activity_issue": {"month": "2026-04", "number": 494},
+    "last_run": "2026-05-01T00:49:19Z",
+    "last_run_id": "25196752728",
+    "monthly_activity_issue": {"month": "2026-05", "number": null},
     "label_cursor": 494,
     "open_repo_assist_prs": [
-        {"branch": "repo-assist/perf-canBind-helpers-20260425", "number": 509, "title": "perf/refactor: unify canBind* helpers; skip Array.filter on bindAll path", "created": "2026-04-25"},
-        {"branch": "repo-assist/fix-array-attr-args-IReadOnlyList-20260427", "number": 510, "title": "fix: handle IReadOnlyList in defineCustomAttrs; prepare release 8.10.0", "created": "2026-04-27"},
-        {"branch": "repo-assist/tests-operator-overloads-eng-sdk-20260429", "number": null, "title": "tests: add GenerativeOperatorOverloadsTests; ci: update .NET SDK to 8.0.125; prepare release 8.10.0", "created": "2026-04-29"}
+        {"branch": "repo-assist/perf-canBind-helpers-20260425-49d046a5ffb3a8de", "number": 509, "title": "perf/refactor: unify canBind* helpers; skip Array.filter on bindAll path", "created": "2026-04-25"},
+        {"branch": "repo-assist/fix-array-attr-args-IReadOnlyList-20260427-6c695498f8584087", "number": 510, "title": "fix: handle IReadOnlyList in defineCustomAttrs; prepare release 8.10.0", "created": "2026-04-27"},
+        {"branch": "repo-assist/eng-sdk-8.0.125-20260501", "number": 511, "title": "eng: update .NET SDK from 8.0.124 to 8.0.125", "created": "2026-05-01"},
+        {"branch": "repo-assist/perf-cache-GetParameters-20260501", "number": 512, "title": "perf: cache GetParameters/PropertyType/FieldType/EventHandlerType in target-model wrappers", "created": "2026-05-01"}
     ],
-    "merged_this_month": [490, 491, 493, 495, 497, 498, 499, 501, 502, 504, 505, 506, 507, 508],
+    "merged_this_month": [],
     "comments_made": {
         "298": "2026-02-26", "299": "2026-02-26", "300": "2026-02-26", "384": "2026-02-26"
     },
-    "notes": "3 open Repo Assist PRs: #509 (canBind* perf/refactor), #510 (IReadOnlyList fix, 8.10.0), and new PR (operator overloads tests + SDK 8.0.125 update, claims 8.10.0 - may need renumber). 165/165 tests pass. SDK updated from 8.0.124 to 8.0.125 in global.json and CI workflows."
+    "notes": "4 open Repo Assist PRs: #509 (canBind* perf), #510 (IReadOnlyList fix), #511 (SDK 8.0.125 update), #512 (lazy caching for GetParameters/PropertyType/FieldType/EventHandlerType in tx*Def wrappers). Monthly Activity issue for April (#494) closed; May issue created (number TBD from API). 157/157 tests pass on master."
 }
