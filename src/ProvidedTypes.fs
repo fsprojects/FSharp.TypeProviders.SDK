@@ -15755,9 +15755,14 @@ namespace ProviderImplementation.ProvidedTypes
 
         let defineCustomAttrs f (cattrs: IList<CustomAttributeData>) =
             for attr in cattrs do
-                let transValue (o:obj) = 
+                // When custom attribute data is obtained via real .NET reflection (GetCustomAttributesData()),
+                // array-typed constructor/named arguments have their Value as IReadOnlyList<CustomAttributeTypedArgument>
+                // rather than a plain obj[].  Unwrap this so the downstream encoder receives obj[] as expected.
+                let rec transValue (o:obj) = 
                     match o with 
                     | :? Type as t -> box (transType t)
+                    | :? IReadOnlyList<CustomAttributeTypedArgument> as elems ->
+                        elems |> Seq.map (fun e -> transValue e.Value) |> Seq.toArray |> box
                     | v -> v
                 let constructorArgs = [ for x in attr.ConstructorArguments -> transValue x.Value ]
                 let namedProps = [ for x in attr.NamedArguments do match x.MemberInfo with :? PropertyInfo as pi -> yield ILCustomAttrNamedArg(pi.Name, transType x.TypedValue.ArgumentType, transValue x.TypedValue.Value) | _ -> () ] 
