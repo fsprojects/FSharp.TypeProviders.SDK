@@ -7758,6 +7758,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// Makes a method definition read from a binary available as a ConstructorInfo. Not all methods are implemented.
         and txILConstructorDef (declTy: Type) (inp: ILMethodDef) =
             let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
+            let parametersCache = lazy (inp.Parameters |> Array.map (txILParameter (gps, [| |])))
             { new ConstructorInfo() with
 
                 override __.Name = inp.Name
@@ -7765,7 +7766,7 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.MemberType = MemberTypes.Constructor
                 override __.DeclaringType = declTy
 
-                override __.GetParameters() = inp.Parameters |> Array.map (txILParameter (gps, [| |]))
+                override __.GetParameters() = parametersCache.Value
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
                 override __.MetadataToken = inp.Token
 
@@ -7792,13 +7793,14 @@ namespace ProviderImplementation.ProvidedTypes
             let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
             let rec gps2 = inp.GenericParams |> Array.mapi (fun i gp -> txILGenericParam (fun () -> gps, gps2) (i + gps.Length) gp)
             let mutable returnTypeFixCache = None
+            let parametersCache = lazy (inp.Parameters |> Array.map (txILParameter (gps, gps2)))
             { new MethodInfo() with
 
                 override __.Name = inp.Name
                 override __.DeclaringType = declTy
                 override __.MemberType = MemberTypes.Method
                 override __.Attributes = inp.Attributes
-                override __.GetParameters() = inp.Parameters |> Array.map (txILParameter (gps, gps2))
+                override __.GetParameters() = parametersCache.Value
                 override __.CallingConvention = if inp.IsStatic then CallingConventions.Standard else CallingConventions.HasThis ||| CallingConventions.Standard
 
                 override __.ReturnType = 
@@ -7851,6 +7853,8 @@ namespace ProviderImplementation.ProvidedTypes
         /// Makes a property definition read from a binary available as a PropertyInfo. Not all methods are implemented.
         and txILPropertyDef (declTy: Type) (inp: ILPropertyDef) =
             let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
+            let propertyTypeCache = lazy (inp.PropertyType |> txILType (gps, [| |]))
+            let indexParametersCache = lazy (inp.IndexParameters |> Array.map (txILParameter (gps, [| |])))
             { new PropertyInfo() with
 
                 override __.Name = inp.Name
@@ -7858,10 +7862,10 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.MemberType = MemberTypes.Property
                 override __.DeclaringType = declTy
 
-                override __.PropertyType = inp.PropertyType |> txILType (gps, [| |])
+                override __.PropertyType = propertyTypeCache.Value
                 override __.GetGetMethod(_nonPublic) = inp.GetMethod |> Option.map (txILMethodRef declTy) |> Option.toObj
                 override __.GetSetMethod(_nonPublic) = inp.SetMethod |> Option.map (txILMethodRef declTy) |> Option.toObj
-                override __.GetIndexParameters() = inp.IndexParameters |> Array.map (txILParameter (gps, [| |]))
+                override __.GetIndexParameters() = indexParametersCache.Value
                 override __.CanRead = inp.GetMethod.IsSome
                 override __.CanWrite = inp.SetMethod.IsSome
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
@@ -7887,6 +7891,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// Make an event definition read from a binary available as an EventInfo. Not all methods are implemented.
         and txILEventDef (declTy: Type) (inp: ILEventDef) =
             let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
+            let eventHandlerTypeCache = lazy (inp.EventHandlerType |> txILType (gps, [| |]))
             { new EventInfo() with
 
                 override __.Name = inp.Name
@@ -7894,7 +7899,7 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.MemberType = MemberTypes.Event
                 override __.DeclaringType = declTy
 
-                override __.EventHandlerType = inp.EventHandlerType |> txILType (gps, [| |])
+                override __.EventHandlerType = eventHandlerTypeCache.Value
                 override __.GetAddMethod(_nonPublic) = inp.AddMethod |> txILMethodRef declTy
                 override __.GetRemoveMethod(_nonPublic) = inp.RemoveMethod |> txILMethodRef declTy
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
@@ -7918,6 +7923,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// Makes a field definition read from a binary available as a FieldInfo. Not all methods are implemented.
         and txILFieldDef (declTy: Type) (inp: ILFieldDef) =
             let gps = if declTy.IsGenericType then declTy.GetGenericArguments() else [| |]
+            let fieldTypeCache = lazy (inp.FieldType |> txILType (gps, [| |]))
             { new FieldInfo() with
 
                 override __.Name = inp.Name
@@ -7925,7 +7931,7 @@ namespace ProviderImplementation.ProvidedTypes
                 override __.MemberType = MemberTypes.Field
                 override __.DeclaringType = declTy
 
-                override __.FieldType = inp.FieldType |> txILType (gps, [| |])
+                override __.FieldType = fieldTypeCache.Value
                 override __.GetRawConstantValue() = match inp.LiteralValue with None -> null | Some v -> v
                 override __.GetCustomAttributesData() = inp.CustomAttrs |> txCustomAttributesData
                 override __.MetadataToken = inp.Token
