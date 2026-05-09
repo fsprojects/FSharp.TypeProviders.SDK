@@ -1,3 +1,8 @@
+#### 8.11.0 - May 7, 2026
+
+- Tests: Add regression test for `System.Type` custom attribute constructor argument round-trip (covers the 8.4.0 `decodeILCustomAttribData` fix)
+- Eng: Update .NET SDK pin in `global.json` from 8.0.124 to 8.0.125
+
 #### 8.10.0 - April 27, 2026
 
 - Bug fix: `defineCustomAttrs` in the generative assembly compiler now correctly handles array-typed constructor arguments whose values are `IReadOnlyList<CustomAttributeTypedArgument>` — the format that `GetCustomAttributesData()` returns for array-typed constructor parameters. Previously, propagating real reflected `CustomAttributeData` with array constructor args to a provided type would crash the assembly compiler.

@@ -152,3 +152,66 @@ let ``Custom attribute on a generative method has correct string argument``() =
     let desc = attrs |> Seq.find (fun a -> a.Constructor.DeclaringType = typeof<DescriptionAttribute>)
     Assert.Equal(1, desc.ConstructorArguments.Count)
     Assert.Equal("my method", desc.ConstructorArguments.[0].Value :?> string)
+
+// ---------------------------------------------------------------------------
+// System.Type constructor argument round-trip
+//
+// Regression test for the 8.4.0 fix: decodeILCustomAttribData now resolves
+// System.Type custom attribute arguments (previously always returned null).
+// DebuggerTypeProxyAttribute(Type proxyType) takes a System.Type, making it
+// ideal for testing the typeof<T> encode/decode path.
+// ---------------------------------------------------------------------------
+
+[<TypeProvider>]
+type GenerativeTypeArgAttrProvider (config: TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces (config)
+
+    let ns = "TypeArgAttr.Provided"
+    let tempAssembly = ProvidedAssembly()
+    let container = ProvidedTypeDefinition(tempAssembly, ns, "Container", Some typeof<obj>, isErased = false)
+
+    do
+        // DebuggerTypeProxyAttribute(Type) accepts a System.Type argument.
+        let typeProxyCtor = typeof<DebuggerTypeProxyAttribute>.GetConstructor([| typeof<Type> |])
+
+        let widgetType = ProvidedTypeDefinition("Widget", Some typeof<obj>, isErased = false)
+
+        // Attach DebuggerTypeProxyAttribute(typeof<int>) — the typeof<int> is a System.Type value
+        widgetType.AddCustomAttribute {
+            new CustomAttributeData() with
+                member _.Constructor = typeProxyCtor
+                member _.ConstructorArguments = upcast [| CustomAttributeTypedArgument(typeof<Type>, box typeof<int>) |]
+                member _.NamedArguments = upcast [||] }
+
+        widgetType.AddMember (ProvidedConstructor([], invokeCode = fun _ -> <@@ () @@>))
+        container.AddMember widgetType
+        tempAssembly.AddTypes [container]
+        this.AddNamespace(ns, [container])
+
+let loadTypeArgAttrTestAssembly () =
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs)
+    let tp = GenerativeTypeArgAttrProvider(cfg) :> TypeProviderForNamespaces
+    let providedType = tp.Namespaces.[0].GetTypes().[0]
+    let bytes = (tp :> ITypeProvider).GetGeneratedAssemblyContents(providedType.Assembly)
+    let assem = Assembly.Load bytes
+    assem.GetType("TypeArgAttr.Provided.Container").GetNestedType("Widget")
+
+[<Fact>]
+let ``Custom attribute with System.Type constructor argument round-trips correctly``() =
+    // Regression test: before the 8.4.0 fix, decodeILCustomAttribData returned null
+    // for System.Type-typed constructor arguments instead of resolving the type.
+    let widgetType = loadTypeArgAttrTestAssembly ()
+    Assert.NotNull(widgetType)
+    let attrs = widgetType.GetCustomAttributesData()
+    let proxyAttr = attrs |> Seq.tryFind (fun a -> a.Constructor.DeclaringType = typeof<DebuggerTypeProxyAttribute>)
+    Assert.True(proxyAttr.IsSome, "DebuggerTypeProxyAttribute should be present on Widget type")
+    let attr = proxyAttr.Value
+    Assert.Equal(1, attr.ConstructorArguments.Count)
+    // The decoded value should be the System.Type for System.Int32.
+    let argValue = attr.ConstructorArguments.[0].Value
+    Assert.NotNull(argValue)
+    let resolvedType = argValue :?> Type
+    Assert.NotNull(resolvedType)
+    Assert.Equal("System.Int32", resolvedType.FullName)
