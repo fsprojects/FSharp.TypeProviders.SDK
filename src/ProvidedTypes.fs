@@ -16046,9 +16046,12 @@ namespace ProviderImplementation.ProvidedTypes
 
                             let methLocals = Dictionary<Var, ILLocalBuilder>()
 
-                            let expectedState = if (transType minfo.ReturnType = ILType.Void) then ExpectedStackState.Empty else ExpectedStackState.Value
+                            let retType = transType minfo.ReturnType
+                            let retUnit = retType = ILType.Void || retType.QualifiedName = (transType (convTypeToTgt typeof<unit>)).QualifiedName
+                            let expectedState = if retUnit then ExpectedStackState.Empty else ExpectedStackState.Value
                             let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, methLocals, parameterVars)
                             codeGen.EmitExpr (expectedState, expr)
+                            if retUnit then ilg.Emit(I_ldnull)
                             ilg.Emit I_ret
                       | _ -> ()
 
