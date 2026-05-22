@@ -1121,3 +1121,15 @@ let ``bitwise not execute correctly``() =
            checkExpr <@ ~~~1234us @>
            checkExpr <@ ~~~12uy @>
        ]
+
+[<Fact>]
+let ``equality on enums``() =
+    testProvidedAssembly
+        [
+            check <@ DateTimeKind.Utc = DateTimeKind.Local @> false
+            check <@ DateTimeKind.Utc <> DateTimeKind.Local @> true
+            check <@ DateTimeKind.Utc < DateTimeKind.Local @> true
+            check <@ DateTimeKind.Utc <= DateTimeKind.Local @> true
+            check <@ DateTimeKind.Utc > DateTimeKind.Local @> false
+            check <@ DateTimeKind.Utc >= DateTimeKind.Local @> false
+        ]

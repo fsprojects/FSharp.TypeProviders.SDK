@@ -183,3 +183,11 @@ let ``typeof``() =
                     typeof<DateTime>.Name
                 @> "DateTime"
         ]
+
+[<Fact>]
+let ``try-finally with a unit-returning method``() =
+    testProvidedAssembly
+        [
+            (<@@ try ResizeArray<int>().Clear() finally ResizeArray<int>().Clear() @@>),
+            (fun _ -> ()) // just checking for InvalidProgramException
+        ]
