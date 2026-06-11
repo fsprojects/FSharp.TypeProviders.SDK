@@ -14233,17 +14233,171 @@ namespace ProviderImplementation.ProvidedTypes
         | Address = 2
         | Value = 3
 
-    type CodeGenerator(assemblyMainModule: ILModuleBuilder, 
-                       genUniqueTypeName: (unit -> string), 
-                       implicitCtorArgsAsFields: ILFieldBuilder list, 
-                       convTypeToTgt: Type -> Type, 
-                       transType: Type -> ILType, 
-                       transFieldSpec: FieldInfo -> ILFieldSpec, 
-                       transMeth: MethodInfo -> ILMethodSpec, 
-                       transMethRef: MethodInfo -> ILMethodRef, 
-                       transCtorSpec: ConstructorInfo -> ILMethodSpec, 
-                       ilg: ILGenerator, 
-                       localsMap:Dictionary<Var, ILLocalBuilder>, 
+    /// Precomputed expression patterns used by CodeGenerator when emitting member bodies.
+    ///
+    /// Evaluating the quotation literals below deserializes them, which involves binding
+    /// methods via reflection (GetGenericArguments/MakeGenericType etc.). A CodeGenerator is
+    /// constructed for every emitted member body, so these must be computed once per assembly
+    /// compilation rather than in the CodeGenerator constructor: for providers with thousands
+    /// of members the repeated deserialization dominated compile time (issue #341).
+    type CodeGenPatterns(convTypeToTgt: Type -> Type) =
+
+        let languagePrimitivesType() = (convTypeToTgt (typedefof<list<_>>.Assembly.GetType("Microsoft.FSharp.Core.LanguagePrimitives")))
+
+        let (|SpecificCall|_|) templateParameter =
+            // Note: precomputation
+            match templateParameter with
+            | (Lambdas(_, Call(_, minfo1, _)) | Call(_, minfo1, _)) ->
+                let targetType = convTypeToTgt minfo1.DeclaringType
+                let minfo1 = targetType.GetMethod(minfo1.Name, bindAll)
+                let isg1 = minfo1.IsGenericMethod
+                let gmd =
+                    if minfo1.IsGenericMethodDefinition then
+                        minfo1
+                    elif isg1 then
+                        minfo1.GetGenericMethodDefinition()
+                    else null
+
+                // end-of-precomputation
+
+                (fun tm ->
+                   match tm with
+                   | Call(obj, minfo2, args)
+                      when (minfo1.MetadataToken = minfo2.MetadataToken &&
+                            if isg1 then
+                              minfo2.IsGenericMethod && gmd = minfo2.GetGenericMethodDefinition()
+                            else
+                              minfo1 = minfo2) ->
+                       Some(obj, (minfo2.GetGenericArguments() |> Array.toList), args)
+                   | _ -> None)
+            | _ ->
+                 invalidArg "templateParameter" "The parameter is not a recognized method name"
+
+        let makeDecimalPattern =
+            let minfo1 = languagePrimitivesType().GetNestedType("IntrinsicFunctions").GetMethod("MakeDecimal")
+            (fun tm ->
+               match tm with
+               | Call(None, minfo2, args)
+                  when (minfo1.MetadataToken = minfo2.MetadataToken &&
+                        minfo1 = minfo2) ->
+                   Some(args)
+               | _ -> None)
+
+        let nanPattern =
+            let operatorsType = convTypeToTgt (typedefof<list<_>>.Assembly.GetType("Microsoft.FSharp.Core.Operators"))
+            let minfo1 = operatorsType.GetProperty("NaN").GetGetMethod()
+            (fun e ->
+                match e with
+                | Call(None, minfo2, [])
+                  when (minfo1.MetadataToken = minfo2.MetadataToken &&
+                        minfo1 = minfo2) ->
+                    Some()
+                | _ -> None)
+
+        let nanSinglePattern =
+            let operatorsType = convTypeToTgt (typedefof<list<_>>.Assembly.GetType("Microsoft.FSharp.Core.Operators"))
+            let minfo1 = operatorsType.GetProperty("NaNSingle").GetGetMethod()
+            (fun e ->
+                match e with
+                | Call(None, minfo2, [])
+                  when (minfo1.MetadataToken = minfo2.MetadataToken &&
+                        minfo1 = minfo2) ->
+                    Some()
+                | _ -> None)
+
+        let lessThanGenericMethod =
+            match <@@ (<) @@> with
+            | DerivedPatterns.Lambdas(_, Call(None, meth, _)) ->
+                let targetType = convTypeToTgt meth.DeclaringType
+                targetType.GetMethod(meth.Name, bindAll)
+            | _ -> failwith "Unreachable"
+
+        member _.MakeDecimal = makeDecimalPattern
+        member _.NaN = nanPattern
+        member _.NaNSingle = nanSinglePattern
+
+        member val TypeOf = (|SpecificCall|_|) <@ typeof<obj> @>
+
+        member val LessThan = (|SpecificCall|_|) <@ (<) @>
+        member val GreaterThan = (|SpecificCall|_|) <@ (>) @>
+        member val LessThanOrEqual = (|SpecificCall|_|) <@ (<=) @>
+        member val GreaterThanOrEqual = (|SpecificCall|_|) <@ (>=) @>
+        member val Equals = (|SpecificCall|_|) <@ (=) @>
+        member val NotEquals = (|SpecificCall|_|) <@ (<>) @>
+        member val Multiply = (|SpecificCall|_|) <@ (*) @>
+        member val Addition = (|SpecificCall|_|) <@ (+) @>
+        member val Subtraction = (|SpecificCall|_|) <@ (-) @>
+        member val UnaryNegation = (|SpecificCall|_|) <@ (~-) @>
+        member val Division = (|SpecificCall|_|) <@ (/) @>
+        member val UnaryPlus = (|SpecificCall|_|) <@ (~+) @>
+        member val Modulus = (|SpecificCall|_|) <@ (%) @>
+        member val LeftShift = (|SpecificCall|_|) <@ (<<<) @>
+        member val RightShift = (|SpecificCall|_|) <@ (>>>) @>
+        member val And = (|SpecificCall|_|) <@ (&&&) @>
+        member val Or = (|SpecificCall|_|) <@ (|||) @>
+        member val Xor = (|SpecificCall|_|) <@ (^^^) @>
+        member val Not = (|SpecificCall|_|) <@ (~~~) @>
+        member val Max = (|SpecificCall|_|) <@ max @>
+        member val Min = (|SpecificCall|_|) <@ min @>
+        member val CallByte = (|SpecificCall|_|) <@ byte @>
+        member val CallSByte = (|SpecificCall|_|) <@ sbyte @>
+        member val CallUInt16 = (|SpecificCall|_|) <@ uint16 @>
+        member val CallInt16 = (|SpecificCall|_|) <@ int16 @>
+        member val CallUInt32 = (|SpecificCall|_|) <@ uint32 @>
+        member val CallInt = (|SpecificCall|_|) <@ int @>
+        member val CallInt32 = (|SpecificCall|_|) <@ int32 @>
+        member val CallUInt64 = (|SpecificCall|_|) <@ uint64 @>
+        member val CallInt64 = (|SpecificCall|_|) <@ int64 @>
+        member val CallSingle = (|SpecificCall|_|) <@ single @>
+        member val CallFloat32 = (|SpecificCall|_|) <@ float32 @>
+        member val CallDouble = (|SpecificCall|_|) <@ double @>
+        member val CallFloat = (|SpecificCall|_|) <@ float @>
+        member val CallDecimal = (|SpecificCall|_|) <@ decimal @>
+        member val CallChar = (|SpecificCall|_|) <@ char @>
+        member val Ignore = (|SpecificCall|_|) <@ ignore @>
+        member val GetArray = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray @>
+        member val GetArray2D = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray2D @>
+        member val GetArray3D = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray3D @>
+        member val GetArray4D = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray4D @>
+
+        member val Abs = (|SpecificCall|_|) <@ abs @>
+        member val Acos = (|SpecificCall|_|) <@ acos @>
+        member val Asin = (|SpecificCall|_|) <@ asin @>
+        member val Atan = (|SpecificCall|_|) <@ atan @>
+        member val Atan2 = (|SpecificCall|_|) <@ atan2 @>
+        member val Ceil = (|SpecificCall|_|) <@ ceil @>
+        member val Exp = (|SpecificCall|_|) <@ exp @>
+        member val Floor = (|SpecificCall|_|) <@ floor @>
+        member val Truncate = (|SpecificCall|_|) <@ truncate @>
+        member val Round = (|SpecificCall|_|) <@ round @>
+        member val Sign = (|SpecificCall|_|) <@ sign @>
+        member val Log = (|SpecificCall|_|) <@ log @>
+        member val Log10 = (|SpecificCall|_|) <@ log10 @>
+        member val Sqrt = (|SpecificCall|_|) <@ sqrt @>
+        member val Cos = (|SpecificCall|_|) <@ cos @>
+        member val Cosh = (|SpecificCall|_|) <@ cosh @>
+        member val Sin = (|SpecificCall|_|) <@ sin @>
+        member val Sinh = (|SpecificCall|_|) <@ sinh @>
+        member val Tan = (|SpecificCall|_|) <@ tan @>
+        member val Tanh = (|SpecificCall|_|) <@ tanh @>
+        member val Pow = (|SpecificCall|_|) <@ ( ** ) @>
+
+        member _.MkLessThan (a1 : Expr) (a2 : Expr) =
+            let m = lessThanGenericMethod.MakeGenericMethod(a1.Type)
+            Expr.Call(m, [a1; a2])
+
+    type CodeGenerator(assemblyMainModule: ILModuleBuilder,
+                       codeGenPatterns: CodeGenPatterns,
+                       genUniqueTypeName: (unit -> string),
+                       implicitCtorArgsAsFields: ILFieldBuilder list,
+                       convTypeToTgt: Type -> Type,
+                       transType: Type -> ILType,
+                       transFieldSpec: FieldInfo -> ILFieldSpec,
+                       transMeth: MethodInfo -> ILMethodSpec,
+                       transMethRef: MethodInfo -> ILMethodRef,
+                       transCtorSpec: ConstructorInfo -> ILMethodSpec,
+                       ilg: ILGenerator,
+                       localsMap:Dictionary<Var, ILLocalBuilder>,
                        parameterVars) =
 
         // TODO: this works over FSharp.Core 4.4.0.0 types and methods. These types need to be retargeted to the target runtime.
@@ -14294,138 +14448,79 @@ namespace ProviderImplementation.ProvidedTypes
                         && (x.GetParameters() |> Array.map (fun i -> i.ParameterType)) = tps)
             
 
-        let (|SpecificCall|_|) templateParameter = 
-            // Note: precomputation
-            match templateParameter with
-            | (Lambdas(_, Call(_, minfo1, _)) | Call(_, minfo1, _)) ->
-                let targetType = convTypeToTgt minfo1.DeclaringType
-                let minfo1 = targetType.GetMethod(minfo1.Name, bindAll)
-                let isg1 = minfo1.IsGenericMethod
-                let gmd = 
-                    if minfo1.IsGenericMethodDefinition then 
-                        minfo1
-                    elif isg1 then 
-                        minfo1.GetGenericMethodDefinition() 
-                    else null
+        // These patterns are precomputed once per assembly compilation in CodeGenPatterns:
+        // evaluating their quotation literals here would deserialize them on every
+        // CodeGenerator construction, i.e. once per emitted member body (issue #341).
+        let (|MakeDecimal|_|) = codeGenPatterns.MakeDecimal
+        let (|NaN|_|) = codeGenPatterns.NaN
+        let (|NaNSingle|_|) = codeGenPatterns.NaNSingle
 
-                // end-of-precomputation
+        let (|TypeOf|_|) = codeGenPatterns.TypeOf
 
-                (fun tm ->
-                   match tm with
-                   | Call(obj, minfo2, args)
-                      when (minfo1.MetadataToken = minfo2.MetadataToken &&
-                            if isg1 then
-                              minfo2.IsGenericMethod && gmd = minfo2.GetGenericMethodDefinition()
-                            else
-                              minfo1 = minfo2) ->
-                       Some(obj, (minfo2.GetGenericArguments() |> Array.toList), args)
-                   | _ -> None)
-            | _ ->
-                 invalidArg "templateParameter" "The parameter is not a recognized method name"
+        let (|LessThan|_|) = codeGenPatterns.LessThan
+        let (|GreaterThan|_|) = codeGenPatterns.GreaterThan
+        let (|LessThanOrEqual|_|) = codeGenPatterns.LessThanOrEqual
+        let (|GreaterThanOrEqual|_|) = codeGenPatterns.GreaterThanOrEqual
+        let (|Equals|_|) = codeGenPatterns.Equals
+        let (|NotEquals|_|) = codeGenPatterns.NotEquals
+        let (|Multiply|_|) = codeGenPatterns.Multiply
+        let (|Addition|_|) = codeGenPatterns.Addition
+        let (|Subtraction|_|) = codeGenPatterns.Subtraction
+        let (|UnaryNegation|_|) = codeGenPatterns.UnaryNegation
+        let (|Division|_|) = codeGenPatterns.Division
+        let (|UnaryPlus|_|) = codeGenPatterns.UnaryPlus
+        let (|Modulus|_|) = codeGenPatterns.Modulus
+        let (|LeftShift|_|) = codeGenPatterns.LeftShift
+        let (|RightShift|_|) = codeGenPatterns.RightShift
+        let (|And|_|) = codeGenPatterns.And
+        let (|Or|_|) = codeGenPatterns.Or
+        let (|Xor|_|) = codeGenPatterns.Xor
+        let (|Not|_|) = codeGenPatterns.Not
+        let (|Max|_|) = codeGenPatterns.Max
+        let (|Min|_|) = codeGenPatterns.Min
+        let (|CallByte|_|) = codeGenPatterns.CallByte
+        let (|CallSByte|_|) = codeGenPatterns.CallSByte
+        let (|CallUInt16|_|) = codeGenPatterns.CallUInt16
+        let (|CallInt16|_|) = codeGenPatterns.CallInt16
+        let (|CallUInt32|_|) = codeGenPatterns.CallUInt32
+        let (|CallInt|_|) = codeGenPatterns.CallInt
+        let (|CallInt32|_|) = codeGenPatterns.CallInt32
+        let (|CallUInt64|_|) = codeGenPatterns.CallUInt64
+        let (|CallInt64|_|) = codeGenPatterns.CallInt64
+        let (|CallSingle|_|) = codeGenPatterns.CallSingle
+        let (|CallFloat32|_|) = codeGenPatterns.CallFloat32
+        let (|CallDouble|_|) = codeGenPatterns.CallDouble
+        let (|CallFloat|_|) = codeGenPatterns.CallFloat
+        let (|CallDecimal|_|) = codeGenPatterns.CallDecimal
+        let (|CallChar|_|) = codeGenPatterns.CallChar
+        let (|Ignore|_|) = codeGenPatterns.Ignore
+        let (|GetArray|_|) = codeGenPatterns.GetArray
+        let (|GetArray2D|_|) = codeGenPatterns.GetArray2D
+        let (|GetArray3D|_|) = codeGenPatterns.GetArray3D
+        let (|GetArray4D|_|) = codeGenPatterns.GetArray4D
 
-        let (|MakeDecimal|_|) = 
-            let minfo1 = languagePrimitivesType().GetNestedType("IntrinsicFunctions").GetMethod("MakeDecimal")
-            (fun tm ->
-               match tm with
-               | Call(None, minfo2, args)
-                  when (minfo1.MetadataToken = minfo2.MetadataToken &&
-                        minfo1 = minfo2) ->
-                   Some(args)
-               | _ -> None)
- 
-        let (|NaN|_|) =
-            let operatorsType = convTypeToTgt (typedefof<list<_>>.Assembly.GetType("Microsoft.FSharp.Core.Operators"))
-            let minfo1 = operatorsType.GetProperty("NaN").GetGetMethod()
-            (fun e -> 
-                match e with
-                | Call(None, minfo2, [])
-                  when (minfo1.MetadataToken = minfo2.MetadataToken &&
-                        minfo1 = minfo2) ->
-                    Some()
-                | _ -> None)
-            
-        let (|NaNSingle|_|) =
-            let operatorsType = convTypeToTgt (typedefof<list<_>>.Assembly.GetType("Microsoft.FSharp.Core.Operators"))
-            let minfo1 = operatorsType.GetProperty("NaNSingle").GetGetMethod()
-            (fun e -> 
-                match e with
-                | Call(None, minfo2, [])
-                  when (minfo1.MetadataToken = minfo2.MetadataToken &&
-                        minfo1 = minfo2) ->
-                    Some()
-                | _ -> None)
-            
-        let (|TypeOf|_|) = (|SpecificCall|_|) <@ typeof<obj> @>
+        let (|Abs|_|) = codeGenPatterns.Abs
+        let (|Acos|_|) = codeGenPatterns.Acos
+        let (|Asin|_|) = codeGenPatterns.Asin
+        let (|Atan|_|) = codeGenPatterns.Atan
+        let (|Atan2|_|) = codeGenPatterns.Atan2
+        let (|Ceil|_|) = codeGenPatterns.Ceil
+        let (|Exp|_|) = codeGenPatterns.Exp
+        let (|Floor|_|) = codeGenPatterns.Floor
+        let (|Truncate|_|) = codeGenPatterns.Truncate
+        let (|Round|_|) = codeGenPatterns.Round
+        let (|Sign|_|) = codeGenPatterns.Sign
+        let (|Log|_|) = codeGenPatterns.Log
+        let (|Log10|_|) = codeGenPatterns.Log10
+        let (|Sqrt|_|) = codeGenPatterns.Sqrt
+        let (|Cos|_|) = codeGenPatterns.Cos
+        let (|Cosh|_|) = codeGenPatterns.Cosh
+        let (|Sin|_|) = codeGenPatterns.Sin
+        let (|Sinh|_|) = codeGenPatterns.Sinh
+        let (|Tan|_|) = codeGenPatterns.Tan
+        let (|Tanh|_|) = codeGenPatterns.Tanh
+        let (|Pow|_|) = codeGenPatterns.Pow
 
-        let (|LessThan|_|) = (|SpecificCall|_|) <@ (<) @>
-        let (|GreaterThan|_|) = (|SpecificCall|_|) <@ (>) @>
-        let (|LessThanOrEqual|_|) = (|SpecificCall|_|) <@ (<=) @>
-        let (|GreaterThanOrEqual|_|) = (|SpecificCall|_|) <@ (>=) @>
-        let (|Equals|_|) = (|SpecificCall|_|) <@ (=) @>
-        let (|NotEquals|_|) = (|SpecificCall|_|) <@ (<>) @>
-        let (|Multiply|_|) = (|SpecificCall|_|) <@ (*) @>
-        let (|Addition|_|) = (|SpecificCall|_|) <@ (+) @>
-        let (|Subtraction|_|) = (|SpecificCall|_|) <@ (-) @>
-        let (|UnaryNegation|_|) = (|SpecificCall|_|) <@ (~-) @>
-        let (|Division|_|) = (|SpecificCall|_|) <@ (/) @>
-        let (|UnaryPlus|_|) = (|SpecificCall|_|) <@ (~+) @>
-        let (|Modulus|_|) = (|SpecificCall|_|) <@ (%) @>
-        let (|LeftShift|_|) = (|SpecificCall|_|) <@ (<<<) @>
-        let (|RightShift|_|) = (|SpecificCall|_|) <@ (>>>) @>
-        let (|And|_|) = (|SpecificCall|_|) <@ (&&&) @>
-        let (|Or|_|) = (|SpecificCall|_|) <@ (|||) @>
-        let (|Xor|_|) = (|SpecificCall|_|) <@ (^^^) @>
-        let (|Not|_|) = (|SpecificCall|_|) <@ (~~~) @>
-        //let (|Compare|_|) = (|SpecificCall|_|) <@ compare @>
-        let (|Max|_|) = (|SpecificCall|_|) <@ max @>
-        let (|Min|_|) = (|SpecificCall|_|) <@ min @>
-        //let (|Hash|_|) = (|SpecificCall|_|) <@ hash @>
-        let (|CallByte|_|) = (|SpecificCall|_|) <@ byte @>
-        let (|CallSByte|_|) = (|SpecificCall|_|) <@ sbyte @>
-        let (|CallUInt16|_|) = (|SpecificCall|_|) <@ uint16 @>
-        let (|CallInt16|_|) = (|SpecificCall|_|) <@ int16 @>
-        let (|CallUInt32|_|) = (|SpecificCall|_|) <@ uint32 @>
-        let (|CallInt|_|) = (|SpecificCall|_|) <@ int @>
-        let (|CallInt32|_|) = (|SpecificCall|_|) <@ int32 @>
-        let (|CallUInt64|_|) = (|SpecificCall|_|) <@ uint64 @>
-        let (|CallInt64|_|) = (|SpecificCall|_|) <@ int64 @>
-        let (|CallSingle|_|) = (|SpecificCall|_|) <@ single @>
-        let (|CallFloat32|_|) = (|SpecificCall|_|) <@ float32 @>
-        let (|CallDouble|_|) = (|SpecificCall|_|) <@ double @>
-        let (|CallFloat|_|) = (|SpecificCall|_|) <@ float @>
-        let (|CallDecimal|_|) = (|SpecificCall|_|) <@ decimal @>
-        let (|CallChar|_|) = (|SpecificCall|_|) <@ char @>
-        let (|Ignore|_|) = (|SpecificCall|_|) <@ ignore @>
-        let (|GetArray|_|) = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray @>
-        let (|GetArray2D|_|) = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray2D @>
-        let (|GetArray3D|_|) = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray3D @>
-        let (|GetArray4D|_|) = (|SpecificCall|_|) <@ LanguagePrimitives.IntrinsicFunctions.GetArray4D @>
-        
-        let (|Abs|_|) = (|SpecificCall|_|) <@ abs @>
-        let (|Acos|_|) = (|SpecificCall|_|) <@ acos @>
-        let (|Asin|_|) = (|SpecificCall|_|) <@ asin @>
-        let (|Atan|_|) = (|SpecificCall|_|) <@ atan @>
-        let (|Atan2|_|) = (|SpecificCall|_|) <@ atan2 @>
-        let (|Ceil|_|) = (|SpecificCall|_|) <@ ceil @>
-        let (|Exp|_|) = (|SpecificCall|_|) <@ exp @>
-        let (|Floor|_|) = (|SpecificCall|_|) <@ floor @>
-        let (|Truncate|_|) = (|SpecificCall|_|) <@ truncate @>
-        let (|Round|_|) = (|SpecificCall|_|) <@ round @>
-        let (|Sign|_|) = (|SpecificCall|_|) <@ sign @>
-        let (|Log|_|) = (|SpecificCall|_|) <@ log @>
-        let (|Log10|_|) = (|SpecificCall|_|) <@ log10 @>
-        let (|Sqrt|_|) = (|SpecificCall|_|) <@ sqrt @>
-        let (|Cos|_|) = (|SpecificCall|_|) <@ cos @>
-        let (|Cosh|_|) = (|SpecificCall|_|) <@ cosh @>
-        let (|Sin|_|) = (|SpecificCall|_|) <@ sin @>
-        let (|Sinh|_|) = (|SpecificCall|_|) <@ sinh @>
-        let (|Tan|_|) = (|SpecificCall|_|) <@ tan @>
-        let (|Tanh|_|) = (|SpecificCall|_|) <@ tanh @>
-        //let (|Range|_|) = (|SpecificCall|_|) <@ (..) @>
-        //let (|RangeStep|_|) = (|SpecificCall|_|) <@ (.. ..) @>
-        let (|Pow|_|) = (|SpecificCall|_|) <@ ( ** ) @>
-        //let (|Pown|_|) = (|SpecificCall|_|) <@ pown @>
-    
         let mathOp t1 name = 
             match t1 with 
             | Double ->
@@ -14440,14 +14535,8 @@ namespace ProviderImplementation.ProvidedTypes
                 ilg.Emit(I_call(Normalcall, transMeth m, None))
             | _ -> failwithf "%s not supported for type %s" name t1.Name
 
-        let lessThan (a1 : Expr) (a2 : Expr) = 
-            match <@@ (<) @@> with 
-            | DerivedPatterns.Lambdas(vars, Call(None, meth, _)) -> 
-                let targetType = convTypeToTgt meth.DeclaringType
-                let m = targetType.GetMethod(meth.Name, bindAll).MakeGenericMethod(a1.Type)
-                Expr.Call(m, [a1; a2])
-            | _ -> failwith "Unreachable"
-            
+        let lessThan (a1 : Expr) (a2 : Expr) = codeGenPatterns.MkLessThan a1 a2
+
         let isEmpty s = (s = ExpectedStackState.Empty)
         let isAddress s = (s = ExpectedStackState.Address)
         let rec emitLambda(callSiteIlg: ILGenerator, v: Var, body: Expr, freeVars: seq<Var>, lambdaLocals: Dictionary<_, ILLocalBuilder>, parameters) =
@@ -14499,7 +14588,7 @@ namespace ProviderImplementation.ProvidedTypes
             let unitType = transType (convTypeToTgt (typeof<unit>))
             let expectedState = if (retType = ILType.Void || retType.QualifiedName = unitType.QualifiedName) then ExpectedStackState.Empty else ExpectedStackState.Value
             let lambdaParamVars = [| Var("this", typeof<obj>); v|]
-            let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, lambdaLocals, lambdaParamVars)
+            let codeGen = CodeGenerator(assemblyMainModule, codeGenPatterns, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, lambdaLocals, lambdaParamVars)
             codeGen.EmitExpr (expectedState, body)
             if retType.QualifiedName = unitType.QualifiedName then 
                 ilg.Emit(I_ldnull)
@@ -15785,6 +15874,8 @@ namespace ProviderImplementation.ProvidedTypes
         member __.Compile(isHostedExecution) =
             let providedTypeDefinitionsT = targetAssembly.GetTheTypes() |> Array.collect (fun (tds, nsps) -> Array.map (fun td -> (td, nsps)) tds)
             let ilg = context.ILGlobals
+            // Precompute the patterns shared by every CodeGenerator constructed below (see CodeGenPatterns)
+            let codeGenPatterns = CodeGenPatterns(convTypeToTgt)
             let assemblyName = targetAssembly.GetName()
             let assemblyFileName = targetAssembly.Location
             let assemblyBuilder = 
@@ -15971,7 +16062,7 @@ namespace ProviderImplementation.ProvidedTypes
                                for p in pcinfo.GetParameters() do
                                     yield Var(p.Name, p.ParameterType) |]
 
-                        let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, ctorLocals, parameterVars)
+                        let codeGen = CodeGenerator(assemblyMainModule, codeGenPatterns, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, ctorLocals, parameterVars)
 
                         let parameters = [ for v in parameterVars -> Expr.Var v ]
 
@@ -16009,7 +16100,7 @@ namespace ProviderImplementation.ProvidedTypes
 
                         let expr = pc.GetInvokeCode [ ]
                         let ctorLocals = new Dictionary<_, _>()
-                        let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, ctorLocals, [| |])
+                        let codeGen = CodeGenerator(assemblyMainModule, codeGenPatterns, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, ctorLocals, [| |])
                         codeGen.EmitExpr (ExpectedStackState.Empty, expr)
                         ilg.Emit I_ret
 
@@ -16055,7 +16146,7 @@ namespace ProviderImplementation.ProvidedTypes
                             let retType = transType minfo.ReturnType
                             let retUnit = retType = ILType.Void || retType.QualifiedName = (transType (convTypeToTgt typeof<unit>)).QualifiedName
                             let expectedState = if retUnit then ExpectedStackState.Empty else ExpectedStackState.Value
-                            let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, methLocals, parameterVars)
+                            let codeGen = CodeGenerator(assemblyMainModule, codeGenPatterns, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, methLocals, parameterVars)
                             codeGen.EmitExpr (expectedState, expr)
                             if retUnit then ilg.Emit(I_ldnull)
                             ilg.Emit I_ret
