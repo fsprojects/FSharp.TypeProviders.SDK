@@ -1436,7 +1436,9 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     // interface/override queues and the bindings cache mutates plain ResizeArray/Dictionary state,
     // so without this guard the delayed factories can run more than once and the backing lists can
     // be corrupted by concurrent Add calls. Monitor is re-entrant, so a factory that reenters this
-    // same type's realization on the same thread is fine.
+    // same type's realization on the same thread is fine. The queue writers (AddMember et al.) stay
+    // unlocked by design: they run either during provider construction, before the compiler observes
+    // the type, or from a delayed factory that already holds this lock via realization.
     let realizationLock = obj()
 
     do match backingDataSource with
@@ -1480,11 +1482,13 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
                             members.Add (e.GetRemoveMethod true)
                     | _ -> ()
                 
-    let evalMembers() = lock realizationLock evalMembersUnsafe
-
+    // The backing list read must stay inside the lock: another thread's realization can
+    // Add to the list (a backingDataSource can report fresh members repeatedly) while an
+    // unlocked ToArray/GetRange/Count is mid-copy - a torn array or ArgumentException.
     let getMembers() =
-        evalMembers()
-        members.ToArray()
+        lock realizationLock (fun () ->
+            evalMembersUnsafe()
+            members.ToArray())
 
     // Save some common lookups for provided types with lots of members
     let mutable bindings :  Dictionary<int32, obj> = null
@@ -1515,11 +1519,10 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
             | Some (_, _getFreshMembers, getInterfaces, _getFreshMethodOverrides) ->
                 interfacesQueue.Add getInterfaces
 
-    let evalInterfaces() = lock realizationLock evalInterfacesUnsafe
-
     let getInterfaces() =
-        evalInterfaces()
-        interfaceImpls.ToArray()
+        lock realizationLock (fun () ->
+            evalInterfacesUnsafe()
+            interfaceImpls.ToArray())
 
     let evalMethodOverridesUnsafe () =
         if methodOverridesQueue.Count > 0 then
@@ -1533,11 +1536,10 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
             | Some (_, _getFreshMembers, _getFreshInterfaces, getFreshMethodOverrides) ->
                 methodOverridesQueue.Add getFreshMethodOverrides
 
-    let evalMethodOverrides () = lock realizationLock evalMethodOverridesUnsafe
-
     let getFreshMethodOverrides () =
-        evalMethodOverrides ()
-        methodOverrides.ToArray()
+        lock realizationLock (fun () ->
+            evalMethodOverridesUnsafe()
+            methodOverrides.ToArray())
 
     let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
@@ -1795,17 +1797,17 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
         
     // Count the members declared since the indicated position in the members list.  This allows the target model to observe 
     // incremental additions made to the source model
-    member __.CountMembersFromCursor(idx: int) = evalMembers(); members.Count - idx
+    member __.CountMembersFromCursor(idx: int) = lock realizationLock (fun () -> evalMembersUnsafe(); members.Count - idx)
 
     // Fetch the members declared since the indicated position in the members list.  This allows the target model to observe 
     // incremental additions made to the source model
-    member __.GetMembersFromCursor(idx: int) = evalMembers(); members.GetRange(idx, members.Count - idx).ToArray(), members.Count
+    member __.GetMembersFromCursor(idx: int) = lock realizationLock (fun () -> evalMembersUnsafe(); members.GetRange(idx, members.Count - idx).ToArray(), members.Count)
 
     // Fetch the interfaces declared since the indicated position in the interfaces list
-    member __.GetInterfaceImplsFromCursor(idx: int) = evalInterfaces(); interfaceImpls.GetRange(idx, interfaceImpls.Count - idx).ToArray(), interfaceImpls.Count
+    member __.GetInterfaceImplsFromCursor(idx: int) = lock realizationLock (fun () -> evalInterfacesUnsafe(); interfaceImpls.GetRange(idx, interfaceImpls.Count - idx).ToArray(), interfaceImpls.Count)
 
     // Fetch the method overrides declared since the indicated position in the list
-    member __.GetMethodOverridesFromCursor(idx: int) = evalMethodOverrides(); methodOverrides.GetRange(idx, methodOverrides.Count - idx).ToArray(), methodOverrides.Count
+    member __.GetMethodOverridesFromCursor(idx: int) = lock realizationLock (fun () -> evalMethodOverridesUnsafe(); methodOverrides.GetRange(idx, methodOverrides.Count - idx).ToArray(), methodOverrides.Count)
 
     // Fetch the method overrides 
     member __.GetMethodOverrides() = getFreshMethodOverrides()
