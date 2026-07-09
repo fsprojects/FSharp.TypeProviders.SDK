@@ -1431,7 +1431,15 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     let methodOverrides = ResizeArray<ProvidedMethod * MethodInfo>()
     let methodOverridesQueue = ResizeArray<unit -> (ProvidedMethod * MethodInfo)[]>()
 
-    do match backingDataSource with 
+    // The F# compiler may realize a single ProvidedTypeDefinition's members from multiple threads
+    // (e.g. ParallelCompilation, on by default in recent .NET SDKs). Realizing the delayed member/
+    // interface/override queues and the bindings cache mutates plain ResizeArray/Dictionary state,
+    // so without this guard the delayed factories can run more than once and the backing lists can
+    // be corrupted by concurrent Add calls. Monitor is re-entrant, so a factory that reenters this
+    // same type's realization on the same thread is fine.
+    let realizationLock = obj()
+
+    do match backingDataSource with
         | None -> () 
         | Some (_, getFreshMembers, getFreshInterfaces, getFreshMethodOverrides) ->
             membersQueue.Add getFreshMembers
@@ -1446,7 +1454,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     let moreMembers() =
         membersQueue.Count > 0 || checkFreshMembers() 
 
-    let evalMembers() =
+    let evalMembersUnsafe() =
         if moreMembers() then
             // re-add the getFreshMembers call from the backingDataSource to make sure we fetch the latest translated members from the source model
             match backingDataSource with 
@@ -1472,6 +1480,8 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
                             members.Add (e.GetRemoveMethod true)
                     | _ -> ()
                 
+    let evalMembers() = lock realizationLock evalMembersUnsafe
+
     let getMembers() =
         evalMembers()
         members.ToArray()
@@ -1479,20 +1489,21 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     // Save some common lookups for provided types with lots of members
     let mutable bindings :  Dictionary<int32, obj> = null
 
-    let save (key: BindingFlags) f : 'T = 
+    let save (key: BindingFlags) f : 'T =
+      lock realizationLock (fun () ->
         let key = int key
 
-        if isNull bindings then 
+        if isNull bindings then
             bindings <- Dictionary<_, _>(HashIdentity.Structural)
 
-        if not (moreMembers()) && bindings.ContainsKey(key)  then 
+        if not (moreMembers()) && bindings.ContainsKey(key)  then
             bindings.[key] :?> 'T
         else
             let res = f () // this will refresh the members
             bindings.[key] <- box res
-            res
+            res)
 
-    let evalInterfaces() =
+    let evalInterfacesUnsafe() =
         if interfacesQueue.Count > 0 then
             let elems = interfacesQueue |> Seq.toArray // take a copy in case more elements get added
             interfacesQueue.Clear()
@@ -1504,11 +1515,13 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
             | Some (_, _getFreshMembers, getInterfaces, _getFreshMethodOverrides) ->
                 interfacesQueue.Add getInterfaces
 
+    let evalInterfaces() = lock realizationLock evalInterfacesUnsafe
+
     let getInterfaces() =
         evalInterfaces()
         interfaceImpls.ToArray()
 
-    let evalMethodOverrides () =
+    let evalMethodOverridesUnsafe () =
         if methodOverridesQueue.Count > 0 then
             let elems = methodOverridesQueue |> Seq.toArray // take a copy in case more elements get added
             methodOverridesQueue.Clear()
@@ -1519,6 +1532,8 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
             | None -> () 
             | Some (_, _getFreshMembers, _getFreshInterfaces, getFreshMethodOverrides) ->
                 methodOverridesQueue.Add getFreshMethodOverrides
+
+    let evalMethodOverrides () = lock realizationLock evalMethodOverridesUnsafe
 
     let getFreshMethodOverrides () =
         evalMethodOverrides ()
@@ -9258,6 +9273,15 @@ namespace ProviderImplementation.ProvidedTypes
         let typeTableFwd = Dictionary<Type, Type>()
         let typeTableBwd = Dictionary<Type, Type>()
 
+        // Guards the type translation tables above. The F# compiler may translate types on several
+        // threads at once (e.g. ParallelCompilation, on by default in recent .NET SDKs). The
+        // check-then-create in convProvidedTypeDefToTgt must be atomic: without this lock, two
+        // concurrent conversions of the same source ProvidedTypeDefinition each mint a distinct
+        // target type, and the compiler then fails intermittently with FS0193/FS0001
+        // "type X is not compatible with type X" on erased provided types. Monitor is re-entrant,
+        // so the recursive conversion of declaring/base/argument types on the same thread is fine.
+        let typeTablesLock = obj()
+
         let fixName (fullName:string) =
           if fullName.StartsWith("FSI_") then
               // when F# Interactive is the host of the design time assembly, 
@@ -9295,7 +9319,7 @@ namespace ProviderImplementation.ProvidedTypes
                 asm.GetType fullName |> function null -> None | x -> Some (x, true)
 
         let typeBuilder = ProvidedTypeBuilder.typeBuilder
-        let rec convTypeRef toTgt (t:Type) =
+        let rec convTypeRefUnsafe toTgt (t:Type) =
             let table = (if toTgt then typeTableFwd else typeTableBwd)
             match table.TryGetValue(t) with
             | true, newT -> newT
@@ -9349,7 +9373,10 @@ namespace ProviderImplementation.ProvidedTypes
                             | None -> loop (i - 1)
                     loop (asms.Count - 1)
 
-        and convType toTgt (t:Type) =
+        and convTypeRef toTgt (t: Type) =
+            lock typeTablesLock (fun () -> convTypeRefUnsafe toTgt t)
+
+        and convTypeUnsafe toTgt (t:Type) =
             let table = (if toTgt then typeTableFwd else typeTableBwd)
             match table.TryGetValue(t) with
             | true, newT -> newT
@@ -9379,6 +9406,9 @@ namespace ProviderImplementation.ProvidedTypes
 
                 else
                     convTypeRef toTgt t
+
+        and convType toTgt (t: Type) =
+            lock typeTablesLock (fun () -> convTypeUnsafe toTgt t)
 
         and convTypeToTgt ty = convType true ty
         and convTypeToSrc ty = convType false ty
@@ -9616,7 +9646,7 @@ namespace ProviderImplementation.ProvidedTypes
         and convCustomAttributesDataToTgt (cattrs: IList<CustomAttributeData>) = 
             cattrs |> Array.ofSeq |> Array.choose tryConvCustomAttributeDataToTgt 
  
-        and convProvidedTypeDefToTgt (x: ProvidedTypeDefinition) =
+        and convProvidedTypeDefToTgtUnsafe (x: ProvidedTypeDefinition) =
           if x.IsErased && x.BelongsToTargetModel then failwithf "unexpected target type definition '%O'" x
           match typeTableFwd.TryGetValue(x) with
           | true, newT -> (newT :?> ProvidedTypeDefinition)
@@ -9697,6 +9727,11 @@ namespace ProviderImplementation.ProvidedTypes
                 let parentT = (convTypeToTgt x.DeclaringType :?> ProvidedTypeDefinition)
                 parentT.PatchDeclaringTypeOfMember xT
             xT
+
+        // Serialized: the lookup and the creation must be one atomic step so a source type is only
+        // ever translated to a single target type (see typeTablesLock above).
+        and convProvidedTypeDefToTgt (x: ProvidedTypeDefinition) =
+            lock typeTablesLock (fun () -> convProvidedTypeDefToTgtUnsafe x)
 
         and convTypeDefToTgt (x: Type) =
             match x with 
