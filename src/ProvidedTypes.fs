@@ -16053,10 +16053,13 @@ namespace ProviderImplementation.ProvidedTypes
                             let methLocals = Dictionary<Var, ILLocalBuilder>()
 
                             let retType = transType minfo.ReturnType
-                            let retUnit = retType = ILType.Void || retType.QualifiedName = (transType (convTypeToTgt typeof<unit>)).QualifiedName
-                            let expectedState = if retUnit then ExpectedStackState.Empty else ExpectedStackState.Value
+                            let retVoid = retType = ILType.Void
+                            let retUnit = not retVoid && retType.QualifiedName = (transType (convTypeToTgt typeof<unit>)).QualifiedName
+                            let expectedState = if retVoid || retUnit then ExpectedStackState.Empty else ExpectedStackState.Value
                             let codeGen = CodeGenerator(assemblyMainModule, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, methLocals, parameterVars)
                             codeGen.EmitExpr (expectedState, expr)
+                            // A method whose return type is FSharp.Core Unit must return the (boxed) unit
+                            // value null; a void-returning method must leave the stack empty at ret.
                             if retUnit then ilg.Emit(I_ldnull)
                             ilg.Emit I_ret
                       | _ -> ()
