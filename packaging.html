@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en" data-root="https://fsprojects.github.io/FSharp.TypeProviders.SDK/">
+<head>
+    <meta charset="UTF-8">
+    <meta content="IE=edge" http-equiv="X-UA-Compatible">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="FSharp.TypeProviders.SDK contributors" name="author">
+    <!-- Opengraph properties (https://ogp.me/) -->
+    <meta property="og:site_name" content="FSharp.TypeProviders.SDK">
+    <meta property="og:title" content="Packaging" />
+    <meta property="og:url" content="https://fsprojects.github.io/FSharp.TypeProviders.SDK/packaging.html">
+    <meta property="og:type" content="website" />
+    <!-- Twitter cards (https://developer.twitter.com/en/docs/twitter-for-websites/cards/overview/summary-card-with-large-image) -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="https://fsprojects.github.io/FSharp.TypeProviders.SDK/">
+    <meta name="twitter:title" content="Packaging">
+    
+    <title>Packaging | FSharp.TypeProviders.SDK</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/img/favicon.ico" rel="icon" sizes="32x32" type="image/png"/>
+    <script type="application/javascript" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-theme-set-dark.js"></script>
+    <script type="application/javascript" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-details-set-expanded.js"></script>
+    <link href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-default.css" rel="stylesheet" type="text/css"/>
+    <link href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-theme.css" rel="stylesheet" type="text/css"/>
+    
+    
+</head>
+<body class="content">
+<header>
+    <div class="start">
+        <div id="menu-toggle">
+            <iconify-icon class="icon closed" height="22" icon="eva:menu-fill" width="22"></iconify-icon>
+            <iconify-icon class="icon open" height="22" icon="mi:close" width="22"></iconify-icon>
+            <input type="checkbox" name="mobile-menu" />
+            <ul class="menu">
+                <li class="nav-header">Links</li>
+                <li class="license-menu-item builtin-menu-item nav-item"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/LICENSE.md">License</a>
+                </li>
+                <li class="release-notes-menu-item builtin-menu-item nav-item"><a class="nav-link"
+                                        href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/RELEASE_NOTES.md">Release
+                    Notes</a></li>
+                <li class="repository-menu-item builtin-menu-item nav-item"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/">Source
+                    Repository</a></li>
+                <li class="nav-header active">
+  Documentation
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/quick-start.html">
+    Quick Start
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/guide.html">
+    Complete Guide
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/providing-types.html">
+    Providing Types, Members, and Features
+  </a>
+</li>             
+<li class="nav-item active">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/packaging.html">
+    Packaging
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/units-of-measure.html">
+    Units of Measure
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/debugging.html">
+    Debugging
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/technical-notes.html">
+    Technical Notes
+  </a>
+</li>
+                <li class="nav-header">
+  API Reference
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/index.html">
+    All Namespaces
+  </a>
+</li>
+            </ul>
+        </div>
+        <a href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/">
+            <img alt="Header menu logo" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/files/img/logo.png">
+            <strong>FSharp.TypeProviders.SDK</strong>
+        </a>
+    </div>
+    <div class="end">
+        <a href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/" target="_blank">
+            <iconify-icon icon="uil:github" width="26" height="26"></iconify-icon>
+        </a>
+        <iconify-icon id="search-btn" icon="carbon:search" class="search" width="24" height="24"></iconify-icon>
+        <fsdocs-theme-toggle></fsdocs-theme-toggle>
+    </div>
+</header>
+<aside id="fsdocs-main-menu">
+    <ul class="menu">
+        <li class="nav-header">Links</li>
+        <li class="license-menu-item builtin-menu-item nav-item"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/LICENSE.md">License</a>
+        </li>
+        <li class="release-notes-menu-item builtin-menu-item nav-item"><a class="nav-link"
+                                href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/blob/master/RELEASE_NOTES.md">Release
+            Notes</a></li>
+        <li class="repository-menu-item builtin-menu-item nav-item"><a class="nav-link" href="https://github.com/fsprojects/FSharp.TypeProviders.SDK/">Source
+            Repository</a></li>
+        <li class="nav-header active">
+  Documentation
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/quick-start.html">
+    Quick Start
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/guide.html">
+    Complete Guide
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/providing-types.html">
+    Providing Types, Members, and Features
+  </a>
+</li>             
+<li class="nav-item active">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/packaging.html">
+    Packaging
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/units-of-measure.html">
+    Units of Measure
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/debugging.html">
+    Debugging
+  </a>
+</li>             
+<li class="nav-item ">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/technical-notes.html">
+    Technical Notes
+  </a>
+</li>
+        <li class="nav-header">
+  API Reference
+</li>             
+<li class="nav-item">
+  <a class="nav-link" href="https://fsprojects.github.io/FSharp.TypeProviders.SDK/reference/index.html">
+    All Namespaces
+  </a>
+</li>
+    </ul>
+</aside>
+<main>
+    <div id="content">
+        
+<h1><a name="Packaging-F-Type-Providers" class="anchor" href="#Packaging-F-Type-Providers">Packaging F# Type Providers</a></h1>
+<h2><a name="NuGet-Package-Layout" class="anchor" href="#NuGet-Package-Layout">NuGet Package Layout</a></h2>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">lib/netstandard2.0/
+    MyProvider.dll               ← TPRTC (carries TypeProviderAssembly attribute)
+
+typeproviders/fsharp41/netstandard2.0/
+    MyProvider.DesignTime.dll    ← TPDTC
+    MyDependency.dll             ← all design-time dependencies bundled here
+</code></pre></td></tr></table>
+<p>The TPRTC goes in <code>lib/</code>; the TPDTC and all its dependencies go in <code>typeproviders/fsharp41/</code>.</p>
+<h2><a name="How-Packaging-Is-Automated" class="anchor" href="#How-Packaging-Is-Automated"><code>IsFSharpDesignTimeProvider</code>: How Packaging Is Automated</a></h2>
+<p>The NuGet package layout above is generated automatically by the F# SDK MSBuild targets shipped with the .NET SDK. The mechanism is controlled by the <code>IsFSharpDesignTimeProvider</code> MSBuild property and item metadata. This is a built-in feature of the .NET SDK's F# support but is almost entirely undocumented in official sources.</p>
+<h3><a name="The-Three-Roles-of" class="anchor" href="#The-Three-Roles-of">The Three Roles of <code>IsFSharpDesignTimeProvider</code></a></h3>
+<p><code>IsFSharpDesignTimeProvider</code> plays three distinct roles depending on where it appears in your project files.</p>
+<p><strong>Role 1: <code>ProjectReference</code> metadata (the standard split-project pattern)</strong></p>
+<p>The most common pattern is a runtime project that references the design-time project via <code>ProjectReference</code>
+and marks it with <code>IsFSharpDesignTimeProvider</code> metadata:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip highlighted"><code lang="xml"><span class="c">&lt;!-- MyProvider.Runtime.fsproj --&gt;</span>
+<span class="k">&lt;</span><span class="i">PropertyGroup</span><span class="k">&gt;</span>
+  <span class="k">&lt;</span><span class="i">TargetFrameworks</span><span class="k">&gt;</span>netstandard2.0;net8.0<span class="k">&lt;/</span><span class="i">TargetFrameworks</span><span class="k">&gt;</span>
+  <span class="k">&lt;</span><span class="i">FSharpToolsDirectory</span><span class="k">&gt;</span>typeproviders<span class="k">&lt;/</span><span class="i">FSharpToolsDirectory</span><span class="k">&gt;</span>
+<span class="k">&lt;/</span><span class="i">PropertyGroup</span><span class="k">&gt;</span>
+
+<span class="k">&lt;</span><span class="i">ItemGroup</span><span class="k">&gt;</span>
+  <span class="k">&lt;</span><span class="i">ProjectReference</span> <span class="o">Include</span><span class="k">="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj"</span><span class="k">&gt;</span>
+    <span class="k">&lt;</span><span class="i">IsFSharpDesignTimeProvider</span><span class="k">&gt;</span>true<span class="k">&lt;/</span><span class="i">IsFSharpDesignTimeProvider</span><span class="k">&gt;</span>
+    <span class="k">&lt;</span><span class="i">PrivateAssets</span><span class="k">&gt;</span>all<span class="k">&lt;/</span><span class="i">PrivateAssets</span><span class="k">&gt;</span>
+  <span class="k">&lt;/</span><span class="i">ProjectReference</span><span class="k">&gt;</span>
+<span class="k">&lt;/</span><span class="i">ItemGroup</span><span class="k">&gt;</span>
+</code></pre></td></tr></table>
+<p>This metadata activates two separate MSBuild targets:</p>
+<ul>
+<li>
+<p>*<em><code>CollectFSharpDesignTimeTools</code>*</em> (runs <code>BeforeTargets="BeforeCompile"</code>): Resolves the design-time DLL
+path and adds it to the <code>FscCompilerTools</code> item group, which is passed to the F# compiler via the
+<code>--compilertools:&lt;path&gt;</code> flag. This is what allows type providers to load during compilation of consumer
+projects without any special configuration — the build system wires it up automatically.</p>
+</li>
+<li>
+<p>*<em><code>PackageFSharpDesignTimeTools</code>*</em> (runs as part of <code>TargetsForTfmSpecificContentInPackage</code>, hooked in
+during <code>GenerateNuspec</code>): Collects the entire build output folder of the referenced design-time project
+and places it in the NuGet package under
+<code>$(FSharpToolsDirectory)/$(FSharpDesignTimeProtocol)/$(TargetFramework)/</code>, one sub-folder per target
+framework. <code>FSharp.Core.dll</code> and <code>System.ValueTuple.dll</code> are always excluded — they are expected to be
+available in the host tooling environment.</p>
+</li>
+</ul>
+<p><code>&lt;PrivateAssets&gt;all&lt;/PrivateAssets&gt;</code> is essential: it prevents the design-time project from being emitted
+as a <code>&lt;dependency&gt;</code> element in the <code>.nuspec</code>. The design-time DLL is bundled directly into the package
+(under <code>typeproviders/</code> or <code>tools/</code>), not declared as a package dependency.</p>
+<p><strong>Role 2: Project-level property (a project that is its own design-time provider)</strong></p>
+<p>When <code>&lt;IsFSharpDesignTimeProvider&gt;true&lt;/IsFSharpDesignTimeProvider&gt;</code> appears as a top-level
+<code>&lt;PropertyGroup&gt;</code> property, the project's own build output is packed as a design-time provider. This is
+used when the runtime and design-time components are a single combined DLL:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip highlighted"><code lang="xml"><span class="c">&lt;!-- MyProvider.fsproj – a combined TPRTC + TPDTC in one DLL --&gt;</span>
+<span class="k">&lt;</span><span class="i">PropertyGroup</span><span class="k">&gt;</span>
+  <span class="k">&lt;</span><span class="i">IsFSharpDesignTimeProvider</span><span class="k">&gt;</span>true<span class="k">&lt;/</span><span class="i">IsFSharpDesignTimeProvider</span><span class="k">&gt;</span>
+  <span class="k">&lt;</span><span class="i">FSharpToolsDirectory</span><span class="k">&gt;</span>typeproviders<span class="k">&lt;/</span><span class="i">FSharpToolsDirectory</span><span class="k">&gt;</span>
+<span class="k">&lt;/</span><span class="i">PropertyGroup</span><span class="k">&gt;</span>
+</code></pre></td></tr></table>
+<p>In <code>PackageFSharpDesignTimeTools</code>, when the project property is set, the target collects
+<code>@(BuiltProjectOutputGroupKeyOutput)</code> (the current project's outputs) rather than the outputs of a
+referenced project, and places them under the <code>typeproviders/</code> or <code>tools/</code> folder.</p>
+<p><strong>Role 3: <code>PackageReference</code> metadata (consuming a separately published design-time package)</strong></p>
+<p>When the design-time DLL is shipped as a distinct NuGet package, consumers reference it on a
+<code>PackageReference</code>:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip highlighted"><code lang="xml"><span class="k">&lt;</span><span class="i">PackageReference</span> <span class="o">Include</span><span class="k">="MyProvider.DesignTime"</span> <span class="o">Version</span><span class="k">="1.0.0"</span><span class="k">&gt;</span>
+  <span class="k">&lt;</span><span class="i">IsFSharpDesignTimeProvider</span><span class="k">&gt;</span>true<span class="k">&lt;/</span><span class="i">IsFSharpDesignTimeProvider</span><span class="k">&gt;</span>
+<span class="k">&lt;/</span><span class="i">PackageReference</span><span class="k">&gt;</span>
+</code></pre></td></tr></table>
+<p><code>CollectFSharpDesignTimeTools</code> then uses the auto-generated <code>Pkg&lt;PackageName&gt;</code> MSBuild property —
+set by NuGet restore to the package's content root — to locate the DLL and add it to <code>FscCompilerTools</code>.
+The property name is derived by replacing <code>.</code> with <code>_</code> in the package file name, e.g.
+<code>PkgMyProvider_DesignTime</code>.</p>
+<h3><a name="and" class="anchor" href="#and"><code>FSharpToolsDirectory</code> and <code>FSharpDesignTimeProtocol</code></a></h3>
+<p>Two MSBuild properties control the exact path inside the NuGet package:</p>
+<table>
+<thead>
+<tr class="header">
+<th><p>Property</p></th>
+<th><p>Default</p></th>
+<th><p>Valid values</p></th>
+<th><p>Purpose</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p><code>FSharpToolsDirectory</code></p></td>
+<td><p><code>tools</code></p></td>
+<td><p><code>tools</code>, <code>typeproviders</code></p></td>
+<td><p>Top-level folder in the package</p></td>
+</tr>
+<tr class="even">
+<td><p><code>FSharpDesignTimeProtocol</code></p></td>
+<td><p><code>fsharp41</code></p></td>
+<td><p><code>fsharp41</code> (only)</p></td>
+<td><p>Protocol sub-folder</p></td>
+</tr>
+</tbody>
+</table>
+
+<p>The combined path for design-time DLLs is:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="o">$</span><span class="pn">(</span><span class="id">FSharpToolsDirectory</span><span class="pn">)</span><span class="o">/$</span><span class="pn">(</span><span class="id">FSharpDesignTimeProtocol</span><span class="pn">)</span><span class="o">/$</span><span class="pn">(</span><span class="id">TargetFramework</span><span class="pn">)</span><span class="o">/</span>
+</code></pre>
+<p>For example, with <code>FSharpToolsDirectory=typeproviders</code> and <code>TargetFramework=netstandard2.0</code>:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="id">typeproviders</span><span class="o">/</span><span class="id">fsharp41</span><span class="o">/</span><span class="id">netstandard2</span><span class="pn">.</span><span class="n">0</span><span class="o">/</span><span class="id">MyProvider</span><span class="pn">.</span><span class="id">DesignTime</span><span class="pn">.</span><span class="id">dll</span>
+</code></pre>
+<p>*<em><code>typeproviders/</code> vs <code>tools/</code>*</em>: Both locations are probed by the F# SDK when resolving design-time
+providers. <code>typeproviders/</code> is intended specifically for F# type providers and is the <strong>recommended</strong>
+choice. Set <code>&lt;FSharpToolsDirectory&gt;typeproviders&lt;/FSharpToolsDirectory&gt;</code> on your runtime project. The
+<code>tools/</code> folder is a more generic location also used by other F# tools; use it only if you have a specific
+reason.</p>
+<p>The <code>fsharp41</code> protocol identifier reflects the provider protocol version introduced with F# 4.1. It is
+currently the only valid value; the build targets treat any other value as an error.</p>
+<h3><a name="What-the-Target-Does" class="anchor" href="#What-the-Target-Does">What the <code>_CheckForDesignTimeProviderReferences</code> Target Does</a></h3>
+<p>The F# SDK includes a <code>_CheckForDesignTimeProviderReferences</code> target that runs
+<code>BeforeTargets="GenerateNuspec"</code>. It scans all <code>ProjectReference</code> and <code>PackageReference</code> items for
+<code>IsFSharpDesignTimeProvider</code> metadata. If any are found and the project itself does not already have
+<code>&lt;IsFSharpDesignTimeProvider&gt;true&lt;/IsFSharpDesignTimeProvider&gt;</code> as a project property, it appends
+<code>PackageFSharpDesignTimeTools</code> to <code>TargetsForTfmSpecificContentInPackage</code>.</p>
+<p>The practical consequence: <strong>you do not need to set <code>&lt;IsFSharpDesignTimeProvider&gt;</code> as a project
+property on the runtime project</strong>. Setting it only as metadata on the <code>ProjectReference</code> is sufficient
+to trigger both build-time tool collection and pack-time layout.</p>
+<h3><a name="Complete-Example-for-a-Split-Project-Provider" class="anchor" href="#Complete-Example-for-a-Split-Project-Provider">Complete Example for a Split-Project Provider</a></h3>
+<p><code>MyProvider.Runtime.fsproj</code> (generates the package):</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip highlighted"><code lang="xml"><span class="k">&lt;</span><span class="i">Project</span> <span class="o">Sdk</span><span class="k">="Microsoft.NET.Sdk"</span><span class="k">&gt;</span>
+  <span class="k">&lt;</span><span class="i">PropertyGroup</span><span class="k">&gt;</span>
+    <span class="k">&lt;</span><span class="i">OutputType</span><span class="k">&gt;</span>Library<span class="k">&lt;/</span><span class="i">OutputType</span><span class="k">&gt;</span>
+    <span class="k">&lt;</span><span class="i">TargetFrameworks</span><span class="k">&gt;</span>netstandard2.0;net8.0<span class="k">&lt;/</span><span class="i">TargetFrameworks</span><span class="k">&gt;</span>
+    <span class="c">&lt;!-- Place design-time DLL under typeproviders/fsharp41/ in the package --&gt;</span>
+    <span class="k">&lt;</span><span class="i">FSharpToolsDirectory</span><span class="k">&gt;</span>typeproviders<span class="k">&lt;/</span><span class="i">FSharpToolsDirectory</span><span class="k">&gt;</span>
+  <span class="k">&lt;/</span><span class="i">PropertyGroup</span><span class="k">&gt;</span>
+
+  <span class="k">&lt;</span><span class="i">ItemGroup</span><span class="k">&gt;</span>
+    <span class="k">&lt;</span><span class="i">Compile</span> <span class="o">Include</span><span class="k">="MyProvider.Runtime.fs"</span> <span class="k">/&gt;</span>
+  <span class="k">&lt;/</span><span class="i">ItemGroup</span><span class="k">&gt;</span>
+
+  <span class="k">&lt;</span><span class="i">ItemGroup</span><span class="k">&gt;</span>
+    <span class="c">&lt;!-- Mark the design-time project: bundles it into the package and wires it up during build --&gt;</span>
+    <span class="k">&lt;</span><span class="i">ProjectReference</span> <span class="o">Include</span><span class="k">="..\MyProvider.DesignTime\MyProvider.DesignTime.fsproj"</span><span class="k">&gt;</span>
+      <span class="k">&lt;</span><span class="i">IsFSharpDesignTimeProvider</span><span class="k">&gt;</span>true<span class="k">&lt;/</span><span class="i">IsFSharpDesignTimeProvider</span><span class="k">&gt;</span>
+      <span class="k">&lt;</span><span class="i">PrivateAssets</span><span class="k">&gt;</span>all<span class="k">&lt;/</span><span class="i">PrivateAssets</span><span class="k">&gt;</span>
+    <span class="k">&lt;/</span><span class="i">ProjectReference</span><span class="k">&gt;</span>
+  <span class="k">&lt;/</span><span class="i">ItemGroup</span><span class="k">&gt;</span>
+<span class="k">&lt;/</span><span class="i">Project</span><span class="k">&gt;</span>
+</code></pre></td></tr></table>
+<p><code>MyProvider.DesignTime.fsproj</code> (built and bundled — <strong>not</strong> set as a package project itself):</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip highlighted"><code lang="xml"><span class="k">&lt;</span><span class="i">Project</span> <span class="o">Sdk</span><span class="k">="Microsoft.NET.Sdk"</span><span class="k">&gt;</span>
+  <span class="k">&lt;</span><span class="i">PropertyGroup</span><span class="k">&gt;</span>
+    <span class="k">&lt;</span><span class="i">OutputType</span><span class="k">&gt;</span>Library<span class="k">&lt;/</span><span class="i">OutputType</span><span class="k">&gt;</span>
+    <span class="k">&lt;</span><span class="i">TargetFrameworks</span><span class="k">&gt;</span>netstandard2.0;net8.0<span class="k">&lt;/</span><span class="i">TargetFrameworks</span><span class="k">&gt;</span>
+  <span class="k">&lt;/</span><span class="i">PropertyGroup</span><span class="k">&gt;</span>
+
+  <span class="k">&lt;</span><span class="i">ItemGroup</span><span class="k">&gt;</span>
+    <span class="c">&lt;!-- Include a copy of the runtime helpers for quotation code generation --&gt;</span>
+    <span class="k">&lt;</span><span class="i">Compile</span> <span class="o">Include</span><span class="k">="..\MyProvider.Runtime\MyProvider.Runtime.fs"</span> <span class="k">/&gt;</span>
+    <span class="k">&lt;</span><span class="i">Compile</span> <span class="o">Include</span><span class="k">="MyProvider.DesignTime.fs"</span> <span class="k">/&gt;</span>
+  <span class="k">&lt;/</span><span class="i">ItemGroup</span><span class="k">&gt;</span>
+
+  <span class="k">&lt;</span><span class="i">ItemGroup</span><span class="k">&gt;</span>
+    <span class="k">&lt;</span><span class="i">ProjectReference</span> <span class="o">Include</span><span class="k">="..\..\src\FSharp.TypeProviders.SDK.fsproj"</span> <span class="k">/&gt;</span>
+  <span class="k">&lt;/</span><span class="i">ItemGroup</span><span class="k">&gt;</span>
+<span class="k">&lt;/</span><span class="i">Project</span><span class="k">&gt;</span>
+</code></pre></td></tr></table>
+<p>Running <code>dotnet pack</code> on the runtime project produces a package with this layout:</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip"><code lang="text">lib/netstandard2.0/
+    MyProvider.Runtime.dll             ← TPRTC; carries [&lt;TypeProviderAssembly("MyProvider.DesignTime")&gt;]
+lib/net8.0/
+    MyProvider.Runtime.dll
+
+typeproviders/fsharp41/netstandard2.0/
+    MyProvider.DesignTime.dll          ← TPDTC; loaded by the F# compiler / IDE
+    SomeDesignTimeDependency.dll       ← any other files from the design-time build output
+typeproviders/fsharp41/net8.0/
+    MyProvider.DesignTime.dll
+    SomeDesignTimeDependency.dll
+</code></pre></td></tr></table>
+<h2><a name="Bundling-Dependencies" class="anchor" href="#Bundling-Dependencies">Bundling Dependencies</a></h2>
+<p>All dependencies required by the design-time component <strong>must</strong> be bundled alongside
+<code>MyProvider.DesignTime.dll</code>. They must <strong>not</strong> be listed as regular NuGet package dependencies.</p>
+<table class="pre"><tr><td class="snippet"><pre class="fssnip highlighted"><code lang="xml"><span class="c">&lt;!-- In MyProvider.DesignTime.fsproj – copy a dependency to the output folder --&gt;</span>
+<span class="k">&lt;</span><span class="i">Content</span> <span class="o">Include</span><span class="k">="..\..\packages\Newtonsoft.Json\lib\netstandard2.0\Newtonsoft.Json.dll"</span>
+         <span class="o">CopyToOutputDirectory</span><span class="k">="PreserveNewest"</span> <span class="k">/&gt;</span>
+</code></pre></td></tr></table>
+<p>Make sure these bundled DLLs end up in <code>typeproviders/fsharp41/netstandard2.0/</code> in your NuGet package.</p>
+<h2><a name="Assembly-Replacement-Map" class="anchor" href="#Assembly-Replacement-Map">Assembly Replacement Map</a></h2>
+<p>When your quotation code references types from the runtime component, the SDK must rewrite the assembly
+reference from the design-time component name to the runtime component name. Provide the map in the
+<code>TypeProviderForNamespaces</code> constructor:</p>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">inherit</span> <span class="id">TypeProviderForNamespaces</span><span class="pn">(</span>
+    <span class="id">config</span><span class="pn">,</span>
+    <span class="id">assemblyReplacementMap</span> <span class="o">=</span> <span class="pn">[</span><span class="pn">(</span><span class="s">&quot;MyProvider.DesignTime&quot;</span><span class="pn">,</span> <span class="s">&quot;MyProvider.Runtime&quot;</span><span class="pn">)</span><span class="pn">]</span><span class="pn">)</span>
+</code></pre>
+<h2><a name="Runtime-vs-Design-Time-Dependencies" class="anchor" href="#Runtime-vs-Design-Time-Dependencies">Runtime vs Design-Time Dependencies</a></h2>
+<p>Runtime dependencies are often the same as design-time dependencies for simple type providers. For more complex providers these can differ:</p>
+<ul>
+<li><p><strong>Runtime dependencies</strong> are the dependencies of everything in your quotations in your type provider implementation. These are normal NuGet package dependencies, just like any normal .NET library. For example, if your type provider has Newtonsoft.Json as a runtime dependency, your NuGet package should list it as a normal <code>&lt;dependency&gt;</code> in the nuspec.</p></li>
+<li><p><strong>Design-time dependencies</strong> are the dependencies of everything outside the quotations — the code that decides and generates the provided types. These must all be bundled alongside your design-time DLL. The design-time component is loaded into a tool like Ionide or Visual Studio and must be loadable without referencing any other packages.</p></li>
+</ul>
+<h2><a name="Common-Pitfalls" class="anchor" href="#Common-Pitfalls">Common Pitfalls</a></h2>
+<table>
+<thead>
+<tr class="header">
+<th><p>Pitfall</p></th>
+<th><p>Fix</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>Design-time DLL missing from NuGet package</p></td>
+<td><p>Set <code>IsFSharpDesignTimeProvider</code> metadata on the <code>ProjectReference</code> and <code>&lt;FSharpToolsDirectory&gt;typeproviders&lt;/FSharpToolsDirectory&gt;</code> on the runtime project</p></td>
+</tr>
+<tr class="even">
+<td><p>Design-time DLL ends up in <code>tools/</code> not <code>typeproviders/</code></p></td>
+<td><p>Set <code>&lt;FSharpToolsDirectory&gt;typeproviders&lt;/FSharpToolsDirectory&gt;</code> on the runtime project</p></td>
+</tr>
+<tr class="odd">
+<td><p>Design-time project appears as a NuGet dependency</p></td>
+<td><p>Add <code>&lt;PrivateAssets&gt;all&lt;/PrivateAssets&gt;</code> to the <code>IsFSharpDesignTimeProvider</code> <code>ProjectReference</code></p></td>
+</tr>
+<tr class="even">
+<td><p>Design-time dependency DLL not found at runtime</p></td>
+<td><p>Bundle all design-time DLLs into the design-time build output folder; they are automatically swept into the package</p></td>
+</tr>
+</tbody>
+</table>
+
+
+        
+    </div>
+</main>
+<aside id="fsdocs-page-menu">
+    <p id="on-this-page">On this page</p>
+    <ul>
+  <li class="level-1">
+    <a href="#Packaging-F-Type-Providers">
+      Packaging F# Type Providers
+    </a>
+  </li>
+  <li class="level-2">
+    <a href="#NuGet-Package-Layout">
+      NuGet Package Layout
+    </a>
+  </li>
+  <li class="level-3">
+    <a href="#Complete-Example-for-a-Split-Project-Provider">
+      Complete Example for a Split-Project Provider
+    </a>
+  </li>
+  <li class="level-2">
+    <a href="#Bundling-Dependencies">
+      Bundling Dependencies
+    </a>
+  </li>
+  <li class="level-2">
+    <a href="#Assembly-Replacement-Map">
+      Assembly Replacement Map
+    </a>
+  </li>
+  <li class="level-2">
+    <a href="#Runtime-vs-Design-Time-Dependencies">
+      Runtime vs Design-Time Dependencies
+    </a>
+  </li>
+  <li class="level-2">
+    <a href="#Common-Pitfalls">
+      Common Pitfalls
+    </a>
+  </li>
+</ul>
+</aside>
+<dialog>
+    <input type="search" placeholder="Search docs" />
+    <div class="results">
+        <ul></ul>
+        <p class="empty">Type something to start searching.</p>
+    </div>
+</dialog>
+<script type="module" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-tips.js"></script>
+<script type="module" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-theme-toggle.js"></script>
+<script type="module" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-details-toggle.js"></script>
+<script type="module" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-theme.js"></script>
+<script type="module" src="https://fsprojects.github.io/FSharp.TypeProviders.SDK/content/fsdocs-search.js"></script>
+
+</body>
+</html>
