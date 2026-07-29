@@ -9275,13 +9275,13 @@ namespace ProviderImplementation.ProvidedTypes
         let typeTableFwd = Dictionary<Type, Type>()
         let typeTableBwd = Dictionary<Type, Type>()
 
-        // Guards the type translation tables above. The F# compiler may translate types on several
-        // threads at once (e.g. ParallelCompilation, on by default in recent .NET SDKs). The
-        // check-then-create in convProvidedTypeDefToTgt must be atomic: without this lock, two
-        // concurrent conversions of the same source ProvidedTypeDefinition each mint a distinct
-        // target type, and the compiler then fails intermittently with FS0193/FS0001
-        // "type X is not compatible with type X" on erased provided types. Monitor is re-entrant,
-        // so the recursive conversion of declaring/base/argument types on the same thread is fine.
+        // Guards the translation tables above (type, var, and assembly). The F# compiler may
+        // translate types on several threads at once (e.g. ParallelCompilation, on by default in
+        // recent .NET SDKs). The check-then-create in convProvidedTypeDefToTgt, convVarToTgt/Src,
+        // and convProvidedAssembly must be atomic: without this lock, two concurrent conversions
+        // of the same source object each mint a distinct target copy, leading to FS0193/FS0001
+        // or ArgumentException on duplicate Dictionary keys. Monitor is re-entrant, so recursive
+        // conversion of declaring/base/argument types on the same thread is fine.
         let typeTablesLock = obj()
 
         let fixName (fullName:string) =
@@ -9475,6 +9475,7 @@ namespace ProviderImplementation.ProvidedTypes
             | Choice2Of2 res -> res
 
         and convVarToSrc (v: Var) =
+          lock typeTablesLock (fun () ->
             match varTableBwd.TryGetValue v with
             | true, v -> v
             | false, _ ->
@@ -9482,7 +9483,7 @@ namespace ProviderImplementation.ProvidedTypes
                 // store the original var as we'll have to revert to it later
                 varTableBwd.Add(v, newVar)
                 varTableFwd.Add(newVar, v)
-                newVar
+                newVar)
 
         and convVarExprToSrc quotation =
             match quotation with
@@ -9491,6 +9492,7 @@ namespace ProviderImplementation.ProvidedTypes
             | _ -> failwithf "Unexpected non-variable argument: %A" quotation
 
         and convVarToTgt (v: Var) =
+          lock typeTablesLock (fun () ->
             match varTableFwd.TryGetValue v with
             | true, v -> v
             | false, _ ->
@@ -9499,7 +9501,7 @@ namespace ProviderImplementation.ProvidedTypes
                 // store it so we reuse it from now on
                 varTableFwd.Add(v, newVar)
                 varTableBwd.Add(newVar, v)
-                newVar
+                newVar)
 
 
         and convExprToTgt quotation =
@@ -9806,19 +9808,20 @@ namespace ProviderImplementation.ProvidedTypes
             convMemberDefToTgt declTyT x :?> ProvidedMethod
 
         and convProvidedAssembly (assembly: ProvidedAssembly) = 
-          match assemblyTableFwd.TryGetValue(assembly) with
-          | true, newT -> newT
-          | false, _ ->
-            let tgtAssembly = ProvidedAssembly(true, assembly.GetName(), assembly.Location, K(convCustomAttributesDataToTgt(assembly.GetCustomAttributesData())))
+          lock typeTablesLock (fun () ->
+            match assemblyTableFwd.TryGetValue(assembly) with
+            | true, newT -> newT
+            | false, _ ->
+              let tgtAssembly = ProvidedAssembly(true, assembly.GetName(), assembly.Location, K(convCustomAttributesDataToTgt(assembly.GetCustomAttributesData())))
 
-            for (types, enclosingGeneratedTypeNames) in assembly.GetTheTypes() do
-                let typesT = Array.map convProvidedTypeDefToTgt types
-                tgtAssembly.AddTheTypes (typesT, enclosingGeneratedTypeNames) 
+              for (types, enclosingGeneratedTypeNames) in assembly.GetTheTypes() do
+                  let typesT = Array.map convProvidedTypeDefToTgt types
+                  tgtAssembly.AddTheTypes (typesT, enclosingGeneratedTypeNames) 
 
-            assemblyTableFwd.Add(assembly, tgtAssembly)
-            this.AddSourceAssembly(assembly)
-            this.AddTargetAssembly(assembly.GetName(), tgtAssembly)
-            (tgtAssembly :> Assembly)
+              assemblyTableFwd.Add(assembly, tgtAssembly)
+              this.AddSourceAssembly(assembly)
+              this.AddTargetAssembly(assembly.GetName(), tgtAssembly)
+              (tgtAssembly :> Assembly))
 
         let rec convNamespaceToTgt (x: IProvidedNamespace) =
             { new IProvidedNamespace with
