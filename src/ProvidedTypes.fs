@@ -1431,7 +1431,17 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     let methodOverrides = ResizeArray<ProvidedMethod * MethodInfo>()
     let methodOverridesQueue = ResizeArray<unit -> (ProvidedMethod * MethodInfo)[]>()
 
-    do match backingDataSource with 
+    // The F# compiler may realize a single ProvidedTypeDefinition's members from multiple threads
+    // (e.g. ParallelCompilation, on by default in recent .NET SDKs). Realizing the delayed member/
+    // interface/override queues and the bindings cache mutates plain ResizeArray/Dictionary state,
+    // so without this guard the delayed factories can run more than once and the backing lists can
+    // be corrupted by concurrent Add calls. Monitor is re-entrant, so a factory that reenters this
+    // same type's realization on the same thread is fine. The queue writers (AddMember et al.) stay
+    // unlocked by design: they run either during provider construction, before the compiler observes
+    // the type, or from a delayed factory that already holds this lock via realization.
+    let realizationLock = obj()
+
+    do match backingDataSource with
         | None -> () 
         | Some (_, getFreshMembers, getFreshInterfaces, getFreshMethodOverrides) ->
             membersQueue.Add getFreshMembers
@@ -1446,7 +1456,7 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     let moreMembers() =
         membersQueue.Count > 0 || checkFreshMembers() 
 
-    let evalMembers() =
+    let evalMembersUnsafe() =
         if moreMembers() then
             // re-add the getFreshMembers call from the backingDataSource to make sure we fetch the latest translated members from the source model
             match backingDataSource with 
@@ -1472,27 +1482,32 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
                             members.Add (e.GetRemoveMethod true)
                     | _ -> ()
                 
+    // The backing list read must stay inside the lock: another thread's realization can
+    // Add to the list (a backingDataSource can report fresh members repeatedly) while an
+    // unlocked ToArray/GetRange/Count is mid-copy - a torn array or ArgumentException.
     let getMembers() =
-        evalMembers()
-        members.ToArray()
+        lock realizationLock (fun () ->
+            evalMembersUnsafe()
+            members.ToArray())
 
     // Save some common lookups for provided types with lots of members
     let mutable bindings :  Dictionary<int32, obj> = null
 
-    let save (key: BindingFlags) f : 'T = 
+    let save (key: BindingFlags) f : 'T =
+      lock realizationLock (fun () ->
         let key = int key
 
-        if isNull bindings then 
+        if isNull bindings then
             bindings <- Dictionary<_, _>(HashIdentity.Structural)
 
-        if not (moreMembers()) && bindings.ContainsKey(key)  then 
+        if not (moreMembers()) && bindings.ContainsKey(key)  then
             bindings.[key] :?> 'T
         else
             let res = f () // this will refresh the members
             bindings.[key] <- box res
-            res
+            res)
 
-    let evalInterfaces() =
+    let evalInterfacesUnsafe() =
         if interfacesQueue.Count > 0 then
             let elems = interfacesQueue |> Seq.toArray // take a copy in case more elements get added
             interfacesQueue.Clear()
@@ -1505,10 +1520,11 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
                 interfacesQueue.Add getInterfaces
 
     let getInterfaces() =
-        evalInterfaces()
-        interfaceImpls.ToArray()
+        lock realizationLock (fun () ->
+            evalInterfacesUnsafe()
+            interfaceImpls.ToArray())
 
-    let evalMethodOverrides () =
+    let evalMethodOverridesUnsafe () =
         if methodOverridesQueue.Count > 0 then
             let elems = methodOverridesQueue |> Seq.toArray // take a copy in case more elements get added
             methodOverridesQueue.Clear()
@@ -1521,8 +1537,9 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
                 methodOverridesQueue.Add getFreshMethodOverrides
 
     let getFreshMethodOverrides () =
-        evalMethodOverrides ()
-        methodOverrides.ToArray()
+        lock realizationLock (fun () ->
+            evalMethodOverridesUnsafe()
+            methodOverrides.ToArray())
 
     let customAttributesImpl = CustomAttributesImpl(isTgt, customAttributesData)
 
@@ -1780,17 +1797,17 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
         
     // Count the members declared since the indicated position in the members list.  This allows the target model to observe 
     // incremental additions made to the source model
-    member __.CountMembersFromCursor(idx: int) = evalMembers(); members.Count - idx
+    member __.CountMembersFromCursor(idx: int) = lock realizationLock (fun () -> evalMembersUnsafe(); members.Count - idx)
 
     // Fetch the members declared since the indicated position in the members list.  This allows the target model to observe 
     // incremental additions made to the source model
-    member __.GetMembersFromCursor(idx: int) = evalMembers(); members.GetRange(idx, members.Count - idx).ToArray(), members.Count
+    member __.GetMembersFromCursor(idx: int) = lock realizationLock (fun () -> evalMembersUnsafe(); members.GetRange(idx, members.Count - idx).ToArray(), members.Count)
 
     // Fetch the interfaces declared since the indicated position in the interfaces list
-    member __.GetInterfaceImplsFromCursor(idx: int) = evalInterfaces(); interfaceImpls.GetRange(idx, interfaceImpls.Count - idx).ToArray(), interfaceImpls.Count
+    member __.GetInterfaceImplsFromCursor(idx: int) = lock realizationLock (fun () -> evalInterfacesUnsafe(); interfaceImpls.GetRange(idx, interfaceImpls.Count - idx).ToArray(), interfaceImpls.Count)
 
     // Fetch the method overrides declared since the indicated position in the list
-    member __.GetMethodOverridesFromCursor(idx: int) = evalMethodOverrides(); methodOverrides.GetRange(idx, methodOverrides.Count - idx).ToArray(), methodOverrides.Count
+    member __.GetMethodOverridesFromCursor(idx: int) = lock realizationLock (fun () -> evalMethodOverridesUnsafe(); methodOverrides.GetRange(idx, methodOverrides.Count - idx).ToArray(), methodOverrides.Count)
 
     // Fetch the method overrides 
     member __.GetMethodOverrides() = getFreshMethodOverrides()
@@ -9258,6 +9275,15 @@ namespace ProviderImplementation.ProvidedTypes
         let typeTableFwd = Dictionary<Type, Type>()
         let typeTableBwd = Dictionary<Type, Type>()
 
+        // Guards the translation tables above (type, var, and assembly). The F# compiler may
+        // translate types on several threads at once (e.g. ParallelCompilation, on by default in
+        // recent .NET SDKs). The check-then-create in convProvidedTypeDefToTgt, convVarToTgt/Src,
+        // and convProvidedAssembly must be atomic: without this lock, two concurrent conversions
+        // of the same source object each mint a distinct target copy, leading to FS0193/FS0001
+        // or ArgumentException on duplicate Dictionary keys. Monitor is re-entrant, so recursive
+        // conversion of declaring/base/argument types on the same thread is fine.
+        let typeTablesLock = obj()
+
         let fixName (fullName:string) =
           if fullName.StartsWith("FSI_") then
               // when F# Interactive is the host of the design time assembly, 
@@ -9295,7 +9321,7 @@ namespace ProviderImplementation.ProvidedTypes
                 asm.GetType fullName |> function null -> None | x -> Some (x, true)
 
         let typeBuilder = ProvidedTypeBuilder.typeBuilder
-        let rec convTypeRef toTgt (t:Type) =
+        let rec convTypeRefUnsafe toTgt (t:Type) =
             let table = (if toTgt then typeTableFwd else typeTableBwd)
             match table.TryGetValue(t) with
             | true, newT -> newT
@@ -9349,7 +9375,10 @@ namespace ProviderImplementation.ProvidedTypes
                             | None -> loop (i - 1)
                     loop (asms.Count - 1)
 
-        and convType toTgt (t:Type) =
+        and convTypeRef toTgt (t: Type) =
+            lock typeTablesLock (fun () -> convTypeRefUnsafe toTgt t)
+
+        and convTypeUnsafe toTgt (t:Type) =
             let table = (if toTgt then typeTableFwd else typeTableBwd)
             match table.TryGetValue(t) with
             | true, newT -> newT
@@ -9379,6 +9408,9 @@ namespace ProviderImplementation.ProvidedTypes
 
                 else
                     convTypeRef toTgt t
+
+        and convType toTgt (t: Type) =
+            lock typeTablesLock (fun () -> convTypeUnsafe toTgt t)
 
         and convTypeToTgt ty = convType true ty
         and convTypeToSrc ty = convType false ty
@@ -9443,6 +9475,7 @@ namespace ProviderImplementation.ProvidedTypes
             | Choice2Of2 res -> res
 
         and convVarToSrc (v: Var) =
+          lock typeTablesLock (fun () ->
             match varTableBwd.TryGetValue v with
             | true, v -> v
             | false, _ ->
@@ -9450,7 +9483,7 @@ namespace ProviderImplementation.ProvidedTypes
                 // store the original var as we'll have to revert to it later
                 varTableBwd.Add(v, newVar)
                 varTableFwd.Add(newVar, v)
-                newVar
+                newVar)
 
         and convVarExprToSrc quotation =
             match quotation with
@@ -9459,6 +9492,7 @@ namespace ProviderImplementation.ProvidedTypes
             | _ -> failwithf "Unexpected non-variable argument: %A" quotation
 
         and convVarToTgt (v: Var) =
+          lock typeTablesLock (fun () ->
             match varTableFwd.TryGetValue v with
             | true, v -> v
             | false, _ ->
@@ -9467,7 +9501,7 @@ namespace ProviderImplementation.ProvidedTypes
                 // store it so we reuse it from now on
                 varTableFwd.Add(v, newVar)
                 varTableBwd.Add(newVar, v)
-                newVar
+                newVar)
 
 
         and convExprToTgt quotation =
@@ -9616,7 +9650,7 @@ namespace ProviderImplementation.ProvidedTypes
         and convCustomAttributesDataToTgt (cattrs: IList<CustomAttributeData>) = 
             cattrs |> Array.ofSeq |> Array.choose tryConvCustomAttributeDataToTgt 
  
-        and convProvidedTypeDefToTgt (x: ProvidedTypeDefinition) =
+        and convProvidedTypeDefToTgtUnsafe (x: ProvidedTypeDefinition) =
           if x.IsErased && x.BelongsToTargetModel then failwithf "unexpected target type definition '%O'" x
           match typeTableFwd.TryGetValue(x) with
           | true, newT -> (newT :?> ProvidedTypeDefinition)
@@ -9698,6 +9732,11 @@ namespace ProviderImplementation.ProvidedTypes
                 parentT.PatchDeclaringTypeOfMember xT
             xT
 
+        // Serialized: the lookup and the creation must be one atomic step so a source type is only
+        // ever translated to a single target type (see typeTablesLock above).
+        and convProvidedTypeDefToTgt (x: ProvidedTypeDefinition) =
+            lock typeTablesLock (fun () -> convProvidedTypeDefToTgtUnsafe x)
+
         and convTypeDefToTgt (x: Type) =
             match x with 
             | :? ProvidedTypeDefinition as x -> convProvidedTypeDefToTgt x :> Type  
@@ -9769,19 +9808,20 @@ namespace ProviderImplementation.ProvidedTypes
             convMemberDefToTgt declTyT x :?> ProvidedMethod
 
         and convProvidedAssembly (assembly: ProvidedAssembly) = 
-          match assemblyTableFwd.TryGetValue(assembly) with
-          | true, newT -> newT
-          | false, _ ->
-            let tgtAssembly = ProvidedAssembly(true, assembly.GetName(), assembly.Location, K(convCustomAttributesDataToTgt(assembly.GetCustomAttributesData())))
+          lock typeTablesLock (fun () ->
+            match assemblyTableFwd.TryGetValue(assembly) with
+            | true, newT -> newT
+            | false, _ ->
+              let tgtAssembly = ProvidedAssembly(true, assembly.GetName(), assembly.Location, K(convCustomAttributesDataToTgt(assembly.GetCustomAttributesData())))
 
-            for (types, enclosingGeneratedTypeNames) in assembly.GetTheTypes() do
-                let typesT = Array.map convProvidedTypeDefToTgt types
-                tgtAssembly.AddTheTypes (typesT, enclosingGeneratedTypeNames) 
+              for (types, enclosingGeneratedTypeNames) in assembly.GetTheTypes() do
+                  let typesT = Array.map convProvidedTypeDefToTgt types
+                  tgtAssembly.AddTheTypes (typesT, enclosingGeneratedTypeNames) 
 
-            assemblyTableFwd.Add(assembly, tgtAssembly)
-            this.AddSourceAssembly(assembly)
-            this.AddTargetAssembly(assembly.GetName(), tgtAssembly)
-            (tgtAssembly :> Assembly)
+              assemblyTableFwd.Add(assembly, tgtAssembly)
+              this.AddSourceAssembly(assembly)
+              this.AddTargetAssembly(assembly.GetName(), tgtAssembly)
+              (tgtAssembly :> Assembly))
 
         let rec convNamespaceToTgt (x: IProvidedNamespace) =
             { new IProvidedNamespace with
@@ -16144,10 +16184,13 @@ namespace ProviderImplementation.ProvidedTypes
                             let methLocals = Dictionary<Var, ILLocalBuilder>()
 
                             let retType = transType minfo.ReturnType
-                            let retUnit = retType = ILType.Void || retType.QualifiedName = (transType (convTypeToTgt typeof<unit>)).QualifiedName
-                            let expectedState = if retUnit then ExpectedStackState.Empty else ExpectedStackState.Value
+                            let retVoid = retType = ILType.Void
+                            let retUnit = not retVoid && retType.QualifiedName = (transType (convTypeToTgt typeof<unit>)).QualifiedName
+                            let expectedState = if retVoid || retUnit then ExpectedStackState.Empty else ExpectedStackState.Value
                             let codeGen = CodeGenerator(assemblyMainModule, codeGenPatterns, genUniqueTypeName, implicitCtorArgsAsFields, convTypeToTgt, transType, transFieldSpec, transMeth, transMethRef, transCtorSpec, ilg, methLocals, parameterVars)
                             codeGen.EmitExpr (expectedState, expr)
+                            // A method whose return type is FSharp.Core Unit must return the (boxed) unit
+                            // value null; a void-returning method must leave the stack empty at ret.
                             if retUnit then ilg.Emit(I_ldnull)
                             ilg.Emit I_ret
                       | _ -> ()
