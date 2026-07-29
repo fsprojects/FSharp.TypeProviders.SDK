@@ -555,6 +555,56 @@ let ``TargetTypeDefinition member-wrapper caches are thread-safe under parallel 
     for th in threads do th.Join()
     Assert.True(errors.IsEmpty, sprintf "Thread-safety violations: %A" (errors |> Seq.toList))
 
+[<Fact>]
+let ``Concurrent type translation through ProvidedAssembly does not corrupt assemblyTableFwd``() =
+    // Regression test for https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/525
+    // convProvidedAssembly uses a check-then-create on assemblyTableFwd.  Without locking,
+    // concurrent translations of types in the same ProvidedAssembly can duplicate the assembly
+    // entry or throw ArgumentException.
+    //
+    // Strategy: create a generative type provider with multiple types in one ProvidedAssembly,
+    // then call ConvertSourceProvidedTypeDefinitionToTarget from many threads simultaneously.
+    // Each type's translation triggers convProvidedAssembly for the shared assembly.
+    let runtimeAssemblyRefs = Targets.DotNetStandard20FSharpRefs()
+    let runtimeAssembly = runtimeAssemblyRefs.[0]
+    let cfg = Testing.MakeSimulatedTypeProviderConfig(__SOURCE_DIRECTORY__, runtimeAssembly, runtimeAssemblyRefs)
+    let tp = new TypeProviderForNamespaces(cfg)
+    let ctxt = tp.TargetContext
+
+    let ns = "ConcurrencyTest.Assembly"
+    let sharedAssembly = ProvidedAssembly()
+
+    // Create 16 types in the same ProvidedAssembly
+    let sourceTypes =
+        [| for i in 1..16 ->
+            let t = ProvidedTypeDefinition(sharedAssembly, ns, sprintf "Type%d" i, Some typeof<obj>, isErased = false)
+            let ctor = ProvidedConstructor([], invokeCode = fun _ -> <@@ () @@>)
+            t.AddMember ctor
+            t |]
+
+    sharedAssembly.AddTypes (sourceTypes |> Array.toList)
+    tp.AddNamespace(ns, sourceTypes |> Array.toList)
+
+    let errors = System.Collections.Concurrent.ConcurrentBag<exn>()
+    let barrier = new System.Threading.Barrier(8)
+    let threads =
+        [| for i in 0..7 ->
+            System.Threading.Thread(fun () ->
+                try
+                    barrier.SignalAndWait()
+                    // Each thread translates a different pair of types, but all share the assembly
+                    let t1 = sourceTypes.[i * 2]
+                    let t2 = sourceTypes.[i * 2 + 1]
+                    for _ in 1..20 do
+                        ctxt.ConvertSourceTypeToTarget t1 |> ignore
+                        ctxt.ConvertSourceTypeToTarget t2 |> ignore
+                with ex ->
+                    errors.Add(ex)) |]
+    for th in threads do th.Start()
+    for th in threads do th.Join()
+    barrier.Dispose()
+    Assert.True(errors.IsEmpty, sprintf "Concurrent assembly-table violations: %A" (errors |> Seq.toList))
+
 // Provider for testing that IReadOnlyList<CustomAttributeTypedArgument> values — the format that
 // real .NET reflection (GetCustomAttributesData()) uses for array-typed constructor arguments —
 // are correctly unwrapped by transValue in defineCustomAttrs.

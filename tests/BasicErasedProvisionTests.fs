@@ -5,6 +5,7 @@ open System.Reflection
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypesTesting
 open Microsoft.FSharp.Core.CompilerServices
+open Microsoft.FSharp.Quotations
 open Xunit
 
 #nowarn "760" // IDisposable needs new
@@ -868,3 +869,72 @@ let ``DefineStaticParameters does not warn when there are no static parameters``
         Assert.True(w.IsNone, "No all-optional warning expected for empty parameter list")
     finally
         ProvidedTypeDefinition.Logger := prevLogger
+
+[<Fact>]
+let ``Concurrent ConvertSourceExprToTarget on shared Vars does not corrupt var tables``() =
+    // Regression test for https://github.com/fsprojects/FSharp.TypeProviders.SDK/issues/525
+    // convVarToTgt uses a check-then-create on varTableFwd/varTableBwd.  Without locking,
+    // concurrent translations of the same Var throw ArgumentException (duplicate key) or
+    // produce inconsistent mappings.
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    use tp = new TypeProviderForNamespaces(cfg)
+    let ctxt = tp.TargetContext
+
+    // Build quotation expressions that share the same Var instances.
+    // Each thread will translate the same expressions, forcing concurrent convVarToTgt calls.
+    let sharedVar1 = Var("x", typeof<int>)
+    let sharedVar2 = Var("y", typeof<string>)
+    let sharedVar3 = Var("z", typeof<int>)
+    let expr1 = Expr.Lambda(sharedVar1, Expr.Lambda(sharedVar2, Expr.Var(sharedVar1)))
+    let expr2 = Expr.Let(sharedVar3, Expr.Value(42), Expr.Var(sharedVar3))
+
+    let errors = System.Collections.Concurrent.ConcurrentBag<exn>()
+    let barrier = new System.Threading.Barrier(8)
+    let threads =
+        [| for _ in 1..8 ->
+            System.Threading.Thread(fun () ->
+                try
+                    barrier.SignalAndWait() // maximize contention by starting together
+                    for _ in 1..100 do
+                        ctxt.ConvertSourceExprToTarget expr1 |> ignore
+                        ctxt.ConvertSourceExprToTarget expr2 |> ignore
+                with ex ->
+                    errors.Add(ex)) |]
+    for th in threads do th.Start()
+    for th in threads do th.Join()
+    barrier.Dispose()
+    Assert.True(errors.IsEmpty, sprintf "Concurrent var-table violations: %A" (errors |> Seq.toList))
+
+[<Fact>]
+let ``Concurrent ConvertSourceTypeToTarget does not corrupt type tables``() =
+    // Regression test: ConvertSourceTypeToTarget uses typeTablesLock (from #522).
+    // Verify that parallel translation of many types does not throw or produce inconsistent results.
+    let refs = Targets.DotNetStandard20FSharpRefs()
+    let cfg = Testing.MakeSimulatedTypeProviderConfig (__SOURCE_DIRECTORY__, refs.[0], refs)
+    use tp = new TypeProviderForNamespaces(cfg)
+    let ctxt = tp.TargetContext
+
+    // Use a variety of source types that require translation (including generic and array types
+    // that exercise deeper paths through convType/convTypeRef)
+    let sourceTypes = [| typeof<int>; typeof<string>; typeof<DateTime>; typeof<int[]>;
+                         typeof<System.Collections.Generic.List<int>>;
+                         typeof<System.Collections.Generic.Dictionary<string, int>>;
+                         typeof<int option>; typeof<Result<int,string>> |]
+
+    let errors = System.Collections.Concurrent.ConcurrentBag<exn>()
+    let barrier = new System.Threading.Barrier(8)
+    let threads =
+        [| for _ in 1..8 ->
+            System.Threading.Thread(fun () ->
+                try
+                    barrier.SignalAndWait()
+                    for _ in 1..50 do
+                        for srcTy in sourceTypes do
+                            ctxt.ConvertSourceTypeToTarget srcTy |> ignore
+                with ex ->
+                    errors.Add(ex)) |]
+    for th in threads do th.Start()
+    for th in threads do th.Join()
+    barrier.Dispose()
+    Assert.True(errors.IsEmpty, sprintf "Concurrent type-table violations: %A" (errors |> Seq.toList))
