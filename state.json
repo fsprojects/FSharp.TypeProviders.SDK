@@ -1,12 +1,15 @@
 {
-    "last_run": "2026-05-07T05:54:17Z",
-    "last_run_id": "25478425207",
-    "monthly_activity_issue": {"month": "2026-05", "number": 514},
-    "label_cursor": 514,
-    "open_repo_assist_prs": [],
-    "merged_this_month": [509, 510, 513],
+    "last_run": "2026-08-27T07:22:10Z",
+    "last_run_id": "33049303870",
+    "monthly_activity_issue": {"month": "2026-08", "number": null, "note": "created via create_issue in this run; number assigned post-workflow"},
+    "label_cursor": 524,
+    "open_repo_assist_prs": [
+        {"branch": "repo-assist/eng-sdk-8.0.130-20260827", "title": "eng: perf guard for flushTargetAssemblies; update SDK to 8.0.130; prepare release 8.12.0", "created": "2026-08-27"}
+    ],
+    "merged_this_month": [],
     "comments_made": {
-        "298": "2026-02-26", "299": "2026-02-26", "300": "2026-02-26", "384": "2026-02-26"
+        "298": "2026-02-26", "299": "2026-02-26", "300": "2026-02-26", "384": "2026-02-26",
+        "519": "2026-07-29", "521": "2026-07-29"
     },
-    "notes": "PRs #509, #510, #513 merged this month. Issues #511, #512 are pending patches (SDK update) that maintainer must apply manually via git am. Current run: Task 9 added System.Type custom attr regression test (159/159 pass). Task 4 updated global.json to 8.0.125 and RELEASE_NOTES to 8.11.0 — patch created. global.json is a protected file so PRs with it go to patch artifacts. Monthly activity issue #514 updated."
+    "notes": "Closed July monthly activity issue #524 (referenced repo-assist/release-8.12.0-2026-07-30 branch which never merged - superseded by this run's own SDK/perf/release-notes PR). Created new Aug 2026 monthly activity issue. Task 8 perf: flushTargetAssemblies now skips ToArray/Clear when queue empty (avoids allocation on hot lookup path). Task 4 eng: global.json SDK 8.0.125->8.0.130 (latest 8.0.x per dotnetcli release feed). Task 10: continued release-notes bookkeeping for 8.12.0, documenting merged #520/#521/#522/#523/#525/#526. Build succeeded (net8.0 + netstandard2.0), 165/165 tests passed, BasicProvider.Tests example built OK. Only 5 open issues remain, all with Repo Assist comments (298, 299, 300, 384, plus this month's tracking issue). No new human activity on 298/299/300/384 since last comment - not re-engaging per anti-spam rule. Issue #384 remains a compiler-side (dotnet/fsharp) issue; no upstream link filed yet - potential future task."
 }
