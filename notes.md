@@ -1,47 +1,34 @@
 # Repo Assist Memory
 
 ## Last Updated
-2026-02-26
+2026-09-03
 
-## Merged PRs (this month)
-- PR #422: Release 8.2.0 preparation (merged 2026-02-24)
-- PR #428: Warn when all static parameters are optional (merged 2026-02-25)
-- PR #430: Update fsdocs from 11.4.3 to 11.5.1 (merged 2026-02-25)
-- PR #431: Update from .NET 5 to .NET 8 (merged 2026-02-25)
-- PR #432: Fix custom attributes on nested erased types (merged 2026-02-25)
-- PR #437: Update fsdocs-tool to v21 (merged 2026-02-25)
-- PR #442: Add coverage tests and Coverage build target (merged 2026-02-26)
-- PR #443: Memoize transType in AssemblyCompiler (merged 2026-02-26)
-- PR #444: Tests and docs for equality/comparison on generative provided types (merged 2026-02-26)
-- PR #445: Add docs/tests for nonNullable, hideObjectMethods, AddCustomAttribute, ProvidedMeasureBuilder (merged 2026-02-26)
-- PR #446: Remove NUnit.Console and Microsoft.NETCore.App from template (merged 2026-02-26)
-- PR #455: Docs overhaul guide (merged 2026-02-26)
-- PR #457: transTypeRef/transMethRef caching (merged 2026-02-26)
-- PR #458: Fix GetNestedType on TypeSymbol/ProvidedTypeSymbol (merged 2026-02-26)
-- PR #459: Fix mutable variable captures in QuotationSimplifier (merged 2026-02-26)
+## Merged PRs since 8.11.0 (documented in 8.12.0 release notes this run)
+- PR #520: perf - stop re-deserializing CodeGenerator quotation patterns per member body (issue #341)
+- PR #525/#526: Protect varTable/assemblyTable with typeTablesLock for thread safety
+- PR #523: Fix invalid IL for generative methods with System.Void return type
+- PR #532: Document agentic contribution workflow (CONTRIBUTING.md)
 
-## Open Issues (as of 2026-02-26)
-- #298: Binary reader removal - Repo Assist commented 2026-02-26 (SRM migration approach)
-- #299: Binary writer removal - Repo Assist commented 2026-02-26 (PersistedAssemblyBuilder)
-- #300: Quotation reflection hack removal - Repo Assist commented 2026-02-26 (needs FSharp.Core fix)
-- #384: Wrong namespace for generative TPs - Repo Assist commented 2026-02-26 (compiler-side, attribute blob root cause)
-- #421: Monthly Activity 2026-02 (Repo Assist tracking issue)
-- #460: No-Op Runs tracker - do NOT engage
-- #461: Repo Assist failed tracker - do NOT engage
+## Open PRs (as of 2026-09-03)
+- eng: update .NET SDK to 8.0.130; prepare release 8.12.0 (repo-assist, created 2026-09-03, draft) - branch repo-assist/eng-sdk-8.0.130-release-8.12.0-20260903
 
-## All Open Issues Now Have Repo Assist Comments
+## Open Issues (as of 2026-09-03)
+- #298: Binary reader removal - Repo Assist commented 2026-02-26 (SRM migration approach), no new activity
+- #299: Binary writer removal - Repo Assist commented 2026-02-26 (PersistedAssemblyBuilder), no new activity
+- #300: Quotation reflection hack removal - Repo Assist commented 2026-02-26 (needs FSharp.Core fix), no new activity
+- #384: Wrong namespace for generative TPs - Repo Assist commented 2026-02-26 (compiler-side, attribute blob root cause); last human comment/update 2026-03-07 (a label/reference change, no new substantive discussion) - no re-engagement needed
+- New Monthly Activity issue for 2026-09 (number assigned post-workflow); closed #534 (August, no new activity)
 
 ## Notes
 - The repository uses paket for dependency management
 - Main SDK targets netstandard2.0 for package compatibility; net8.0 for engineering
 - Test projects target net8.0
 - ProvidedTypes.fs has TreatWarningsAsErrors=true; needs #nowarn "0044" for .NET 8 serialization deprecation warnings
-- Schedule is DAILY at 08:08 UTC (changed by dsyme 2026-02-26 from --repeat)
-- Maintainer has -1 reaction on monthly activity issue #421 — be conservative about run frequency
-- Issues #460, #461 are automated failure/no-op trackers - do NOT engage
-- All currently open issues have Repo Assist comments
-- UncheckedQuotations module (lines 332-517) uses mkFE0/1/2/3/N internal FSharp.Core methods - stable since F# 2.0
-- Binary reader in AssemblyReader module starts at ~line 1941 in ProvidedTypes.fs
-- Issue #384 is a compiler-side bug (dotnet/fsharp) - attribute blobs store type names as strings, not rewritten in generative TP compile
-- Release 8.3.0 prepared 2026-02-26 with RELEASE_NOTES.md update; PR #462 created
-- Custom attr encoding fix: implemented obj[] support in encodeCustomAttrElemTypeForObject (was failwith "TODO"); applied transValue to constructorArgs and namedProps/namedFields in defineCustomAttrs (was dead code). 104 tests pass. PR pending.
+- CONTRIBUTING.md (added via #532) now requires: every PR must have a matching discussed issue; Repo Assist may be invoked via /repo-assist <instructions>
+- `./build.sh RunTests` (FAKE) fails in this sandbox: FAKE tries to resolve SDK runtime pack list over network and gets blocked by proxy (403), falling back to only finding 6.0.x NETCore.App.Ref packs, which don't match. Use `dotnet test tests/FSharp.TypeProviders.SDK.Tests.fsproj -c Release` directly instead as a reliable substitute in this sandboxed environment - confirmed 165/165 tests pass.
+- Version numbers come from RELEASE_NOTES.md's newest heading (read via FAKE's release.NugetVersion) - "preparing a release" = adding a new dated entry at the top of RELEASE_NOTES.md summarizing merged, undocumented changes.
+- global.json SDK pin: 8.0.125 -> 8.0.130 (latest 8.0.1xx per dotnet/core releases.json as of 2026-09-03)
+- Remaining TODOs in ProvidedTypes.fs (lines 1341, 7084, 7087, 9361, 13952, 14130, 14443) reviewed this run: all are either intentional/stable design notes (e.g. eqILScopeRef always true is fine because name-based binding suffices) or low-value/out-of-scope (hardcoded unit abbreviations without FCS dependency) - not actionable without deeper design discussion; left alone per "no breaking changes without approval" guideline
+- Issues #298, #299, #300, #384 all have Repo Assist comments with no new human activity since last comment - anti-spam rule: do not re-engage
+- Only 4 "real" open issues remain (298, 299, 300, 384) plus the rolling Monthly Activity tracking issue
+- Issue #384 is a compiler-side bug (dotnet/fsharp) - attribute blobs store type names as strings, not rewritten in generative TP compile; no upstream issue filed yet - potential future task

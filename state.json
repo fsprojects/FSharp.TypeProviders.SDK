@@ -1,15 +1,15 @@
 {
-    "last_run": "2026-08-27T07:22:10Z",
-    "last_run_id": "33049303870",
-    "monthly_activity_issue": {"month": "2026-08", "number": null, "note": "created via create_issue in this run; number assigned post-workflow"},
-    "label_cursor": 524,
+    "last_run": "2026-09-03T05:36:00Z",
+    "last_run_id": "33719303939",
+    "monthly_activity_issue": {"month": "2026-09", "number": null, "note": "created via create_issue in this run; number assigned post-workflow; closed prior August issue #534"},
+    "label_cursor": 534,
     "open_repo_assist_prs": [
-        {"branch": "repo-assist/eng-sdk-8.0.130-20260827", "title": "eng: perf guard for flushTargetAssemblies; update SDK to 8.0.130; prepare release 8.12.0", "created": "2026-08-27"}
+        {"branch": "repo-assist/eng-sdk-8.0.130-release-8.12.0-20260903", "title": "eng: update .NET SDK to 8.0.130; prepare release 8.12.0", "created": "2026-09-03"}
     ],
     "merged_this_month": [],
     "comments_made": {
         "298": "2026-02-26", "299": "2026-02-26", "300": "2026-02-26", "384": "2026-02-26",
         "519": "2026-07-29", "521": "2026-07-29"
     },
-    "notes": "Closed July monthly activity issue #524 (referenced repo-assist/release-8.12.0-2026-07-30 branch which never merged - superseded by this run's own SDK/perf/release-notes PR). Created new Aug 2026 monthly activity issue. Task 8 perf: flushTargetAssemblies now skips ToArray/Clear when queue empty (avoids allocation on hot lookup path). Task 4 eng: global.json SDK 8.0.125->8.0.130 (latest 8.0.x per dotnetcli release feed). Task 10: continued release-notes bookkeeping for 8.12.0, documenting merged #520/#521/#522/#523/#525/#526. Build succeeded (net8.0 + netstandard2.0), 165/165 tests passed, BasicProvider.Tests example built OK. Only 5 open issues remain, all with Repo Assist comments (298, 299, 300, 384, plus this month's tracking issue). No new human activity on 298/299/300/384 since last comment - not re-engaging per anti-spam rule. Issue #384 remains a compiler-side (dotnet/fsharp) issue; no upstream link filed yet - potential future task."
+    "notes": "Task selection this run: 5 (Coding Improvements), 2 (Issue Investigation/Comment), 3 (Issue Investigation/Fix). Reviewed all open issues (298,299,300,384) - no new human activity since last Repo Assist comment on any, so did not re-engage (anti-spam). No issues labelled bug/help-wanted/good-first-issue exist and none identified as fixable this run, so Task 3 had no action; Task 2 candidates all already commented with no new activity. Substituted Task 5 (Coding Improvements) -> reviewed all 7 remaining TODOs in ProvidedTypes.fs; none were actionable low-risk improvements (all either intentional design notes or requiring deeper discussion) -> fell back to Task 4 (Engineering Investments): updated global.json SDK pin 8.0.125->8.0.130, prepared RELEASE_NOTES.md 8.12.0 entry documenting 4 previously-undocumented merged PRs (#520, #525/#526, #523, #532). Build note: FAKE's RunTests target fails in this sandbox due to network-restricted proxy blocking SDK release-index lookup; used `dotnet test` directly instead, confirmed 165/165 pass - documented in PR Test Status section. Closed August Monthly Activity issue #534 (no maintainer comments, month rollover) and created September equivalent."
 }
