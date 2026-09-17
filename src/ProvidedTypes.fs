@@ -15982,7 +15982,7 @@ namespace ProviderImplementation.ProvidedTypes
                 match ptdT with
                 | None -> ()
                 | Some ptdT ->
-                    let isDelegateType = ptdT.BaseType <> null && ptdT.BaseType.FullName = "System.MulticastDelegate"
+                    let isDelegateType = not (isNull ptdT.BaseType) && ptdT.BaseType.FullName = "System.MulticastDelegate"
                     for cinfo in ptdT.GetConstructors(bindAll) do
                         match cinfo with
                         | :? ProvidedConstructor as pcinfo when not (ctorMap.ContainsKey pcinfo)  ->
@@ -16065,7 +16065,7 @@ namespace ProviderImplementation.ProvidedTypes
 
                     // Delegate types (base = System.MulticastDelegate) use Runtime implementation; their
                     // constructor and Invoke/BeginInvoke/EndInvoke bodies are synthesised by the CLR.
-                    let isDelegateType = ptdT.BaseType <> null && ptdT.BaseType.FullName = "System.MulticastDelegate"
+                    let isDelegateType = not (isNull ptdT.BaseType) && ptdT.BaseType.FullName = "System.MulticastDelegate"
 
                     // Allow at most one constructor, and use its arguments as the fields of the type
                     let ctors =
