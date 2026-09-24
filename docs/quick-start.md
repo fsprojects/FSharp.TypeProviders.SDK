@@ -14,7 +14,8 @@ a constructor, a property, and a method.
 
 ## Prerequisites
 
-- .NET SDK 6.0 or later (`dotnet --version`)
+- .NET SDK 8.0 or later (`dotnet --version`) — the project template's `global.json` pins an 8.x SDK
+  with `rollForward: minor`, which only rolls forward within major version 8
 - The F# compiler included with the .NET SDK
 
 ---
