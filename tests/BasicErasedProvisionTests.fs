@@ -639,6 +639,40 @@ let ``test ProvidedStaticParameter properties``() =
     Assert.Equal("hello", p2.RawDefaultValue :?> string)
     Assert.True(p2.Attributes.HasFlag(ParameterAttributes.Optional), "parameter with default should be Optional")
 
+// Tests for ProvidedTypeBuilder.MakeTupleType(types, isStruct) -- the isStruct=true overload
+// produces System.ValueTuple-based types rather than System.Tuple-based reference types.
+[<Fact>]
+let ``test ProvidedTypeBuilder MakeTupleType isStruct true produces ValueTuple``() =
+    let refTuple = ProvidedTypeBuilder.MakeTupleType([ typeof<int>; typeof<string> ], false)
+    Assert.Equal(typedefof<System.Tuple<int, string>>, refTuple.GetGenericTypeDefinition())
+    Assert.False(refTuple.IsValueType, "reference tuple should not be a value type")
+
+    let structTuple = ProvidedTypeBuilder.MakeTupleType([ typeof<int>; typeof<string> ], true)
+    Assert.Equal(typedefof<System.ValueTuple<int, string>>, structTuple.GetGenericTypeDefinition())
+    Assert.True(structTuple.IsValueType, "struct tuple should be a value type")
+
+    // The single-argument overload defaults to isStruct = false
+    let defaultTuple = ProvidedTypeBuilder.MakeTupleType([ typeof<int>; typeof<string> ])
+    Assert.Equal(refTuple, defaultTuple)
+
+// Tests for ProvidedTypeBuilder.MakeTupleType with more than 8 elements, which exercises the
+// recursive "rest" tuple encoding used by System.Tuple/System.ValueTuple for large tuples.
+[<Fact>]
+let ``test ProvidedTypeBuilder MakeTupleType large tuple uses TRest encoding``() =
+    let types = [ for i in 1 .. 9 -> typeof<int> ]
+    let bigTuple = ProvidedTypeBuilder.MakeTupleType(types)
+
+    // A 9-element reference tuple is encoded as Tuple<int,...,int, Tuple<int,int>> (7 + a nested 2-tuple "rest")
+    Assert.Equal(typedefof<System.Tuple<int, int, int, int, int, int, int, System.Tuple<int, int>>>, bigTuple.GetGenericTypeDefinition())
+    let genericArgs = bigTuple.GetGenericArguments()
+    Assert.Equal(8, genericArgs.Length)
+    let restTy = genericArgs.[7]
+    Assert.Equal(typedefof<System.Tuple<int, int>>, restTy.GetGenericTypeDefinition())
+
+    // Same large-tuple recursive encoding also applies to struct tuples
+    let bigStructTuple = ProvidedTypeBuilder.MakeTupleType(types, true)
+    Assert.Equal(typedefof<System.ValueTuple<int, int, int, int, int, int, int, System.ValueTuple<int, int>>>, bigStructTuple.GetGenericTypeDefinition())
+
 // Tests for TypeProviderForNamespaces.AddNamespace, Namespaces, and Invalidate
 [<Fact>]
 let ``test TypeProviderForNamespaces AddNamespace and Namespaces``() =
