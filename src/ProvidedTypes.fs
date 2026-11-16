@@ -1456,8 +1456,14 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     let moreMembers() =
         membersQueue.Count > 0 || checkFreshMembers() 
 
+    // Save some common lookups for provided types with lots of members
+    let mutable bindings :  Dictionary<int32, obj> = null
+
     let evalMembersUnsafe() =
         if moreMembers() then
+            // every cached lookup table is out of date once more members arrive
+            if not (isNull bindings) then bindings.Clear()
+
             // re-add the getFreshMembers call from the backingDataSource to make sure we fetch the latest translated members from the source model
             match backingDataSource with 
             | None -> () 
@@ -1489,9 +1495,6 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
         lock realizationLock (fun () ->
             evalMembersUnsafe()
             members.ToArray())
-
-    // Save some common lookups for provided types with lots of members
-    let mutable bindings :  Dictionary<int32, obj> = null
 
     let save (key: BindingFlags) f : 'T =
       lock realizationLock (fun () ->
@@ -1761,7 +1764,11 @@ and ProvidedTypeDefinition(isTgt: bool, container:TypeContainer, className: stri
     override __.IsSZArray = false
 #endif
 
-    override x.GetHashCode() = x.Namespace.GetHashCode() ^^^ className.GetHashCode()
+    override x.GetHashCode() =
+        match container with
+        // include the declaring type so same-named nested types under different parents do not collide
+        | TypeContainer.Type declaringType -> (declaringType.GetHashCode() * 31) ^^^ className.GetHashCode()
+        | _ -> (match x.Namespace with null -> 0 | nsp -> nsp.GetHashCode()) ^^^ className.GetHashCode()
     override this.Equals(that: obj) = Object.ReferenceEquals(this, that)
     override this.Equals(that: Type) = Object.ReferenceEquals(this, that)
 
@@ -9017,12 +9024,13 @@ namespace ProviderImplementation.ProvidedTypes
                         RebuildShapeCombinationUnchecked(shape, exprs1)
             fun e -> f fallback e
 
-        let rightPipe = <@@ (|>) @@>
+        // Static and lazy: deserializing the quotation once per QuotationSimplifier (i.e. per member body) is costly
+        static let rightPipe = lazy <@@ (|>) @@>
         let inlineRightPipe expr =
             let rec loop expr = traverse loopCore expr
             and loopCore fallback orig =
                 match orig with
-                | SpecificCall rightPipe (None, _, [operand; applicable]) ->
+                | SpecificCall rightPipe.Value (None, _, [operand; applicable]) ->
                     let fixedOperand = loop operand
                     match loop applicable with
                     | Lambda(arg, body) ->
@@ -9269,8 +9277,10 @@ namespace ProviderImplementation.ProvidedTypes
         let getSourceAssembliesTable() = getSourceAssemblies() |> ignore; sourceAssembliesTable_
 
         /// When translating quotations, Expr.Var's are translated to new variable respecting reference equality.
-        let varTableFwd = Dictionary<Var, Var>()
-        let varTableBwd = Dictionary<Var, Var>()
+        // Weak tables: the host creates fresh variables for every call it translates, so the
+        // entries must be collectable once those variables are no longer referenced.
+        let varTableFwd = System.Runtime.CompilerServices.ConditionalWeakTable<Var, Var>()
+        let varTableBwd = System.Runtime.CompilerServices.ConditionalWeakTable<Var, Var>()
         let assemblyTableFwd = Dictionary<Assembly, Assembly>()
         let typeTableFwd = Dictionary<Type, Type>()
         let typeTableBwd = Dictionary<Type, Type>()
@@ -12719,7 +12729,15 @@ namespace ProviderImplementation.ProvidedTypes
                   generatePdb=generatePdb
                   // These must use structural comparison since they are keyed by arrays
                   guids=MetadataTable<_>.New("guids", HashIdentity.Structural)
-                  blobs= MetadataTable<_>.New("blobs", HashIdentity.Structural)
+                  // Structural hashing of byte[] only reads the first 19 bytes, so blobs sharing a prefix
+                  // (e.g. XML doc attributes) would all fall in one bucket; hash the whole array.
+                  blobs= MetadataTable<_>.New("blobs",
+                            { new System.Collections.Generic.IEqualityComparer<byte[]> with
+                                member __.Equals(a, b) = (a = b)
+                                member __.GetHashCode(a) =
+                                    let mutable h = a.Length
+                                    for b in a do h <- h * 31 + int b
+                                    h })
                   strings= MetadataTable<_>.New("strings", EqualityComparer.Default) 
                   userStrings= MetadataTable<_>.New("user strings", EqualityComparer.Default) }
 
